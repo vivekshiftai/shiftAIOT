@@ -1,0 +1,90 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: iot-platform-backend
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/iotplatform
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:Vivek@1234}
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      continue-on-error: true
+  
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 2000ms
+  
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${EMAIL_USERNAME:}
+    password: ${EMAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
+  expiration: 86400000 # 24 hours
+
+# InfluxDB Configuration
+influxdb:
+  url: ${INFLUX_URL:http://localhost:8086}
+  token: ${INFLUX_TOKEN:my-token}
+  org: ${INFLUX_ORG:iot-platform}
+  bucket: ${INFLUX_BUCKET:telemetry}
+
+# MQTT Configuration
+mqtt:
+  broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}
+  client-id: iot-platform-backend
+  username: ${MQTT_USERNAME:}
+  password: ${MQTT_PASSWORD:}
+
+# OpenAI Configuration
+openai:
+  api-key: ${OPENAI_API_KEY:}
+
+# File Upload Configuration
+file:
+  upload-dir: ${FILE_UPLOAD_DIR:./uploads}
+
+# Logging
+logging:
+  level:
+    com.iotplatform: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.web: DEBUG
+    org.springframework.data.jpa: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%-5level] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/iot-platform.log
+    max-size: 10MB
+    max-history: 30
