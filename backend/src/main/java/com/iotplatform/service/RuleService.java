@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.iotplatform.controller.RuleController;
 import com.iotplatform.dto.TelemetryDataRequest;
 import com.iotplatform.model.Device;
 import com.iotplatform.model.Rule;
@@ -58,6 +59,22 @@ public class RuleService {
         Rule rule = ruleRepository.findByIdAndOrganizationId(id, organizationId)
                 .orElseThrow(() -> new RuntimeException("Rule not found"));
         ruleRepository.delete(rule);
+    }
+
+    public List<Rule> getActiveRules(String organizationId) {
+        return ruleRepository.findByOrganizationIdAndActive(organizationId, true);
+    }
+
+    public RuleController.RuleStats getRuleStats(String organizationId) {
+        long totalRules = ruleRepository.findByOrganizationId(organizationId).size();
+        long activeRules = ruleRepository.findByOrganizationIdAndActive(organizationId, true).size();
+        
+        // For now, return placeholder values for triggered counts
+        // In a real implementation, you would query actual trigger history
+        long triggeredToday = 0;
+        long triggeredThisWeek = 0;
+        
+        return new RuleController.RuleStats(totalRules, activeRules, triggeredToday, triggeredThisWeek);
     }
 
     public void evaluateRules(String deviceId, TelemetryDataRequest telemetryData, String organizationId) {

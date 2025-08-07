@@ -93,6 +93,93 @@ public class Device {
     @Column(name = "humidity")
     private Double humidity;
 
+    // Device specifications
+    @Size(max = 100)
+    @Column(name = "manufacturer")
+    private String manufacturer;
+
+    @Size(max = 100)
+    @Column(name = "model")
+    private String model;
+
+    @Size(max = 100)
+    @Column(name = "serial_number")
+    private String serialNumber;
+
+    @Size(max = 17)
+    @Column(name = "mac_address")
+    private String macAddress;
+
+    @Size(max = 45)
+    @Column(name = "ip_address")
+    private String ipAddress;
+
+    @Column(name = "port")
+    private Integer port;
+
+    // Documentation URLs
+    @Size(max = 500)
+    @Column(name = "manual_url")
+    private String manualUrl;
+
+    @Size(max = 500)
+    @Column(name = "datasheet_url")
+    private String datasheetUrl;
+
+    @Size(max = 500)
+    @Column(name = "certificate_url")
+    private String certificateUrl;
+
+    // Additional metadata
+    @Size(max = 1000)
+    @Column(name = "description")
+    private String description;
+
+    @Size(max = 2000)
+    @Column(name = "installation_notes")
+    private String installationNotes;
+
+    @Size(max = 500)
+    @Column(name = "maintenance_schedule")
+    private String maintenanceSchedule;
+
+    @Size(max = 500)
+    @Column(name = "warranty_info")
+    private String warrantyInfo;
+
+    // Connectivity details
+    @Size(max = 100)
+    @Column(name = "wifi_ssid")
+    private String wifiSsid;
+
+    @Size(max = 100)
+    @Column(name = "mqtt_broker")
+    private String mqttBroker;
+
+    @Size(max = 100)
+    @Column(name = "mqtt_topic")
+    private String mqttTopic;
+
+    // Power and environmental
+    @Size(max = 50)
+    @Column(name = "power_source")
+    private String powerSource;
+
+    @Column(name = "power_consumption")
+    private Double powerConsumption;
+
+    @Column(name = "operating_temperature_min")
+    private Double operatingTemperatureMin;
+
+    @Column(name = "operating_temperature_max")
+    private Double operatingTemperatureMax;
+
+    @Column(name = "operating_humidity_min")
+    private Double operatingHumidityMin;
+
+    @Column(name = "operating_humidity_max")
+    private Double operatingHumidityMax;
+
     public enum DeviceType {
         SENSOR, ACTUATOR, GATEWAY, CONTROLLER
     }
@@ -178,4 +265,75 @@ public class Device {
 
     public Double getHumidity() { return humidity; }
     public void setHumidity(Double humidity) { this.humidity = humidity; }
+
+    // Device specifications getters and setters
+    public String getManufacturer() { return manufacturer; }
+    public void setManufacturer(String manufacturer) { this.manufacturer = manufacturer; }
+
+    public String getModel() { return model; }
+    public void setModel(String model) { this.model = model; }
+
+    public String getSerialNumber() { return serialNumber; }
+    public void setSerialNumber(String serialNumber) { this.serialNumber = serialNumber; }
+
+    public String getMacAddress() { return macAddress; }
+    public void setMacAddress(String macAddress) { this.macAddress = macAddress; }
+
+    public String getIpAddress() { return ipAddress; }
+    public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
+
+    public Integer getPort() { return port; }
+    public void setPort(Integer port) { this.port = port; }
+
+    // Documentation getters and setters
+    public String getManualUrl() { return manualUrl; }
+    public void setManualUrl(String manualUrl) { this.manualUrl = manualUrl; }
+
+    public String getDatasheetUrl() { return datasheetUrl; }
+    public void setDatasheetUrl(String datasheetUrl) { this.datasheetUrl = datasheetUrl; }
+
+    public String getCertificateUrl() { return certificateUrl; }
+    public void setCertificateUrl(String certificateUrl) { this.certificateUrl = certificateUrl; }
+
+    // Additional metadata getters and setters
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    public String getInstallationNotes() { return installationNotes; }
+    public void setInstallationNotes(String installationNotes) { this.installationNotes = installationNotes; }
+
+    public String getMaintenanceSchedule() { return maintenanceSchedule; }
+    public void setMaintenanceSchedule(String maintenanceSchedule) { this.maintenanceSchedule = maintenanceSchedule; }
+
+    public String getWarrantyInfo() { return warrantyInfo; }
+    public void setWarrantyInfo(String warrantyInfo) { this.warrantyInfo = warrantyInfo; }
+
+    // Connectivity getters and setters
+    public String getWifiSsid() { return wifiSsid; }
+    public void setWifiSsid(String wifiSsid) { this.wifiSsid = wifiSsid; }
+
+    public String getMqttBroker() { return mqttBroker; }
+    public void setMqttBroker(String mqttBroker) { this.mqttBroker = mqttBroker; }
+
+    public String getMqttTopic() { return mqttTopic; }
+    public void setMqttTopic(String mqttTopic) { this.mqttTopic = mqttTopic; }
+
+    // Power and environmental getters and setters
+    public String getPowerSource() { return powerSource; }
+    public void setPowerSource(String powerSource) { this.powerSource = powerSource; }
+
+    public Double getPowerConsumption() { return powerConsumption; }
+    public void setPowerConsumption(Double powerConsumption) { this.powerConsumption = powerConsumption; }
+
+    public Double getOperatingTemperatureMin() { return operatingTemperatureMin; }
+    public void setOperatingTemperatureMin(Double operatingTemperatureMin) { this.operatingTemperatureMin = operatingTemperatureMin; }
+
+    public Double getOperatingTemperatureMax() { return operatingTemperatureMax; }
+    public void setOperatingTemperatureMax(Double operatingTemperatureMax) { this.operatingTemperatureMax = operatingTemperatureMax; }
+
+    public Double getOperatingHumidityMin() { return operatingHumidityMin; }
+    public void setOperatingHumidityMin(Double operatingHumidityMin) { this.operatingHumidityMin = operatingHumidityMin; }
+
+    public Double getOperatingHumidityMax() { return operatingHumidityMax; }
+    public void setOperatingHumidityMax(Double operatingHumidityMax) { this.operatingHumidityMax = operatingHumidityMax; }
 }

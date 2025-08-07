@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Cpu } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 export const LoginForm: React.FC = () => {
@@ -11,10 +12,13 @@ export const LoginForm: React.FC = () => {
   const [error, setError] = useState('');
   
   const { login, isLoading } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    console.log('LoginForm - handleSubmit called with credentials:', credentials);
     
     if (!credentials.email || !credentials.password) {
       setError('Please enter both email and password');
@@ -22,8 +26,13 @@ export const LoginForm: React.FC = () => {
     }
     
     try {
+      console.log('LoginForm - calling login function');
       await login(credentials.email, credentials.password);
+      console.log('LoginForm - login successful, navigating to dashboard');
+      // Navigate to dashboard after successful login
+      navigate('/dashboard');
     } catch (err) {
+      console.error('LoginForm - login failed with error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       if (errorMessage.includes('Bad credentials')) {
         setError('Invalid email or password. Please try again.');
@@ -163,10 +172,7 @@ export const LoginForm: React.FC = () => {
               <p className="text-slate-600 text-xs">
                 Don't have an account?{' '}
                 <button
-                  onClick={() => {
-                    window.history.pushState({}, '', '/signup');
-                    window.location.reload();
-                  }}
+                  onClick={() => navigate('/signup')}
                   className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
                 >
                   Sign up here
@@ -174,7 +180,8 @@ export const LoginForm: React.FC = () => {
               </p>
             </div>
 
-            {/* <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+            {/* Demo Account Info
+            <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
               <div className="flex items-start">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">

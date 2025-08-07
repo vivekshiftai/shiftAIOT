@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     phone_number VARCHAR(20),
-    role VARCHAR(50) DEFAULT 'VIEWER',
+    role VARCHAR(50) DEFAULT 'USER',
     organization_id VARCHAR(255) DEFAULT 'default',
     avatar VARCHAR(255),
     enabled BOOLEAN DEFAULT true,

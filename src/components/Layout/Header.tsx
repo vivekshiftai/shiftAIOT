@@ -1,7 +1,7 @@
-import React from 'react';
-import { Menu, Search, Bell, Settings, Sun, Moon } from 'lucide-react';
+import React, { useState } from 'react';
+import { Menu, Search, Settings, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useIoT } from '../../contexts/IoTContext';
+import { NotificationDropdown } from './NotificationDropdown';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -15,9 +15,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleDarkMode 
 }) => {
   const { user, logout } = useAuth();
-  const { notifications } = useIoT();
-
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
 
   return (
     <header className="bg-white/90 backdrop-blur-sm border-b border-slate-200 h-16 flex items-center justify-between px-6 shadow-sm">
@@ -41,16 +39,10 @@ export const Header: React.FC<HeaderProps> = ({
 
       <div className="flex items-center gap-4">
         {/* Notifications */}
-        <div className="relative">
-          <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors relative">
-            <Bell className="w-5 h-5 text-slate-600" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </button>
-        </div>
+        <NotificationDropdown 
+          isOpen={notificationDropdownOpen}
+          onToggle={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
+        />
 
         {/* Dark Mode Toggle */}
         <button

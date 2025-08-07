@@ -1,39 +1,31 @@
 package com.iotplatform.dto;
 
+import com.iotplatform.model.User;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 public class SignupRequest {
+    
     @NotBlank
     @Size(min = 2, max = 50)
     private String firstName;
 
     @NotBlank
-    @Size(min = 2, max = 50)
+    @Size(min = 1, max = 50)
     private String lastName;
 
     @NotBlank
-    @Size(max = 50)
     @Email
+    @Size(max = 100)
     private String email;
 
     @NotBlank
-    @Size(min = 6, max = 40)
+    @Size(min = 3, max = 40)
     private String password;
 
-    @NotBlank
-    @Size(min = 10, max = 20)
-    private String phoneNumber;
-
-    @NotBlank
-    private String role;
-
-    @NotBlank
-    private String organizationId;
-
-    // Constructors
-    public SignupRequest() {}
+    private User.Role role = User.Role.USER; // Default to USER role
 
     // Getters and Setters
     public String getFirstName() { return firstName; }
@@ -48,17 +40,6 @@ public class SignupRequest {
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
 
-    public String getPhoneNumber() { return phoneNumber; }
-    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
-
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
-
-    public String getOrganizationId() { return organizationId; }
-    public void setOrganizationId(String organizationId) { this.organizationId = organizationId; }
-
-    // Helper method to get full name
-    public String getFullName() {
-        return firstName + " " + lastName;
-    }
+    public User.Role getRole() { return role; }
+    public void setRole(User.Role role) { this.role = role; }
 }

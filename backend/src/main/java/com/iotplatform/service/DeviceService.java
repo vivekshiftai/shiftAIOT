@@ -1,16 +1,21 @@
 package com.iotplatform.service;
 
-import com.iotplatform.dto.DeviceStatsResponse;
-import com.iotplatform.dto.TelemetryDataRequest;
-import com.iotplatform.model.Device;
-import com.iotplatform.repository.DeviceRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.iotplatform.dto.DeviceCreateResponse;
+import com.iotplatform.dto.DeviceCreateWithFileRequest;
+import com.iotplatform.dto.DeviceStatsResponse;
+import com.iotplatform.dto.TelemetryDataRequest;
+import com.iotplatform.model.Device;
+import com.iotplatform.repository.DeviceRepository;
 
 @Service
 public class DeviceService {
@@ -23,6 +28,9 @@ public class DeviceService {
 
     @Autowired
     private RuleService ruleService;
+
+    @Autowired
+    private FileStorageService fileStorageService;
 
     public List<Device> getAllDevices(String organizationId) {
         return deviceRepository.findByOrganizationId(organizationId);
@@ -49,6 +57,147 @@ public class DeviceService {
         device.setOrganizationId(organizationId);
         device.setStatus(Device.DeviceStatus.OFFLINE);
         return deviceRepository.save(device);
+    }
+
+    public DeviceCreateResponse createDeviceWithFiles(DeviceCreateWithFileRequest request, 
+                                                   MultipartFile manualFile, 
+                                                   MultipartFile datasheetFile, 
+                                                   MultipartFile certificateFile, 
+                                                   String organizationId) throws IOException {
+        
+        // Create the device
+        Device device = new Device();
+        device.setId(UUID.randomUUID().toString());
+        device.setOrganizationId(organizationId);
+        device.setStatus(Device.DeviceStatus.OFFLINE);
+        
+        // Set basic device information
+        device.setName(request.getName());
+        device.setType(request.getType());
+        device.setLocation(request.getLocation());
+        device.setProtocol(request.getProtocol());
+        device.setFirmware(request.getFirmware());
+        device.setTags(request.getTags());
+        device.setConfig(request.getConfig());
+        
+        // Set device specifications
+        device.setManufacturer(request.getManufacturer());
+        device.setModel(request.getModel());
+        device.setSerialNumber(request.getSerialNumber());
+        device.setMacAddress(request.getMacAddress());
+        device.setIpAddress(request.getIpAddress());
+        device.setPort(request.getPort());
+        
+        // Set documentation URLs (if provided)
+        device.setManualUrl(request.getManualUrl());
+        device.setDatasheetUrl(request.getDatasheetUrl());
+        device.setCertificateUrl(request.getCertificateUrl());
+        
+        // Set additional metadata
+        device.setDescription(request.getDescription());
+        device.setInstallationNotes(request.getInstallationNotes());
+        device.setMaintenanceSchedule(request.getMaintenanceSchedule());
+        device.setWarrantyInfo(request.getWarrantyInfo());
+        
+        // Set connectivity details
+        device.setWifiSsid(request.getWifiSsid());
+        device.setMqttBroker(request.getMqttBroker());
+        device.setMqttTopic(request.getMqttTopic());
+        
+        // Set power and environmental details
+        device.setPowerSource(request.getPowerSource());
+        device.setPowerConsumption(request.getPowerConsumption());
+        device.setOperatingTemperatureMin(request.getOperatingTemperatureMin());
+        device.setOperatingTemperatureMax(request.getOperatingTemperatureMax());
+        device.setOperatingHumidityMin(request.getOperatingHumidityMin());
+        device.setOperatingHumidityMax(request.getOperatingHumidityMax());
+        
+        // Save the device first
+        Device savedDevice = deviceRepository.save(device);
+        
+        // Handle file uploads
+        boolean manualUploaded = false;
+        boolean datasheetUploaded = false;
+        boolean certificateUploaded = false;
+        
+        if (manualFile != null && !manualFile.isEmpty()) {
+            try {
+                String manualPath = fileStorageService.storeFile(manualFile, savedDevice.getId());
+                savedDevice.setManualUrl(manualPath);
+                manualUploaded = true;
+            } catch (Exception e) {
+                // Log error but continue with device creation
+                System.err.println("Failed to upload manual file: " + e.getMessage());
+            }
+        }
+        
+        if (datasheetFile != null && !datasheetFile.isEmpty()) {
+            try {
+                String datasheetPath = fileStorageService.storeFile(datasheetFile, savedDevice.getId());
+                savedDevice.setDatasheetUrl(datasheetPath);
+                datasheetUploaded = true;
+            } catch (Exception e) {
+                // Log error but continue with device creation
+                System.err.println("Failed to upload datasheet file: " + e.getMessage());
+            }
+        }
+        
+        if (certificateFile != null && !certificateFile.isEmpty()) {
+            try {
+                String certificatePath = fileStorageService.storeFile(certificateFile, savedDevice.getId());
+                savedDevice.setCertificateUrl(certificatePath);
+                certificateUploaded = true;
+            } catch (Exception e) {
+                // Log error but continue with device creation
+                System.err.println("Failed to upload certificate file: " + e.getMessage());
+            }
+        }
+        
+        // Update device with file paths if files were uploaded
+        if (manualUploaded || datasheetUploaded || certificateUploaded) {
+            savedDevice = deviceRepository.save(savedDevice);
+        }
+        
+        // Create response
+        DeviceCreateResponse response = new DeviceCreateResponse();
+        response.setId(savedDevice.getId());
+        response.setName(savedDevice.getName());
+        response.setType(savedDevice.getType());
+        response.setStatus(savedDevice.getStatus());
+        response.setLocation(savedDevice.getLocation());
+        response.setProtocol(savedDevice.getProtocol());
+        response.setFirmware(savedDevice.getFirmware());
+        response.setTags(savedDevice.getTags());
+        response.setConfig(savedDevice.getConfig());
+        response.setManufacturer(savedDevice.getManufacturer());
+        response.setModel(savedDevice.getModel());
+        response.setSerialNumber(savedDevice.getSerialNumber());
+        response.setMacAddress(savedDevice.getMacAddress());
+        response.setIpAddress(savedDevice.getIpAddress());
+        response.setPort(savedDevice.getPort());
+        response.setManualUrl(savedDevice.getManualUrl());
+        response.setDatasheetUrl(savedDevice.getDatasheetUrl());
+        response.setCertificateUrl(savedDevice.getCertificateUrl());
+        response.setDescription(savedDevice.getDescription());
+        response.setInstallationNotes(savedDevice.getInstallationNotes());
+        response.setMaintenanceSchedule(savedDevice.getMaintenanceSchedule());
+        response.setWarrantyInfo(savedDevice.getWarrantyInfo());
+        response.setWifiSsid(savedDevice.getWifiSsid());
+        response.setMqttBroker(savedDevice.getMqttBroker());
+        response.setMqttTopic(savedDevice.getMqttTopic());
+        response.setPowerSource(savedDevice.getPowerSource());
+        response.setPowerConsumption(savedDevice.getPowerConsumption());
+        response.setOperatingTemperatureMin(savedDevice.getOperatingTemperatureMin());
+        response.setOperatingTemperatureMax(savedDevice.getOperatingTemperatureMax());
+        response.setOperatingHumidityMin(savedDevice.getOperatingHumidityMin());
+        response.setOperatingHumidityMax(savedDevice.getOperatingHumidityMax());
+        response.setCreatedAt(savedDevice.getCreatedAt());
+        response.setUpdatedAt(savedDevice.getUpdatedAt());
+        response.setManualUploaded(manualUploaded);
+        response.setDatasheetUploaded(datasheetUploaded);
+        response.setCertificateUploaded(certificateUploaded);
+        
+        return response;
     }
 
     public Device updateDevice(String id, Device deviceDetails, String organizationId) {

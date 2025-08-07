@@ -1,23 +1,17 @@
 package com.iotplatform.model;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -31,68 +25,77 @@ import jakarta.validation.constraints.Size;
 @Entity
 @Table(name = "users")
 public class User implements UserDetails {
+    
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
     @NotBlank
     @Size(max = 50)
-    @Column(name = "first_name")
+    @Column(name = "first_name", nullable = false)
     private String firstName;
 
     @NotBlank
     @Size(max = 50)
-    @Column(name = "last_name")
+    @Column(name = "last_name", nullable = false)
     private String lastName;
 
-    @Size(max = 20)
-    @Column(name = "phone_number")
-    private String phoneNumber;
-
     @NotBlank
-    @Email
     @Size(max = 100)
-    @Column(unique = true)
+    @Email
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
 
     @NotBlank
     @Size(max = 120)
-    @JsonIgnore
+    @Column(name = "password", nullable = false)
     private String password;
 
     @Enumerated(EnumType.STRING)
-    private Role role;
+    @Column(name = "role", nullable = false)
+    private Role role = Role.USER;
 
-    private String avatar;
-
-    @Column(name = "organization_id")
+    @Column(name = "organization_id", nullable = false)
     private String organizationId;
 
-    @ElementCollection(fetch = FetchType.EAGER)
-    @Enumerated(EnumType.STRING)
-    private Set<Permission> permissions = new HashSet<>();
+    @Column(name = "enabled", nullable = false)
+    private boolean enabled = true;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
-    private boolean enabled = true;
+    // IoT Device Connection Settings
+    @Column(name = "mqtt_broker_url")
+    private String mqttBrokerUrl;
+
+    @Column(name = "mqtt_username")
+    private String mqttUsername;
+
+    @Column(name = "mqtt_password")
+    private String mqttPassword;
+
+    @Column(name = "api_key")
+    private String apiKey;
+
+    @Column(name = "webhook_url")
+    private String webhookUrl;
+
+    @Column(name = "connection_type")
+    @Enumerated(EnumType.STRING)
+    private ConnectionType connectionType = ConnectionType.MQTT;
 
     public enum Role {
-        SUPER_ADMIN, ORG_ADMIN, DEVICE_MANAGER, OPERATOR, VIEWER
+        ADMIN, USER
     }
 
-    public enum Permission {
-        DEVICE_READ, DEVICE_WRITE, DEVICE_DELETE,
-        RULE_READ, RULE_WRITE, RULE_DELETE,
-        USER_READ, USER_WRITE, USER_DELETE,
-        NOTIFICATION_READ, NOTIFICATION_WRITE,
-        KNOWLEDGE_READ, KNOWLEDGE_WRITE, KNOWLEDGE_DELETE
+    public enum ConnectionType {
+        MQTT, HTTP, WEBSOCKET, COAP
     }
 
     @PrePersist
@@ -106,14 +109,36 @@ public class User implements UserDetails {
         updatedAt = LocalDateTime.now();
     }
 
-    // UserDetails implementation
     @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
+    public Set<GrantedAuthority> getAuthorities() {
         Set<GrantedAuthority> authorities = new HashSet<>();
+        
+        // Add role-based authorities
         authorities.add(new SimpleGrantedAuthority("ROLE_" + role.name()));
-        authorities.addAll(permissions.stream()
-                .map(permission -> new SimpleGrantedAuthority(permission.name()))
-                .collect(Collectors.toSet()));
+        
+        // Add specific permissions based on role
+        if (role == Role.ADMIN) {
+            authorities.add(new SimpleGrantedAuthority("DEVICE_READ"));
+            authorities.add(new SimpleGrantedAuthority("DEVICE_WRITE"));
+            authorities.add(new SimpleGrantedAuthority("DEVICE_DELETE"));
+            authorities.add(new SimpleGrantedAuthority("RULE_READ"));
+            authorities.add(new SimpleGrantedAuthority("RULE_WRITE"));
+            authorities.add(new SimpleGrantedAuthority("RULE_DELETE"));
+            authorities.add(new SimpleGrantedAuthority("USER_READ"));
+            authorities.add(new SimpleGrantedAuthority("USER_WRITE"));
+            authorities.add(new SimpleGrantedAuthority("USER_DELETE"));
+            authorities.add(new SimpleGrantedAuthority("NOTIFICATION_READ"));
+            authorities.add(new SimpleGrantedAuthority("NOTIFICATION_WRITE"));
+            authorities.add(new SimpleGrantedAuthority("KNOWLEDGE_READ"));
+            authorities.add(new SimpleGrantedAuthority("KNOWLEDGE_WRITE"));
+            authorities.add(new SimpleGrantedAuthority("KNOWLEDGE_DELETE"));
+        } else {
+            authorities.add(new SimpleGrantedAuthority("DEVICE_READ"));
+            authorities.add(new SimpleGrantedAuthority("RULE_READ"));
+            authorities.add(new SimpleGrantedAuthority("NOTIFICATION_READ"));
+            authorities.add(new SimpleGrantedAuthority("KNOWLEDGE_READ"));
+        }
+        
         return authorities;
     }
 
@@ -152,32 +177,21 @@ public class User implements UserDetails {
     public String getLastName() { return lastName; }
     public void setLastName(String lastName) { this.lastName = lastName; }
 
-    public String getPhoneNumber() { return phoneNumber; }
-    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
-
-    // Helper method to get full name
-    public String getFullName() {
-        return firstName + " " + lastName;
-    }
+    public String getFullName() { return firstName + " " + lastName; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
-    @Override
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
 
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
 
-    public String getAvatar() { return avatar; }
-    public void setAvatar(String avatar) { this.avatar = avatar; }
-
     public String getOrganizationId() { return organizationId; }
     public void setOrganizationId(String organizationId) { this.organizationId = organizationId; }
 
-    public Set<Permission> getPermissions() { return permissions; }
-    public void setPermissions(Set<Permission> permissions) { this.permissions = permissions; }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
@@ -188,5 +202,22 @@ public class User implements UserDetails {
     public LocalDateTime getLastLogin() { return lastLogin; }
     public void setLastLogin(LocalDateTime lastLogin) { this.lastLogin = lastLogin; }
 
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    // IoT Connection Settings
+    public String getMqttBrokerUrl() { return mqttBrokerUrl; }
+    public void setMqttBrokerUrl(String mqttBrokerUrl) { this.mqttBrokerUrl = mqttBrokerUrl; }
+
+    public String getMqttUsername() { return mqttUsername; }
+    public void setMqttUsername(String mqttUsername) { this.mqttUsername = mqttUsername; }
+
+    public String getMqttPassword() { return mqttPassword; }
+    public void setMqttPassword(String mqttPassword) { this.mqttPassword = mqttPassword; }
+
+    public String getApiKey() { return apiKey; }
+    public void setApiKey(String apiKey) { this.apiKey = apiKey; }
+
+    public String getWebhookUrl() { return webhookUrl; }
+    public void setWebhookUrl(String webhookUrl) { this.webhookUrl = webhookUrl; }
+
+    public ConnectionType getConnectionType() { return connectionType; }
+    public void setConnectionType(ConnectionType connectionType) { this.connectionType = connectionType; }
 }

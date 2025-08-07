@@ -1,102 +1,359 @@
-import React, { useState } from 'react';
-import { Plus, Play, Pause, Trash2, Edit, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Play, Pause, Trash2, Edit, Zap, Filter, Search, AlertTriangle, CheckCircle, Info, RefreshCw } from 'lucide-react';
 import { RuleBuilder } from '../components/Rules/RuleBuilder';
 import { useIoT } from '../contexts/IoTContext';
+import { ruleAPI } from '../services/api';
+import { Rule } from '../types';
+import { LoadingSpinner, LoadingButton } from '../components/Loading/LoadingComponents';
 
 export const RulesSection: React.FC = () => {
-  const { rules } = useIoT();
+  const { rules, createRule, updateRule, deleteRule, toggleRule, refreshRules, loading } = useIoT();
   const [showRuleBuilder, setShowRuleBuilder] = useState(false);
-  const [editingRule, setEditingRule] = useState(null);
+  const [editingRule, setEditingRule] = useState<Rule | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedRules, setSelectedRules] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const filteredRules = rules.filter(rule => {
+    const matchesSearch = rule.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         rule.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || 
+                         (statusFilter === 'active' && rule.active) ||
+                         (statusFilter === 'inactive' && !rule.active);
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  const activeRulesCount = rules.filter(r => r.active).length;
+  const totalRulesCount = rules.length;
+
+  const handleRefreshRules = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshRules();
+    } catch (error) {
+      console.error('Failed to refresh rules:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleEditRule = (rule: Rule) => {
+    setEditingRule(rule);
+    setShowRuleBuilder(true);
+  };
+
+  const handleToggleRule = async (ruleId: string) => {
+    try {
+      await toggleRule(ruleId);
+    } catch (error) {
+      console.error('Failed to toggle rule:', error);
+    }
+  };
+
+  const handleDeleteRule = async (ruleId: string) => {
+    if (window.confirm('Are you sure you want to delete this rule? This action cannot be undone.')) {
+      try {
+        await deleteRule(ruleId);
+      } catch (error) {
+        console.error('Failed to delete rule:', error);
+      }
+    }
+  };
+
+  const handleSelectRule = (ruleId: string) => {
+    setSelectedRules(prev => 
+      prev.includes(ruleId) 
+        ? prev.filter(id => id !== ruleId)
+        : [...prev, ruleId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedRules.length === filteredRules.length) {
+      setSelectedRules([]);
+    } else {
+      setSelectedRules(filteredRules.map(r => r.id));
+    }
+  };
+
+  const handleBulkToggle = async (active: boolean) => {
+    setIsSubmitting(true);
+    try {
+      const promises = selectedRules.map(ruleId => {
+        const rule = rules.find(r => r.id === ruleId);
+        if (rule && rule.active !== active) {
+          return toggleRule(ruleId);
+        }
+        return Promise.resolve();
+      });
+      await Promise.all(promises);
+      setSelectedRules([]);
+    } catch (error) {
+      console.error('Failed to bulk toggle rules:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete ${selectedRules.length} rules? This action cannot be undone.`)) {
+      setIsSubmitting(true);
+      try {
+        const promises = selectedRules.map(ruleId => deleteRule(ruleId));
+        await Promise.all(promises);
+        setSelectedRules([]);
+      } catch (error) {
+        console.error('Failed to bulk delete rules:', error);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  const getRuleIcon = (rule: Rule) => {
+    if (!rule.active) return <Pause className="w-5 h-5 text-slate-400" />;
+    
+    // Determine icon based on rule conditions
+    const hasErrorCondition = rule.conditions.some(c => 
+      c.operator === '>' && c.metric === 'temperature' && parseFloat(c.value.toString()) > 30
+    );
+    
+    if (hasErrorCondition) return <AlertTriangle className="w-5 h-5 text-red-500" />;
+    return <Zap className="w-5 h-5 text-green-500" />;
+  };
+
+  const getRuleBadge = (rule: Rule) => {
+    if (!rule.active) return 'bg-slate-100 text-slate-600';
+    return 'bg-green-100 text-green-600';
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    return date.toLocaleDateString();
+  };
+
+  // Show loading screen while data is being fetched
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-8 bg-slate-200 rounded-lg w-48 animate-pulse mb-2"></div>
+            <div className="h-4 bg-slate-200 rounded-lg w-64 animate-pulse"></div>
+          </div>
+          <div className="h-10 bg-slate-200 rounded-lg w-32 animate-pulse"></div>
+        </div>
+        
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-slate-200">
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="h-6 bg-slate-200 rounded-lg w-40 animate-pulse"></div>
+                  <div className="h-4 bg-slate-200 rounded-lg w-20 animate-pulse"></div>
+                </div>
+                <div className="space-y-3">
+                  <div className="h-4 bg-slate-200 rounded-lg w-full animate-pulse"></div>
+                  <div className="h-4 bg-slate-200 rounded-lg w-2/3 animate-pulse"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Automation Rules</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <h1 className="text-3xl font-bold text-slate-800">Automation Rules</h1>
+          <p className="text-slate-600 mt-2">
             Create and manage automated responses to device events
           </p>
         </div>
         
-        <button 
-          onClick={() => setShowRuleBuilder(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Create Rule
-        </button>
+        <div className="flex gap-2">
+          <LoadingButton
+            loading={isRefreshing}
+            onClick={handleRefreshRules}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </LoadingButton>
+          <button 
+            onClick={() => setShowRuleBuilder(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg"
+          >
+            <Plus className="w-4 h-4" />
+            Create Rule
+          </button>
+        </div>
       </div>
+
+      {/* Filters */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-slate-200">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex-1 min-w-64">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search rules..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all"
+              />
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-4 text-sm text-slate-600">
+            <span>{activeRulesCount} active</span>
+            <span className="text-slate-400">•</span>
+            <span>{totalRulesCount} total</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Bulk Actions */}
+      {selectedRules.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-blue-800">
+              {selectedRules.length} rule{selectedRules.length !== 1 ? 's' : ''} selected
+            </span>
+            <div className="flex gap-2">
+              <LoadingButton
+                loading={isSubmitting}
+                onClick={() => handleBulkToggle(true)}
+                className="px-3 py-1 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Activate All
+              </LoadingButton>
+              <LoadingButton
+                loading={isSubmitting}
+                onClick={() => handleBulkToggle(false)}
+                className="px-3 py-1 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+              >
+                Deactivate All
+              </LoadingButton>
+              <LoadingButton
+                loading={isSubmitting}
+                onClick={handleBulkDelete}
+                className="px-3 py-1 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete All
+              </LoadingButton>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Rules List */}
       <div className="space-y-4">
-        {rules.map((rule) => (
-          <div key={rule.id} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+        {filteredRules.map((rule) => (
+          <div key={rule.id} className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-slate-200">
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-4 flex-1">
-                <div className={`p-2 rounded-lg ${
-                  rule.active ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-700'
-                }`}>
-                  <Zap className={`w-5 h-5 ${
-                    rule.active ? 'text-green-600 dark:text-green-400' : 'text-gray-400'
-                  }`} />
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedRules.includes(rule.id)}
+                    onChange={() => handleSelectRule(rule.id)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <div className={`p-2 rounded-lg ${
+                    rule.active ? 'bg-green-50' : 'bg-slate-100'
+                  }`}>
+                    {getRuleIcon(rule)}
+                  </div>
                 </div>
                 
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">{rule.name}</h3>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      rule.active 
-                        ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400'
-                        : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                    }`}>
+                    <h3 className="text-lg font-semibold text-slate-900">{rule.name}</h3>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRuleBadge(rule)}`}>
                       {rule.active ? 'Active' : 'Inactive'}
                     </span>
+                    {rule.lastTriggered && (
+                      <span className="text-xs text-slate-500">
+                        Last triggered: {formatDate(rule.lastTriggered)}
+                      </span>
+                    )}
                   </div>
                   
-                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
+                  <p className="text-slate-600 text-sm mb-3">
                     {rule.description}
                   </p>
                   
-                  <div className="flex items-center gap-6 text-sm">
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Conditions: {rule.conditions.length}
-                    </span>
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Actions: {rule.actions.length}
-                    </span>
-                    <span className="text-gray-500 dark:text-gray-400">
-                      Created: {new Date(rule.createdAt).toLocaleDateString()}
-                    </span>
-                    {rule.lastTriggered && (
-                      <span className="text-gray-500 dark:text-gray-400">
-                        Last triggered: {new Date(rule.lastTriggered).toLocaleDateString()}
-                      </span>
-                    )}
+                  <div className="flex items-center gap-6 text-sm text-slate-500">
+                    <span>Conditions: {rule.conditions.length}</span>
+                    <span>Actions: {rule.actions.length}</span>
+                    <span>Created: {new Date(rule.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
               </div>
               
               <div className="flex items-center gap-2 ml-4">
-                <button className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
+                <button 
+                  onClick={() => handleEditRule(rule)}
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  title="Edit rule"
+                >
                   <Edit className="w-4 h-4" />
                 </button>
                 
-                <button className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors">
+                <button 
+                  onClick={() => handleToggleRule(rule.id)}
+                  className={`p-2 rounded-lg transition-colors ${
+                    rule.active 
+                      ? 'text-yellow-600 hover:bg-yellow-50' 
+                      : 'text-green-600 hover:bg-green-50'
+                  }`}
+                  title={rule.active ? 'Deactivate rule' : 'Activate rule'}
+                >
                   {rule.active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 </button>
                 
-                <button className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                <button 
+                  onClick={() => handleDeleteRule(rule.id)}
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Delete rule"
+                >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
             
             {/* Rule Logic Preview */}
-            <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+            <div className="mt-4 p-3 bg-slate-50 rounded-lg">
               <div className="flex items-center gap-2 text-sm">
-                <span className="font-medium text-gray-700 dark:text-gray-300">IF:</span>
-                <span className="text-gray-600 dark:text-gray-400">
+                <span className="font-medium text-slate-700">IF:</span>
+                <span className="text-slate-600">
                   {rule.conditions.map((condition, index) => (
                     <span key={condition.id}>
                       {index > 0 && ` ${condition.logicOperator || 'AND'} `}
@@ -104,8 +361,8 @@ export const RulesSection: React.FC = () => {
                     </span>
                   ))}
                 </span>
-                <span className="font-medium text-gray-700 dark:text-gray-300 ml-4">THEN:</span>
-                <span className="text-gray-600 dark:text-gray-400">
+                <span className="font-medium text-slate-700 ml-4">THEN:</span>
+                <span className="text-slate-600">
                   {rule.actions.map(action => action.type).join(', ')}
                 </span>
               </div>
@@ -114,16 +371,19 @@ export const RulesSection: React.FC = () => {
         ))}
       </div>
 
-      {rules.length === 0 && (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-          <Zap className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No rules yet</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Create your first automation rule to get started with intelligent device management.
+      {filteredRules.length === 0 && (
+        <div className="text-center py-12 bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200">
+          <Zap className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-slate-800 mb-2">No rules found</h3>
+          <p className="text-slate-600 mb-6">
+            {rules.length === 0 
+              ? "Create your first automation rule to get started with intelligent device management."
+              : "No rules match your current search criteria."
+            }
           </p>
           <button 
             onClick={() => setShowRuleBuilder(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all"
           >
             Create First Rule
           </button>
@@ -137,7 +397,7 @@ export const RulesSection: React.FC = () => {
           setShowRuleBuilder(false);
           setEditingRule(null);
         }}
-        rule={editingRule}
+        rule={editingRule || undefined}
       />
     </div>
   );

@@ -1,11 +1,9 @@
 package com.iotplatform.service;
 
 import java.time.LocalDateTime;
-import java.util.Set;
+import java.util.Optional;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -24,92 +22,102 @@ import com.iotplatform.security.JwtTokenProvider;
 @Service
 public class AuthService {
 
-    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
     @Autowired
-    AuthenticationManager authenticationManager;
+    private JwtTokenProvider jwtTokenProvider;
 
     @Autowired
-    UserRepository userRepository;
+    private UserRepository userRepository;
 
     @Autowired
-    PasswordEncoder encoder;
+    private PasswordEncoder passwordEncoder;
 
-    @Autowired
-    JwtTokenProvider jwtTokenProvider;
-
-    public JwtResponse authenticateUser(LoginRequest loginRequest) {
-        logger.info("Authentication attempt for user: {}", loginRequest.getEmail());
-        
+    public JwtResponse login(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
+            new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
+        );
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtTokenProvider.generateToken(authentication);
 
         User user = (User) authentication.getPrincipal();
-        
-        // Update last login
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
-        logger.info("User {} authenticated successfully", user.getEmail());
-        return new JwtResponse(jwt, user.getId(), user.getFullName(), user.getEmail(), 
-                              user.getRole().name(), user.getOrganizationId());
+        return new JwtResponse(jwt, user.getId(), user.getFirstName() + " " + user.getLastName(), user.getEmail(), user.getRole().name(), user.getOrganizationId());
     }
 
-    public User registerUser(SignupRequest signUpRequest) {
-        logger.info("User registration attempt for email: {}", signUpRequest.getEmail());
-        
-        if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            logger.warn("Registration failed: Email {} is already taken", signUpRequest.getEmail());
-            throw new RuntimeException("Error: Email is already taken!");
+    public User signup(SignupRequest signupRequest) {
+        if (userRepository.existsByEmail(signupRequest.getEmail())) {
+            throw new RuntimeException("Email is already in use!");
         }
 
-        // Create new user's account
         User user = new User();
         user.setId(UUID.randomUUID().toString());
-        user.setFirstName(signUpRequest.getFirstName());
-        user.setLastName(signUpRequest.getLastName());
-        user.setEmail(signUpRequest.getEmail());
-        user.setPassword(encoder.encode(signUpRequest.getPassword()));
-        user.setPhoneNumber(signUpRequest.getPhoneNumber());
-        user.setRole(User.Role.valueOf(signUpRequest.getRole().toUpperCase()));
-        user.setOrganizationId(signUpRequest.getOrganizationId());
-        user.setPermissions(getDefaultPermissions(user.getRole()));
+        user.setFirstName(signupRequest.getFirstName());
+        user.setLastName(signupRequest.getLastName());
+        user.setEmail(signupRequest.getEmail());
+        user.setPassword(passwordEncoder.encode(signupRequest.getPassword()));
+        
+        // Set role based on request, default to USER
+        user.setRole(signupRequest.getRole());
+        
+        // Generate organization ID (in a real app, this might come from the signup process)
+        user.setOrganizationId(UUID.randomUUID().toString());
+        
+        // Set default IoT connection settings
+        user.setConnectionType(User.ConnectionType.MQTT);
+        user.setMqttBrokerUrl("mqtt.broker.com");
+        user.setMqttUsername("iot_user");
+        user.setMqttPassword("iot_password");
+        user.setApiKey(UUID.randomUUID().toString());
+        user.setWebhookUrl("https://webhook.site/your-unique-url");
 
-        User savedUser = userRepository.save(user);
-        logger.info("User {} registered successfully with ID: {}", signUpRequest.getEmail(), savedUser.getId());
-        return savedUser;
+        return userRepository.save(user);
     }
 
-    private Set<User.Permission> getDefaultPermissions(User.Role role) {
-        return switch (role) {
-            case SUPER_ADMIN -> Set.of(User.Permission.values());
-            case ORG_ADMIN -> Set.of(
-                User.Permission.DEVICE_READ, User.Permission.DEVICE_WRITE, User.Permission.DEVICE_DELETE,
-                User.Permission.RULE_READ, User.Permission.RULE_WRITE, User.Permission.RULE_DELETE,
-                User.Permission.USER_READ, User.Permission.USER_WRITE, User.Permission.USER_DELETE,
-                User.Permission.NOTIFICATION_READ, User.Permission.NOTIFICATION_WRITE,
-                User.Permission.KNOWLEDGE_READ, User.Permission.KNOWLEDGE_WRITE, User.Permission.KNOWLEDGE_DELETE
-            );
-            case DEVICE_MANAGER -> Set.of(
-                User.Permission.DEVICE_READ, User.Permission.DEVICE_WRITE,
-                User.Permission.RULE_READ, User.Permission.RULE_WRITE,
-                User.Permission.NOTIFICATION_READ,
-                User.Permission.KNOWLEDGE_READ
-            );
-            case OPERATOR -> Set.of(
-                User.Permission.DEVICE_READ,
-                User.Permission.RULE_READ,
-                User.Permission.NOTIFICATION_READ,
-                User.Permission.KNOWLEDGE_READ
-            );
-            case VIEWER -> Set.of(
-                User.Permission.DEVICE_READ,
-                User.Permission.NOTIFICATION_READ,
-                User.Permission.KNOWLEDGE_READ
-            );
-        };
+    public Optional<User> getUserByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    public Optional<User> getUserById(String id) {
+        return userRepository.findById(id);
+    }
+
+    public boolean isAdmin(User user) {
+        return user.getRole() == User.Role.ADMIN;
+    }
+
+    public boolean isUser(User user) {
+        return user.getRole() == User.Role.USER;
+    }
+
+    public boolean hasPermission(User user, String permission) {
+        if (isAdmin(user)) {
+            return true; // Admin has all permissions
+        }
+        
+        // Check specific permissions for USER role
+        switch (permission) {
+            case "DEVICE_READ":
+            case "RULE_READ":
+            case "NOTIFICATION_READ":
+            case "KNOWLEDGE_READ":
+                return true; // USER can read devices, rules, notifications, and knowledge
+            case "DEVICE_WRITE":
+            case "DEVICE_DELETE":
+            case "RULE_WRITE":
+            case "RULE_DELETE":
+            case "USER_WRITE":
+            case "USER_DELETE":
+            case "NOTIFICATION_WRITE":
+            case "KNOWLEDGE_WRITE":
+            case "KNOWLEDGE_DELETE":
+                return false; // USER cannot perform write/delete actions
+            default:
+                return false;
+        }
     }
 }

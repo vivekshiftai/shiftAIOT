@@ -2,158 +2,169 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
 import { User } from '../types';
 
-interface SignupData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  phoneNumber: string;
-}
-
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (data: SignupData) => Promise<void>;
-  logout: () => void;
-  handleAuthFailure: () => void;
   isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (data: { firstName: string; lastName: string; email: string; password: string; role: 'ADMIN' | 'USER' }) => Promise<void>;
+  logout: () => void;
+  isAdmin: () => boolean;
+  isUser: () => boolean;
+  hasPermission: (permission: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
 
-// Mock user data
-const mockUser: User = {
-  id: '1',
-  name: 'John Smith',
-  email: 'john.smith@iotplatform.com',
-  role: 'org_admin',
-  avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face',
-  lastLogin: '2025-01-13T10:30:00Z',
-  permissions: ['device:read', 'device:write', 'rule:read', 'rule:write', 'user:read']
-};
+interface AuthProviderProps {
+  children: React.ReactNode;
+}
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Check for existing session on mount
   useEffect(() => {
-    // Check for existing session
-    const savedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
-    
-    if (savedUser && token) {
-      try {
-        // Validate token by making a test request
-        // For now, we'll just check if token exists
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        // If token is invalid, clear storage and redirect to login
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+    const checkAuth = () => {
+      console.log('AuthProvider - Checking authentication status');
+      
+      const savedUser = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+      
+      if (savedUser && token) {
+        try {
+          const parsedUser = JSON.parse(savedUser);
+          console.log('AuthProvider - Found saved user:', parsedUser.email);
+          setUser(parsedUser);
+        } catch (error) {
+          console.error('AuthProvider - Failed to parse saved user:', error);
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+          setUser(null);
+        }
+      } else {
+        console.log('AuthProvider - No saved session found');
         setUser(null);
       }
-    } else {
-      // No saved session, ensure user is null
-      setUser(null);
-    }
-    setIsLoading(false);
+      
+      setIsLoading(false);
+    };
+
+    checkAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
-    setIsLoading(true);
+    console.log('AuthProvider - Login attempt for:', email);
     
     try {
       const response = await authAPI.login({ email, password });
       const { token, id, name, email: userEmail, role, organizationId } = response.data;
       
-      const userData: User = {
+      const user: User = {
         id,
-        name,
+        firstName: name.split(' ')[0],
+        lastName: name.split(' ').slice(1).join(' '),
         email: userEmail,
-        role: role.toLowerCase(),
+        role: role as 'ADMIN' | 'USER',
         organizationId,
-        avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=100&h=100&fit=crop&crop=face',
-        lastLogin: new Date().toISOString(),
-        permissions: ['device:read', 'device:write', 'rule:read', 'rule:write', 'user:read']
+        enabled: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString()
       };
       
+      console.log('AuthProvider - Login successful, user role:', user.role);
+      
       localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-    } catch (error: any) {
-      const errorMessage = error.response?.data || 'Login failed';
-      // Extract the actual error message from the response
-      const message = typeof errorMessage === 'string' && errorMessage.includes('Error: ') 
-        ? errorMessage.replace('Error: ', '') 
-        : errorMessage;
-      
-      // Clear any existing invalid tokens
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
-      
-      throw new Error(message);
-    } finally {
-      setIsLoading(false);
+      localStorage.setItem('user', JSON.stringify(user));
+      setUser(user);
+    } catch (error) {
+      console.error('AuthProvider - Login failed:', error);
+      throw error;
     }
   };
 
-  const signup = async (data: SignupData) => {
-    setIsLoading(true);
+  const signup = async (data: { firstName: string; lastName: string; email: string; password: string; role: 'ADMIN' | 'USER' }) => {
+    console.log('AuthProvider - Signup attempt for:', data.email, 'role:', data.role);
     
     try {
-      const response = await authAPI.register({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        password: data.password,
-        phoneNumber: data.phoneNumber,
-        role: 'VIEWER',
-        organizationId: 'default'
-      });
+      const response = await authAPI.register(data);
+      const user = response.data;
       
-      // After successful signup, automatically log in the user
-      await login(data.email, data.password);
-    } catch (error: any) {
-      const errorMessage = error.response?.data || 'Signup failed';
-      // Extract the actual error message from the response
-      const message = typeof errorMessage === 'string' && errorMessage.includes('Error: ') 
-        ? errorMessage.replace('Error: ', '') 
-        : errorMessage;
-      throw new Error(message);
-    } finally {
-      setIsLoading(false);
+      console.log('AuthProvider - Signup successful, user role:', user.role);
+      
+      // Don't automatically log in after signup - user should login separately
+      setUser(null);
+    } catch (error) {
+      console.error('AuthProvider - Signup failed:', error);
+      throw error;
     }
   };
 
   const logout = () => {
-    setUser(null);
+    console.log('AuthProvider - Logging out user');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    // Redirect to login page
-    window.history.pushState({}, '', '/login');
-    window.location.reload();
+    setUser(null);
+    window.location.href = '/login';
   };
 
-  const handleAuthFailure = () => {
-    setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    // Redirect to login page with error message
-    window.history.pushState({}, '', '/login');
-    window.location.reload();
+  const isAdmin = () => {
+    return user?.role === 'ADMIN';
+  };
+
+  const isUser = () => {
+    return user?.role === 'USER';
+  };
+
+  const hasPermission = (permission: string): boolean => {
+    if (!user) return false;
+    
+    if (isAdmin()) {
+      return true; // Admin has all permissions
+    }
+    
+    // Check specific permissions for USER role
+            switch (permission) {
+          case 'DEVICE_READ':
+          case 'RULE_READ':
+          case 'NOTIFICATION_READ':
+          case 'KNOWLEDGE_READ':
+            return true; // USER can read devices, rules, notifications, and knowledge
+          case 'DEVICE_WRITE':
+          case 'DEVICE_DELETE':
+          case 'RULE_WRITE':
+          case 'RULE_DELETE':
+          case 'USER_WRITE':
+          case 'USER_DELETE':
+          case 'NOTIFICATION_WRITE':
+          case 'KNOWLEDGE_WRITE':
+          case 'KNOWLEDGE_DELETE':
+            return false; // USER cannot perform write/delete actions
+          default:
+            return false;
+        }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, handleAuthFailure, isLoading }}>
+    <AuthContext.Provider value={{
+      user,
+      isLoading,
+      login,
+      signup,
+      logout,
+      isAdmin,
+      isUser,
+      hasPermission
+    }}>
       {children}
     </AuthContext.Provider>
   );

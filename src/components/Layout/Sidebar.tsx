@@ -1,10 +1,10 @@
 import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   Home, 
   Cpu, 
   BarChart3, 
   Settings, 
-  Zap, 
   Bell, 
   Users, 
   BookOpen,
@@ -18,14 +18,13 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: Home },
-  { id: 'devices', label: 'Devices', icon: Cpu },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'rules', label: 'Rules', icon: Zap },
-  { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'users', label: 'Users', icon: Users },
-  { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/dashboard' },
+  { id: 'devices', label: 'Devices', icon: Cpu, path: '/devices' },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
+  { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen, path: '/knowledge' },
+  { id: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
+  { id: 'users', label: 'Users', icon: Users, path: '/users' },
+  { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -33,6 +32,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSectionChange, 
   collapsed 
 }) => {
+  const location = useLocation();
+
   return (
     <aside className={`bg-gradient-to-b from-slate-900 via-blue-900 to-indigo-900 text-white transition-all duration-300 ${
       collapsed ? 'w-16' : 'w-64'
@@ -55,11 +56,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeSection === item.id;
+            const isActive = location.pathname === item.path || (location.pathname === '/' && item.path === '/dashboard');
             
             return (
               <li key={item.id}>
-                <button
+                <Link
+                  to={item.path}
                   onClick={() => onSectionChange(item.id)}
                   className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 ${
                     isActive 
@@ -74,7 +76,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       {isActive && <ChevronRight className="w-4 h-4" />}
                     </>
                   )}
-                </button>
+                </Link>
               </li>
             );
           })}

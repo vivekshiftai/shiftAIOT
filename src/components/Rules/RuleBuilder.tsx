@@ -7,19 +7,27 @@ interface RuleBuilderProps {
   isOpen: boolean;
   onClose: () => void;
   rule?: Rule;
+  deviceId?: string;
+  onSubmit?: (ruleData: Omit<Rule, 'id' | 'createdAt'>) => Promise<void>;
 }
 
-export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule }) => {
+export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule, deviceId, onSubmit }) => {
   const { devices, createRule } = useIoT();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    active: boolean;
+    conditions: RuleCondition[];
+    actions: RuleAction[];
+  }>({
     name: rule?.name || '',
     description: rule?.description || '',
-    active: rule?.active || true,
+    active: rule?.active ?? true,
     conditions: rule?.conditions || [
       {
         id: '1',
         type: 'telemetry_threshold' as const,
-        deviceId: '',
+        deviceId: deviceId || '',
         metric: 'temperature',
         operator: '>' as const,
         value: 30
@@ -40,7 +48,7 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule 
     const newCondition: RuleCondition = {
       id: Date.now().toString(),
       type: 'telemetry_threshold',
-      deviceId: '',
+      deviceId: deviceId || '',
       metric: 'temperature',
       operator: '>',
       value: 0,
@@ -80,16 +88,32 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule 
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    createRule({
-      name: formData.name,
-      description: formData.description,
-      active: formData.active,
-      conditions: formData.conditions,
-      actions: formData.actions
-    });
-    onClose();
+    try {
+      if (onSubmit) {
+        // Use custom onSubmit if provided (for device-specific rules)
+        await onSubmit({
+          name: formData.name,
+          description: formData.description,
+          active: formData.active,
+          conditions: formData.conditions,
+          actions: formData.actions
+        });
+      } else {
+        // Use default createRule from context
+        await createRule({
+          name: formData.name,
+          description: formData.description,
+          active: formData.active,
+          conditions: formData.conditions,
+          actions: formData.actions
+        });
+      }
+      onClose();
+    } catch (error) {
+      console.error('Failed to create rule:', error);
+    }
   };
 
   return (
