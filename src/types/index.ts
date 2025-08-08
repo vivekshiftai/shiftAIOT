@@ -22,7 +22,7 @@ export interface Device {
   id: string;
   name: string;
   type: 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER';
-  status: 'online' | 'offline' | 'warning' | 'error';
+  status: 'ONLINE' | 'OFFLINE' | 'WARNING' | 'ERROR';
   location: string;
   lastSeen: string;
   batteryLevel?: number;
@@ -113,14 +113,15 @@ export interface RuleAction {
 }
 
 export interface Notification {
-  id: string;
+  id?: string;
   title: string;
   message: string;
-  type: 'info' | 'warning' | 'error' | 'success';
-  timestamp: string;
+  type: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
   read: boolean;
   userId: string;
   deviceId?: string;
+  organizationId?: string;
+  createdAt?: string;
 }
 
 export interface LoginRequest {

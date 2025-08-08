@@ -1,4 +1,5 @@
 import { Notification, Device, Rule, TelemetryData } from '../types';
+import { notificationAPI } from './api';
 
 export interface NotificationEvent {
   type: 'device_added' | 'device_assigned' | 'device_offline' | 'device_online' | 'rule_triggered' | 'temperature_alert' | 'battery_low' | 'maintenance_due';
@@ -36,21 +37,31 @@ class NotificationService {
   }
 
   // Create a new notification
-  createNotification(event: NotificationEvent): Notification {
-    const notification: Notification = {
-      id: `notification_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+  async createNotification(event: NotificationEvent): Promise<Notification> {
+    const notification: any = {
       title: this.getNotificationTitle(event),
       message: this.getNotificationMessage(event),
       type: this.getNotificationType(event),
-      timestamp: new Date().toISOString(),
       read: false,
-      userId: event.userId,
-      deviceId: event.deviceId
+      userId: event.userId || '1', // Default user ID if not provided
+      deviceId: event.deviceId,
+      organizationId: '1' // Default organization ID
     };
 
-    this.notifications.unshift(notification);
-    this.notifyListeners();
-    return notification;
+    try {
+      // Store notification in database
+      const response = await notificationAPI.create(notification);
+      const savedNotification = response.data;
+      
+      // Add to local state
+      this.notifications.unshift(savedNotification);
+      this.notifyListeners();
+      return savedNotification;
+    } catch (error) {
+      console.error('Failed to save notification to database:', error);
+      // Don't create fallback notification - let the error propagate
+      throw error;
+    }
   }
 
   // Get notification title based on event type
@@ -107,17 +118,17 @@ class NotificationService {
       case 'device_offline':
       case 'temperature_alert':
       case 'battery_low':
-        return 'error';
+        return 'ERROR';
       case 'maintenance_due':
-        return 'warning';
+        return 'WARNING';
       case 'device_added':
       case 'device_assigned':
       case 'device_online':
-        return 'success';
+        return 'SUCCESS';
       case 'rule_triggered':
-        return 'info';
+        return 'INFO';
       default:
-        return 'info';
+        return 'INFO';
     }
   }
 
@@ -135,6 +146,19 @@ class NotificationService {
     return this.notifications;
   }
 
+  // Load notifications from database
+  async loadFromDatabase(): Promise<void> {
+    try {
+      const response = await notificationAPI.getAll();
+      this.notifications = response.data;
+      this.notifyListeners();
+    } catch (error) {
+      console.error('Failed to load notifications from database:', error);
+      this.notifications = [];
+      this.notifyListeners();
+    }
+  }
+
   // Get unread notifications
   getUnread(): Notification[] {
     return this.notifications.filter(n => !n.read);
@@ -146,23 +170,10 @@ class NotificationService {
     this.notifyListeners();
   }
 
-  // Check rules and trigger notifications
+  // Check rules and trigger notifications (disabled to prevent unwanted notifications)
   checkRules(devices: Device[], rules: Rule[], telemetryData: TelemetryData[], userId: string) {
-    rules.forEach(rule => {
-      if (!rule.active) return;
-
-      const triggered = this.evaluateRule(rule, devices, telemetryData);
-      if (triggered) {
-        this.createNotification({
-          type: 'rule_triggered',
-          userId,
-          data: {
-            ruleName: rule.name,
-            message: rule.description
-          }
-        });
-      }
-    });
+    // Disabled automatic rule checking to prevent unwanted notifications
+    console.log('Rule checking disabled to prevent unwanted notifications');
   }
 
   // Evaluate a rule against current device and telemetry data
@@ -226,8 +237,8 @@ class NotificationService {
   }
 
   // Device event notifications
-  onDeviceAdded(device: Device, userId: string) {
-    this.createNotification({
+  async onDeviceAdded(device: Device, userId: string) {
+    await this.createNotification({
       type: 'device_added',
       deviceId: device.id,
       deviceName: device.name,
@@ -235,8 +246,8 @@ class NotificationService {
     });
   }
 
-  onDeviceAssigned(device: Device, userId: string) {
-    this.createNotification({
+  async onDeviceAssigned(device: Device, userId: string) {
+    await this.createNotification({
       type: 'device_assigned',
       deviceId: device.id,
       deviceName: device.name,
@@ -244,16 +255,16 @@ class NotificationService {
     });
   }
 
-  onDeviceStatusChange(device: Device, userId: string) {
-    if (device.status === 'offline') {
-      this.createNotification({
+  async onDeviceStatusChange(device: Device, userId: string) {
+    if (device.status === 'OFFLINE') {
+      await this.createNotification({
         type: 'device_offline',
         deviceId: device.id,
         deviceName: device.name,
         userId
       });
-    } else if (device.status === 'online') {
-      this.createNotification({
+    } else if (device.status === 'ONLINE') {
+      await this.createNotification({
         type: 'device_online',
         deviceId: device.id,
         deviceName: device.name,
@@ -262,8 +273,8 @@ class NotificationService {
     }
   }
 
-  onTemperatureAlert(device: Device, temperature: number, userId: string) {
-    this.createNotification({
+  async onTemperatureAlert(device: Device, temperature: number, userId: string) {
+    await this.createNotification({
       type: 'temperature_alert',
       deviceId: device.id,
       deviceName: device.name,
@@ -272,8 +283,8 @@ class NotificationService {
     });
   }
 
-  onBatteryLow(device: Device, batteryLevel: number, userId: string) {
-    this.createNotification({
+  async onBatteryLow(device: Device, batteryLevel: number, userId: string) {
+    await this.createNotification({
       type: 'battery_low',
       deviceId: device.id,
       deviceName: device.name,
@@ -282,8 +293,8 @@ class NotificationService {
     });
   }
 
-  onMaintenanceDue(device: Device, userId: string) {
-    this.createNotification({
+  async onMaintenanceDue(device: Device, userId: string) {
+    await this.createNotification({
       type: 'maintenance_due',
       deviceId: device.id,
       deviceName: device.name,

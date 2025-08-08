@@ -47,21 +47,34 @@ export const DeviceDetailsSection: React.FC = () => {
   }
 
   const statusConfig = {
-    online: { icon: Wifi, color: 'text-green-600', bg: 'bg-green-50', label: 'Online' },
-    offline: { icon: WifiOff, color: 'text-slate-600', bg: 'bg-slate-50', label: 'Offline' },
-    warning: { icon: Thermometer, color: 'text-yellow-600', bg: 'bg-yellow-50', label: 'Warning' },
-    error: { icon: Cpu, color: 'text-red-600', bg: 'bg-red-50', label: 'Error' }
+    ONLINE: { icon: Wifi, color: 'text-green-600', bg: 'bg-green-50', label: 'Online' },
+    OFFLINE: { icon: WifiOff, color: 'text-slate-600', bg: 'bg-slate-50', label: 'Offline' },
+    WARNING: { icon: Thermometer, color: 'text-yellow-600', bg: 'bg-yellow-50', label: 'Warning' },
+    ERROR: { icon: Cpu, color: 'text-red-600', bg: 'bg-red-50', label: 'Error' }
   };
 
   const deviceTypeConfig = {
-      SENSOR: { icon: Thermometer, label: 'Sensor' },
-  ACTUATOR: { icon: Cpu, label: 'Actuator' },
-  GATEWAY: { icon: Wifi, label: 'Gateway' },
-  CONTROLLER: { icon: Cpu, label: 'Controller' }
+    SENSOR: { icon: Thermometer, label: 'Sensor' },
+    ACTUATOR: { icon: Cpu, label: 'Actuator' },
+    GATEWAY: { icon: Wifi, label: 'Gateway' },
+    CONTROLLER: { icon: Cpu, label: 'Controller' }
   };
 
-  const statusInfo = statusConfig[device.status];
-  const deviceTypeInfo = deviceTypeConfig[device.type];
+  // Helper functions for case-insensitive matching
+  const getDeviceTypeConfig = (deviceType: string) => {
+    if (!deviceType) return deviceTypeConfig.SENSOR;
+    const upperType = deviceType.toUpperCase();
+    return deviceTypeConfig[upperType as keyof typeof deviceTypeConfig] || deviceTypeConfig.SENSOR;
+  };
+
+  const getStatusConfig = (status: string) => {
+    if (!status) return statusConfig.OFFLINE;
+    const upperStatus = status.toUpperCase();
+    return statusConfig[upperStatus as keyof typeof statusConfig] || statusConfig.OFFLINE;
+  };
+
+  const statusInfo = getStatusConfig(device.status);
+  const deviceTypeInfo = getDeviceTypeConfig(device.type);
   const StatusIcon = statusInfo.icon;
   const TypeIcon = deviceTypeInfo.icon;
 
@@ -352,7 +365,7 @@ export const DeviceDetailsSection: React.FC = () => {
             <div className="space-y-3">
               {hasPermission('DEVICE_WRITE') && (
                 <button
-                  onClick={() => updateDeviceStatus(device.id, device.status === 'online' ? 'offline' : 'online')}
+                  onClick={() => updateDeviceStatus(device.id, device.status === 'ONLINE' ? 'OFFLINE' : 'ONLINE')}
                   className="w-full flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all"
                 >
                   <StatusIcon className="w-4 h-4" />

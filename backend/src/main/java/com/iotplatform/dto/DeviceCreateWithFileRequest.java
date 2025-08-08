@@ -3,6 +3,7 @@ package com.iotplatform.dto;
 import java.util.List;
 import java.util.Map;
 
+import com.iotplatform.model.Device;
 import com.iotplatform.model.Device.DeviceType;
 import com.iotplatform.model.Device.Protocol;
 
@@ -28,6 +29,9 @@ public class DeviceCreateWithFileRequest {
     
     @Size(max = 50, message = "Firmware version must be less than 50 characters")
     private String firmware;
+    
+    // Status field
+    private Device.DeviceStatus status;
     
     private List<String> tags;
     
@@ -88,6 +92,9 @@ public class DeviceCreateWithFileRequest {
     
     public String getFirmware() { return firmware; }
     public void setFirmware(String firmware) { this.firmware = firmware; }
+    
+    public Device.DeviceStatus getStatus() { return status; }
+    public void setStatus(Device.DeviceStatus status) { this.status = status; }
     
     public List<String> getTags() { return tags; }
     public void setTags(List<String> tags) { this.tags = tags; }

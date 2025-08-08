@@ -44,7 +44,28 @@ CREATE TABLE IF NOT EXISTS devices (
     temperature DOUBLE PRECISION,
     humidity DOUBLE PRECISION,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Additional device fields
+    manufacturer VARCHAR(100),
+    model VARCHAR(100),
+    serial_number VARCHAR(100),
+    mac_address VARCHAR(17),
+    manual_url VARCHAR(500),
+    datasheet_url VARCHAR(500),
+    certificate_url VARCHAR(500),
+    description VARCHAR(1000),
+    installation_notes VARCHAR(2000),
+    maintenance_schedule VARCHAR(500),
+    warranty_info VARCHAR(500),
+    wifi_ssid VARCHAR(100),
+    mqtt_broker VARCHAR(100),
+    mqtt_topic VARCHAR(100),
+    power_source VARCHAR(50),
+    power_consumption DOUBLE PRECISION,
+    operating_temperature_min DOUBLE PRECISION,
+    operating_temperature_max DOUBLE PRECISION,
+    operating_humidity_min DOUBLE PRECISION,
+    operating_humidity_max DOUBLE PRECISION
 );
 
 -- Device Tags table
@@ -149,7 +170,7 @@ SELECT
     'User',
     'admin@shiftaiot.com',
     '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: admin123
-    'ORG_ADMIN',
+    'ADMIN',
     'default'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@shiftaiot.com');
 
@@ -264,3 +285,15 @@ SELECT
     'NOTIFICATION',
     '{"notificationType": "EMAIL", "recipients": ["admin@shiftaiot.com"], "subject": "High Temperature Alert", "message": "Temperature has exceeded 30°C"}'
 WHERE NOT EXISTS (SELECT 1 FROM rule_actions WHERE id = 'action-001');
+
+-- Insert default user account for testing
+INSERT INTO users (id, first_name, last_name, email, password, role, organization_id)
+SELECT 
+    'user-001',
+    'Test',
+    'User',
+    'user@shiftaiot.com',
+    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: user123
+    'USER',
+    'default'
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'user@shiftaiot.com');

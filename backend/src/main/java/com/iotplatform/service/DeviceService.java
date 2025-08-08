@@ -2,10 +2,14 @@ package com.iotplatform.service;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,6 +24,8 @@ import com.iotplatform.repository.DeviceRepository;
 @Service
 public class DeviceService {
 
+    private static final Logger logger = LoggerFactory.getLogger(DeviceService.class);
+
     @Autowired
     private DeviceRepository deviceRepository;
 
@@ -31,9 +37,15 @@ public class DeviceService {
 
     @Autowired
     private FileStorageService fileStorageService;
+    
+    @Autowired
+    private PDFRAGService pdfRAGService;
 
     public List<Device> getAllDevices(String organizationId) {
-        return deviceRepository.findByOrganizationId(organizationId);
+        logger.info("DeviceService.getAllDevices called with organizationId: {}", organizationId);
+        List<Device> devices = deviceRepository.findByOrganizationId(organizationId);
+        logger.info("DeviceService.getAllDevices found {} devices for organization: {}", devices.size(), organizationId);
+        return devices;
     }
 
     public List<Device> getDevicesByStatus(String organizationId, Device.DeviceStatus status) {
@@ -55,7 +67,10 @@ public class DeviceService {
     public Device createDevice(Device device, String organizationId) {
         device.setId(UUID.randomUUID().toString());
         device.setOrganizationId(organizationId);
-        device.setStatus(Device.DeviceStatus.OFFLINE);
+        // Use the status from the device if provided, otherwise default to ONLINE
+        if (device.getStatus() == null) {
+            device.setStatus(Device.DeviceStatus.ONLINE);
+        }
         return deviceRepository.save(device);
     }
 
@@ -69,7 +84,12 @@ public class DeviceService {
         Device device = new Device();
         device.setId(UUID.randomUUID().toString());
         device.setOrganizationId(organizationId);
-        device.setStatus(Device.DeviceStatus.OFFLINE);
+        // Use the status from the request if provided, otherwise default to ONLINE
+        if (request.getStatus() != null) {
+            device.setStatus(request.getStatus());
+        } else {
+            device.setStatus(Device.DeviceStatus.ONLINE);
+        }
         
         // Set basic device information
         device.setName(request.getName());
@@ -198,6 +218,40 @@ public class DeviceService {
         response.setCertificateUploaded(certificateUploaded);
         
         return response;
+    }
+    
+    public Map<String, Object> processPDFWithRAG(MultipartFile pdfFile, String deviceId) {
+        try {
+            // Upload PDF to RAG system
+            Map<String, Object> uploadResult = pdfRAGService.uploadPDF(pdfFile, deviceId);
+            
+            if (!(Boolean) uploadResult.get("success")) {
+                return uploadResult;
+            }
+            
+            // Generate maintenance rules
+            Map<String, Object> maintenanceRules = pdfRAGService.generateMaintenanceRules(deviceId, null);
+            
+            // Generate device specifications
+            Map<String, Object> deviceSpecs = pdfRAGService.generateDeviceSpecifications(deviceId, null);
+            
+            // Combine results
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("document_id", uploadResult.get("document_id"));
+            result.put("extracted_text_length", uploadResult.get("extracted_text_length"));
+            result.put("maintenance_rules", maintenanceRules);
+            result.put("device_specifications", deviceSpecs);
+            
+            return result;
+            
+        } catch (Exception e) {
+            logger.error("Error processing PDF with RAG", e);
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("message", "Error processing PDF with RAG: " + e.getMessage());
+            return errorResult;
+        }
     }
 
     public Device updateDevice(String id, Device deviceDetails, String organizationId) {

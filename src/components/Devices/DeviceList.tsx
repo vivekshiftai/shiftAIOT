@@ -14,12 +14,13 @@ import {
 import { Device } from '../../types';
 import { DeviceCard } from './DeviceCard';
 import { AddDeviceForm } from './AddDeviceForm';
+import { DeviceOnboardingForm } from './DeviceOnboardingForm';
 import { DeviceDetails } from './DeviceDetails';
 
 interface DeviceListProps {
   devices: Device[];
   onStatusChange: (deviceId: string, status: Device['status']) => void;
-  onAddDevice: (deviceData: any, files: any[]) => Promise<void>;
+  onAddDevice: (deviceData: any, files: any, aiRules?: any[]) => Promise<void>;
   onDeleteDevice: (deviceId: string) => Promise<void>;
   onRefresh: () => void;
   loading?: boolean;
@@ -38,6 +39,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
   loading = false
 }) => {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showOnboardingForm, setShowOnboardingForm] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchTerm, setSearchTerm] = useState('');
@@ -58,12 +60,30 @@ export const DeviceList: React.FC<DeviceListProps> = ({
     return matchesSearch && matchesStatus && matchesType;
   });
 
-  const handleAddDevice = async (deviceData: any, files: any[]) => {
+  const handleAddDevice = async (deviceData: any, files: any) => {
     try {
       await onAddDevice(deviceData, files);
       setShowAddForm(false);
     } catch (error) {
       console.error('Failed to add device:', error);
+    }
+  };
+
+  const handleOnboardingDevice = async (deviceData: any, files: any[], aiRules: any[]) => {
+    try {
+      // Convert files array to the expected format
+      const fileMap: { manual?: File; datasheet?: File; certificate?: File } = {};
+      files.forEach((fileUpload: any) => {
+        if (fileUpload.type === 'manual') fileMap.manual = fileUpload.file;
+        else if (fileUpload.type === 'datasheet') fileMap.datasheet = fileUpload.file;
+        else if (fileUpload.type === 'certificate') fileMap.certificate = fileUpload.file;
+      });
+      
+      // Use the new AI onboarding API
+      await onAddDevice(deviceData, fileMap, aiRules);
+      setShowOnboardingForm(false);
+    } catch (error) {
+      console.error('Failed to onboard device with AI:', error);
     }
   };
 
@@ -135,13 +155,22 @@ export const DeviceList: React.FC<DeviceListProps> = ({
             </button>
           </div>
           
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Device
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowOnboardingForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Smart Onboarding
+            </button>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Quick Add
+            </button>
+          </div>
         </div>
       </div>
 
@@ -216,13 +245,22 @@ export const DeviceList: React.FC<DeviceListProps> = ({
             }
           </p>
           {!searchTerm && statusFilter === 'all' && typeFilter === 'all' && (
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mx-auto"
-            >
-              <Plus className="w-4 h-4" />
-              Add Your First Device
-            </button>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => setShowOnboardingForm(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Smart Onboarding
+              </button>
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Quick Add
+              </button>
+            </div>
           )}
         </div>
       ) : (
@@ -268,6 +306,14 @@ export const DeviceList: React.FC<DeviceListProps> = ({
         <AddDeviceForm
           onSubmit={handleAddDevice}
           onCancel={() => setShowAddForm(false)}
+        />
+      )}
+
+      {/* Device Onboarding Form Modal */}
+      {showOnboardingForm && (
+        <DeviceOnboardingForm
+          onSubmit={handleOnboardingDevice}
+          onCancel={() => setShowOnboardingForm(false)}
         />
       )}
 

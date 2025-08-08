@@ -191,7 +191,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
           </div>
 
           {/* Telemetry Data */}
-          {device.status === 'online' && (
+          {device.status === 'ONLINE' && (
             <div className="border-t border-slate-200 pt-6">
               <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
                 <Thermometer className="w-5 h-5" />

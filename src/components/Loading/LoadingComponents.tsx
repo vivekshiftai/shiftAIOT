@@ -1,5 +1,6 @@
 import React from 'react';
 import { Loader2, Cpu, Bell, BarChart3, Settings, Users, AlertTriangle } from 'lucide-react';
+import { IoTLoadingScreen, IoTDataLoadingScreen } from './IoTLoadingScreen';
 
 // Main Application Loading Screen
 export const AppLoadingScreen: React.FC = () => (
@@ -254,3 +255,6 @@ export const SettingsEmptyLoading: React.FC = () => (
     description="Loading system configuration options..."
   />
 );
+
+// IoT-specific loading screens
+export { IoTLoadingScreen, IoTDataLoadingScreen };

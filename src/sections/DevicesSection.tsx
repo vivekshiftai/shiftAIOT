@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Filter, Search, Cpu } from 'lucide-react';
+import { Plus, Filter, Search, Cpu, CheckCircle, X } from 'lucide-react';
 import { DeviceCard } from '../components/Devices/DeviceCard';
 import { AddDeviceForm } from '../components/Devices/AddDeviceForm';
 import { TestModal } from '../components/Devices/TestModal';
@@ -20,6 +20,12 @@ export const DevicesSection: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showTestModal, setShowTestModal] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  // Debug logging
+  console.log('DevicesSection - devices:', devices);
+  console.log('DevicesSection - loading:', loading);
+  console.log('DevicesSection - devices length:', devices?.length || 0);
 
   const filteredDevices = devices.filter(device => {
     const matchesSearch = device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -30,11 +36,10 @@ export const DevicesSection: React.FC = () => {
     return matchesSearch && matchesStatus && matchesType;
   });
 
+  console.log('DevicesSection - filteredDevices:', filteredDevices);
+  console.log('DevicesSection - filteredDevices length:', filteredDevices.length);
+
   const handleAddDeviceClick = () => {
-    if (!hasPermission('DEVICE_WRITE')) {
-      alert('You do not have permission to add devices. Please contact an administrator.');
-      return;
-    }
     console.log('Add Device button clicked, setting showAddForm to true');
     setShowAddForm(true);
   };
@@ -75,6 +80,24 @@ export const DevicesSection: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+              <span className="text-green-800">{successMessage}</span>
+            </div>
+            <button
+              onClick={() => setSuccessMessage('')}
+              className="text-green-600 hover:text-green-800"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -85,32 +108,15 @@ export const DevicesSection: React.FC = () => {
         </div>
         
         <div className="flex gap-2">
-          <LoadingButton
-            loading={isRefreshing}
-            onClick={handleRefreshDevices}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg"
+          <button 
+            onClick={handleAddDeviceClick}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg"
           >
-            Refresh
-          </LoadingButton>
+            <Plus className="w-4 h-4" />
+            Add Device
+          </button>
           
-          {isAdmin() && (
-            <button 
-              onClick={handleTestModalClick}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg"
-            >
-              Test Modal
-            </button>
-          )}
-          
-          {hasPermission('DEVICE_WRITE') && (
-            <button 
-              onClick={handleAddDeviceClick}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg"
-            >
-              <Plus className="w-4 h-4" />
-              Add Device
-            </button>
-          )}
+
         </div>
       </div>
 
@@ -165,7 +171,7 @@ export const DevicesSection: React.FC = () => {
           <div key={device.id} onClick={() => handleDeviceClick(device)}>
             <DeviceCard
               device={device}
-              onStatusChange={hasPermission('DEVICE_WRITE') ? updateDeviceStatus : (() => {})}
+              onStatusChange={updateDeviceStatus}
             />
           </div>
         ))}
@@ -178,19 +184,14 @@ export const DevicesSection: React.FC = () => {
           </div>
           <h3 className="text-lg font-medium text-slate-800 mb-2">No devices found</h3>
           <p className="text-slate-600 mb-6">
-            {hasPermission('DEVICE_WRITE') 
-              ? 'No devices match your current search criteria. Try adjusting your filters or add your first device.'
-              : 'No devices match your current search criteria. Try adjusting your filters.'
-            }
+            No devices match your current search criteria. Try adjusting your filters or add your first device.
           </p>
-          {hasPermission('DEVICE_WRITE') && (
-            <button 
-              onClick={handleAddDeviceClick}
-              className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all"
-            >
-              Add First Device
-            </button>
-          )}
+          <button 
+            onClick={handleAddDeviceClick}
+            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all"
+          >
+            Add First Device
+          </button>
         </div>
       )}
 
@@ -207,13 +208,12 @@ export const DevicesSection: React.FC = () => {
         />
       )}
 
-             {/* Add Device Form Modal - Admin Only */}
-       {showAddForm && hasPermission('DEVICE_WRITE') && (
+             {/* Add Device Form Modal */}
+       {showAddForm && (
         <AddDeviceForm
-          onSubmit={async (deviceData, files) => {
+          onSubmit={async (deviceData, files, aiRules) => {
             try {
               console.log('DevicesSection - Submitting device data:', deviceData);
-              console.log('DevicesSection - Files to upload:', files);
               
               // Convert files array to object format expected by API
               const fileObject: { manual?: File; datasheet?: File; certificate?: File } = {};
@@ -223,68 +223,47 @@ export const DevicesSection: React.FC = () => {
                 if (file.type === 'certificate') fileObject.certificate = file.file;
               });
               
-              // Create device object for backend
-              const newDevice: Omit<Device, 'id'> = {
-                name: deviceData.name,
-                type: deviceData.type,
-                status: 'online',
-                location: deviceData.location,
+              // Create a complete device object with all required fields
+              const completeDeviceData: Omit<Device, 'id'> = {
+                ...deviceData,
                 lastSeen: new Date().toISOString(),
                 batteryLevel: 100,
-                firmware: deviceData.firmware,
-                protocol: deviceData.protocol,
-                tags: deviceData.tags,
-                manufacturer: deviceData.manufacturer,
-                model: deviceData.model,
-                serialNumber: deviceData.serialNumber,
-                macAddress: deviceData.macAddress,
-                ipAddress: deviceData.ipAddress,
-                port: deviceData.port,
-                powerSource: deviceData.powerSource,
-                powerConsumption: deviceData.powerConsumption,
-                operatingTemperatureMin: deviceData.operatingTemperatureMin,
-                operatingTemperatureMax: deviceData.operatingTemperatureMax,
-                operatingHumidityMin: deviceData.operatingHumidityMin,
-                operatingHumidityMax: deviceData.operatingHumidityMax,
-                wifiSsid: deviceData.wifiSsid,
-                mqttBroker: deviceData.mqttBroker,
-                mqttTopic: deviceData.mqttTopic,
-                description: deviceData.description,
-                installationNotes: deviceData.installationNotes,
-                maintenanceSchedule: deviceData.maintenanceSchedule,
-                warrantyInfo: deviceData.warrantyInfo,
-                organizationId: '', // Will be set by backend
+                organizationId: '1', // Will be set by backend
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
               };
               
-              // Try to create device with files first
-              let createdDevice;
+              // Create device using IoTContext which handles backend creation and local state update
               if (files.length > 0) {
-                try {
-                  console.log('DevicesSection - Creating device with files');
-                  const response = await deviceAPI.createWithFiles(deviceData, fileObject);
-                  createdDevice = response.data;
-                  console.log('DevicesSection - Device created with files:', createdDevice.id);
-                } catch (error) {
-                  console.error('DevicesSection - Failed to create device with files:', error);
-                  // Fall back to creating device without files
-                  console.log('DevicesSection - Falling back to create device without files');
-                  createdDevice = await addDevice(newDevice);
-                }
+                // For files, we need to use the API directly
+                const response = await deviceAPI.createWithFiles(deviceData, fileObject);
+                const createdDevice = response.data;
+                
+                console.log('DevicesSection - Device created successfully:', createdDevice);
+                
+                // Refresh devices from database to ensure we have the latest data
+                await refreshDevices();
               } else {
-                // Create device without files
-                console.log('DevicesSection - Creating device without files');
-                createdDevice = await addDevice(newDevice);
+                // Use the addDevice function from IoTContext
+                const createdDevice = await addDevice(completeDeviceData);
+                console.log('DevicesSection - Device created successfully:', createdDevice);
               }
               
-              console.log('DevicesSection - Device created successfully:', createdDevice.id);
+              // Show success message
+              setSuccessMessage(`Device "${deviceData.name}" has been successfully added to the platform!`);
               
-              // Close the form
-              setShowAddForm(false);
+              // Clear success message after 5 seconds
+              setTimeout(() => {
+                setSuccessMessage('');
+              }, 5000);
+              
+              // Close the form after a short delay to show success message
+              setTimeout(() => {
+                setShowAddForm(false);
+              }, 1000);
+              
             } catch (error) {
               console.error('DevicesSection - Failed to create device:', error);
-              // Show error to user (you can add a toast notification here)
               alert(`Failed to create device: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
           }}

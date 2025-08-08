@@ -12,25 +12,25 @@ interface DeviceCardProps {
 }
 
 const statusConfig = {
-  online: { 
+  ONLINE: { 
     icon: Wifi, 
     color: 'text-green-600', 
     bg: 'bg-green-50',
     label: 'Online'
   },
-  offline: { 
+  OFFLINE: { 
     icon: WifiOff, 
     color: 'text-slate-600', 
     bg: 'bg-slate-50',
     label: 'Offline'
   },
-  warning: { 
+  WARNING: { 
     icon: AlertTriangle, 
     color: 'text-yellow-600', 
     bg: 'bg-yellow-50',
     label: 'Warning'
   },
-  error: { 
+  ERROR: { 
     icon: XCircle, 
     color: 'text-red-600', 
     bg: 'bg-red-50',
@@ -45,10 +45,31 @@ const deviceTypeConfig = {
   CONTROLLER: { icon: Cpu, label: 'Controller' }
 };
 
+// Helper function to get device type config with case-insensitive matching
+const getDeviceTypeConfig = (deviceType: string) => {
+  if (!deviceType) return deviceTypeConfig.SENSOR;
+  const upperType = deviceType.toUpperCase();
+  return deviceTypeConfig[upperType as keyof typeof deviceTypeConfig] || deviceTypeConfig.SENSOR;
+};
+
+// Helper function to get status config with case-insensitive matching
+const getStatusConfig = (status: string) => {
+  if (!status) return statusConfig.OFFLINE;
+  const upperStatus = status.toUpperCase();
+  return statusConfig[upperStatus as keyof typeof statusConfig] || statusConfig.OFFLINE;
+};
+
 export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onStatusChange }) => {
   const { hasPermission } = useAuth();
-  const statusInfo = statusConfig[device.status];
-  const deviceTypeInfo = deviceTypeConfig[device.type];
+  
+  // Add additional safety checks
+  if (!device) {
+    console.error('DeviceCard: device prop is undefined or null');
+    return null;
+  }
+  
+  const statusInfo = getStatusConfig(device.status || 'OFFLINE');
+  const deviceTypeInfo = getDeviceTypeConfig(device.type || 'SENSOR');
   const StatusIcon = statusInfo.icon;
   const TypeIcon = deviceTypeInfo.icon;
 
@@ -86,7 +107,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onStatusChange }
         </div>
 
         {/* Telemetry Data */}
-        {device.status === 'online' && (
+        {device.status === 'ONLINE' && (
           <div className="flex items-center gap-4 mr-4">
             {device.batteryLevel && (
               <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
@@ -137,10 +158,10 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onStatusChange }
               onChange={(e) => onStatusChange(device.id, e.target.value as Device['status'])}
               className="text-xs px-3 py-1 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all"
             >
-              <option value="online">Online</option>
-              <option value="offline">Offline</option>
-              <option value="warning">Warning</option>
-              <option value="error">Error</option>
+                             <option value="ONLINE">Online</option>
+               <option value="OFFLINE">Offline</option>
+               <option value="WARNING">Warning</option>
+               <option value="ERROR">Error</option>
             </select>
           </div>
         </div>

@@ -43,13 +43,21 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   const { user } = useAuth();
   const notificationService = NotificationService.getInstance();
 
-  // Subscribe to notification service updates
+  // Load notifications from database and subscribe to updates
   useEffect(() => {
+    const loadNotifications = async () => {
+      await notificationService.loadFromDatabase();
+    };
+
+    // Load initial notifications
+    loadNotifications();
+
+    // Subscribe to notification service updates
     const unsubscribe = notificationService.subscribe((newNotifications) => {
       setNotifications(newNotifications);
     });
@@ -60,99 +68,77 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   // Load data from backend when user is authenticated
   useEffect(() => {
     const loadData = async () => {
-      if (!user) {
-        console.log('IoTContext - No user authenticated, clearing data');
-        setDevices([]);
-        setRules([]);
-        setNotifications([]);
-        return;
-      }
-
+      console.log('IoTContext - Loading data from backend');
       setLoading(true);
+      
       try {
-        console.log('IoTContext - Loading data from backend for authenticated user');
-        const token = localStorage.getItem('token');
-        if (!token) {
-          console.error('IoTContext - No token found');
-          throw new Error('No authentication token');
+        // Load all data from backend independently to handle partial failures
+        console.log('IoTContext - Starting to load data from backend...');
+        
+        // Load devices first (most important)
+        try {
+          const devicesRes = await deviceAPI.getAll();
+          console.log('IoTContext - Raw device response:', devicesRes);
+          
+          if (devicesRes.data) {
+            console.log('IoTContext - Setting devices:', devicesRes.data);
+            setDevices(devicesRes.data);
+          } else {
+            console.log('IoTContext - No devices data in response');
+            setDevices([]);
+          }
+        } catch (error) {
+          console.error('IoTContext - Failed to load devices:', error);
+          setDevices([]);
         }
 
-        // Load all data from backend
-        const [devicesRes, rulesRes, notificationsRes] = await Promise.all([
-          deviceAPI.getAll(),
-          ruleAPI.getAll(),
-          notificationAPI.getAll()
-        ]);
+        // Load rules (optional)
+        try {
+          const rulesRes = await ruleAPI.getAll();
+          console.log('IoTContext - Raw rules response:', rulesRes);
+          
+          if (rulesRes.data) {
+            setRules(rulesRes.data);
+          } else {
+            setRules([]);
+          }
+        } catch (error) {
+          console.error('IoTContext - Failed to load rules:', error);
+          setRules([]);
+        }
 
-        console.log('IoTContext - Data loaded from backend:', {
-          devices: devicesRes.data.length,
-          rules: rulesRes.data.length,
-          notifications: notificationsRes.data.length
-        });
+        // Load notifications (optional)
+        try {
+          const notificationsRes = await notificationAPI.getAll();
+          console.log('IoTContext - Raw notifications response:', notificationsRes);
+          
+          if (notificationsRes.data) {
+            setNotifications(notificationsRes.data);
+          } else {
+            setNotifications([]);
+          }
+        } catch (error) {
+          console.error('IoTContext - Failed to load notifications:', error);
+          setNotifications([]);
+        }
 
-        setDevices(devicesRes.data);
-        setRules(rulesRes.data);
-        setNotifications(notificationsRes.data);
+        console.log('IoTContext - Data loading completed');
       } catch (error) {
         console.error('IoTContext - Failed to load data from backend:', error);
-        // Clear data on error - don't use mock data
-        setDevices([]);
-        setRules([]);
-        setNotifications([]);
-        throw new Error(`Failed to load data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        // Don't set any dummy data - let the UI show empty state if no data
+        console.log('IoTContext - No data loaded from backend, showing empty state');
       } finally {
         setLoading(false);
       }
     };
 
+    // Load data immediately when component mounts
     loadData();
-  }, [user]); // Dependency on user
+  }, []); // Remove user dependency to load data immediately
 
-  // Simulate real-time telemetry data and evaluate rules
-  useEffect(() => {
-    if (!user || devices.length === 0) return;
+  // Note: Removed telemetry simulation to prevent unwanted notifications and data interference
 
-    const interval = setInterval(async () => {
-      const randomDevice = devices[Math.floor(Math.random() * devices.length)];
-      if (randomDevice.status === 'online') {
-        const newData: TelemetryData = {
-          id: Math.random().toString(36).substr(2, 9), // Generate a random ID
-          deviceId: randomDevice.id,
-          timestamp: new Date().toISOString(),
-          metrics: {
-            temperature: 20 + Math.random() * 15,
-            humidity: 40 + Math.random() * 30,
-            pressure: 100 + Math.random() * 50
-          }
-        };
-
-        // Add telemetry data to backend
-        try {
-          await addTelemetryData(newData);
-        } catch (error) {
-          console.error('Failed to add telemetry data:', error);
-        }
-
-        // Evaluate rules with new telemetry data
-        try {
-          await evaluateRules(randomDevice.id, newData);
-        } catch (error) {
-          console.error('Failed to evaluate rules:', error);
-        }
-
-        // Check for alerts and create notifications
-        if (newData.metrics.temperature > 30) {
-          notificationService.onTemperatureAlert(randomDevice, newData.metrics.temperature, user?.id || '1');
-        }
-
-        if (randomDevice.batteryLevel && randomDevice.batteryLevel < 20) {
-          notificationService.onBatteryLow(randomDevice, randomDevice.batteryLevel, user?.id || '1');
-        }
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [devices, rules, user]);
+  // Note: Removed periodic device refresh to prevent interference with database data
 
   const updateDeviceStatus = async (deviceId: string, status: Device['status']) => {
     try {
@@ -169,13 +155,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         device.id === deviceId ? updatedDevice : device
       ));
       
-      // Send notification for status change
-      if (user?.id) {
-        const device = devices.find(d => d.id === deviceId);
-        if (device) {
-          notificationService.onDeviceStatusChange(device, user.id);
-        }
-      }
+              // Note: Removed automatic status change notifications to prevent unwanted notifications
     } catch (error) {
       console.error('Failed to update device status in backend:', error);
       // Don't update local state if backend fails
@@ -290,13 +270,10 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       
       console.log('IoTContext - Device created in backend:', newDevice.id);
       
-      // Update local state with the device returned from backend
-      setDevices(prev => [...prev, newDevice]);
+      // Add to local state
+      setDevices(prev => [newDevice, ...prev]);
       
-      // Send notification for new device
-      if (user?.id) {
-        notificationService.onDeviceAdded(newDevice, user.id);
-      }
+      // Note: Removed automatic device added notifications to prevent unwanted notifications
       
       return newDevice;
     } catch (error) {
@@ -348,17 +325,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
           // Update rule with last triggered timestamp in backend
           await updateRule(rule.id, { lastTriggered: new Date().toISOString() });
 
-          // Create notification for triggered rule
-          if (user?.id) {
-            notificationService.createNotification({
-              type: 'rule_triggered',
-              userId: user.id,
-              data: {
-                ruleName: rule.name,
-                message: rule.description
-              }
-            });
-          }
+          // Note: Removed automatic rule triggered notifications to prevent unwanted notifications
         }
       }
     } catch (error) {

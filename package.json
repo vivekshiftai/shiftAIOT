@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite",
     "dev:full": "concurrently \"npm run dev\" \"npm run backend:dev\"",
+    "dev:all": "concurrently \"npm run dev\" \"npm run backend:dev\" \"npm run rag:dev\"",
     "backend:dev": "cd backend && mvn spring-boot:run",
     "backend:build": "cd backend && mvn clean package",
+    "rag:dev": "cd pdf_rag_system && python -m pip install -r requirements.txt && python main.py",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

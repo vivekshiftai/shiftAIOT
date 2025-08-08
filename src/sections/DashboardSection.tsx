@@ -7,10 +7,10 @@ import { useIoT } from '../contexts/IoTContext';
 export const DashboardSection: React.FC = () => {
   const { devices, notifications } = useIoT();
 
-  const onlineDevices = devices.filter(d => d.status === 'online').length;
+  const onlineDevices = devices.filter(d => d.status === 'ONLINE').length;
   const totalDevices = devices.length;
-  const warningDevices = devices.filter(d => d.status === 'warning').length;
-  const errorDevices = devices.filter(d => d.status === 'error').length;
+  const warningDevices = devices.filter(d => d.status === 'WARNING').length;
+  const errorDevices = devices.filter(d => d.status === 'ERROR').length;
   const unreadNotifications = notifications.filter(n => !n.read).length;
 
   return (
@@ -88,9 +88,9 @@ export const DashboardSection: React.FC = () => {
             {devices.slice(0, 5).map((device) => (
               <div key={device.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl">
                 <div className={`w-3 h-3 rounded-full ${
-                  device.status === 'online' ? 'bg-green-500' :
-                  device.status === 'warning' ? 'bg-yellow-500' :
-                  device.status === 'error' ? 'bg-red-500' : 'bg-slate-400'
+                  device.status === 'ONLINE' ? 'bg-green-500' :
+                                     device.status === 'WARNING' ? 'bg-yellow-500' :
+                   device.status === 'ERROR' ? 'bg-red-500' : 'bg-slate-400'
                 }`} />
                 <div className="flex-1">
                   <p className="font-medium text-slate-800">{device.name}</p>
@@ -98,9 +98,9 @@ export const DashboardSection: React.FC = () => {
                 </div>
                 <div className="text-right">
                   <p className={`text-sm font-medium ${
-                    device.status === 'online' ? 'text-green-600' :
-                    device.status === 'warning' ? 'text-yellow-600' :
-                    device.status === 'error' ? 'text-red-600' : 'text-slate-600'
+                    device.status === 'ONLINE' ? 'text-green-600' :
+                                         device.status === 'WARNING' ? 'text-yellow-600' :
+                     device.status === 'ERROR' ? 'text-red-600' : 'text-slate-600'
                   }`}>
                     {device.status}
                   </p>

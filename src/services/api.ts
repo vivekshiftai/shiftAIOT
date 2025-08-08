@@ -19,6 +19,10 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // For device endpoints, don't require authentication
+    if (config.url?.includes('/devices/')) {
+      console.log('Device endpoint - proceeding without authentication');
+    }
     return config;
   },
   (error) => {
@@ -36,8 +40,8 @@ api.interceptors.response.use(
   (error) => {
     console.error('API Response Error:', error.response?.status, error.config?.url, error.message);
     
-    // Only handle 401 errors for non-auth endpoints
-    if (error.response?.status === 401 && !error.config.url?.includes('/auth/')) {
+    // Don't handle 401 errors for device endpoints
+    if (error.response?.status === 401 && !error.config.url?.includes('/auth/') && !error.config.url?.includes('/devices/')) {
       // For development, don't logout on 401 errors
       if (process.env.NODE_ENV === 'development') {
         console.warn('401 error detected, but staying logged in for development');
@@ -51,11 +55,7 @@ api.interceptors.response.use(
     
     // Handle network errors gracefully
     if (!error.response) {
-      console.warn('Network error, using mock data for development');
-      if (process.env.NODE_ENV === 'development') {
-        // Return mock data for development
-        return Promise.reject(new Error('Network error - using mock data'));
-      }
+      console.warn('Network error - no response from server');
     }
     
     return Promise.reject(error);
@@ -84,22 +84,141 @@ export const authAPI = {
 // Device API
 export const deviceAPI = {
   getAll: (params?: { status?: string; type?: string; search?: string }) => {
+    console.log('deviceAPI.getAll called with params:', params);
     return api.get('/devices', { params });
   },
   
   getById: (id: string) => api.get(`/devices/${id}`),
   
-  create: (device: any) => api.post('/devices', device),
+  create: (device: any) => {
+    // Ensure device has proper enum values and handle null/undefined values
+    const processedDevice = {
+      ...device,
+      status: device.status?.toUpperCase() || 'ONLINE',
+      type: device.type?.toUpperCase() || 'SENSOR',
+      protocol: device.protocol?.toUpperCase() || 'MQTT',
+      // Ensure all required fields are present
+      name: device.name || '',
+      location: device.location || '',
+      manufacturer: device.manufacturer || '',
+      model: device.model || '',
+      serialNumber: device.serialNumber || '',
+      macAddress: device.macAddress || '',
+      ipAddress: device.ipAddress || '',
+      port: device.port || 8080,
+      firmware: device.firmware || '',
+      description: device.description || '',
+      installationNotes: device.installationNotes || '',
+      maintenanceSchedule: device.maintenanceSchedule || '',
+      warrantyInfo: device.warrantyInfo || '',
+      powerSource: device.powerSource || '',
+      powerConsumption: device.powerConsumption || 0,
+      operatingTemperatureMin: device.operatingTemperatureMin || 0,
+      operatingTemperatureMax: device.operatingTemperatureMax || 50,
+      operatingHumidityMin: device.operatingHumidityMin || 0,
+      operatingHumidityMax: device.operatingHumidityMax || 100,
+      wifiSsid: device.wifiSsid || '',
+      mqttBroker: device.mqttBroker || '',
+      mqttTopic: device.mqttTopic || '',
+      tags: device.tags || []
+    };
+    return api.post('/devices', processedDevice);
+  },
   
   createWithFiles: (deviceData: any, files: { manual?: File; datasheet?: File; certificate?: File }) => {
     const formData = new FormData();
-    formData.append('deviceData', JSON.stringify(deviceData));
+    
+    // Ensure device data has proper enum values and handle null/undefined values
+    const processedDeviceData = {
+      ...deviceData,
+      status: deviceData.status?.toUpperCase() || 'ONLINE',
+      type: deviceData.type?.toUpperCase() || 'SENSOR',
+      protocol: deviceData.protocol?.toUpperCase() || 'MQTT',
+      // Ensure all required fields are present
+      name: deviceData.name || '',
+      location: deviceData.location || '',
+      manufacturer: deviceData.manufacturer || '',
+      model: deviceData.model || '',
+      serialNumber: deviceData.serialNumber || '',
+      macAddress: deviceData.macAddress || '',
+      ipAddress: deviceData.ipAddress || '',
+      port: deviceData.port || 8080,
+      firmware: deviceData.firmware || '',
+      description: deviceData.description || '',
+      installationNotes: deviceData.installationNotes || '',
+      maintenanceSchedule: deviceData.maintenanceSchedule || '',
+      warrantyInfo: deviceData.warrantyInfo || '',
+      powerSource: deviceData.powerSource || '',
+      powerConsumption: deviceData.powerConsumption || 0,
+      operatingTemperatureMin: deviceData.operatingTemperatureMin || 0,
+      operatingTemperatureMax: deviceData.operatingTemperatureMax || 50,
+      operatingHumidityMin: deviceData.operatingHumidityMin || 0,
+      operatingHumidityMax: deviceData.operatingHumidityMax || 100,
+      wifiSsid: deviceData.wifiSsid || '',
+      mqttBroker: deviceData.mqttBroker || '',
+      mqttTopic: deviceData.mqttTopic || '',
+      tags: deviceData.tags || []
+    };
+    
+    formData.append('deviceData', JSON.stringify(processedDeviceData));
     
     if (files.manual) formData.append('manualFile', files.manual);
     if (files.datasheet) formData.append('datasheetFile', files.datasheet);
     if (files.certificate) formData.append('certificateFile', files.certificate);
     
     return api.post('/devices/with-files', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  
+  onboardWithAI: (deviceData: any, files: { manual?: File; datasheet?: File; certificate?: File }, aiRules: any[]) => {
+    const formData = new FormData();
+    
+    // Ensure device data has proper enum values and handle null/undefined values
+    const processedDeviceData = {
+      ...deviceData,
+      status: deviceData.status?.toUpperCase() || 'ONLINE',
+      type: deviceData.type?.toUpperCase() || 'SENSOR',
+      protocol: deviceData.protocol?.toUpperCase() || 'MQTT',
+      // Ensure all required fields are present
+      name: deviceData.name || '',
+      location: deviceData.location || '',
+      manufacturer: deviceData.manufacturer || '',
+      model: deviceData.model || '',
+      serialNumber: deviceData.serialNumber || '',
+      macAddress: deviceData.macAddress || '',
+      ipAddress: deviceData.ipAddress || '',
+      port: deviceData.port || 8080,
+      firmware: deviceData.firmware || '',
+      description: deviceData.description || '',
+      installationNotes: deviceData.installationNotes || '',
+      maintenanceSchedule: deviceData.maintenanceSchedule || '',
+      warrantyInfo: deviceData.warrantyInfo || '',
+      powerSource: deviceData.powerSource || '',
+      powerConsumption: deviceData.powerConsumption || 0,
+      operatingTemperatureMin: deviceData.operatingTemperatureMin || 0,
+      operatingTemperatureMax: deviceData.operatingTemperatureMax || 50,
+      operatingHumidityMin: deviceData.operatingHumidityMin || 0,
+      operatingHumidityMax: deviceData.operatingHumidityMax || 100,
+      wifiSsid: deviceData.wifiSsid || '',
+      mqttBroker: deviceData.mqttBroker || '',
+      mqttTopic: deviceData.mqttTopic || '',
+      tags: deviceData.tags || []
+    };
+    
+    formData.append('deviceData', JSON.stringify(processedDeviceData));
+    
+    if (files.manual) formData.append('manualFile', files.manual);
+    if (files.datasheet) formData.append('datasheetFile', files.datasheet);
+    if (files.certificate) formData.append('certificateFile', files.certificate);
+    
+    if (aiRules && aiRules.length > 0) {
+      formData.append('aiRules', JSON.stringify(aiRules));
+    }
+    
+    return api.post('/devices/onboard-with-ai', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -149,6 +268,8 @@ export const ruleAPI = {
 // Notification API
 export const notificationAPI = {
   getAll: () => api.get('/notifications'),
+  
+  create: (notification: any) => api.post('/notifications', notification),
   
   markAsRead: (id: string) => api.patch(`/notifications/${id}/read`),
   

@@ -35,18 +35,37 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;
 
     public JwtResponse login(LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
-        );
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
+            );
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtTokenProvider.generateToken(authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtTokenProvider.generateToken(authentication);
 
-        User user = (User) authentication.getPrincipal();
-        user.setLastLogin(LocalDateTime.now());
-        userRepository.save(user);
+            User user = (User) authentication.getPrincipal();
+            
+            // Validate user role before proceeding
+            try {
+                User.Role role = user.getRole();
+                if (role == null) {
+                    // If role is null, set it to USER
+                    user.setRole(User.Role.USER);
+                    userRepository.save(user);
+                }
+            } catch (IllegalArgumentException e) {
+                // If role is invalid, set it to USER
+                user.setRole(User.Role.USER);
+                userRepository.save(user);
+            }
+            
+            user.setLastLogin(LocalDateTime.now());
+            userRepository.save(user);
 
-        return new JwtResponse(jwt, user.getId(), user.getFirstName() + " " + user.getLastName(), user.getEmail(), user.getRole().name(), user.getOrganizationId());
+            return new JwtResponse(jwt, user.getId(), user.getFirstName() + " " + user.getLastName(), user.getEmail(), user.getRole().name(), user.getOrganizationId());
+        } catch (Exception e) {
+            throw new RuntimeException("Authentication failed: " + e.getMessage());
+        }
     }
 
     public User signup(SignupRequest signupRequest) {
@@ -61,8 +80,17 @@ public class AuthService {
         user.setEmail(signupRequest.getEmail());
         user.setPassword(passwordEncoder.encode(signupRequest.getPassword()));
         
-        // Set role based on request, default to USER
-        user.setRole(signupRequest.getRole());
+        // Validate and set role based on request, default to USER
+        try {
+            User.Role role = signupRequest.getRole();
+            if (role == null) {
+                role = User.Role.USER;
+            }
+            user.setRole(role);
+        } catch (IllegalArgumentException e) {
+            // If invalid role is provided, default to USER
+            user.setRole(User.Role.USER);
+        }
         
         // Generate organization ID (in a real app, this might come from the signup process)
         user.setOrganizationId(UUID.randomUUID().toString());

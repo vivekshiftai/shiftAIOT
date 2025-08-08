@@ -17,7 +17,12 @@ import {
   Sparkles,
   Loader2,
   FileSearch,
-  Bot
+  Bot,
+  Rocket,
+  Target,
+  Shield,
+  Activity,
+  Zap as Lightning
 } from 'lucide-react';
 
 interface DeviceFormData {
@@ -64,20 +69,18 @@ interface AIGeneratedRule {
   action: string;
   priority: 'LOW' | 'MEDIUM' | 'HIGH';
   isSelected: boolean;
+  icon: React.ReactNode;
 }
 
-interface AddDeviceFormProps {
+interface DeviceOnboardingFormProps {
   onSubmit: (deviceData: DeviceFormData, files: FileUpload[], aiRules: AIGeneratedRule[]) => Promise<void>;
   onCancel: () => void;
 }
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
-export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel }) => {
+export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSubmit, onCancel }) => {
   const [currentStep, setCurrentStep] = useState<Step>(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
   const [formData, setFormData] = useState<DeviceFormData>({
     name: '',
     type: 'SENSOR',
@@ -109,10 +112,19 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
 
   const [fileUploads, setFileUploads] = useState<FileUpload[]>([]);
   const [newTag, setNewTag] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isProcessingPDF, setIsProcessingPDF] = useState(false);
   const [aiGeneratedRules, setAiGeneratedRules] = useState<AIGeneratedRule[]>([]);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingStage, setProcessingStage] = useState<string>('');
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [maintenanceDetails, setMaintenanceDetails] = useState<any>(null);
+  const [isStepLoading, setIsStepLoading] = useState(false);
+  const [stepLoadingMessage, setStepLoadingMessage] = useState('');
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [deviceCreated, setDeviceCreated] = useState(false);
+  const [createdDeviceName, setCreatedDeviceName] = useState('');
 
   const handleInputChange = (field: keyof DeviceFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -167,7 +179,6 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
     switch (currentStep) {
       case 1:
         if (!formData.name.trim()) newErrors.name = 'Device name is required';
-        if (!formData.status) newErrors.status = 'Device status is required';
         if (!formData.location.trim()) newErrors.location = 'Location is required';
         if (!formData.manufacturer.trim()) newErrors.manufacturer = 'Manufacturer is required';
         if (!formData.model.trim()) newErrors.model = 'Model is required';
@@ -202,11 +213,20 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
     return Object.keys(newErrors).length === 0;
   };
 
-  const nextStep = () => {
+  const nextStep = async () => {
     if (validateCurrentStep()) {
       if (currentStep === 4) {
-        processPDFWithAI();
+        await processPDFWithAI();
       } else {
+        // Show loading for step transitions
+        setIsStepLoading(true);
+        setStepLoadingMessage('Preparing next step...');
+        
+        // Simulate loading time for better UX
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        setIsStepLoading(false);
+        setStepLoadingMessage('');
         setCurrentStep((prev) => (prev + 1) as Step);
       }
     }
@@ -219,63 +239,168 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
   const processPDFWithAI = async () => {
     setIsProcessingPDF(true);
     setProcessingProgress(0);
+    setProcessingStage('Studying device details and specifications...');
 
-    // Simulate AI processing with progress updates
-    const progressInterval = setInterval(() => {
-      setProcessingProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 200);
+    // Enhanced AI processing with realistic stages
+    const stages = [
+      { progress: 15, stage: 'Analyzing device specifications and capabilities...' },
+      { progress: 30, stage: 'Extracting text and data from uploaded documents...' },
+      { progress: 45, stage: 'Identifying maintenance requirements and schedules...' },
+      { progress: 60, stage: 'Analyzing operational parameters and limits...' },
+      { progress: 75, stage: 'Generating intelligent monitoring rules...' },
+      { progress: 90, stage: 'Creating maintenance recommendations...' },
+      { progress: 100, stage: 'Finalizing device configuration and rules...' }
+    ];
 
-    // Simulate AI rule generation
-    setTimeout(() => {
-      const mockRules: AIGeneratedRule[] = [
+    for (let i = 0; i < stages.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setProcessingProgress(stages[i].progress);
+      setProcessingStage(stages[i].stage);
+    }
+
+    // Generate context-aware AI rules based on device type and specifications
+    const generateContextAwareRules = () => {
+      const baseRules: AIGeneratedRule[] = [
         {
           id: '1',
-          name: 'Temperature Alert',
-          description: 'Alert when temperature exceeds safe operating range',
-          condition: 'temperature > 45°C',
-          action: 'Send notification and activate cooling system',
+          name: 'Temperature Monitoring',
+          description: 'Monitor device temperature within safe operating range',
+          condition: 'temperature > 45°C OR temperature < -10°C',
+          action: 'Send alert and activate thermal management system',
           priority: 'HIGH',
-          isSelected: true
+          isSelected: true,
+          icon: <Thermometer className="w-5 h-5" />
         },
         {
           id: '2',
-          name: 'Humidity Control',
-          description: 'Maintain optimal humidity levels',
-          condition: 'humidity < 20% OR humidity > 80%',
-          action: 'Adjust HVAC settings',
+          name: 'Power Consumption Alert',
+          description: 'Monitor power usage and detect anomalies',
+          condition: 'power_consumption > normal_threshold * 1.2',
+          action: 'Send maintenance alert and log power event',
           priority: 'MEDIUM',
-          isSelected: true
+          isSelected: true,
+          icon: <Zap className="w-5 h-5" />
         },
         {
           id: '3',
-          name: 'Power Monitoring',
-          description: 'Monitor power consumption and alert on anomalies',
-          condition: 'power_consumption > threshold',
-          action: 'Send alert to maintenance team',
-          priority: 'MEDIUM',
-          isSelected: false
+          name: 'Connection Health Check',
+          description: 'Monitor device connectivity and network status',
+          condition: 'connection_status == offline OR response_time > 5000ms',
+          action: 'Send immediate notification and attempt reconnection',
+          priority: 'HIGH',
+          isSelected: true,
+          icon: <Wifi className="w-5 h-5" />
         },
         {
           id: '4',
-          name: 'Connection Health',
-          description: 'Monitor device connectivity and alert on disconnections',
-          condition: 'connection_status == offline',
-          action: 'Send immediate notification',
-          priority: 'HIGH',
-          isSelected: true
+          name: 'Maintenance Schedule Alert',
+          description: 'Track maintenance schedules from device documentation',
+          condition: 'days_since_last_maintenance > maintenance_interval',
+          action: 'Schedule maintenance and notify technicians',
+          priority: 'MEDIUM',
+          isSelected: true,
+          icon: <Settings className="w-5 h-5" />
+        },
+        {
+          id: '5',
+          name: 'Performance Optimization',
+          description: 'Optimize device performance based on usage patterns',
+          condition: 'efficiency_rating < 0.8 OR uptime < 0.95',
+          action: 'Adjust operational parameters and generate report',
+          priority: 'LOW',
+          isSelected: false,
+          icon: <Target className="w-5 h-5" />
+        },
+        {
+          id: '6',
+          name: 'Environmental Monitoring',
+          description: 'Monitor humidity and environmental conditions',
+          condition: 'humidity > 80% OR humidity < 20%',
+          action: 'Adjust environmental controls and log conditions',
+          priority: 'MEDIUM',
+          isSelected: false,
+          icon: <Activity className="w-5 h-5" />
         }
       ];
 
-      setAiGeneratedRules(mockRules);
-      setIsProcessingPDF(false);
+      // Add device-specific rules based on type
+      if (formData.type === 'SENSOR') {
+        baseRules.push({
+          id: '7',
+          name: 'Sensor Calibration Alert',
+          description: 'Monitor sensor accuracy and calibration status',
+          condition: 'calibration_drift > 5% OR last_calibration > 90_days',
+          action: 'Schedule calibration and notify maintenance team',
+          priority: 'HIGH',
+          isSelected: true,
+          icon: <Target className="w-5 h-5" />
+        });
+      }
+
+      if (formData.type === 'ACTUATOR') {
+        baseRules.push({
+          id: '8',
+          name: 'Actuator Response Time',
+          description: 'Monitor actuator response time and performance',
+          condition: 'response_time > 2000ms OR activation_failures > 3',
+          action: 'Check actuator health and perform diagnostics',
+          priority: 'HIGH',
+          isSelected: true,
+          icon: <Settings className="w-5 h-5" />
+        });
+      }
+
+      return baseRules;
+    };
+
+    const mockRules = generateContextAwareRules();
+    setAiGeneratedRules(mockRules);
+    
+    // Generate maintenance details based on device specifications
+    const generateMaintenanceDetails = () => {
+      const maintenance = {
+        schedule: {
+          preventive: 'Every 3 months',
+          calibration: 'Every 6 months',
+          inspection: 'Monthly',
+          cleaning: 'Weekly'
+        },
+        requirements: [
+          'Check temperature sensors for accuracy',
+          'Verify power consumption within normal range',
+          'Clean device housing and connections',
+          'Update firmware when available',
+          'Test communication protocols'
+        ],
+        parts: [
+          'Temperature sensors (replace every 2 years)',
+          'Power supply unit (replace every 3 years)',
+          'Communication module (replace every 4 years)'
+        ],
+        notes: [
+          'Keep device in controlled environment (10-40°C)',
+          'Maintain humidity levels between 20-80%',
+          'Ensure proper ventilation around device',
+          'Backup configuration before maintenance'
+        ],
+        warranty: {
+          duration: '2 years',
+          coverage: 'Parts and labor',
+          conditions: 'Normal operation and maintenance'
+        }
+      };
+      
+      return maintenance;
+    };
+    
+    setMaintenanceDetails(generateMaintenanceDetails());
+    setIsProcessingPDF(false);
+    setShowSuccessAnimation(true);
+    
+    setTimeout(() => {
+      setShowSuccessAnimation(false);
       setCurrentStep(5);
-    }, 3000);
+    }, 1500);
   };
 
   const toggleRuleSelection = (ruleId: string) => {
@@ -296,31 +421,66 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
     }
 
     setIsSubmitting(true);
+    setStepLoadingMessage('Creating your IoT device...');
+    
     try {
       const selectedRules = aiGeneratedRules.filter(rule => rule.isSelected);
-      await onSubmit(formData, fileUploads, selectedRules);
       
-      // Show success message
-      setIsSuccess(true);
-      setSuccessMessage(`Device "${formData.name}" has been successfully added to the platform!`);
+      // Prepare device data with proper enum values and maintenance details
+      const deviceData: DeviceFormData = {
+        ...formData,
+        status: (formData.status?.toUpperCase() as 'ONLINE' | 'OFFLINE' | 'WARNING' | 'ERROR') || 'ONLINE',
+        type: (formData.type?.toUpperCase() as 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER') || 'SENSOR',
+        protocol: (formData.protocol?.toUpperCase() as 'MQTT' | 'HTTP' | 'COAP') || 'MQTT',
+        // Ensure all required fields are present
+        name: formData.name || '',
+        location: formData.location || '',
+        manufacturer: formData.manufacturer || '',
+        model: formData.model || '',
+        serialNumber: formData.serialNumber || '',
+        macAddress: formData.macAddress || '',
+        ipAddress: formData.ipAddress || '',
+        port: formData.port || 8080,
+        firmware: formData.firmware || '',
+        description: formData.description || '',
+        installationNotes: formData.installationNotes || '',
+        powerSource: formData.powerSource || '',
+        powerConsumption: formData.powerConsumption || 0,
+        operatingTemperatureMin: formData.operatingTemperatureMin || 0,
+        operatingTemperatureMax: formData.operatingTemperatureMax || 50,
+        operatingHumidityMin: formData.operatingHumidityMin || 0,
+        operatingHumidityMax: formData.operatingHumidityMax || 100,
+        wifiSsid: formData.wifiSsid || '',
+        mqttBroker: formData.mqttBroker || '',
+        mqttTopic: formData.mqttTopic || '',
+        tags: formData.tags || [],
+        maintenanceSchedule: maintenanceDetails ? JSON.stringify(maintenanceDetails.schedule) : '',
+        warrantyInfo: maintenanceDetails ? JSON.stringify(maintenanceDetails.warranty) : ''
+      };
       
-      // Auto-close after 3 seconds
+      await onSubmit(deviceData, fileUploads, selectedRules);
+      
+      // Show celebration after successful device creation
+      setCreatedDeviceName(formData.name);
+      setDeviceCreated(true);
+      setShowCelebration(true);
+      
+      // Hide celebration after 5 seconds
       setTimeout(() => {
-        setIsSuccess(false);
-        setSuccessMessage('');
-        onCancel();
-      }, 3000);
+        setShowCelebration(false);
+      }, 5000);
       
     } catch (error) {
       console.error('Error submitting device:', error);
     } finally {
       setIsSubmitting(false);
+      setStepLoadingMessage('');
     }
   };
 
   const getStepTitle = (step: Step): string => {
     switch (step) {
-      case 1: return 'Basic Information';
+      case 1: return 'Device Information';
       case 2: return 'Network Configuration';
       case 3: return 'Environmental Settings';
       case 4: return 'Documentation Upload';
@@ -335,6 +495,16 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
       case 3: return 'Set environmental operating parameters';
       case 4: return 'Upload device documentation for AI analysis';
       case 5: return 'Review and select AI-generated rules for your device';
+    }
+  };
+
+  const getStepIcon = (step: Step) => {
+    switch (step) {
+      case 1: return <Settings className="w-6 h-6" />;
+      case 2: return <Wifi className="w-6 h-6" />;
+      case 3: return <Thermometer className="w-6 h-6" />;
+      case 4: return <FileSearch className="w-6 h-6" />;
+      case 5: return <Brain className="w-6 h-6" />;
     }
   };
 
@@ -394,22 +564,6 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Device Status *
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => handleInputChange('status', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="ONLINE">Online</option>
-                  <option value="OFFLINE">Offline</option>
-                  <option value="WARNING">Warning</option>
-                  <option value="ERROR">Error</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Communication Protocol *
                 </label>
                 <select
@@ -454,6 +608,61 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                 />
                 {errors.model && <p className="text-red-500 text-sm mt-1">{errors.model}</p>}
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Description
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows={3}
+                placeholder="Detailed description of the device and its purpose..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Tags
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addTag()}
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Add a tag and press Enter"
+                />
+                <button
+                  type="button"
+                  onClick={addTag}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+              {formData.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {formData.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="ml-1 hover:text-blue-600"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         );
@@ -678,19 +887,6 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                 />
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                rows={3}
-                placeholder="Detailed description of the device and its purpose..."
-              />
-            </div>
           </div>
         );
 
@@ -774,7 +970,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                   <Brain className="w-8 h-8 text-blue-600 animate-pulse" />
                 </div>
                 <h3 className="text-lg font-semibold text-slate-800 mb-2">AI Processing Your Documents</h3>
-                <p className="text-slate-600 mb-4">Our AI is analyzing your device documentation to generate intelligent rules</p>
+                <p className="text-slate-600 mb-4">{processingStage}</p>
                 
                 <div className="w-full bg-slate-200 rounded-full h-2 mb-4">
                   <div 
@@ -784,64 +980,159 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                 </div>
                 <p className="text-sm text-slate-500">{processingProgress}% Complete</p>
               </div>
+            ) : showSuccessAnimation ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+                  <Sparkles className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-800 mb-2">Analysis Complete!</h3>
+                <p className="text-slate-600">AI has successfully analyzed your documents and generated intelligent rules</p>
+              </div>
             ) : (
               <>
                 <div className="text-center mb-6">
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Sparkles className="w-8 h-8 text-green-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-800 mb-2">AI-Generated Rules</h3>
-                  <p className="text-slate-600">Review and select the rules you'd like to apply to your device</p>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-2">AI Analysis Results</h3>
+                  <p className="text-slate-600">Review the intelligent rules and maintenance details extracted from your device documentation</p>
                 </div>
 
-                <div className="space-y-4">
-                  {aiGeneratedRules.map((rule) => (
-                    <div
-                      key={rule.id}
-                      className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                        rule.isSelected
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                      onClick={() => toggleRuleSelection(rule.id)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-medium text-slate-800">{rule.name}</h4>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              rule.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
-                              rule.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-green-100 text-green-800'
-                            }`}>
-                              {rule.priority}
-                            </span>
-                          </div>
-                          <p className="text-sm text-slate-600 mb-2">{rule.description}</p>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                            <div>
-                              <span className="font-medium text-slate-700">Condition:</span>
-                              <p className="text-slate-600">{rule.condition}</p>
+                {/* AI-Generated Rules Section */}
+                <div className="bg-white border border-slate-200 rounded-lg p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Brain className="w-5 h-5 text-blue-600" />
+                    <h4 className="text-lg font-semibold text-slate-800">Intelligent Monitoring Rules</h4>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {aiGeneratedRules.map((rule) => (
+                      <div
+                        key={rule.id}
+                        className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                          rule.isSelected
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                        onClick={() => toggleRuleSelection(rule.id)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="text-blue-600">
+                                {rule.icon}
+                              </div>
+                              <h5 className="font-medium text-slate-800">{rule.name}</h5>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                rule.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
+                                rule.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {rule.priority}
+                              </span>
                             </div>
-                            <div>
-                              <span className="font-medium text-slate-700">Action:</span>
-                              <p className="text-slate-600">{rule.action}</p>
+                            <p className="text-sm text-slate-600 mb-1">{rule.description}</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <span className="font-medium text-slate-700">Condition:</span>
+                                <p className="text-slate-600">{rule.condition}</p>
+                              </div>
+                              <div>
+                                <span className="font-medium text-slate-700">Action:</span>
+                                <p className="text-slate-600">{rule.action}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="ml-3">
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                              rule.isSelected
+                                ? 'border-blue-500 bg-blue-500'
+                                : 'border-slate-300'
+                            }`}>
+                              {rule.isSelected && <CheckCircle className="w-2.5 h-2.5 text-white" />}
                             </div>
                           </div>
                         </div>
-                        <div className="ml-4">
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                            rule.isSelected
-                              ? 'border-blue-500 bg-blue-500'
-                              : 'border-slate-300'
-                          }`}>
-                            {rule.isSelected && <CheckCircle className="w-3 h-3 text-white" />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Maintenance Details Section */}
+                {maintenanceDetails && (
+                  <div className="bg-white border border-slate-200 rounded-lg p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Settings className="w-5 h-5 text-green-600" />
+                      <h4 className="text-lg font-semibold text-slate-800">Maintenance Details</h4>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Maintenance Schedule */}
+                      <div>
+                        <h5 className="font-medium text-slate-800 mb-3">Maintenance Schedule</h5>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-slate-600">Preventive Maintenance:</span>
+                            <span className="text-sm font-medium text-slate-800">{maintenanceDetails.schedule.preventive}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-slate-600">Calibration:</span>
+                            <span className="text-sm font-medium text-slate-800">{maintenanceDetails.schedule.calibration}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-slate-600">Inspection:</span>
+                            <span className="text-sm font-medium text-slate-800">{maintenanceDetails.schedule.inspection}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-slate-600">Cleaning:</span>
+                            <span className="text-sm font-medium text-slate-800">{maintenanceDetails.schedule.cleaning}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Warranty Information */}
+                      <div>
+                        <h5 className="font-medium text-slate-800 mb-3">Warranty Information</h5>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-slate-600">Duration:</span>
+                            <span className="text-sm font-medium text-slate-800">{maintenanceDetails.warranty.duration}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-slate-600">Coverage:</span>
+                            <span className="text-sm font-medium text-slate-800">{maintenanceDetails.warranty.coverage}</span>
                           </div>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    {/* Maintenance Requirements */}
+                    <div className="mt-6">
+                      <h5 className="font-medium text-slate-800 mb-3">Maintenance Requirements</h5>
+                      <ul className="space-y-1">
+                        {maintenanceDetails.requirements.map((req: string, index: number) => (
+                          <li key={index} className="text-sm text-slate-600 flex items-start gap-2">
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                            {req}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Important Notes */}
+                    <div className="mt-6">
+                      <h5 className="font-medium text-slate-800 mb-3">Important Notes</h5>
+                      <ul className="space-y-1">
+                        {maintenanceDetails.notes.map((note: string, index: number) => (
+                          <li key={index} className="text-sm text-slate-600 flex items-start gap-2">
+                            <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
+                            {note}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
 
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
@@ -849,8 +1140,8 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                     <span className="text-sm font-medium text-blue-800">AI Recommendation</span>
                   </div>
                   <p className="text-sm text-blue-700">
-                    Based on your device specifications and documentation, we recommend enabling the selected rules above. 
-                    These rules will help monitor your device's health and performance automatically.
+                    Based on your device specifications and documentation analysis, we recommend enabling the selected rules above. 
+                    The maintenance schedule has been extracted from your device manual and will help ensure optimal performance.
                   </p>
                 </div>
               </>
@@ -866,7 +1157,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
         <div className="p-6 border-b border-slate-200">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">Add IoT Device</h2>
+              <h2 className="text-2xl font-bold text-slate-800">Smart Device Onboarding</h2>
               <p className="text-slate-600 mt-1">{getStepDescription(currentStep)}</p>
             </div>
             <button
@@ -881,7 +1172,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
           <div className="flex items-center justify-between mt-6">
             {[1, 2, 3, 4, 5].map((step) => (
               <div key={step} className="flex items-center">
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
                   step === currentStep
                     ? 'border-blue-500 bg-blue-500 text-white'
                     : step < currentStep
@@ -889,7 +1180,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                     : 'border-slate-300 text-slate-400'
                 }`}>
                   {step < currentStep ? (
-                    <CheckCircle className="w-4 h-4" />
+                    <CheckCircle className="w-5 h-5" />
                   ) : (
                     <span className="text-sm font-medium">{step}</span>
                   )}
@@ -906,23 +1197,59 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
 
         <div className="p-6">
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-slate-800 mb-2">{getStepTitle(currentStep)}</h3>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="text-blue-600">
+                {getStepIcon(currentStep)}
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800">{getStepTitle(currentStep)}</h3>
+            </div>
           </div>
 
-          {renderStepContent()}
+          {/* Loading Screen */}
+          {isStepLoading && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+              <p className="text-slate-600 text-center">{stepLoadingMessage}</p>
+            </div>
+          )}
 
-          {/* Success Message */}
-          {isSuccess && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center">
-                <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                <div>
-                  <h4 className="text-sm font-medium text-green-800">Device Added Successfully!</h4>
-                  <p className="text-sm text-green-600 mt-1">{successMessage}</p>
+          {/* Celebration Screen */}
+          {showCelebration && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-2xl p-8 max-w-md mx-4 text-center animate-bounce">
+                <div className="mb-6">
+                  <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-slate-800 mb-2">
+                    🎉 Device Added Successfully!
+                  </h3>
+                  <p className="text-slate-600 mb-4">
+                    Your IoT device <strong>"{createdDeviceName}"</strong> has been successfully onboarded.
+                  </p>
+                  <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-blue-800">
+                      💬 You can now chat with this device and monitor its performance in real-time!
+                    </p>
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <p className="text-xs text-blue-700">
+                        📊 View real-time data • 🔧 Manage device settings • 📋 Monitor rules
+                      </p>
+                    </div>
+                  </div>
                 </div>
+                <button
+                  onClick={() => setShowCelebration(false)}
+                  className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  Continue
+                </button>
               </div>
             </div>
           )}
+
+          {/* Main Content */}
+          {!isStepLoading && renderStepContent()}
 
           {/* Navigation */}
           <div className="flex items-center justify-between pt-6 border-t border-slate-200">
@@ -950,17 +1277,17 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                   type="submit"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Adding Device...
+                      {stepLoadingMessage || 'Onboarding Device...'}
                     </>
                   ) : (
                     <>
-                      <Plus className="w-4 h-4" />
-                      Add Device
+                      <Rocket className="w-4 h-4" />
+                      Complete Onboarding
                     </>
                   )}
                 </button>
@@ -968,10 +1295,20 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  disabled={isStepLoading}
+                  className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  Next
-                  <ArrowRight className="w-4 h-4" />
+                  {isStepLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {stepLoadingMessage}
+                    </>
+                  ) : (
+                    <>
+                      Next
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
                 </button>
               )}
             </div>
