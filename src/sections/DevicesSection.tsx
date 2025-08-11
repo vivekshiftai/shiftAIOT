@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Filter, Search, Cpu, CheckCircle, X } from 'lucide-react';
 import { DeviceCard } from '../components/Devices/DeviceCard';
-import { AddDeviceForm } from '../components/Devices/AddDeviceForm';
+import { DeviceOnboardingForm } from '../components/Devices/DeviceOnboardingForm';
 import { TestModal } from '../components/Devices/TestModal';
 import { useIoT } from '../contexts/IoTContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -208,49 +208,73 @@ export const DevicesSection: React.FC = () => {
         />
       )}
 
-             {/* Add Device Form Modal */}
+             {/* Device Onboarding Form Modal */}
        {showAddForm && (
-        <AddDeviceForm
-          onSubmit={async (deviceData, files, aiRules) => {
+        <DeviceOnboardingForm
+          onSubmit={async (deviceData: any, file: any) => {
             try {
               console.log('DevicesSection - Submitting device data:', deviceData);
-              
-              // Convert files array to object format expected by API
-              const fileObject: { manual?: File; datasheet?: File; certificate?: File } = {};
-              files.forEach(file => {
-                if (file.type === 'manual') fileObject.manual = file.file;
-                if (file.type === 'datasheet') fileObject.datasheet = file.file;
-                if (file.type === 'certificate') fileObject.certificate = file.file;
-              });
+              console.log('DevicesSection - File data:', file);
               
               // Create a complete device object with all required fields
               const completeDeviceData: Omit<Device, 'id'> = {
-                ...deviceData,
+                name: deviceData.deviceName,
+                type: 'SENSOR', // Default type
+                status: 'ONLINE',
+                location: deviceData.location || '',
+                protocol: deviceData.connectionProtocol || 'MQTT',
                 lastSeen: new Date().toISOString(),
                 batteryLevel: 100,
                 organizationId: '1', // Will be set by backend
                 createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
+                updatedAt: new Date().toISOString(),
+                manufacturer: '',
+                model: deviceData.productId || '',
+                serialNumber: deviceData.serialNumber || '',
+                macAddress: '',
+                ipAddress: '',
+                port: 8100,
+                description: deviceData.metadata || '',
+                installationNotes: '',
+                maintenanceSchedule: '',
+                warrantyInfo: '',
+                wifiSsid: '',
+                mqttBroker: '',
+                mqttTopic: '',
+                powerSource: '',
+                powerConsumption: 0,
+                operatingTemperatureMin: 0,
+                operatingTemperatureMax: 50,
+                operatingHumidityMin: 0,
+                operatingHumidityMax: 100,
+                tags: []
               };
               
-              // Create device using IoTContext which handles backend creation and local state update
-              if (files.length > 0) {
-                // For files, we need to use the API directly
-                const response = await deviceAPI.createWithFiles(deviceData, fileObject);
-                const createdDevice = response.data;
-                
-                console.log('DevicesSection - Device created successfully:', createdDevice);
-                
-                // Refresh devices from database to ensure we have the latest data
-                await refreshDevices();
+              let createdDevice;
+              
+              // Create device using the appropriate method based on whether there's a file
+              if (file && file.file && file.status === 'success') {
+                console.log('DevicesSection - Creating device with file');
+                try {
+                  // For files, we need to use the API directly
+                  const fileObject = { manual: file.file };
+                  const response = await deviceAPI.createWithFiles(completeDeviceData, fileObject);
+                  createdDevice = response.data;
+                } catch (fileError) {
+                  console.error('Failed to create device with file, trying without file:', fileError);
+                  // Fallback: create device without file
+                  createdDevice = await addDevice(completeDeviceData);
+                }
               } else {
+                console.log('DevicesSection - Creating device without file');
                 // Use the addDevice function from IoTContext
-                const createdDevice = await addDevice(completeDeviceData);
-                console.log('DevicesSection - Device created successfully:', createdDevice);
+                createdDevice = await addDevice(completeDeviceData);
               }
               
+              console.log('DevicesSection - Device created successfully:', createdDevice);
+              
               // Show success message
-              setSuccessMessage(`Device "${deviceData.name}" has been successfully added to the platform!`);
+              setSuccessMessage(`Device "${deviceData.deviceName}" has been successfully added to the platform!`);
               
               // Clear success message after 5 seconds
               setTimeout(() => {

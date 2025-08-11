@@ -215,3 +215,17 @@ export interface CoapConnectionRequest {
   brokerUrl: string;
   port?: number;
 }
+
+export interface KnowledgeDocument {
+  id: string;
+  name: string;
+  type: 'pdf' | 'docx' | 'txt' | 'doc';
+  uploadedAt: string;
+  processedAt?: string;
+  size: number;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  vectorized: boolean;
+  organizationId?: string;
+  description?: string;
+  tags?: string[];
+}

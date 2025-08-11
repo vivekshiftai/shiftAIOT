@@ -1,0 +1,176 @@
+package com.iotplatform.controller;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.iotplatform.model.KnowledgeDocument;
+import com.iotplatform.service.KnowledgeService;
+
+@RestController
+@RequestMapping("/api/knowledge")
+@CrossOrigin(origins = "*")
+public class KnowledgeController {
+
+    @Autowired
+    private KnowledgeService knowledgeService;
+
+    @PostMapping("/upload")
+    public ResponseEntity<?> uploadDocument(
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            KnowledgeDocument document = knowledgeService.uploadDocument(file, organizationId);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "document", document,
+                "message", "Document uploaded successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/documents")
+    public ResponseEntity<?> getDocuments(Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            List<KnowledgeDocument> documents = knowledgeService.getDocuments(organizationId);
+            return ResponseEntity.ok(Map.of("documents", documents));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/documents/{documentId}")
+    public ResponseEntity<?> deleteDocument(
+            @PathVariable String documentId,
+            Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            knowledgeService.deleteDocument(documentId, organizationId);
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Document deleted successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/documents/{documentId}/download")
+    public ResponseEntity<Resource> downloadDocument(
+            @PathVariable String documentId,
+            Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            Resource resource = knowledgeService.downloadDocument(documentId, organizationId);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/documents/{documentId}/status")
+    public ResponseEntity<?> getDocumentStatus(
+            @PathVariable String documentId,
+            Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            Map<String, Object> status = knowledgeService.getDocumentStatus(documentId, organizationId);
+            return ResponseEntity.ok(status);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/search")
+    public ResponseEntity<?> searchDocuments(
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            String query = (String) request.get("query");
+            Integer limit = (Integer) request.getOrDefault("limit", 10);
+            
+            List<Map<String, Object>> results = knowledgeService.searchDocuments(query, limit, organizationId);
+            return ResponseEntity.ok(Map.of(
+                "results", results,
+                "totalResults", results.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/chat")
+    public ResponseEntity<?> sendChatMessage(
+            @RequestBody Map<String, Object> request,
+            Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            String message = (String) request.get("message");
+            @SuppressWarnings("unchecked")
+            List<String> documentIds = (List<String>) request.get("documentIds");
+            
+            String response = knowledgeService.processChatMessage(message, documentIds, organizationId);
+            return ResponseEntity.ok(Map.of("message", response));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/chat/history")
+    public ResponseEntity<?> getChatHistory(Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            List<Map<String, Object>> messages = knowledgeService.getChatHistory(organizationId);
+            return ResponseEntity.ok(Map.of("messages", messages));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/statistics")
+    public ResponseEntity<?> getStatistics(Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            Map<String, Object> stats = knowledgeService.getStatistics(organizationId);
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    private String getOrganizationId(Authentication authentication) {
+        // Extract organization ID from authentication
+        // This is a placeholder - implement based on your authentication structure
+        return "default-org";
+    }
+}

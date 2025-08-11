@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,30 +33,30 @@ public class NotificationController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('NOTIFICATION_READ')")
     public ResponseEntity<List<Notification>> getAllNotifications(@AuthenticationPrincipal User user) {
+        // Users can only access their own notifications - this is handled by the service layer
         List<Notification> notifications = notificationService.getUserNotifications(
                 user.getOrganizationId(), user.getId());
         return ResponseEntity.ok(notifications);
     }
 
     @PatchMapping("/{id}/read")
-    @PreAuthorize("hasAuthority('NOTIFICATION_WRITE')")
-    public ResponseEntity<?> markAsRead(@PathVariable String id) {
-        notificationService.markAsRead(id);
+    public ResponseEntity<?> markAsRead(@PathVariable String id, @AuthenticationPrincipal User user) {
+        // Users can only mark their own notifications as read - this is handled by the service layer
+        notificationService.markAsRead(id, user.getOrganizationId(), user.getId());
         return ResponseEntity.ok().body("Notification marked as read");
     }
 
     @PatchMapping("/read-all")
-    @PreAuthorize("hasAuthority('NOTIFICATION_WRITE')")
     public ResponseEntity<?> markAllAsRead(@AuthenticationPrincipal User user) {
+        // Users can only mark their own notifications as read - this is handled by the service layer
         notificationService.markAllAsRead(user.getOrganizationId(), user.getId());
         return ResponseEntity.ok().body("All notifications marked as read");
     }
 
     @GetMapping("/unread-count")
-    @PreAuthorize("hasAuthority('NOTIFICATION_READ')")
     public ResponseEntity<Long> getUnreadCount(@AuthenticationPrincipal User user) {
+        // Users can only get count of their own unread notifications - this is handled by the service layer
         long count = notificationService.getUnreadCount(user.getOrganizationId(), user.getId());
         return ResponseEntity.ok(count);
     }

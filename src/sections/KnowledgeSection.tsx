@@ -1,68 +1,86 @@
-import React, { useState } from 'react';
-import { Upload, Search, FileText, Brain, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
-import { KnowledgeDocument } from '../types';
+import React, { useState, useEffect } from 'react';
+import { 
+  Upload, 
+  Search, 
+  FileText, 
+  Brain, 
+  AlertTriangle, 
+  CheckCircle, 
+  Clock,
+  Send,
+  Download,
+  Trash2,
+  MessageSquare,
+  Bot,
+  User,
+  Plus
+} from 'lucide-react';
+import { pdfProcessingService, PDFDocument, PDFUploadResponse, QueryRequest, QueryResponse } from '../services/pdfProcessingService';
 
-const mockDocuments: KnowledgeDocument[] = [
-  {
-    id: '1',
-    name: 'Device Manual - Temperature Sensors.pdf',
-    type: 'pdf',
-    uploadedAt: '2025-01-10T08:00:00Z',
-    processedAt: '2025-01-10T08:05:00Z',
-    size: 2457600,
-    status: 'completed',
-    vectorized: true
-  },
-  {
-    id: '2',
-    name: 'Troubleshooting Guide - HVAC Systems.docx',
-    type: 'docx',
-    uploadedAt: '2025-01-11T14:30:00Z',
-    processedAt: '2025-01-11T14:35:00Z',
-    size: 1536000,
-    status: 'completed',
-    vectorized: true
-  },
-  {
-    id: '3',
-    name: 'Installation Manual - IoT Gateways.pdf',
-    type: 'pdf',
-    uploadedAt: '2025-01-12T09:15:00Z',
-    size: 3072000,
-    status: 'processing',
-    vectorized: false
-  }
-];
+// Updated interface to match PDF API response
+interface KnowledgeDocument {
+  id: string;
+  name: string;
+  type: string;
+  uploadedAt: string;
+  processedAt?: string;
+  size: number;
+  status: string;
+  vectorized: boolean;
+  chunk_count?: number;
+}
+
+interface ChatMessage {
+  id: string;
+  type: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
 
 export const KnowledgeSection: React.FC = () => {
-  const [documents] = useState<KnowledgeDocument[]>(mockDocuments);
+  const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
+  const [selectedDocument, setSelectedDocument] = useState<KnowledgeDocument | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      id: '1',
+      type: 'assistant',
+      content: 'Hello! I\'m your AI assistant for the IoT knowledge base. I can help you find information from your uploaded PDF documents, answer questions about your devices, and assist with troubleshooting. What would you like to know?',
+      timestamp: new Date()
+    }
+  ]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-    
-    setIsSearching(true);
-    // Simulate AI search
-    setTimeout(() => {
-      setSearchResults([
-        {
-          id: '1',
-          document: 'Device Manual - Temperature Sensors.pdf',
-          excerpt: 'When temperature readings exceed 35°C, check the sensor calibration and ensure proper ventilation around the device.',
-          relevance: 0.95
-        },
-        {
-          id: '2',
-          document: 'Troubleshooting Guide - HVAC Systems.docx',
-          excerpt: 'High temperature alerts can indicate HVAC system malfunction. Verify thermostat settings and check for blocked air vents.',
-          relevance: 0.87
-        }
-      ]);
-      setIsSearching(false);
-    }, 1500);
-  };
+  // Load documents from PDF API on component mount
+  useEffect(() => {
+    const loadDocuments = async () => {
+      try {
+        const pdfListResponse = await pdfProcessingService.listPDFs();
+        const convertedDocuments: KnowledgeDocument[] = pdfListResponse.pdfs.map((pdf: PDFDocument, index: number) => ({
+          id: index.toString(),
+          name: pdf.filename,
+          type: 'pdf',
+          uploadedAt: pdf.upload_date,
+          processedAt: pdf.upload_date, // Assuming processing is immediate
+          size: pdf.file_size,
+          status: 'completed', // All listed PDFs are processed
+          vectorized: true,
+          chunk_count: pdf.chunk_count
+        }));
+        setDocuments(convertedDocuments);
+      } catch (error) {
+        console.error('Failed to load PDF documents:', error);
+        // Keep empty array as fallback
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDocuments();
+  }, []);
 
   const formatFileSize = (bytes: number) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -71,146 +89,395 @@ export const KnowledgeSection: React.FC = () => {
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const getStatusIcon = (status: KnowledgeDocument['status']) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
       case 'processing':
-        return <Clock className="w-5 h-5 text-yellow-600" />;
-      case 'error':
-        return <AlertTriangle className="w-5 h-5 text-red-600" />;
+        return <Clock className="w-4 h-4 text-yellow-600" />;
+      case 'failed':
+        return <AlertTriangle className="w-4 h-4 text-red-600" />;
       default:
-        return null;
+        return <Clock className="w-4 h-4 text-gray-400" />;
     }
   };
 
+  const sendMessage = async () => {
+    if (!newMessage.trim() || isTyping) return;
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: newMessage,
+      timestamp: new Date()
+    };
+
+    setChatMessages(prev => [...prev, userMessage]);
+    setNewMessage('');
+    setIsTyping(true);
+
+    try {
+      // If a document is selected, query it specifically
+      if (selectedDocument) {
+        const queryRequest: QueryRequest = {
+          pdf_filename: selectedDocument.name,
+          query: userMessage.content,
+          max_results: 5
+        };
+
+        const queryResponse = await pdfProcessingService.queryPDF(queryRequest);
+        
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: queryResponse.answer || `I found ${queryResponse.total_matches} relevant results in "${selectedDocument.name}". ${queryResponse.results.length > 0 ? 'Here\'s what I found: ' + queryResponse.results[0].text.substring(0, 200) + '...' : 'Would you like me to search for more specific information?'}`,
+          timestamp: new Date()
+        };
+        setChatMessages(prev => [...prev, assistantMessage]);
+      } else {
+        // Generate a general response
+        const aiResponse = generateAIResponse(userMessage.content);
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: aiResponse,
+          timestamp: new Date()
+        };
+        setChatMessages(prev => [...prev, assistantMessage]);
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: 'I apologize, but I encountered an error while processing your request. Please try again or select a specific document to query.',
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const generateAIResponse = (userMessage: string): string => {
+    const responses = [
+      `Based on the available documentation, I can help you with "${userMessage}". Let me search through the knowledge base for relevant information.`,
+      `I understand you're asking about "${userMessage}". This is a common question that I can address using the uploaded documents.`,
+      `Regarding "${userMessage}", I found some relevant information in the knowledge base. Would you like me to elaborate on any specific aspect?`,
+      `I can help you with "${userMessage}". The documentation contains several relevant sections that might be useful.`
+    ];
+    return responses[Math.floor(Math.random() * responses.length)];
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Only allow PDF files
+    if (!file.type.includes('pdf')) {
+      alert('Please upload only PDF files.');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const uploadResponse: PDFUploadResponse = await pdfProcessingService.uploadPDF(file);
+      
+      // Create a new document entry
+      const newDocument: KnowledgeDocument = {
+        id: Date.now().toString(),
+        name: uploadResponse.pdf_filename,
+        type: 'pdf',
+        uploadedAt: new Date().toISOString(),
+        size: file.size,
+        status: uploadResponse.processing_status === 'processing' ? 'processing' : 'completed',
+        vectorized: uploadResponse.processing_status === 'completed',
+        chunk_count: 0
+      };
+
+      setDocuments(prev => [newDocument, ...prev]);
+      
+      // Clear the input
+      event.target.value = '';
+      
+      // Show success message
+      const successMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: `Successfully uploaded "${uploadResponse.pdf_filename}". ${uploadResponse.processing_status === 'processing' ? 'The document is being processed and will be available for querying shortly.' : 'The document is ready for querying.'}`,
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, successMessage]);
+    } catch (error) {
+      console.error('Failed to upload document:', error);
+      alert('Failed to upload document. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const deleteDocument = async (documentId: string) => {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+
+    try {
+      const document = documents.find(doc => doc.id === documentId);
+      if (document) {
+        await pdfProcessingService.deletePDF(document.name);
+        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+        
+        if (selectedDocument?.id === documentId) {
+          setSelectedDocument(null);
+        }
+
+        // Show deletion message
+        const deletionMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: `Successfully deleted "${document.name}" from the knowledge base.`,
+          timestamp: new Date()
+        };
+        setChatMessages(prev => [...prev, deletionMessage]);
+      }
+    } catch (error) {
+      console.error('Failed to delete document:', error);
+      alert('Failed to delete document. Please try again.');
+    }
+  };
+
+  const filteredDocuments = documents.filter(doc =>
+    doc.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Knowledge Base</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            AI-powered document search and analysis for predictive maintenance
-          </p>
-        </div>
-        
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-          <Upload className="w-4 h-4" />
-          Upload Document
-        </button>
-      </div>
-
-      {/* AI Search */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-3 mb-4">
-          <Brain className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">AI-Powered Search</h3>
-        </div>
-        
-        <div className="flex gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Ask questions about your devices, troubleshooting, or maintenance..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            />
-          </div>
-          <button
-            onClick={handleSearch}
-            disabled={isSearching || !searchQuery.trim()}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSearching ? 'Searching...' : 'Search'}
-          </button>
-        </div>
-
-        {/* Search Results */}
-        {searchResults.length > 0 && (
-          <div className="mt-6 space-y-4">
-            <h4 className="font-medium text-gray-900 dark:text-white">AI Search Results:</h4>
-            {searchResults.map((result) => (
-              <div key={result.id} className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <div className="flex items-start justify-between mb-2">
-                  <h5 className="font-medium text-blue-900 dark:text-blue-300">{result.document}</h5>
-                  <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-800/50 px-2 py-1 rounded">
-                    {Math.round(result.relevance * 100)}% match
+    <div className="h-full flex bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Left Panel - Chat Interface */}
+      <div className="w-2/3 flex flex-col">
+        {/* Chat Header */}
+        <div className="p-6 border-b border-slate-200 bg-white/80 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <Bot className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800">AI Knowledge Assistant</h2>
+              <p className="text-slate-600">
+                Ask questions about your devices and PDF documents
+                {selectedDocument && (
+                  <span className="ml-2 text-blue-600 font-medium">
+                    • Currently viewing: {selectedDocument.name}
                   </span>
-                </div>
-                <p className="text-gray-700 dark:text-gray-300 text-sm">{result.excerpt}</p>
-              </div>
-            ))}
+                )}
+              </p>
+            </div>
           </div>
-        )}
-      </div>
-
-      {/* Document Library */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Document Library</h3>
-          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-            {documents.length} documents indexed for AI search
-          </p>
         </div>
-        
-        <div className="divide-y divide-gray-200 dark:divide-gray-700">
-          {documents.map((doc) => (
-            <div key={doc.id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <FileText className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium text-gray-900 dark:text-white">{doc.name}</h4>
-                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      <span>{formatFileSize(doc.size)}</span>
-                      <span>Uploaded {new Date(doc.uploadedAt).toLocaleDateString()}</span>
-                      {doc.processedAt && (
-                        <span>Processed {new Date(doc.processedAt).toLocaleDateString()}</span>
-                      )}
-                    </div>
-                  </div>
+
+        {/* Chat Messages */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gradient-to-b from-white/50 to-blue-50/30">
+          {chatMessages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div className="flex items-start gap-3 max-w-3xl">
+                <div className={`p-3 rounded-full flex-shrink-0 shadow-lg ${
+                  message.type === 'user'
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
+                    : 'bg-white text-slate-600 border border-slate-200'
+                }`}>
+                  {message.type === 'user' ? (<User className="w-5 h-5" />) : (<Bot className="w-5 h-5" />)}
                 </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(doc.status)}
-                    <span className="text-sm capitalize text-gray-600 dark:text-gray-400">
-                      {doc.status}
-                    </span>
-                  </div>
-                  
-                  {doc.vectorized && (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-xs rounded-full">
-                      <Brain className="w-3 h-3" />
-                      AI Ready
-                    </div>
-                  )}
+                <div
+                  className={`px-6 py-4 rounded-2xl shadow-sm ${
+                    message.type === 'user'
+                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
+                      : 'bg-white text-slate-800 border border-slate-200'
+                  }`}
+                >
+                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  <p className={`text-xs mt-3 ${
+                    message.type === 'user' ? 'text-blue-100' : 'text-slate-500'
+                  }`}>
+                    {message.timestamp.toLocaleTimeString()}
+                  </p>
                 </div>
               </div>
             </div>
           ))}
+          {isTyping && (
+            <div className="flex justify-start">
+              <div className="flex items-start gap-3 max-w-3xl">
+                <div className="p-3 rounded-full flex-shrink-0 shadow-lg bg-white text-slate-600 border border-slate-200">
+                  <Bot className="w-5 h-5" />
+                </div>
+                <div className="px-6 py-4 rounded-2xl shadow-sm bg-white text-slate-800 border border-slate-200">
+                  <div className="flex space-x-2">
+                    <div className="w-3 h-3 bg-slate-400 rounded-full animate-bounce"></div>
+                    <div className="w-3 h-3 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-3 h-3 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Chat Input */}
+        <div className="p-6 border-t border-slate-200 bg-white/80 backdrop-blur-sm">
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+              placeholder={selectedDocument ? `Ask about "${selectedDocument.name}"...` : "Ask about your devices, documents, or troubleshooting..."}
+              className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800 shadow-sm"
+            />
+            <button
+              onClick={sendMessage}
+              disabled={!newMessage.trim() || isTyping}
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+            >
+              <Send className="w-4 h-4" />
+              Send
+            </button>
+          </div>
+          
+          {/* Quick Actions */}
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={() => setNewMessage('How do I troubleshoot temperature sensor issues?')}
+              className="px-4 py-2 text-sm bg-white border border-slate-200 text-slate-700 rounded-full hover:bg-slate-50 transition-colors shadow-sm"
+            >
+              Temperature sensors
+            </button>
+            <button
+              onClick={() => setNewMessage('What maintenance procedures are recommended?')}
+              className="px-4 py-2 text-sm bg-white border border-slate-200 text-slate-700 rounded-full hover:bg-slate-50 transition-colors shadow-sm"
+            >
+              Maintenance
+            </button>
+            <button
+              onClick={() => setNewMessage('How do I install IoT gateways?')}
+              className="px-4 py-2 text-sm bg-white border border-slate-200 text-slate-700 rounded-full hover:bg-slate-50 transition-colors shadow-sm"
+            >
+              Installation
+            </button>
+          </div>
         </div>
       </div>
 
-      {documents.length === 0 && (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-          <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No documents yet</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Upload your first document to start building your AI-powered knowledge base.
-          </p>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            Upload Document
-          </button>
+      {/* Right Panel - PDF Document Library */}
+      <div className="w-1/3 border-l border-slate-200 flex flex-col bg-white/80 backdrop-blur-sm">
+        {/* Header */}
+        <div className="p-6 border-b border-slate-200">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-slate-800">PDF Document Library</h2>
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={uploading}
+              />
+              <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg">
+                {uploading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
+                {uploading ? 'Uploading...' : 'Upload PDF'}
+              </div>
+            </label>
+          </div>
+          
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search PDF documents..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800 shadow-sm"
+            />
+          </div>
         </div>
-      )}
+
+        {/* Document List */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="p-6 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+              <p className="text-slate-500 mt-2">Loading PDF documents...</p>
+            </div>
+          ) : filteredDocuments.length === 0 ? (
+            <div className="p-6 text-center text-slate-500">
+              {searchQuery ? 'No PDF documents found' : 'No PDF documents uploaded yet'}
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-200">
+              {filteredDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors ${
+                    selectedDocument?.id === doc.id ? 'bg-blue-50 border-r-4 border-blue-500' : ''
+                  }`}
+                  onClick={() => setSelectedDocument(doc)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="p-2 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg flex-shrink-0">
+                        <FileText className="w-4 h-4 text-blue-600" />
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-slate-800 truncate">{doc.name}</h4>
+                        <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+                          <span>{formatFileSize(doc.size)}</span>
+                          <span>•</span>
+                          <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
+                          {doc.chunk_count && (
+                            <>
+                              <span>•</span>
+                              <span>{doc.chunk_count} chunks</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 ml-2">
+                      {getStatusIcon(doc.status)}
+                      {doc.vectorized && (
+                        <Brain className="w-4 h-4 text-green-600" />
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteDocument(doc.id);
+                        }}
+                        className="p-1 hover:bg-red-100 rounded transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Stats */}
+        <div className="p-4 border-t border-slate-200 bg-slate-50">
+          <div className="flex items-center justify-between text-sm text-slate-600">
+            <span>{documents.length} PDF documents</span>
+            <span>{documents.filter(d => d.vectorized).length} AI ready</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

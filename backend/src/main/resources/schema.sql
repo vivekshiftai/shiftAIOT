@@ -238,7 +238,7 @@ SELECT
     'ONLINE',
     'HTTP',
     '192.168.1.100',
-    8080,
+    8100,
     'Building A - Floor 1',
     'default'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = 'device-001');
@@ -251,7 +251,7 @@ SELECT
     'ONLINE',
     'HTTP',
     '192.168.1.101',
-    8080,
+    8100,
     'Building A - Floor 1',
     'default'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = 'device-002');

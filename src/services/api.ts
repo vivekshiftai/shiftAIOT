@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'http://localhost:8100/api';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -15,13 +15,18 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     console.log('API Request:', config.method?.toUpperCase(), config.url, config.data);
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    
     // For device endpoints, don't require authentication
     if (config.url?.includes('/devices/')) {
       console.log('Device endpoint - proceeding without authentication');
+      // Remove any existing Authorization header for device endpoints
+      delete config.headers.Authorization;
+      return config;
+    }
+    
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -41,9 +46,9 @@ api.interceptors.response.use(
     console.error('API Response Error:', error.response?.status, error.config?.url, error.message);
     
     // Don't handle 401 errors for device endpoints
-    if (error.response?.status === 401 && !error.config.url?.includes('/auth/') && !error.config.url?.includes('/devices/')) {
+    if (error.response?.status === 401 && !error.config.url?.includes('/devices/')) {
       // For development, don't logout on 401 errors
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.MODE === 'development') {
         console.warn('401 error detected, but staying logged in for development');
         return Promise.reject(error);
       }
@@ -105,7 +110,7 @@ export const deviceAPI = {
       serialNumber: device.serialNumber || '',
       macAddress: device.macAddress || '',
       ipAddress: device.ipAddress || '',
-      port: device.port || 8080,
+              port: device.port || 8100,
       firmware: device.firmware || '',
       description: device.description || '',
       installationNotes: device.installationNotes || '',
@@ -142,7 +147,7 @@ export const deviceAPI = {
       serialNumber: deviceData.serialNumber || '',
       macAddress: deviceData.macAddress || '',
       ipAddress: deviceData.ipAddress || '',
-      port: deviceData.port || 8080,
+      port: deviceData.port || 8100,
       firmware: deviceData.firmware || '',
       description: deviceData.description || '',
       installationNotes: deviceData.installationNotes || '',
@@ -190,7 +195,7 @@ export const deviceAPI = {
       serialNumber: deviceData.serialNumber || '',
       macAddress: deviceData.macAddress || '',
       ipAddress: deviceData.ipAddress || '',
-      port: deviceData.port || 8080,
+      port: deviceData.port || 8100,
       firmware: deviceData.firmware || '',
       description: deviceData.description || '',
       installationNotes: deviceData.installationNotes || '',

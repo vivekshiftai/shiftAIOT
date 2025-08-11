@@ -34,6 +34,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
+            // Skip authentication for device endpoints
+            String requestURI = request.getRequestURI();
+            if (requestURI.startsWith("/api/devices/") || requestURI.startsWith("/devices/")) {
+                logger.debug("Skipping JWT authentication for device endpoint: {}", requestURI);
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             String jwt = getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
@@ -48,6 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         } catch (Exception ex) {
             logger.error("Could not set user authentication in security context", ex);
+            // Don't block the request, just log the error
         }
 
         filterChain.doFilter(request, response);

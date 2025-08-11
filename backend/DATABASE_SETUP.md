@@ -84,7 +84,7 @@ The application will:
 
 ### 6. Verify Setup
 - Check application logs for "✅ Successfully connected to PostgreSQL database"
-- Access API documentation at: http://localhost:8080/api/swagger-ui.html
+- Access API documentation at: http://localhost:8100/api/swagger-ui.html
 - Login with default admin: admin@shiftaiot.com / admin123
 
 ## Troubleshooting
@@ -100,5 +100,5 @@ The application will:
 3. Check application logs for specific errors
 
 ### Port Conflicts
-- Change server.port in application.yml if 8080 is in use
+- Change server.port in application.yml if 8100 is in use
 - Update frontend API configuration accordingly

@@ -46,12 +46,21 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   
   const { user } = useAuth();
-  const notificationService = NotificationService.getInstance();
+  const notificationService = user ? NotificationService.getInstance() : null;
 
   // Load notifications from database and subscribe to updates
   useEffect(() => {
+    if (!user || !notificationService) {
+      console.log('IoTContext - No user or notification service, skipping notification load');
+      return;
+    }
+
     const loadNotifications = async () => {
-      await notificationService.loadFromDatabase();
+      try {
+        await notificationService.loadFromDatabase();
+      } catch (error) {
+        console.error('IoTContext - Failed to load notifications:', error);
+      }
     };
 
     // Load initial notifications
@@ -63,10 +72,16 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     });
 
     return unsubscribe;
-  }, [notificationService]);
+  }, [notificationService, user]);
 
   // Load data from backend when user is authenticated
   useEffect(() => {
+    if (!user) {
+      console.log('IoTContext - No user, skipping data load');
+      setLoading(false);
+      return;
+    }
+
     const loadData = async () => {
       console.log('IoTContext - Loading data from backend');
       setLoading(true);
@@ -134,7 +149,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
 
     // Load data immediately when component mounts
     loadData();
-  }, []); // Remove user dependency to load data immediately
+  }, [user]); // Add user dependency to reload when user changes
 
   // Note: Removed telemetry simulation to prevent unwanted notifications and data interference
 
@@ -227,7 +242,9 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   const markNotificationAsRead = async (notificationId: string) => {
     try {
       await notificationAPI.markAsRead(notificationId);
-      notificationService.markAsRead(notificationId);
+      if (notificationService) {
+        notificationService.markAsRead(notificationId);
+      }
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
       throw error;
@@ -289,7 +306,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       await deviceAPI.update(deviceId, { assignedUserId: userId });
       
       const device = devices.find(d => d.id === deviceId);
-      if (device) {
+      if (device && notificationService) {
         notificationService.onDeviceAssigned(device, userId);
       }
     } catch (error) {

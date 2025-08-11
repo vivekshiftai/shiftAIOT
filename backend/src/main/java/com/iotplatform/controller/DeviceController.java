@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iotplatform.dto.DeviceCreateResponse;
 import com.iotplatform.dto.DeviceCreateWithFileRequest;
@@ -43,6 +44,9 @@ public class DeviceController {
 
     private static final Logger logger = LoggerFactory.getLogger(DeviceController.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final String ANONYMOUS_USER = "anonymous";
+    private static final String DEFAULT_ORGANIZATION = "default";
+    private static final int MAX_FILE_SIZE = 10485760; // 10MB in bytes
 
     private final DeviceService deviceService;
     private final TelemetryService telemetryService;
@@ -61,8 +65,8 @@ public class DeviceController {
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String search) {
         
-        String userEmail = user != null ? user.getEmail() : "anonymous";
-        String organizationId = user != null ? user.getOrganizationId() : "default";
+        String userEmail = getUserEmail(user);
+        String organizationId = getOrganizationId(user);
         
         logger.info("User {} requesting devices with filters - status: {}, type: {}, search: {}", 
                    userEmail, status, type, search);
@@ -71,13 +75,13 @@ public class DeviceController {
         List<Device> devices;
         
         try {
-            if (search != null && !search.isEmpty()) {
-                devices = deviceService.searchDevices(organizationId, search);
+            if (search != null && !search.trim().isEmpty()) {
+                devices = deviceService.searchDevices(organizationId, search.trim());
                 logger.info("Found {} devices matching search: {}", devices.size(), search);
-            } else if (status != null) {
+            } else if (status != null && !status.trim().isEmpty()) {
                 devices = deviceService.getDevicesByStatus(organizationId, Device.DeviceStatus.valueOf(status.toUpperCase()));
                 logger.info("Found {} devices with status: {}", devices.size(), status);
-            } else if (type != null) {
+            } else if (type != null && !type.trim().isEmpty()) {
                 devices = deviceService.getDevicesByType(organizationId, Device.DeviceType.valueOf(type.toUpperCase()));
                 logger.info("Found {} devices with type: {}", devices.size(), type);
             } else {
@@ -87,6 +91,9 @@ public class DeviceController {
             
             logger.info("Returning {} devices to user: {}", devices.size(), userEmail);
             return ResponseEntity.ok(devices);
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid filter parameter for user {}: {}", userEmail, e.getMessage());
+            return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             logger.error("Error getting devices for user {}: {}", userEmail, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -95,12 +102,17 @@ public class DeviceController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Device> getDevice(@PathVariable String id, @AuthenticationPrincipal User user) {
-        String userEmail = user != null ? user.getEmail() : "anonymous";
-        String organizationId = user != null ? user.getOrganizationId() : "default";
+        String userEmail = getUserEmail(user);
+        String organizationId = getOrganizationId(user);
         
         logger.info("User {} requesting device with ID: {}", userEmail, id);
         
-        Optional<Device> device = deviceService.getDevice(id, organizationId);
+        if (id == null || id.trim().isEmpty()) {
+            logger.warn("Invalid device ID provided by user {}", userEmail);
+            return ResponseEntity.badRequest().build();
+        }
+        
+        Optional<Device> device = deviceService.getDevice(id.trim(), organizationId);
         
         if (device.isPresent()) {
             logger.debug("Device {} found for user {}", id, userEmail);
@@ -113,8 +125,8 @@ public class DeviceController {
 
     @PostMapping
     public ResponseEntity<Device> createDevice(@Valid @RequestBody Device device, @AuthenticationPrincipal User user) {
-        String userEmail = user != null ? user.getEmail() : "anonymous";
-        String organizationId = user != null ? user.getOrganizationId() : "default";
+        String userEmail = getUserEmail(user);
+        String organizationId = getOrganizationId(user);
         
         logger.info("User {} creating new device: {}", userEmail, device.getName());
         
@@ -136,8 +148,8 @@ public class DeviceController {
             @RequestParam(value = "certificateFile", required = false) MultipartFile certificateFile,
             @AuthenticationPrincipal User user) {
         
-        String userEmail = user != null ? user.getEmail() : "anonymous";
-        String organizationId = user != null ? user.getOrganizationId() : "default";
+        String userEmail = getUserEmail(user);
+        String organizationId = getOrganizationId(user);
         
         logger.info("User {} creating new device with files: {}", userEmail, deviceData);
         
@@ -146,103 +158,13 @@ public class DeviceController {
             DeviceCreateWithFileRequest request = objectMapper.readValue(deviceData, DeviceCreateWithFileRequest.class);
             
             // Enhanced validation for device data
-            if (request.getName() == null || request.getName().trim().isEmpty()) {
-                logger.error("Device name is required");
-                return ResponseEntity.badRequest().body(null);
+            if (!isValidDeviceRequest(request)) {
+                return ResponseEntity.badRequest().build();
             }
             
-            if (request.getType() == null) {
-                logger.error("Device type is required");
-                return ResponseEntity.badRequest().body(null);
-            }
-            
-            if (request.getLocation() == null || request.getLocation().trim().isEmpty()) {
-                logger.error("Device location is required");
-                return ResponseEntity.badRequest().body(null);
-            }
-            
-            if (request.getProtocol() == null) {
-                logger.error("Device protocol is required");
-                return ResponseEntity.badRequest().body(null);
-            }
-            
-            // Validate MAC address format if provided
-            if (request.getMacAddress() != null && !request.getMacAddress().trim().isEmpty()) {
-                String macPattern = "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$";
-                if (!request.getMacAddress().matches(macPattern)) {
-                    logger.error("Invalid MAC address format: {}", request.getMacAddress());
-                    return ResponseEntity.badRequest().body(null);
-                }
-            }
-            
-            // Validate IP address format if provided
-            if (request.getIpAddress() != null && !request.getIpAddress().trim().isEmpty()) {
-                String ipPattern = "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$";
-                if (!request.getIpAddress().matches(ipPattern)) {
-                    logger.error("Invalid IP address format: {}", request.getIpAddress());
-                    return ResponseEntity.badRequest().body(null);
-                }
-            }
-            
-            // Validate port number if provided
-            if (request.getPort() != null && (request.getPort() < 1 || request.getPort() > 65535)) {
-                logger.error("Invalid port number: {}", request.getPort());
-                return ResponseEntity.badRequest().body(null);
-            }
-            
-            // Validate environmental specifications
-            if (request.getOperatingTemperatureMin() != null && request.getOperatingTemperatureMax() != null) {
-                if (request.getOperatingTemperatureMin() >= request.getOperatingTemperatureMax()) {
-                    logger.error("Operating temperature min must be less than max");
-                    return ResponseEntity.badRequest().body(null);
-                }
-            }
-            
-            if (request.getOperatingHumidityMin() != null && request.getOperatingHumidityMax() != null) {
-                if (request.getOperatingHumidityMin() >= request.getOperatingHumidityMax()) {
-                    logger.error("Operating humidity min must be less than max");
-                    return ResponseEntity.badRequest().body(null);
-                }
-            }
-            
-            // Validate power consumption if provided
-            if (request.getPowerConsumption() != null && request.getPowerConsumption() < 0) {
-                logger.error("Power consumption must be positive");
-                return ResponseEntity.badRequest().body(null);
-            }
-            
-            // Validate file types and sizes if files are provided
-            if (manualFile != null && !manualFile.isEmpty()) {
-                if (!fileStorageService.isValidFileType(manualFile.getOriginalFilename())) {
-                    logger.error("Invalid manual file type: {}", manualFile.getOriginalFilename());
-                    return ResponseEntity.badRequest().body(null);
-                }
-                if (manualFile.getSize() > 10485760) { // 10MB limit
-                    logger.error("Manual file size exceeds limit: {} bytes", manualFile.getSize());
-                    return ResponseEntity.status(413).body(null);
-                }
-            }
-            
-            if (datasheetFile != null && !datasheetFile.isEmpty()) {
-                if (!fileStorageService.isValidFileType(datasheetFile.getOriginalFilename())) {
-                    logger.error("Invalid datasheet file type: {}", datasheetFile.getOriginalFilename());
-                    return ResponseEntity.badRequest().body(null);
-                }
-                if (datasheetFile.getSize() > 10485760) { // 10MB limit
-                    logger.error("Datasheet file size exceeds limit: {} bytes", datasheetFile.getSize());
-                    return ResponseEntity.status(413).body(null);
-                }
-            }
-            
-            if (certificateFile != null && !certificateFile.isEmpty()) {
-                if (!fileStorageService.isValidFileType(certificateFile.getOriginalFilename())) {
-                    logger.error("Invalid certificate file type: {}", certificateFile.getOriginalFilename());
-                    return ResponseEntity.badRequest().body(null);
-                }
-                if (certificateFile.getSize() > 10485760) { // 10MB limit
-                    logger.error("Certificate file size exceeds limit: {} bytes", certificateFile.getSize());
-                    return ResponseEntity.status(413).body(null);
-                }
+            // Validate files if provided
+            if (!validateFiles(manualFile, datasheetFile, certificateFile)) {
+                return ResponseEntity.badRequest().build();
             }
             
             DeviceCreateResponse response = deviceService.createDeviceWithFiles(request, manualFile, datasheetFile, certificateFile, organizationId);
@@ -250,19 +172,24 @@ public class DeviceController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Failed to create device with files: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(null);
+            return ResponseEntity.badRequest().build();
         }
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Device> updateDevice(@PathVariable String id, @Valid @RequestBody Device deviceDetails, @AuthenticationPrincipal User user) {
-        String userEmail = user != null ? user.getEmail() : "anonymous";
-        String organizationId = user != null ? user.getOrganizationId() : "default";
+        String userEmail = getUserEmail(user);
+        String organizationId = getOrganizationId(user);
         
         logger.info("User {} updating device: {}", userEmail, id);
         
+        if (id == null || id.trim().isEmpty()) {
+            logger.warn("Invalid device ID provided by user {}", userEmail);
+            return ResponseEntity.badRequest().build();
+        }
+        
         try {
-            Device updatedDevice = deviceService.updateDevice(id, deviceDetails, organizationId);
+            Device updatedDevice = deviceService.updateDevice(id.trim(), deviceDetails, organizationId);
             logger.info("Device {} updated successfully", id);
             return ResponseEntity.ok(updatedDevice);
         } catch (RuntimeException e) {
@@ -273,13 +200,18 @@ public class DeviceController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteDevice(@PathVariable String id, @AuthenticationPrincipal User user) {
-        String userEmail = user != null ? user.getEmail() : "anonymous";
-        String organizationId = user != null ? user.getOrganizationId() : "default";
+        String userEmail = getUserEmail(user);
+        String organizationId = getOrganizationId(user);
         
         logger.info("User {} deleting device: {}", userEmail, id);
         
+        if (id == null || id.trim().isEmpty()) {
+            logger.warn("Invalid device ID provided by user {}", userEmail);
+            return ResponseEntity.badRequest().build();
+        }
+        
         try {
-            deviceService.deleteDevice(id, organizationId);
+            deviceService.deleteDevice(id.trim(), organizationId);
             logger.info("Device {} deleted successfully", id);
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
@@ -290,13 +222,23 @@ public class DeviceController {
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<Device> updateDeviceStatus(@PathVariable String id, @RequestBody Device.DeviceStatus status, @AuthenticationPrincipal User user) {
-        String userEmail = user != null ? user.getEmail() : "anonymous";
-        String organizationId = user != null ? user.getOrganizationId() : "default";
+        String userEmail = getUserEmail(user);
+        String organizationId = getOrganizationId(user);
         
         logger.info("User {} updating device {} status to: {}", userEmail, id, status);
         
+        if (id == null || id.trim().isEmpty()) {
+            logger.warn("Invalid device ID provided by user {}", userEmail);
+            return ResponseEntity.badRequest().build();
+        }
+        
+        if (status == null) {
+            logger.warn("Invalid status provided by user {}", userEmail);
+            return ResponseEntity.badRequest().build();
+        }
+        
         try {
-            Device updatedDevice = deviceService.updateDeviceStatus(id, status, organizationId);
+            Device updatedDevice = deviceService.updateDeviceStatus(id.trim(), status, organizationId);
             logger.info("Device {} status updated to: {}", id, status);
             return ResponseEntity.ok(updatedDevice);
         } catch (RuntimeException e) {
@@ -309,8 +251,13 @@ public class DeviceController {
     public ResponseEntity<?> postTelemetryData(@PathVariable String id, @Valid @RequestBody TelemetryDataRequest telemetryData) {
         logger.debug("Receiving telemetry data for device: {}", id);
         
+        if (id == null || id.trim().isEmpty()) {
+            logger.warn("Invalid device ID for telemetry data");
+            return ResponseEntity.badRequest().body("Invalid device ID");
+        }
+        
         try {
-            telemetryService.storeTelemetryData(id, telemetryData);
+            telemetryService.storeTelemetryData(id.trim(), telemetryData);
             logger.debug("Telemetry data stored successfully for device: {}", id);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
@@ -323,8 +270,13 @@ public class DeviceController {
     public ResponseEntity<String> getTelemetryData(@PathVariable String id, @RequestParam(defaultValue = "1h") String range) {
         logger.debug("User requesting telemetry data for device: {} with range: {}", id, range);
         
+        if (id == null || id.trim().isEmpty()) {
+            logger.warn("Invalid device ID for telemetry data request");
+            return ResponseEntity.badRequest().body("Invalid device ID");
+        }
+        
         try {
-            String telemetryData = telemetryService.getTelemetryData(id, range);
+            String telemetryData = telemetryService.getTelemetryData(id.trim(), range);
             return ResponseEntity.ok(telemetryData);
         } catch (Exception e) {
             logger.error("Failed to get telemetry data for device {}: {}", id, e.getMessage());
@@ -334,8 +286,8 @@ public class DeviceController {
 
     @GetMapping("/stats")
     public ResponseEntity<DeviceStatsResponse> getDeviceStats(@AuthenticationPrincipal User user) {
-        String userEmail = user != null ? user.getEmail() : "anonymous";
-        String organizationId = user != null ? user.getOrganizationId() : "default";
+        String userEmail = getUserEmail(user);
+        String organizationId = getOrganizationId(user);
         
         logger.info("User {} requesting device statistics", userEmail);
         
@@ -356,49 +308,34 @@ public class DeviceController {
             @PathVariable String type,
             @AuthenticationPrincipal User user) {
         
-        String userEmail = user != null ? user.getEmail() : "anonymous";
-        String organizationId = user != null ? user.getOrganizationId() : "default";
+        String userEmail = getUserEmail(user);
+        String organizationId = getOrganizationId(user);
         
         logger.info("User {} requesting device documentation: device={}, type={}", userEmail, id, type);
         
+        if (id == null || id.trim().isEmpty() || type == null || type.trim().isEmpty()) {
+            logger.warn("Invalid device ID or documentation type provided by user {}", userEmail);
+            return ResponseEntity.badRequest().build();
+        }
+        
         try {
             // Get device to verify ownership and get file path
-            Optional<Device> device = deviceService.getDevice(id, organizationId);
+            Optional<Device> device = deviceService.getDevice(id.trim(), organizationId);
             if (device.isEmpty()) {
                 logger.warn("Device {} not found for user {}", id, userEmail);
                 return ResponseEntity.notFound().build();
             }
             
-            String filePath = null;
-            String contentType = null;
-            String filename = null;
-            
-            switch (type.toLowerCase()) {
-                case "manual":
-                    filePath = device.get().getManualUrl();
-                    filename = "manual.pdf";
-                    break;
-                case "datasheet":
-                    filePath = device.get().getDatasheetUrl();
-                    filename = "datasheet.pdf";
-                    break;
-                case "certificate":
-                    filePath = device.get().getCertificateUrl();
-                    filename = "certificate.pdf";
-                    break;
-                default:
-                    logger.error("Invalid documentation type: {}", type);
-                    return ResponseEntity.badRequest().build();
-            }
-            
-            if (filePath == null || filePath.trim().isEmpty()) {
+            String filePath = getDocumentationFilePath(device.get(), type.trim().toLowerCase());
+            if (filePath == null) {
                 logger.warn("Documentation file not found for device {}: type={}", id, type);
                 return ResponseEntity.notFound().build();
             }
             
             // Load file from storage
             byte[] fileContent = fileStorageService.loadFile(filePath);
-            contentType = fileStorageService.getFileType(filename);
+            String filename = getDocumentationFilename(type.trim().toLowerCase());
+            String contentType = fileStorageService.getFileType(filename);
             
             logger.info("Documentation file downloaded successfully: device={}, type={}, size={} bytes", 
                        id, type, fileContent.length);
@@ -420,68 +357,24 @@ public class DeviceController {
             @PathVariable String id,
             @AuthenticationPrincipal User user) {
         
-        String userEmail = user != null ? user.getEmail() : "anonymous";
-        String organizationId = user != null ? user.getOrganizationId() : "default";
+        String userEmail = getUserEmail(user);
+        String organizationId = getOrganizationId(user);
         
         logger.info("User {} requesting device documentation info: device={}", userEmail, id);
         
+        if (id == null || id.trim().isEmpty()) {
+            logger.warn("Invalid device ID provided by user {}", userEmail);
+            return ResponseEntity.badRequest().build();
+        }
+        
         try {
-            Optional<Device> device = deviceService.getDevice(id, organizationId);
+            Optional<Device> device = deviceService.getDevice(id.trim(), organizationId);
             if (device.isEmpty()) {
                 logger.warn("Device {} not found for user {}", id, userEmail);
                 return ResponseEntity.notFound().build();
             }
             
-            Map<String, Object> documentationInfo = new HashMap<>();
-            documentationInfo.put("deviceId", id);
-            documentationInfo.put("deviceName", device.get().getName());
-            
-            // Check which documentation files are available
-            Map<String, Object> files = new HashMap<>();
-            
-            if (device.get().getManualUrl() != null && !device.get().getManualUrl().trim().isEmpty()) {
-                Map<String, Object> manualInfo = new HashMap<>();
-                manualInfo.put("available", true);
-                manualInfo.put("url", "/devices/" + id + "/documentation/manual");
-                try {
-                    manualInfo.put("size", fileStorageService.getFileSize(device.get().getManualUrl()));
-                } catch (Exception e) {
-                    manualInfo.put("size", "unknown");
-                }
-                files.put("manual", manualInfo);
-            } else {
-                files.put("manual", Map.of("available", false));
-            }
-            
-            if (device.get().getDatasheetUrl() != null && !device.get().getDatasheetUrl().trim().isEmpty()) {
-                Map<String, Object> datasheetInfo = new HashMap<>();
-                datasheetInfo.put("available", true);
-                datasheetInfo.put("url", "/devices/" + id + "/documentation/datasheet");
-                try {
-                    datasheetInfo.put("size", fileStorageService.getFileSize(device.get().getDatasheetUrl()));
-                } catch (Exception e) {
-                    datasheetInfo.put("size", "unknown");
-                }
-                files.put("datasheet", datasheetInfo);
-            } else {
-                files.put("datasheet", Map.of("available", false));
-            }
-            
-            if (device.get().getCertificateUrl() != null && !device.get().getCertificateUrl().trim().isEmpty()) {
-                Map<String, Object> certificateInfo = new HashMap<>();
-                certificateInfo.put("available", true);
-                certificateInfo.put("url", "/devices/" + id + "/documentation/certificate");
-                try {
-                    certificateInfo.put("size", fileStorageService.getFileSize(device.get().getCertificateUrl()));
-                } catch (Exception e) {
-                    certificateInfo.put("size", "unknown");
-                }
-                files.put("certificate", certificateInfo);
-            } else {
-                files.put("certificate", Map.of("available", false));
-            }
-            
-            documentationInfo.put("files", files);
+            Map<String, Object> documentationInfo = buildDocumentationInfo(device.get(), id);
             
             logger.debug("Documentation info retrieved for device {}: {}", id, documentationInfo);
             return ResponseEntity.ok(documentationInfo);
@@ -501,8 +394,8 @@ public class DeviceController {
             @RequestParam(value = "aiRules", required = false) String aiRulesJson,
             @AuthenticationPrincipal User user) {
         
-        String userEmail = user != null ? user.getEmail() : "anonymous";
-        String organizationId = user != null ? user.getOrganizationId() : "default";
+        String userEmail = getUserEmail(user);
+        String organizationId = getOrganizationId(user);
         
         logger.info("User {} starting AI-powered device onboarding", userEmail);
         
@@ -510,32 +403,15 @@ public class DeviceController {
             // Parse device data
             DeviceCreateWithFileRequest deviceRequest = objectMapper.readValue(deviceData, DeviceCreateWithFileRequest.class);
             
-                             // Create device with files
-                 DeviceCreateResponse response = deviceService.createDeviceWithFiles(deviceRequest, manualFile, datasheetFile, certificateFile, organizationId);
-                 
-                 // Log the device creation with maintenance details
-                 logger.info("Device created with ID: {} and maintenance schedule: {}", response.getId(), deviceRequest.getMaintenanceSchedule());
+            // Create device with files
+            DeviceCreateResponse response = deviceService.createDeviceWithFiles(deviceRequest, manualFile, datasheetFile, certificateFile, organizationId);
+            
+            // Log the device creation with maintenance details
+            logger.info("Device created with ID: {} and maintenance schedule: {}", response.getId(), deviceRequest.getMaintenanceSchedule());
             
             // Process AI-generated rules if provided
-            if (aiRulesJson != null && !aiRulesJson.isEmpty()) {
-                try {
-                    List<Map<String, Object>> aiRules = objectMapper.readValue(aiRulesJson, 
-                        objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class));
-                    
-                    logger.info("Processing {} AI-generated rules for device: {}", aiRules.size(), response.getId());
-                    
-                    // Here you would integrate with your AI service to process the rules
-                    // For now, we'll just log the rules
-                    for (Map<String, Object> ruleData : aiRules) {
-                        if ((Boolean) ruleData.get("isSelected")) {
-                            logger.info("Selected AI rule: {} - {}", ruleData.get("name"), ruleData.get("description"));
-                        }
-                    }
-                    
-                    logger.info("AI rules processed for device: {}", response.getId());
-                } catch (Exception e) {
-                    logger.warn("Failed to process AI rules for device {}: {}", response.getId(), e.getMessage());
-                }
+            if (aiRulesJson != null && !aiRulesJson.trim().isEmpty()) {
+                processAIRules(aiRulesJson, response.getId());
             }
             
             logger.info("AI-powered device onboarding completed for device: {}", response.getId());
@@ -552,14 +428,24 @@ public class DeviceController {
                                              @RequestParam("deviceId") String deviceId,
                                              @AuthenticationPrincipal User user) {
         try {
-            String userEmail = user != null ? user.getEmail() : "anonymous";
+            String userEmail = getUserEmail(user);
             
             logger.info("User {} requesting PDF RAG processing for device {}", userEmail, deviceId);
             
-            // Process PDF with RAG system
-            Map<String, Object> result = deviceService.processPDFWithRAG(pdfFile, deviceId);
+            if (pdfFile == null || pdfFile.isEmpty()) {
+                logger.warn("No PDF file provided for RAG processing by user {}", userEmail);
+                return ResponseEntity.badRequest().body(Map.of("error", "No PDF file provided"));
+            }
             
-            if ((Boolean) result.get("success")) {
+            if (deviceId == null || deviceId.trim().isEmpty()) {
+                logger.warn("Invalid device ID provided for RAG processing by user {}", userEmail);
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid device ID"));
+            }
+            
+            // Process PDF with RAG system
+            Map<String, Object> result = deviceService.processPDFWithRAG(pdfFile, deviceId.trim());
+            
+            if (Boolean.TRUE.equals(result.get("success"))) {
                 logger.info("PDF RAG processing completed successfully for device {}", deviceId);
                 return ResponseEntity.ok(result);
             } else {
@@ -571,6 +457,193 @@ public class DeviceController {
             logger.error("Error in PDF RAG processing", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Failed to process PDF with RAG: " + e.getMessage()));
+        }
+    }
+    
+    // Helper methods
+    private String getUserEmail(User user) {
+        return user != null ? user.getEmail() : ANONYMOUS_USER;
+    }
+    
+    private String getOrganizationId(User user) {
+        return user != null ? user.getOrganizationId() : DEFAULT_ORGANIZATION;
+    }
+    
+    private boolean isValidDeviceRequest(DeviceCreateWithFileRequest request) {
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            logger.error("Device name is required");
+            return false;
+        }
+        
+        if (request.getType() == null) {
+            logger.error("Device type is required");
+            return false;
+        }
+        
+        if (request.getLocation() == null || request.getLocation().trim().isEmpty()) {
+            logger.error("Device location is required");
+            return false;
+        }
+        
+        if (request.getProtocol() == null) {
+            logger.error("Device protocol is required");
+            return false;
+        }
+        
+        // Validate MAC address format if provided
+        if (request.getMacAddress() != null && !request.getMacAddress().trim().isEmpty()) {
+            String macPattern = "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$";
+            if (!request.getMacAddress().matches(macPattern)) {
+                logger.error("Invalid MAC address format: {}", request.getMacAddress());
+                return false;
+            }
+        }
+        
+        // Validate IP address format if provided
+        if (request.getIpAddress() != null && !request.getIpAddress().trim().isEmpty()) {
+            String ipPattern = "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$";
+            if (!request.getIpAddress().matches(ipPattern)) {
+                logger.error("Invalid IP address format: {}", request.getIpAddress());
+                return false;
+            }
+        }
+        
+        // Validate port number if provided
+        if (request.getPort() != null && (request.getPort() < 1 || request.getPort() > 65535)) {
+            logger.error("Invalid port number: {}", request.getPort());
+            return false;
+        }
+        
+        // Validate environmental specifications
+        if (request.getOperatingTemperatureMin() != null && request.getOperatingTemperatureMax() != null) {
+            if (request.getOperatingTemperatureMin() >= request.getOperatingTemperatureMax()) {
+                logger.error("Operating temperature min must be less than max");
+                return false;
+            }
+        }
+        
+        if (request.getOperatingHumidityMin() != null && request.getOperatingHumidityMax() != null) {
+            if (request.getOperatingHumidityMin() >= request.getOperatingHumidityMax()) {
+                logger.error("Operating humidity min must be less than max");
+                return false;
+            }
+        }
+        
+        // Validate power consumption if provided
+        if (request.getPowerConsumption() != null && request.getPowerConsumption() < 0) {
+            logger.error("Power consumption must be positive");
+            return false;
+        }
+        
+        return true;
+    }
+    
+    private boolean validateFiles(MultipartFile manualFile, MultipartFile datasheetFile, MultipartFile certificateFile) {
+        // Validate file types and sizes if files are provided
+        if (manualFile != null && !manualFile.isEmpty()) {
+            if (!fileStorageService.isValidFileType(manualFile.getOriginalFilename())) {
+                logger.error("Invalid manual file type: {}", manualFile.getOriginalFilename());
+                return false;
+            }
+            if (manualFile.getSize() > MAX_FILE_SIZE) {
+                logger.error("Manual file size exceeds limit: {} bytes", manualFile.getSize());
+                return false;
+            }
+        }
+        
+        if (datasheetFile != null && !datasheetFile.isEmpty()) {
+            if (!fileStorageService.isValidFileType(datasheetFile.getOriginalFilename())) {
+                logger.error("Invalid datasheet file type: {}", datasheetFile.getOriginalFilename());
+                return false;
+            }
+            if (datasheetFile.getSize() > MAX_FILE_SIZE) {
+                logger.error("Datasheet file size exceeds limit: {} bytes", datasheetFile.getSize());
+                return false;
+            }
+        }
+        
+        if (certificateFile != null && !certificateFile.isEmpty()) {
+            if (!fileStorageService.isValidFileType(certificateFile.getOriginalFilename())) {
+                logger.error("Invalid certificate file type: {}", certificateFile.getOriginalFilename());
+                return false;
+            }
+            if (certificateFile.getSize() > MAX_FILE_SIZE) {
+                logger.error("Certificate file size exceeds limit: {} bytes", certificateFile.getSize());
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    private String getDocumentationFilePath(Device device, String type) {
+        return switch (type) {
+            case "manual" -> device.getManualUrl();
+            case "datasheet" -> device.getDatasheetUrl();
+            case "certificate" -> device.getCertificateUrl();
+            default -> null;
+        };
+    }
+    
+    private String getDocumentationFilename(String type) {
+        return switch (type) {
+            case "manual" -> "manual.pdf";
+            case "datasheet" -> "datasheet.pdf";
+            case "certificate" -> "certificate.pdf";
+            default -> "document.pdf";
+        };
+    }
+    
+    private Map<String, Object> buildDocumentationInfo(Device device, String deviceId) {
+        Map<String, Object> documentationInfo = new HashMap<>();
+        documentationInfo.put("deviceId", deviceId);
+        documentationInfo.put("deviceName", device.getName());
+        
+        // Check which documentation files are available
+        Map<String, Object> files = new HashMap<>();
+        
+        files.put("manual", buildFileInfo(device.getManualUrl(), deviceId, "manual"));
+        files.put("datasheet", buildFileInfo(device.getDatasheetUrl(), deviceId, "datasheet"));
+        files.put("certificate", buildFileInfo(device.getCertificateUrl(), deviceId, "certificate"));
+        
+        documentationInfo.put("files", files);
+        return documentationInfo;
+    }
+    
+    private Map<String, Object> buildFileInfo(String fileUrl, String deviceId, String type) {
+        if (fileUrl != null && !fileUrl.trim().isEmpty()) {
+            Map<String, Object> fileInfo = new HashMap<>();
+            fileInfo.put("available", true);
+            fileInfo.put("url", "/devices/" + deviceId + "/documentation/" + type);
+            try {
+                fileInfo.put("size", fileStorageService.getFileSize(fileUrl));
+            } catch (Exception e) {
+                fileInfo.put("size", "unknown");
+            }
+            return fileInfo;
+        } else {
+            return Map.of("available", false);
+        }
+    }
+    
+    private void processAIRules(String aiRulesJson, String deviceId) {
+        try {
+            List<Map<String, Object>> aiRules = objectMapper.readValue(aiRulesJson, 
+                new TypeReference<List<Map<String, Object>>>() {});
+            
+            logger.info("Processing {} AI-generated rules for device: {}", aiRules.size(), deviceId);
+            
+            // Here you would integrate with your AI service to process the rules
+            // For now, we'll just log the rules
+            for (Map<String, Object> ruleData : aiRules) {
+                if (Boolean.TRUE.equals(ruleData.get("isSelected"))) {
+                    logger.info("Selected AI rule: {} - {}", ruleData.get("name"), ruleData.get("description"));
+                }
+            }
+            
+            logger.info("AI rules processed for device: {}", deviceId);
+        } catch (Exception e) {
+            logger.warn("Failed to process AI rules for device {}: {}", deviceId, e.getMessage());
         }
     }
 }

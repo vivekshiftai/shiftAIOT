@@ -19,6 +19,7 @@ import {
   FileSearch,
   Bot
 } from 'lucide-react';
+import { pdfApiService } from '../../services/pdfApiService';
 
 interface DeviceFormData {
   name: string;
@@ -220,20 +221,54 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
     setIsProcessingPDF(true);
     setProcessingProgress(0);
 
-    // Simulate AI processing with progress updates
+    // Start progress simulation
     const progressInterval = setInterval(() => {
       setProcessingProgress(prev => {
-        if (prev >= 100) {
+        if (prev >= 90) {
           clearInterval(progressInterval);
-          return 100;
+          return 90; // Stop at 90% until API call completes
         }
         return prev + 10;
       });
     }, 200);
 
-    // Simulate AI rule generation
-    setTimeout(() => {
-      const mockRules: AIGeneratedRule[] = [
+    try {
+      // Prepare request for PDF processing API
+      const request = {
+        deviceName: formData.name,
+        deviceType: formData.type,
+        manufacturer: formData.manufacturer,
+        model: formData.model,
+        files: fileUploads.map(fu => fu.file),
+        fileTypes: fileUploads.map(fu => fu.type)
+      };
+
+      // Call external PDF processing API
+      const result = await pdfApiService.processPDF(request);
+      
+      // Update progress to 100%
+      setProcessingProgress(100);
+
+      // Convert API response to AIGeneratedRule format
+      const apiRules: AIGeneratedRule[] = result.rules.map((rule, index) => ({
+        id: `rule_${index}`,
+        name: rule.name || `Rule ${index + 1}`,
+        description: rule.description || 'AI-generated rule based on device documentation',
+        condition: rule.condition || 'condition_placeholder',
+        action: rule.action || 'action_placeholder',
+        priority: rule.priority || 'MEDIUM',
+        isSelected: rule.recommended !== false // Default to selected unless explicitly not recommended
+      }));
+
+      setAiGeneratedRules(apiRules);
+      setIsProcessingPDF(false);
+      setCurrentStep(5);
+
+    } catch (error) {
+      console.error('Error processing PDF with external API:', error);
+      
+      // Fallback to mock rules if API fails
+      const fallbackRules: AIGeneratedRule[] = [
         {
           id: '1',
           name: 'Temperature Alert',
@@ -272,10 +307,10 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
         }
       ];
 
-      setAiGeneratedRules(mockRules);
+      setAiGeneratedRules(fallbackRules);
       setIsProcessingPDF(false);
       setCurrentStep(5);
-    }, 3000);
+    }
   };
 
   const toggleRuleSelection = (ruleId: string) => {

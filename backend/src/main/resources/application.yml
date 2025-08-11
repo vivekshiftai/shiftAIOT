@@ -1,7 +1,13 @@
 server:
-  port: 8080
+  port: 8100
   servlet:
     context-path: /api
+  # File upload configuration
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+      enabled: true
 
 spring:
   application:

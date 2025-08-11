@@ -1,100 +1,172 @@
 package com.iotplatform.model;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
-
 import java.time.LocalDateTime;
-import java.util.Map;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "knowledge_documents")
 public class KnowledgeDocument {
+    
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
-
-    @NotBlank
-    @Size(max = 255)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    
+    @Column(nullable = false)
     private String name;
-
-    @Enumerated(EnumType.STRING)
-    private DocumentType type;
-
-    @Column(name = "file_path")
+    
+    @Column(nullable = false)
+    private String type;
+    
+    @Column(nullable = false)
     private String filePath;
-
-    @Column(name = "uploaded_at")
+    
+    @Column(nullable = false)
+    private Long size;
+    
+    @Column(nullable = false)
+    private String status; // processing, completed, error
+    
+    @Column(nullable = false)
+    private Boolean vectorized = false;
+    
+    @Column(name = "organization_id", nullable = false)
+    private String organizationId;
+    
+    @Column(name = "uploaded_at", nullable = false)
     private LocalDateTime uploadedAt;
-
+    
     @Column(name = "processed_at")
     private LocalDateTime processedAt;
-
-    private Long size;
-
-    @Enumerated(EnumType.STRING)
-    private ProcessingStatus status = ProcessingStatus.PROCESSING;
-
-    @Column(name = "extracted_text", columnDefinition = "TEXT")
-    private String extractedText;
-
-    private boolean vectorized = false;
-
-    @Column(name = "organization_id")
-    private String organizationId;
-
-    @ElementCollection
-    @MapKeyColumn(name = "metadata_key")
-    @Column(name = "metadata_value")
-    private Map<String, String> metadata;
-
-    public enum DocumentType {
-        PDF, DOC, DOCX
+    
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+    
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+    
+    // Constructors
+    public KnowledgeDocument() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
-
-    public enum ProcessingStatus {
-        PROCESSING, COMPLETED, ERROR
+    
+    public KnowledgeDocument(String name, String type, String filePath, Long size, String organizationId) {
+        this();
+        this.name = name;
+        this.type = type;
+        this.filePath = filePath;
+        this.size = size;
+        this.organizationId = organizationId;
+        this.uploadedAt = LocalDateTime.now();
+        this.status = "processing";
     }
-
-    @PrePersist
-    protected void onCreate() {
-        uploadedAt = LocalDateTime.now();
-    }
-
+    
     // Getters and Setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
-    public DocumentType getType() { return type; }
-    public void setType(DocumentType type) { this.type = type; }
-
-    public String getFilePath() { return filePath; }
-    public void setFilePath(String filePath) { this.filePath = filePath; }
-
-    public LocalDateTime getUploadedAt() { return uploadedAt; }
-    public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
-
-    public LocalDateTime getProcessedAt() { return processedAt; }
-    public void setProcessedAt(LocalDateTime processedAt) { this.processedAt = processedAt; }
-
-    public Long getSize() { return size; }
-    public void setSize(Long size) { this.size = size; }
-
-    public ProcessingStatus getStatus() { return status; }
-    public void setStatus(ProcessingStatus status) { this.status = status; }
-
-    public String getExtractedText() { return extractedText; }
-    public void setExtractedText(String extractedText) { this.extractedText = extractedText; }
-
-    public boolean isVectorized() { return vectorized; }
-    public void setVectorized(boolean vectorized) { this.vectorized = vectorized; }
-
-    public String getOrganizationId() { return organizationId; }
-    public void setOrganizationId(String organizationId) { this.organizationId = organizationId; }
-
-    public Map<String, String> getMetadata() { return metadata; }
-    public void setMetadata(Map<String, String> metadata) { this.metadata = metadata; }
+    public Long getId() {
+        return id;
+    }
+    
+    public void setId(Long id) {
+        this.id = id;
+    }
+    
+    public String getName() {
+        return name;
+    }
+    
+    public void setName(String name) {
+        this.name = name;
+    }
+    
+    public String getType() {
+        return type;
+    }
+    
+    public void setType(String type) {
+        this.type = type;
+    }
+    
+    public String getFilePath() {
+        return filePath;
+    }
+    
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+    
+    public Long getSize() {
+        return size;
+    }
+    
+    public void setSize(Long size) {
+        this.size = size;
+    }
+    
+    public String getStatus() {
+        return status;
+    }
+    
+    public void setStatus(String status) {
+        this.status = status;
+    }
+    
+    public Boolean getVectorized() {
+        return vectorized;
+    }
+    
+    public void setVectorized(Boolean vectorized) {
+        this.vectorized = vectorized;
+    }
+    
+    public String getOrganizationId() {
+        return organizationId;
+    }
+    
+    public void setOrganizationId(String organizationId) {
+        this.organizationId = organizationId;
+    }
+    
+    public LocalDateTime getUploadedAt() {
+        return uploadedAt;
+    }
+    
+    public void setUploadedAt(LocalDateTime uploadedAt) {
+        this.uploadedAt = uploadedAt;
+    }
+    
+    public LocalDateTime getProcessedAt() {
+        return processedAt;
+    }
+    
+    public void setProcessedAt(LocalDateTime processedAt) {
+        this.processedAt = processedAt;
+    }
+    
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+    
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+    
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Device } from '../../types';
 import { DeviceCard } from './DeviceCard';
-import { AddDeviceForm } from './AddDeviceForm';
+// import { AddDeviceForm } from './AddDeviceForm';
 import { DeviceOnboardingForm } from './DeviceOnboardingForm';
 import { DeviceDetails } from './DeviceDetails';
 
@@ -27,7 +27,7 @@ interface DeviceListProps {
 }
 
 type ViewMode = 'grid' | 'list';
-type FilterType = 'all' | 'online' | 'offline' | 'warning' | 'error';
+type FilterType = 'all' | 'ONLINE' | 'OFFLINE' | 'WARNING' | 'ERROR';
 type DeviceType = 'all' | 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER';
 
 export const DeviceList: React.FC<DeviceListProps> = ({
@@ -69,18 +69,16 @@ export const DeviceList: React.FC<DeviceListProps> = ({
     }
   };
 
-  const handleOnboardingDevice = async (deviceData: any, files: any[], aiRules: any[]) => {
+  const handleOnboardingDevice = async (deviceData: any, file: any) => {
     try {
-      // Convert files array to the expected format
+      // Convert the new simplified file format to the expected format
       const fileMap: { manual?: File; datasheet?: File; certificate?: File } = {};
-      files.forEach((fileUpload: any) => {
-        if (fileUpload.type === 'manual') fileMap.manual = fileUpload.file;
-        else if (fileUpload.type === 'datasheet') fileMap.datasheet = fileUpload.file;
-        else if (fileUpload.type === 'certificate') fileMap.certificate = fileUpload.file;
-      });
+      if (file && file.file) {
+        fileMap.manual = file.file; // Use the single PDF as manual
+      }
       
-      // Use the new AI onboarding API
-      await onAddDevice(deviceData, fileMap, aiRules);
+      // Use the new AI onboarding API with empty aiRules for now
+      await onAddDevice(deviceData, fileMap, []);
       setShowOnboardingForm(false);
     } catch (error) {
       console.error('Failed to onboard device with AI:', error);
@@ -168,7 +166,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Quick Add
+              Add Device
             </button>
           </div>
         </div>
@@ -200,10 +198,10 @@ export const DeviceList: React.FC<DeviceListProps> = ({
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">All ({getStatusCount('all')})</option>
-                <option value="online">Online ({getStatusCount('online')})</option>
-                <option value="offline">Offline ({getStatusCount('offline')})</option>
-                <option value="warning">Warning ({getStatusCount('warning')})</option>
-                <option value="error">Error ({getStatusCount('error')})</option>
+                <option value="ONLINE">Online ({getStatusCount('ONLINE')})</option>
+                <option value="OFFLINE">Offline ({getStatusCount('OFFLINE')})</option>
+                <option value="WARNING">Warning ({getStatusCount('WARNING')})</option>
+                <option value="ERROR">Error ({getStatusCount('ERROR')})</option>
               </select>
             </div>
 
@@ -258,7 +256,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
                 className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                Quick Add
+                Add Device
               </button>
             </div>
           )}
@@ -301,10 +299,10 @@ export const DeviceList: React.FC<DeviceListProps> = ({
         </div>
       )}
 
-      {/* Add Device Form Modal */}
+      {/* Device Onboarding Form Modal */}
       {showAddForm && (
-        <AddDeviceForm
-          onSubmit={handleAddDevice}
+        <DeviceOnboardingForm
+          onSubmit={handleOnboardingDevice}
           onCancel={() => setShowAddForm(false)}
         />
       )}
