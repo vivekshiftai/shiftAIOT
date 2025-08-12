@@ -60,12 +60,22 @@ export interface MaintenanceData {
   description: string;
 }
 
+export interface SafetyPrecaution {
+  id: string;
+  title: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  category: string;
+  recommended_action: string;
+}
+
 export interface RulesGenerationResponse {
   pdf_filename: string;
   total_pages: number;
   processed_chunks: number;
   iot_rules: IoTRule[];
   maintenance_data: MaintenanceData[];
+  safety_precautions: SafetyPrecaution[];
   processing_time: number;
   summary: string;
 }

@@ -19,6 +19,9 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Add phone column to users table if it doesn't exist
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
+
 -- User Permissions table
 CREATE TABLE IF NOT EXISTS user_permissions (
     user_id VARCHAR(255) NOT NULL,

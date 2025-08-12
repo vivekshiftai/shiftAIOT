@@ -254,11 +254,18 @@ export const DevicesSection: React.FC = () => {
               
               // Create device using the appropriate method based on whether there's a file
               if (file && file.file && file.status === 'success') {
-                console.log('DevicesSection - Creating device with file');
+                console.log('DevicesSection - Creating device with file and PDF results');
                 try {
                   // For files, we need to use the API directly
                   const fileObject = { manual: file.file };
-                  const response = await deviceAPI.createWithFiles(completeDeviceData, fileObject);
+                  
+                  // Include PDF results if available
+                  const deviceRequestData = {
+                    ...completeDeviceData,
+                    pdfResults: deviceData.pdfResults || null
+                  };
+                  
+                  const response = await deviceAPI.createWithFiles(deviceRequestData, fileObject);
                   createdDevice = response.data;
                 } catch (fileError) {
                   console.error('Failed to create device with file, trying without file:', fileError);

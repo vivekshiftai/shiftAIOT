@@ -77,6 +77,123 @@ public class DeviceCreateWithFileRequest {
     private String datasheetFileName;
     private String certificateFileName;
     
+    // PDF Processing Results
+    private PDFResults pdfResults;
+    
+    // Inner class for PDF results
+    public static class PDFResults {
+        private List<IoTRule> iotRules;
+        private List<MaintenanceData> maintenanceData;
+        private List<SafetyPrecaution> safetyPrecautions;
+        private String pdfFilename;
+        private String processingSummary;
+        
+        // Getters and Setters
+        public List<IoTRule> getIotRules() { return iotRules; }
+        public void setIotRules(List<IoTRule> iotRules) { this.iotRules = iotRules; }
+        
+        public List<MaintenanceData> getMaintenanceData() { return maintenanceData; }
+        public void setMaintenanceData(List<MaintenanceData> maintenanceData) { this.maintenanceData = maintenanceData; }
+        
+        public List<SafetyPrecaution> getSafetyPrecautions() { return safetyPrecautions; }
+        public void setSafetyPrecautions(List<SafetyPrecaution> safetyPrecautions) { this.safetyPrecautions = safetyPrecautions; }
+        
+        public String getPdfFilename() { return pdfFilename; }
+        public void setPdfFilename(String pdfFilename) { this.pdfFilename = pdfFilename; }
+        
+        public String getProcessingSummary() { return processingSummary; }
+        public void setProcessingSummary(String processingSummary) { this.processingSummary = processingSummary; }
+    }
+    
+    // Inner classes for PDF results data
+    public static class IoTRule {
+        private String deviceName;
+        private String ruleType;
+        private String condition;
+        private String action;
+        private String priority;
+        private String frequency;
+        private String description;
+        
+        // Getters and Setters
+        public String getDeviceName() { return deviceName; }
+        public void setDeviceName(String deviceName) { this.deviceName = deviceName; }
+        
+        public String getRuleType() { return ruleType; }
+        public void setRuleType(String ruleType) { this.ruleType = ruleType; }
+        
+        public String getCondition() { return condition; }
+        public void setCondition(String condition) { this.condition = condition; }
+        
+        public String getAction() { return action; }
+        public void setAction(String action) { this.action = action; }
+        
+        public String getPriority() { return priority; }
+        public void setPriority(String priority) { this.priority = priority; }
+        
+        public String getFrequency() { return frequency; }
+        public void setFrequency(String frequency) { this.frequency = frequency; }
+        
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+    }
+    
+    public static class MaintenanceData {
+        private String componentName;
+        private String maintenanceType;
+        private String frequency;
+        private String lastMaintenance;
+        private String nextMaintenance;
+        private String description;
+        
+        // Getters and Setters
+        public String getComponentName() { return componentName; }
+        public void setComponentName(String componentName) { this.componentName = componentName; }
+        
+        public String getMaintenanceType() { return maintenanceType; }
+        public void setMaintenanceType(String maintenanceType) { this.maintenanceType = maintenanceType; }
+        
+        public String getFrequency() { return frequency; }
+        public void setFrequency(String frequency) { this.frequency = frequency; }
+        
+        public String getLastMaintenance() { return lastMaintenance; }
+        public void setLastMaintenance(String lastMaintenance) { this.lastMaintenance = lastMaintenance; }
+        
+        public String getNextMaintenance() { return nextMaintenance; }
+        public void setNextMaintenance(String nextMaintenance) { this.nextMaintenance = nextMaintenance; }
+        
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+    }
+    
+    public static class SafetyPrecaution {
+        private String id;
+        private String title;
+        private String description;
+        private String severity;
+        private String category;
+        private String recommendedAction;
+        
+        // Getters and Setters
+        public String getId() { return id; }
+        public void setId(String id) { this.id = id; }
+        
+        public String getTitle() { return title; }
+        public void setTitle(String title) { this.title = title; }
+        
+        public String getDescription() { return description; }
+        public void setDescription(String description) { this.description = description; }
+        
+        public String getSeverity() { return severity; }
+        public void setSeverity(String severity) { this.severity = severity; }
+        
+        public String getCategory() { return category; }
+        public void setCategory(String category) { this.category = category; }
+        
+        public String getRecommendedAction() { return recommendedAction; }
+        public void setRecommendedAction(String recommendedAction) { this.recommendedAction = recommendedAction; }
+    }
+    
     // Getters and Setters
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -185,4 +302,7 @@ public class DeviceCreateWithFileRequest {
     
     public String getCertificateFileName() { return certificateFileName; }
     public void setCertificateFileName(String certificateFileName) { this.certificateFileName = certificateFileName; }
+    
+    public PDFResults getPdfResults() { return pdfResults; }
+    public void setPdfResults(PDFResults pdfResults) { this.pdfResults = pdfResults; }
 }

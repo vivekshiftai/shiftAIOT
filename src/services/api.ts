@@ -304,4 +304,17 @@ export const deviceConnectionAPI = {
   getStats: () => api.get('/device-connections/stats'),
 };
 
+// User API
+export const userAPI = {
+  getAll: () => api.get('/users'),
+  
+  getById: (id: string) => api.get(`/users/${id}`),
+  
+  update: (id: string, user: any) => api.put(`/users/${id}`, user),
+  
+  delete: (id: string) => api.delete(`/users/${id}`),
+  
+  getProfile: () => api.get('/users/profile'),
+};
+
 export default api;
