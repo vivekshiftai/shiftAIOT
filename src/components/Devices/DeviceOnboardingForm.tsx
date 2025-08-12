@@ -31,6 +31,9 @@ import {
 } from 'lucide-react';
 import { pdfProcessingService, RulesGenerationResponse, IoTRule, MaintenanceData, SafetyPrecaution } from '../../services/pdfProcessingService';
 import { AIProcessingLoader } from '../Loading/AIProcessingLoader';
+import { DeviceOnboardingLoader } from '../Loading/DeviceOnboardingLoader';
+import { DeviceOnboardingSuccess } from './DeviceOnboardingSuccess';
+import { DeviceChatInterface } from './DeviceChatInterface';
 import { GeneratedRulesDisplay } from './GeneratedRulesDisplay';
 import { PDFProcessingResults, PDFProcessingResultsData } from './PDFProcessingResults';
 
@@ -104,6 +107,15 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
   const [selectedRules, setSelectedRules] = useState<IoTRule[]>([]);
   const [selectedMaintenance, setSelectedMaintenance] = useState<MaintenanceData[]>([]);
   const [selectedSafety, setSelectedSafety] = useState<SafetyPrecaution[]>([]);
+
+  // Enhanced onboarding states
+  const [showOnboardingLoader, setShowOnboardingLoader] = useState(false);
+  const [onboardingProgress, setOnboardingProgress] = useState(0);
+  const [currentOnboardingProcess, setCurrentOnboardingProcess] = useState<'pdf' | 'rules' | 'knowledgebase'>('pdf');
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [showChatInterface, setShowChatInterface] = useState(false);
+  const [onboardingSubStage, setOnboardingSubStage] = useState('');
+  const [onboardingSubProgress, setOnboardingSubProgress] = useState(0);
 
   const handleInputChange = useCallback((field: keyof DeviceFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -451,31 +463,84 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
     }
 
     setIsSubmitting(true);
-    setStepLoadingMessage('Initializing device creation...');
+    setShowOnboardingLoader(true);
+    setOnboardingProgress(0);
+    setCurrentOnboardingProcess('pdf');
     
     try {
-      console.log('DeviceOnboardingForm - Submitting device data:', formData);
+      console.log('DeviceOnboardingForm - Starting enhanced onboarding process');
+      console.log('DeviceOnboardingForm - Device data:', formData);
       console.log('DeviceOnboardingForm - File data:', uploadedFile);
       console.log('DeviceOnboardingForm - Selected rules:', selectedRules);
       console.log('DeviceOnboardingForm - Selected maintenance:', selectedMaintenance);
       console.log('DeviceOnboardingForm - Selected safety:', selectedSafety);
       
-      // Show progress messages
-      setTimeout(() => {
-        setStepLoadingMessage('Creating device in the system...');
-      }, 1000);
+      // Stage 1: PDF Processing & Git Storage (0-33%)
+      setCurrentOnboardingProcess('pdf');
+      setOnboardingSubStage('Uploading PDF to Git repository');
+      setOnboardingSubProgress(0);
       
-      setTimeout(() => {
-        setStepLoadingMessage('Configuring monitoring rules...');
-      }, 2000);
+      // Simulate PDF processing steps (API handles actual processing)
+      const pdfStages = [
+        'Uploading PDF',
+        'Extracting Content',
+        'Parsing Structure',
+        'Initializing Git Repository',
+        'Committing to Git',
+        'Creating Search Index'
+      ];
       
-      setTimeout(() => {
-        setStepLoadingMessage('Setting up maintenance schedules...');
-      }, 3000);
+      for (let i = 0; i < pdfStages.length; i++) {
+        setOnboardingSubStage(pdfStages[i]);
+        setOnboardingSubProgress((i / (pdfStages.length - 1)) * 100);
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
       
-      setTimeout(() => {
-        setStepLoadingMessage('Finalizing device setup...');
-      }, 4000);
+      setOnboardingProgress(33);
+      
+      // Stage 2: Rules Querying & Generation (33-66%)
+      setCurrentOnboardingProcess('rules');
+      setOnboardingSubStage('Analyzing device specifications');
+      setOnboardingSubProgress(0);
+      
+      const rulesStages = [
+        'Analyzing Specifications',
+        'Identifying Parameters',
+        'Generating Alert Rules',
+        'Creating Automation Rules',
+        'Validating Rule Logic',
+        'Optimizing Performance'
+      ];
+      
+      for (let i = 0; i < rulesStages.length; i++) {
+        setOnboardingSubStage(rulesStages[i]);
+        setOnboardingSubProgress((i / (rulesStages.length - 1)) * 100);
+        await new Promise(resolve => setTimeout(resolve, 600));
+      }
+      
+      setOnboardingProgress(66);
+      
+      // Stage 3: Knowledge Base Creation (66-100%)
+      setCurrentOnboardingProcess('knowledgebase');
+      setOnboardingSubStage('Vectorizing content');
+      setOnboardingSubProgress(0);
+      
+      const kbStages = [
+        'Vectorizing Content',
+        'Creating Embeddings',
+        'Building Search Index',
+        'Training AI Model',
+        'Setting Up Chat Interface',
+        'Testing Query System'
+      ];
+      
+      for (let i = 0; i < kbStages.length; i++) {
+        setOnboardingSubStage(kbStages[i]);
+        setOnboardingSubProgress((i / (kbStages.length - 1)) * 100);
+        await new Promise(resolve => setTimeout(resolve, 700));
+      }
+      
+      setOnboardingProgress(100);
       
       // Create enhanced device data with PDF results
       const enhancedDeviceData = {
@@ -489,22 +554,26 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
         }
       };
       
+      // Submit the device data
       await onSubmit(enhancedDeviceData, uploadedFile);
       
       setCreatedDeviceName(formData.deviceName);
       setDeviceCreated(true);
-      setShowCelebration(true);
+      setShowOnboardingLoader(false);
+      setShowSuccessNotification(true);
       
+      // Auto-hide success notification after 5 seconds and show chat interface
       setTimeout(() => {
-        setShowCelebration(false);
+        setShowSuccessNotification(false);
+        setShowChatInterface(true);
       }, 5000);
       
     } catch (error) {
-      console.error('Error submitting device:', error);
-      alert(`Failed to create device: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error during onboarding process:', error);
+      setShowOnboardingLoader(false);
+      alert(`Failed to complete onboarding: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSubmitting(false);
-      setStepLoadingMessage('');
     }
   }, [validateCurrentStep, formData, uploadedFile, selectedRules, selectedMaintenance, selectedSafety, pdfResultsData, onSubmit]);
 
@@ -852,6 +921,81 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
 
   return (
     <>
+      {/* Enhanced Onboarding Loader */}
+      {showOnboardingLoader && (
+        <DeviceOnboardingLoader
+          isProcessing={true}
+          currentProcess={currentOnboardingProcess}
+          progress={onboardingProgress}
+          onComplete={() => setShowOnboardingLoader(false)}
+          pdfFileName={uploadedFile?.file.name}
+          currentSubStage={onboardingSubStage}
+          subStageProgress={onboardingSubProgress}
+        />
+      )}
+
+      {/* Success Notification */}
+      {showSuccessNotification && (
+        <DeviceOnboardingSuccess
+          deviceName={createdDeviceName}
+          pdfFileName={uploadedFile?.file.name}
+          rulesCount={selectedRules.length}
+          maintenanceCount={selectedMaintenance.length}
+          safetyCount={selectedSafety.length}
+          onContinue={() => {
+            setShowSuccessNotification(false);
+            onCancel();
+          }}
+          onStartChat={() => {
+            setShowSuccessNotification(false);
+            setShowChatInterface(true);
+          }}
+          onClose={() => {
+            setShowSuccessNotification(false);
+            onCancel();
+          }}
+        />
+      )}
+
+      {/* Chat Interface */}
+      {showChatInterface && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full h-[80vh] flex flex-col">
+            <div className="p-4 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-800">AI Chat Assistant</h3>
+                  <p className="text-sm text-slate-600">Ask questions about your newly onboarded device</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowChatInterface(false);
+                    onCancel();
+                  }}
+                  className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-600" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 p-4">
+              <DeviceChatInterface
+                deviceId={formData.deviceId}
+                deviceName={formData.deviceName}
+                pdfFileName={uploadedFile?.file.name}
+                deviceType={formData.productId}
+                manufacturer=""
+                model={formData.productId}
+                onClose={() => {
+                  setShowChatInterface(false);
+                  onCancel();
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AI Processing Loader */}
       {showProcessingLoader && (
         <AIProcessingLoader
