@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Cpu, Wifi, WifiOff, AlertTriangle, XCircle, ChevronRight
+  Cpu, Wifi, WifiOff, AlertTriangle, XCircle, ChevronRight, Thermometer
 } from 'lucide-react';
 import { Device } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';

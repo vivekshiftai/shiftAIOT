@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://20.75.50.202:8100/api';
+const API_BASE_URL = import.meta.env.DEV ? '/api' : 'http://20.75.50.202:8100/api';
 
 // Create axios instance with default config
 const api = axios.create({

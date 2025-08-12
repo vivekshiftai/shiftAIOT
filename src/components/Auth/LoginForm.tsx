@@ -44,6 +44,8 @@ export const LoginForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('LoginForm - Form submitted!');
+    console.log('LoginForm - Credentials:', { email: credentials.email, password: credentials.password ? '***' : 'empty' });
     console.log('LoginForm - Starting login process');
     
     if (!validateForm()) {
@@ -55,7 +57,7 @@ export const LoginForm: React.FC = () => {
     setIsLoading(true);
     
     try {
-      console.log('LoginForm - Calling login function');
+      console.log('LoginForm - Calling login function from AuthContext');
       await login(credentials.email, credentials.password);
       console.log('LoginForm - Login successful');
       success('Welcome back!', 'Successfully logged in to your IoT platform');
@@ -259,6 +261,7 @@ export const LoginForm: React.FC = () => {
                 loading={isLoading}
                 className="w-full"
                 rightIcon={<ArrowRight className="w-4 h-4" />}
+                onClick={() => console.log('LoginForm - Submit button clicked!')}
               >
                 {isLoading ? 'Signing in...' : 'Sign In'}
               </Button>

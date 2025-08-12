@@ -77,16 +77,24 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   // Load data from backend when user is authenticated
   useEffect(() => {
     if (!user) {
-      console.log('IoTContext - No user, skipping data load');
+      console.log('IoTContext - No user, setting loading to false and skipping data load');
       setLoading(false);
+      setDevices([]);
+      setRules([]);
+      setNotifications([]);
+      setTelemetryData([]);
       return;
     }
 
     // Check if user has valid token
     const token = localStorage.getItem('token');
     if (!token) {
-      console.log('IoTContext - No token found, skipping data load');
+      console.log('IoTContext - No token found, setting loading to false and skipping data load');
       setLoading(false);
+      setDevices([]);
+      setRules([]);
+      setNotifications([]);
+      setTelemetryData([]);
       return;
     }
 
