@@ -13,7 +13,7 @@ import { KnowledgeSection } from './sections/KnowledgeSection';
 import { NotificationsSection } from './sections/NotificationsSection';
 import { AnalyticsSection } from './sections/AnalyticsSection';
 import { UsersSection } from './sections/UsersSection';
-import { DebugInfo } from './components/DebugInfo';
+
 import { BarChart3, Bell, Users, Settings, AlertTriangle } from 'lucide-react';
 import { 
   AppLoadingScreen, 
@@ -189,7 +189,7 @@ const MainAppLayout: React.FC = () => {
         </main>
       </div>
       
-      <DebugInfo />
+      
     </div>
   );
 };

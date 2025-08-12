@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Filter, Search, Cpu, CheckCircle, X } from 'lucide-react';
 import { DeviceCard } from '../components/Devices/DeviceCard';
 import { DeviceOnboardingForm } from '../components/Devices/DeviceOnboardingForm';
-import { TestModal } from '../components/Devices/TestModal';
 import { useIoT } from '../contexts/IoTContext';
 import { useAuth } from '../contexts/AuthContext';
 import { deviceAPI } from '../services/api';
@@ -20,7 +19,7 @@ export const DevicesSection: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'name' | 'status' | 'lastSeen'>('name');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showTestModal, setShowTestModal] = useState(false);
+
   // const [isRefreshing, setIsRefreshing] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -228,16 +227,10 @@ export const DevicesSection: React.FC = () => {
 
       {/* Debug Info */}
       <div className="text-sm text-slate-500">
-        Debug: showAddForm = {showAddForm.toString()}, showTestModal = {showTestModal.toString()}
+        Debug: showAddForm = {showAddForm.toString()}
       </div>
 
-      {/* Test Modal - Admin Only */}
-      {isAdmin() && (
-        <TestModal 
-          isOpen={showTestModal} 
-          onClose={() => setShowTestModal(false)} 
-        />
-      )}
+
 
              {/* Device Onboarding Form Modal */}
        {showAddForm && (
