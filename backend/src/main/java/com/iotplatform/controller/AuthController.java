@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.iotplatform.dto.JwtResponse;
 import com.iotplatform.dto.LoginRequest;
+import com.iotplatform.dto.RefreshTokenRequest;
 import com.iotplatform.dto.SignupRequest;
 import com.iotplatform.model.User;
 import com.iotplatform.security.CustomUserDetails;
@@ -79,6 +80,42 @@ public class AuthController {
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest refreshRequest) {
+        try {
+            // Validate the current token
+            if (jwtTokenProvider.validateToken(refreshRequest.getToken())) {
+                String username = jwtTokenProvider.getUsernameFromToken(refreshRequest.getToken());
+                
+                // Find user by email
+                User user = authService.findUserByEmail(username);
+                if (user == null) {
+                    return ResponseEntity.status(401).body("User not found");
+                }
+                
+                // Create authentication object
+                Authentication authentication = new UsernamePasswordAuthenticationToken(
+                    user.getEmail(), null, user.getAuthorities());
+                
+                // Generate new token
+                String newJwt = jwtTokenProvider.generateToken(authentication);
+                
+                return ResponseEntity.ok(new JwtResponse(
+                        newJwt,
+                        user.getId(),
+                        user.getFirstName() + " " + user.getLastName(),
+                        user.getEmail(),
+                        user.getRole().name(),
+                        user.getOrganizationId()
+                ));
+            } else {
+                return ResponseEntity.status(401).body("Invalid or expired token");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body("Token refresh failed: " + e.getMessage());
         }
     }
 }

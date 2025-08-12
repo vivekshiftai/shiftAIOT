@@ -11,7 +11,7 @@ interface StatsCardProps {
     value: number;
     isPositive: boolean;
   };
-  color: 'blue' | 'green' | 'yellow' | 'red';
+  color: 'blue' | 'green' | 'yellow' | 'red' | 'purple';
   onClick?: () => void;
   className?: string;
 }
@@ -36,6 +36,11 @@ const colorClasses = {
     bg: 'bg-red-50 dark:bg-red-900/20',
     icon: 'text-red-600 dark:text-red-400',
     text: 'text-red-600 dark:text-red-400'
+  },
+  purple: {
+    bg: 'bg-purple-50 dark:bg-purple-900/20',
+    icon: 'text-purple-600 dark:text-purple-400',
+    text: 'text-purple-600 dark:text-purple-400'
   }
 };
 

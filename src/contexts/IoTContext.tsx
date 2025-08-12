@@ -82,6 +82,14 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       return;
     }
 
+    // Check if user has valid token
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.log('IoTContext - No token found, skipping data load');
+      setLoading(false);
+      return;
+    }
+
     const loadData = async () => {
       console.log('IoTContext - Loading data from backend');
       setLoading(true);

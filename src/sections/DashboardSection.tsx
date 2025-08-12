@@ -1,45 +1,82 @@
-import React, { useMemo } from 'react';
-import { Cpu, Wifi, CheckCircle2, Wrench, CalendarDays, ChevronRight } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useIoT } from '../contexts/IoTContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { StatsCard } from '../components/Dashboard/StatsCard';
 import { RealtimeChart } from '../components/Dashboard/RealtimeChart';
-import { useIoT } from '../contexts/IoTContext';
-import { useNavigate } from 'react-router-dom';
+import Skeleton, { SkeletonCard } from '../components/UI/Skeleton';
+import Button from '../components/UI/Button';
+import { 
+  Cpu, 
+  Wifi, 
+  Calendar, 
+  CheckCircle, 
+  TrendingUp, 
+  AlertTriangle,
+  Clock,
+  Settings,
+  Activity,
+  Zap,
+  Users,
+  Shield,
+  BarChart3,
+  Bell,
+  ArrowRight,
+  Plus,
+  Eye
+} from 'lucide-react';
 
 export const DashboardSection: React.FC = () => {
-  const { devices, notifications, rules } = useIoT();
+  const { devices, notifications, rules, loading } = useIoT();
+  const { theme } = useTheme();
   const navigate = useNavigate();
+  const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
 
-  const onlineDevices = useMemo(() => devices.filter(d => d.status === 'ONLINE').length, [devices]);
-  const totalDevices = devices.length;
+  // Calculate metrics
+  const metrics = useMemo(() => {
+    const onlineDevices = devices.filter(d => d.status === 'ONLINE').length;
+    const totalDevices = devices.length;
+    
+    // Maintenance schedules (using notifications as proxy)
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 7);
 
-  // Placeholder derived values from existing data (no new API):
-  // Maintenance schedules are not a separate entity in types; use notifications tagged as maintenance as proxy
-  const now = new Date();
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay());
-  startOfWeek.setHours(0, 0, 0, 0);
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 7);
+    const getNotifDate = (n: any) => new Date(n.createdAt || n.timestamp || Date.now());
+    const maintenanceThisWeek = notifications.filter(n =>
+      n.title?.toLowerCase().includes('maintenance') &&
+      getNotifDate(n) >= startOfWeek && getNotifDate(n) < endOfWeek
+    );
 
-  const getNotifDate = (n: any) => new Date(n.createdAt || n.timestamp || Date.now());
-  const maintenanceThisWeek = notifications.filter(n =>
-    n.title?.toLowerCase().includes('maintenance') &&
-    getNotifDate(n) >= startOfWeek && getNotifDate(n) < endOfWeek
-  );
+    const rulesCompletedThisWeek = rules.filter(r => 
+      r.lastTriggered && new Date(r.lastTriggered) >= startOfWeek && new Date(r.lastTriggered) < endOfWeek
+    ).length;
 
-  const rulesCompletedThisWeek = rules.filter(r => r.lastTriggered && new Date(r.lastTriggered) >= startOfWeek && new Date(r.lastTriggered) < endOfWeek).length;
+    return {
+      totalDevices,
+      onlineDevices,
+      maintenanceThisWeek: maintenanceThisWeek.length,
+      rulesCompletedThisWeek
+    };
+  }, [devices, notifications, rules]);
 
-  const upcomingMaintenance = notifications
-    .filter(n => n.title?.toLowerCase().includes('maintenance'))
-    .map(n => ({
-      id: n.id as string,
-      title: n.title,
-      message: n.message,
-      timestamp: (n.createdAt || (n as any).timestamp || new Date().toISOString()) as string,
-      priority: derivePriority(n.createdAt || (n as any).timestamp)
-    }))
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-    .slice(0, 8);
+  // Upcoming maintenance
+  const upcomingMaintenance = useMemo(() => {
+    return notifications
+      .filter(n => n.title?.toLowerCase().includes('maintenance'))
+      .map(n => ({
+        id: n.id as string,
+        title: n.title,
+        message: n.message,
+        timestamp: (n.createdAt || (n as any).timestamp || new Date().toISOString()) as string,
+        priority: derivePriority(n.createdAt || (n as any).timestamp)
+      }))
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      .slice(0, 5);
+  }, [notifications]);
 
   function derivePriority(dateStr?: string) {
     const date = dateStr ? new Date(dateStr) : new Date();
@@ -50,116 +87,265 @@ export const DashboardSection: React.FC = () => {
     return 'later';
   }
 
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'overdue': return 'text-red-500 bg-red-100 dark:bg-red-900/20';
+      case 'soon': return 'text-orange-500 bg-orange-100 dark:bg-orange-900/20';
+      case 'later': return 'text-blue-500 bg-blue-100 dark:bg-blue-900/20';
+      default: return 'text-gray-500 bg-gray-100 dark:bg-gray-900/20';
+    }
+  };
+
+  const getPriorityIcon = (priority: string) => {
+    switch (priority) {
+      case 'overdue': return <AlertTriangle className="w-4 h-4" />;
+      case 'soon': return <Clock className="w-4 h-4" />;
+      case 'later': return <Calendar className="w-4 h-4" />;
+      default: return <Calendar className="w-4 h-4" />;
+    }
+  };
+
+  // Navigation handlers
   const handleNavigateDevices = () => navigate('/devices');
   const handleShowActiveDevices = () => navigate('/devices?status=ONLINE');
   const handleShowMaintenanceWeek = () => navigate('/notifications?filter=maintenance&range=this-week');
   const handleShowRules = () => navigate('/rules');
+  const handleAddDevice = () => navigate('/devices?add=true');
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton width={200} height={32} />
+          <Skeleton width={120} height={40} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-slate-800">Dashboard</h1>
-        <p className="text-slate-600 mt-2">Overview of devices, maintenance, and automation</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            Dashboard
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">
+            Welcome back! Here's what's happening with your IoT devices.
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="md"
+            leftIcon={<Plus className="w-4 h-4" />}
+            onClick={handleAddDevice}
+          >
+            Add Device
+          </Button>
+          <Button
+            variant="primary"
+            size="md"
+            leftIcon={<Eye className="w-4 h-4" />}
+            onClick={() => navigate('/analytics')}
+          >
+            View Analytics
+          </Button>
+        </div>
       </div>
 
-      {/* Top Metrics */}
+      {/* Top Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Total Devices"
-          value={totalDevices}
-          subtitle={`${onlineDevices} online`}
+          value={metrics.totalDevices}
+          subtitle={`${metrics.onlineDevices} online`}
           icon={Cpu}
           color="blue"
           onClick={handleNavigateDevices}
+          className="hover-lift"
         />
         <StatsCard
           title="Active Devices"
-          value={onlineDevices}
+          value={metrics.onlineDevices}
           subtitle="Currently online"
           icon={Wifi}
           color="green"
           onClick={handleShowActiveDevices}
+          className="hover-lift"
         />
         <StatsCard
           title="Maintenance (This Week)"
-          value={maintenanceThisWeek.length}
+          value={metrics.maintenanceThisWeek}
           subtitle="Scheduled tasks"
-          icon={Wrench}
+          icon={Calendar}
           color="yellow"
           onClick={handleShowMaintenanceWeek}
+          className="hover-lift"
         />
         <StatsCard
           title="Rules Completed"
-          value={rulesCompletedThisWeek}
+          value={metrics.rulesCompletedThisWeek}
           subtitle="This week"
-          icon={CheckCircle2}
-          color="red"
+          icon={CheckCircle}
+          color="purple"
           onClick={handleShowRules}
+          className="hover-lift"
         />
       </div>
 
-      {/* Upcoming Maintenance Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200">
-          <div className="p-6 border-b border-slate-200 flex items-center justify-between">
-            <h3 className="text-xl font-semibold text-slate-800">Upcoming Maintenance Schedules</h3>
-            <button onClick={handleShowMaintenanceWeek} className="text-blue-600 hover:text-blue-700 text-sm inline-flex items-center gap-1">
-              View this week <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="p-6 space-y-3">
-            {upcomingMaintenance.length === 0 && (
-              <p className="text-slate-500 text-sm">No upcoming maintenance found.</p>
-            )}
-            {upcomingMaintenance.map((item) => (
-              <div key={item.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  item.priority === 'overdue' ? 'bg-red-100' : item.priority === 'soon' ? 'bg-orange-100' : 'bg-blue-100'
-                }`}>
-                  <Wrench className={`${item.priority === 'overdue' ? 'text-red-600' : item.priority === 'soon' ? 'text-orange-600' : 'text-blue-600'} w-5 h-5`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-slate-800 truncate">{item.title}</p>
-                  <p className="text-sm text-slate-600 truncate">{item.message}</p>
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-2 text-sm text-slate-500">
-                    <CalendarDays className="w-4 h-4" />
-                    <span>{new Date(item.timestamp).toLocaleString()}</span>
-                  </div>
-                </div>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Real-time Chart */}
+        <div className="lg:col-span-2">
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Device Activity
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Real-time monitoring of device performance
+                </p>
               </div>
-            ))}
+              
+              <div className="flex items-center gap-2">
+                {['24h', '7d', '30d'].map((range) => (
+                  <button
+                    key={range}
+                    onClick={() => setSelectedTimeRange(range)}
+                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                      selectedTimeRange === range
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {range}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="h-80">
+              <RealtimeChart 
+                metric="temperature"
+                title="Device Activity"
+                color="#3b82f6"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Mini chart summary */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 p-6">
-          <h4 className="text-lg font-semibold text-slate-800 mb-4">This Week Overview</h4>
-          <div className="grid grid-cols-7 gap-2">
-            {Array.from({ length: 7 }).map((_, idx) => {
-              const day = new Date(startOfWeek);
-              day.setDate(startOfWeek.getDate() + idx);
-              const count = maintenanceThisWeek.filter(n => getNotifDate(n).getDay() === day.getDay()).length;
-              return (
-                <div key={idx} className="flex flex-col items-center gap-2">
-                  <div className="text-xs text-slate-500">{day.toLocaleDateString(undefined, { weekday: 'short' })}</div>
-                  <div className="w-full h-24 bg-slate-100 rounded-md relative overflow-hidden">
-                    <div className={`absolute bottom-0 left-0 right-0 bg-yellow-400`} style={{ height: `${Math.min(100, count * 25)}%` }}></div>
+        {/* Upcoming Maintenance */}
+        <div className="lg:col-span-1">
+          <div className="card p-6 h-full">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Upcoming Maintenance
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Scheduled tasks and alerts
+                </p>
+              </div>
+              <Bell className="w-5 h-5 text-gray-400" />
+            </div>
+
+            <div className="space-y-4">
+              {upcomingMaintenance.length > 0 ? (
+                upcomingMaintenance.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/notifications?id=${item.id}`)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900 dark:text-white text-sm mb-1">
+                          {item.title}
+                        </h4>
+                        <p className="text-gray-600 dark:text-gray-400 text-xs mb-2">
+                          {item.message}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(item.priority)}`}>
+                            {getPriorityIcon(item.priority)}
+                            <span className="ml-1 capitalize">{item.priority}</span>
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {new Date(item.timestamp).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-gray-400" />
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-600">{count}</div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    No upcoming maintenance scheduled
+                  </p>
                 </div>
-              );
-            })}
+              )}
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+                onClick={() => navigate('/notifications')}
+              >
+                View All Notifications
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Charts Grid (keep simple visuals) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RealtimeChart metric="temperature" title="Temperature Trends" color="#3b82f6" />
-        <RealtimeChart metric="humidity" title="Humidity Levels" color="#10b981" />
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/devices')}>
+          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Cpu className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          </div>
+          <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Manage Devices</h4>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">View and configure your IoT devices</p>
+        </div>
+
+        <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/rules')}>
+          <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Zap className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+          </div>
+          <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Automation Rules</h4>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">Create and manage automation workflows</p>
+        </div>
+
+        <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/analytics')}>
+          <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <BarChart3 className="w-6 h-6 text-green-600 dark:text-green-400" />
+          </div>
+          <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Analytics</h4>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">View detailed performance insights</p>
+        </div>
+
+        <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/settings')}>
+          <div className="w-12 h-12 bg-gray-100 dark:bg-gray-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Settings className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+          </div>
+          <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Settings</h4>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">Configure platform preferences</p>
+        </div>
       </div>
     </div>
   );

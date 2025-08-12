@@ -2,6 +2,7 @@ import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'rea
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { IoTProvider, useIoT } from './contexts/IoTContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import { SignupForm } from './components/Auth/SignupForm';
 import { Sidebar } from './components/Layout/Sidebar';
@@ -13,6 +14,7 @@ import { KnowledgeSection } from './sections/KnowledgeSection';
 import { NotificationsSection } from './sections/NotificationsSection';
 import { AnalyticsSection } from './sections/AnalyticsSection';
 import { UsersSection } from './sections/UsersSection';
+import { ToastContainer, useToast } from './components/UI/Toast';
 
 import { BarChart3, Bell, Users, Settings, AlertTriangle } from 'lucide-react';
 import { 
@@ -100,7 +102,6 @@ const MainAppLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   console.log('MainAppLayout - user:', user, 'location:', location.pathname, 'iotLoading:', iotLoading);
@@ -121,14 +122,7 @@ const MainAppLayout: React.FC = () => {
 
   const section = getCurrentSection();
 
-  // Apply dark mode class to html element
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
+  // Theme is now handled by ThemeContext
 
   // Handle section change
   const handleSectionChange = (section: string) => {
@@ -145,7 +139,7 @@ const MainAppLayout: React.FC = () => {
   console.log('MainAppLayout - Rendering main layout');
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex ${darkMode ? 'dark' : ''}`}>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 flex">
       <Sidebar
         activeSection={section}
         onSectionChange={handleSectionChange}
@@ -155,8 +149,6 @@ const MainAppLayout: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0">
         <Header
           onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
-          darkMode={darkMode}
-          onToggleDarkMode={() => setDarkMode(!darkMode)}
         />
         
         <main className="flex-1 p-6 overflow-auto">
@@ -199,23 +191,37 @@ function App() {
   
   return (
     <ErrorBoundary>
-      <Router>
-        <AuthProvider>
-          <IoTProvider>
-            <Routes>
-              <Route path="/login" element={<LoginForm />} />
-              <Route path="/signup" element={<SignupForm />} />
-              <Route path="/*" element={
-                <ProtectedRoute>
-                  <MainAppLayout />
-                </ProtectedRoute>
-              } />
-            </Routes>
-          </IoTProvider>
-        </AuthProvider>
-      </Router>
+      <ThemeProvider>
+        <Router>
+          <AuthProvider>
+            <IoTProvider>
+              <AppWithToast />
+            </IoTProvider>
+          </AuthProvider>
+        </Router>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }
+
+// Component to handle toast notifications
+const AppWithToast: React.FC = () => {
+  const { toasts, removeToast } = useToast();
+
+  return (
+    <>
+      <Routes>
+        <Route path="/login" element={<LoginForm />} />
+        <Route path="/signup" element={<SignupForm />} />
+        <Route path="/*" element={
+          <ProtectedRoute>
+            <MainAppLayout />
+          </ProtectedRoute>
+        } />
+      </Routes>
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+    </>
+  );
+};
 
 export default App;
