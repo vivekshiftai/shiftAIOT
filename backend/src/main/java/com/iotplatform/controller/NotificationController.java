@@ -39,6 +39,11 @@ public class NotificationController {
 
     @GetMapping
     public ResponseEntity<List<Notification>> getAllNotifications(@AuthenticationPrincipal User user) {
+        if (user == null) {
+            logger.warn("User is null in getAllNotifications - authentication issue");
+            return ResponseEntity.status(401).build();
+        }
+        
         logger.info("User {} requesting notifications for organization: {}", 
                    user.getEmail(), user.getOrganizationId());
         
@@ -52,6 +57,11 @@ public class NotificationController {
 
     @PatchMapping("/{id}/read")
     public ResponseEntity<?> markAsRead(@PathVariable String id, @AuthenticationPrincipal User user) {
+        if (user == null) {
+            logger.warn("User is null in markAsRead - authentication issue");
+            return ResponseEntity.status(401).build();
+        }
+        
         logger.info("User {} marking notification {} as read", user.getEmail(), id);
         
         // Users can only mark their own notifications as read - this is handled by the service layer
@@ -61,6 +71,11 @@ public class NotificationController {
 
     @PatchMapping("/read-all")
     public ResponseEntity<?> markAllAsRead(@AuthenticationPrincipal User user) {
+        if (user == null) {
+            logger.warn("User is null in markAllAsRead - authentication issue");
+            return ResponseEntity.status(401).build();
+        }
+        
         logger.info("User {} marking all notifications as read", user.getEmail());
         
         // Users can only mark their own notifications as read - this is handled by the service layer
@@ -76,6 +91,11 @@ public class NotificationController {
 
     @GetMapping("/unread-count")
     public ResponseEntity<Long> getUnreadCount(@AuthenticationPrincipal User user) {
+        if (user == null) {
+            logger.warn("User is null in getUnreadCount - authentication issue");
+            return ResponseEntity.status(401).build();
+        }
+        
         logger.info("User {} requesting unread notification count", user.getEmail());
         
         // Users can only get count of their own unread notifications - this is handled by the service layer

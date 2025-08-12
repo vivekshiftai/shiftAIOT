@@ -23,9 +23,9 @@ import org.springframework.web.multipart.MultipartFile;
 import com.iotplatform.model.KnowledgeDocument;
 import com.iotplatform.service.KnowledgeService;
 
+@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/api/knowledge")
-@CrossOrigin(origins = "*")
+@RequestMapping("/knowledge")
 public class KnowledgeController {
 
     @Autowired

@@ -102,6 +102,12 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       console.log('IoTContext - Loading data from backend');
       setLoading(true);
       
+      // Add a timeout to prevent getting stuck in loading state
+      const timeoutId = setTimeout(() => {
+        console.log('IoTContext - Loading timeout, setting loading to false');
+        setLoading(false);
+      }, 10000); // 10 second timeout
+      
       try {
         // Load all data from backend independently to handle partial failures
         console.log('IoTContext - Starting to load data from backend...');
@@ -123,7 +129,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
           setDevices([]);
         }
 
-        // Load rules (optional)
+        // Load rules (optional) - skip if endpoint doesn't exist
         try {
           const rulesRes = await ruleAPI.getAll();
           console.log('IoTContext - Raw rules response:', rulesRes);
@@ -138,7 +144,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
           setRules([]);
         }
 
-        // Load notifications (optional)
+        // Load notifications (optional) - skip if endpoint doesn't exist
         try {
           const notificationsRes = await notificationAPI.getAll();
           console.log('IoTContext - Raw notifications response:', notificationsRes);
@@ -159,6 +165,8 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         // Don't set any dummy data - let the UI show empty state if no data
         console.log('IoTContext - No data loaded from backend, showing empty state');
       } finally {
+        clearTimeout(timeoutId);
+        console.log('IoTContext - Setting loading to false');
         setLoading(false);
       }
     };

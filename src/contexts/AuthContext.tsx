@@ -58,12 +58,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    console.log('AuthContext - Login attempt for:', email);
-    
     try {
-      console.log('AuthContext - Making API call');
       const response = await authAPI.login({ email, password });
-      console.log('AuthContext - API response received:', response.data);
       
       const { token, id, name, email: userEmail, role, organizationId } = response.data;
       
@@ -80,14 +76,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         lastLogin: new Date().toISOString()
       };
       
-      console.log('AuthContext - Created user object:', user);
-      console.log('AuthContext - Saving to localStorage');
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
       
-      console.log('AuthContext - Setting user state');
       setUser(user);
-      console.log('AuthContext - Login completed successfully');
       
     } catch (error) {
       console.error('AuthContext - Login failed with error:', error);

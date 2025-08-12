@@ -14,11 +14,9 @@ const api = axios.create({
 // Add request interceptor to include auth token
 api.interceptors.request.use(
   (config) => {
-    console.log('API Request Interceptor:', config.method?.toUpperCase(), config.url);
     
     // For device endpoints, don't require authentication
     if (config.url?.includes('/devices/') && !config.url?.includes('/auth/')) {
-      console.log('API - Device endpoint, skipping auth');
       // Remove any existing Authorization header for device endpoints
       delete config.headers.Authorization;
       return config;
@@ -26,10 +24,8 @@ api.interceptors.request.use(
     
     const token = localStorage.getItem('token');
     if (token) {
-      console.log('API - Adding auth token to request');
       config.headers.Authorization = `Bearer ${token}`;
     } else {
-      console.log('API - No auth token found');
     }
     return config;
   },
@@ -42,7 +38,6 @@ api.interceptors.request.use(
 // Add response interceptor to handle auth errors and token refresh
 api.interceptors.response.use(
   (response) => {
-    console.log('API Response Interceptor:', response.status, response.config.url);
     return response;
   },
   async (error) => {
@@ -71,16 +66,7 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   login: (credentials: { email: string; password: string }) => {
-    console.log('API - Login request to:', `${API_BASE_URL}/auth/signin`);
-    console.log('API - Login credentials:', { email: credentials.email, password: '***' });
-    
-    return api.post('/auth/signin', credentials).then(response => {
-      console.log('API - Login response:', response.data);
-      return response;
-    }).catch(error => {
-      console.error('API - Login error:', error.response?.data || error.message);
-      throw error;
-    });
+    return api.post('/auth/signin', credentials);
   },
   
   register: (userData: {
