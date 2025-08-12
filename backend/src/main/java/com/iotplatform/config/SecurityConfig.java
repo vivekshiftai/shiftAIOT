@@ -10,7 +10,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -29,7 +28,7 @@ import com.iotplatform.security.JwtTokenProvider;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
+// @EnableMethodSecurity(prePostEnabled = true) // Temporarily disabled to fix notification access
 public class SecurityConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
@@ -86,7 +85,7 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/websocket/**").permitAll()
                 .requestMatchers("/devices/**").permitAll()
-                .requestMatchers("/notifications/**").permitAll()
+                .requestMatchers("/notifications/**").authenticated()
                 .requestMatchers("/rules/**").permitAll()
                 .anyRequest().authenticated()
             )
