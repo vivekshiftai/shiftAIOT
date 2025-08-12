@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Filter, Search, Cpu, CheckCircle, X } from 'lucide-react';
 import { DeviceCard } from '../components/Devices/DeviceCard';
 import { DeviceOnboardingForm } from '../components/Devices/DeviceOnboardingForm';
@@ -8,18 +8,20 @@ import { useIoT } from '../contexts/IoTContext';
 import { useAuth } from '../contexts/AuthContext';
 import { deviceAPI } from '../services/api';
 import { Device } from '../types';
-import { DevicesLoading, LoadingButton } from '../components/Loading/LoadingComponents';
+import { DevicesLoading } from '../components/Loading/LoadingComponents';
 
 export const DevicesSection: React.FC = () => {
   const navigate = useNavigate();
-  const { devices, updateDeviceStatus, refreshDevices, addDevice, loading } = useIoT();
-  const { isAdmin, hasPermission } = useAuth();
+  const location = useLocation();
+  const { devices, updateDeviceStatus, addDevice, loading } = useIoT();
+  const { isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [sortBy, setSortBy] = useState<'name' | 'status' | 'lastSeen'>('name');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showTestModal, setShowTestModal] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  // const [isRefreshing, setIsRefreshing] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
   // Debug logging
@@ -27,14 +29,31 @@ export const DevicesSection: React.FC = () => {
   console.log('DevicesSection - loading:', loading);
   console.log('DevicesSection - devices length:', devices?.length || 0);
 
-  const filteredDevices = devices.filter(device => {
-    const matchesSearch = device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         device.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || device.status === statusFilter;
-    const matchesType = typeFilter === 'all' || device.type === typeFilter;
-    
-    return matchesSearch && matchesStatus && matchesType;
-  });
+  // Initialize filters from query params
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const status = params.get('status');
+    const search = params.get('search');
+    if (status) setStatusFilter(status);
+    if (search) setSearchTerm(search);
+  }, [location.search]);
+
+  const filteredDevices = useMemo(() => {
+    const base = devices.filter(device => {
+      const matchesSearch = device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           device.location.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || device.status === statusFilter;
+      const matchesType = typeFilter === 'all' || device.type === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
+    });
+    const sorted = [...base].sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'status') return a.status.localeCompare(b.status);
+      if (sortBy === 'lastSeen') return new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime();
+      return 0;
+    });
+    return sorted;
+  }, [devices, searchTerm, statusFilter, typeFilter, sortBy]);
 
   console.log('DevicesSection - filteredDevices:', filteredDevices);
   console.log('DevicesSection - filteredDevices length:', filteredDevices.length);
@@ -49,25 +68,25 @@ export const DevicesSection: React.FC = () => {
     setShowAddForm(false);
   };
 
-  const handleTestModalClick = () => {
-    if (!isAdmin()) {
-      alert('This feature is only available to administrators.');
-      return;
-    }
-    console.log('Test modal button clicked');
-    setShowTestModal(true);
-  };
+  // const handleTestModalClick = () => {
+  //   if (!isAdmin()) {
+  //     alert('This feature is only available to administrators.');
+  //     return;
+  //   }
+  //   console.log('Test modal button clicked');
+  //   setShowTestModal(true);
+  // };
 
-  const handleRefreshDevices = async () => {
-    setIsRefreshing(true);
-    try {
-      await refreshDevices();
-    } catch (error) {
-      console.error('Failed to refresh devices:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
+  // const handleRefreshDevices = async () => {
+  //   setIsRefreshing(true);
+  //   try {
+  //     await refreshDevices();
+  //   } catch (error) {
+  //     console.error('Failed to refresh devices:', error);
+  //   } finally {
+  //     setIsRefreshing(false);
+  //   }
+  // };
 
   const handleDeviceClick = (device: Device) => {
     navigate(`/devices/${device.id}`);
@@ -144,10 +163,10 @@ export const DevicesSection: React.FC = () => {
               className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all"
             >
               <option value="all">All Status</option>
-              <option value="online">Online</option>
-              <option value="offline">Offline</option>
-              <option value="warning">Warning</option>
-              <option value="error">Error</option>
+              <option value="ONLINE">Online</option>
+              <option value="OFFLINE">Offline</option>
+              <option value="WARNING">Warning</option>
+              <option value="ERROR">Error</option>
             </select>
             
             <select
@@ -160,6 +179,18 @@ export const DevicesSection: React.FC = () => {
               <option value="ACTUATOR">Actuators</option>
               <option value="GATEWAY">Gateways</option>
               <option value="CONTROLLER">Controllers</option>
+            </select>
+
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all"
+              aria-label="Sort devices"
+              title="Sort by"
+            >
+              <option value="name">Sort: Name</option>
+              <option value="status">Sort: Status</option>
+              <option value="lastSeen">Sort: Last Seen</option>
             </select>
           </div>
         </div>

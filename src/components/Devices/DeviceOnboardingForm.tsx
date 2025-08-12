@@ -53,6 +53,9 @@ interface DeviceFormData {
     safety_precautions: SafetyPrecaution[];
     pdf_filename: string;
     processing_summary: string;
+    total_pages?: number;
+    processed_chunks?: number;
+    processing_time?: number;
   };
 }
 
@@ -455,9 +458,7 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
     setCurrentStep((prev) => (prev - 1) as Step);
   }, []);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = useCallback(async () => {
     if (!validateCurrentStep()) {
       return;
     }
@@ -471,73 +472,107 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
       console.log('DeviceOnboardingForm - Starting enhanced onboarding process');
       console.log('DeviceOnboardingForm - Device data:', formData);
       console.log('DeviceOnboardingForm - File data:', uploadedFile);
-      console.log('DeviceOnboardingForm - Selected rules:', selectedRules);
-      console.log('DeviceOnboardingForm - Selected maintenance:', selectedMaintenance);
-      console.log('DeviceOnboardingForm - Selected safety:', selectedSafety);
+      
+      let pdfFilename = '';
+      let rulesData: any = null;
       
       // Stage 1: PDF Processing & Git Storage (0-33%)
       setCurrentOnboardingProcess('pdf');
-      setOnboardingSubStage('Uploading PDF to Git repository');
+      setOnboardingSubStage('Uploading PDF to processing service');
       setOnboardingSubProgress(0);
       
-      // Simulate PDF processing steps (API handles actual processing)
-      const pdfStages = [
-        'Uploading PDF',
-        'Extracting Content',
-        'Parsing Structure',
-        'Initializing Git Repository',
-        'Committing to Git',
-        'Creating Search Index'
-      ];
-      
-      for (let i = 0; i < pdfStages.length; i++) {
-        setOnboardingSubStage(pdfStages[i]);
-        setOnboardingSubProgress((i / (pdfStages.length - 1)) * 100);
-        await new Promise(resolve => setTimeout(resolve, 800));
+      if (uploadedFile?.file) {
+        try {
+          // Upload PDF to processing service
+          setOnboardingSubStage('Uploading PDF');
+          setOnboardingSubProgress(10);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          const uploadResponse = await pdfProcessingService.uploadPDF(uploadedFile.file);
+          pdfFilename = uploadResponse.pdf_filename;
+          
+          setOnboardingSubStage('PDF uploaded successfully');
+          setOnboardingSubProgress(100);
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          console.log('PDF uploaded successfully:', uploadResponse);
+        } catch (error) {
+          console.error('PDF upload failed:', error);
+          throw new Error(`Failed to upload PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
       }
       
       setOnboardingProgress(33);
       
       // Stage 2: Rules Querying & Generation (33-66%)
       setCurrentOnboardingProcess('rules');
-      setOnboardingSubStage('Analyzing device specifications');
+      setOnboardingSubStage('Generating IoT rules and maintenance data');
       setOnboardingSubProgress(0);
       
-      const rulesStages = [
-        'Analyzing Specifications',
-        'Identifying Parameters',
-        'Generating Alert Rules',
-        'Creating Automation Rules',
-        'Validating Rule Logic',
-        'Optimizing Performance'
-      ];
-      
-      for (let i = 0; i < rulesStages.length; i++) {
-        setOnboardingSubStage(rulesStages[i]);
-        setOnboardingSubProgress((i / (rulesStages.length - 1)) * 100);
-        await new Promise(resolve => setTimeout(resolve, 600));
+      if (pdfFilename) {
+        try {
+          const rulesStages = [
+            'Analyzing device specifications',
+            'Identifying monitoring parameters',
+            'Generating alert rules',
+            'Creating automation workflows',
+            'Validating rule logic',
+            'Optimizing performance'
+          ];
+          
+          for (let i = 0; i < rulesStages.length; i++) {
+            setOnboardingSubStage(rulesStages[i]);
+            setOnboardingSubProgress((i / (rulesStages.length - 1)) * 80);
+            await new Promise(resolve => setTimeout(resolve, 400));
+          }
+          
+          // Generate rules using the PDF processing service
+          setOnboardingSubStage('Calling rules generation API');
+          setOnboardingSubProgress(90);
+          
+          const rulesResponse = await pdfProcessingService.generateRules({
+            pdf_filename: pdfFilename,
+            chunk_size: 1000,
+            rule_types: ['monitoring', 'maintenance', 'alert']
+          });
+          
+          rulesData = rulesResponse;
+          setSelectedRules(rulesResponse.iot_rules || []);
+          setSelectedMaintenance(rulesResponse.maintenance_data || []);
+          setSelectedSafety(rulesResponse.safety_precautions || []);
+          
+          setOnboardingSubStage('Rules generated successfully');
+          setOnboardingSubProgress(100);
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          console.log('Rules generated successfully:', rulesResponse);
+        } catch (error) {
+          console.error('Rules generation failed:', error);
+          // Continue with fallback data
+          console.log('Using fallback rules data');
+        }
       }
       
       setOnboardingProgress(66);
       
       // Stage 3: Knowledge Base Creation (66-100%)
       setCurrentOnboardingProcess('knowledgebase');
-      setOnboardingSubStage('Vectorizing content');
+      setOnboardingSubStage('Building AI knowledge base');
       setOnboardingSubProgress(0);
       
       const kbStages = [
-        'Vectorizing Content',
-        'Creating Embeddings',
-        'Building Search Index',
-        'Training AI Model',
-        'Setting Up Chat Interface',
-        'Testing Query System'
+        'Vectorizing document content',
+        'Creating semantic embeddings',
+        'Building search index',
+        'Training AI model',
+        'Setting up chat interface',
+        'Testing query system'
       ];
       
       for (let i = 0; i < kbStages.length; i++) {
         setOnboardingSubStage(kbStages[i]);
         setOnboardingSubProgress((i / (kbStages.length - 1)) * 100);
-        await new Promise(resolve => setTimeout(resolve, 700));
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
       
       setOnboardingProgress(100);
@@ -549,8 +584,11 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
           iot_rules: selectedRules,
           maintenance_data: selectedMaintenance,
           safety_precautions: selectedSafety,
-          pdf_filename: pdfResultsData?.pdf_filename || uploadedFile?.file.name || 'unknown.pdf',
-          processing_summary: pdfResultsData?.summary || 'AI-generated rules and maintenance data'
+          pdf_filename: pdfFilename || uploadedFile?.file.name || 'unknown.pdf',
+          processing_summary: rulesData?.summary || 'AI-generated rules and maintenance data',
+          total_pages: rulesData?.total_pages || 0,
+          processed_chunks: rulesData?.processed_chunks || 0,
+          processing_time: rulesData?.processing_time || 0
         }
       };
       
@@ -571,11 +609,14 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
     } catch (error) {
       console.error('Error during onboarding process:', error);
       setShowOnboardingLoader(false);
-      alert(`Failed to complete onboarding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Show error notification
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred during onboarding';
+      alert(`Failed to complete onboarding: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
-  }, [validateCurrentStep, formData, uploadedFile, selectedRules, selectedMaintenance, selectedSafety, pdfResultsData, onSubmit]);
+  }, [validateCurrentStep, formData, uploadedFile, selectedRules, selectedMaintenance, selectedSafety, onSubmit]);
 
   const getStepTitle = useCallback((step: Step): string => {
     switch (step) {
@@ -942,6 +983,11 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
           rulesCount={selectedRules.length}
           maintenanceCount={selectedMaintenance.length}
           safetyCount={selectedSafety.length}
+          processingDetails={{
+            total_pages: pdfResultsData?.total_pages || 0,
+            processed_chunks: pdfResultsData?.processed_chunks || 0,
+            processing_time: pdfResultsData?.processing_time || 0
+          }}
           onContinue={() => {
             setShowSuccessNotification(false);
             onCancel();

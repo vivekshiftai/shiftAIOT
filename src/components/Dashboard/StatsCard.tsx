@@ -1,16 +1,19 @@
 import React from 'react';
-import { DivideIcon as LucideIcon } from 'lucide-react';
+
+type IconType = React.ComponentType<{ className?: string }>;
 
 interface StatsCardProps {
   title: string;
   value: string | number;
   subtitle: string;
-  icon: LucideIcon;
+  icon: IconType;
   trend?: {
     value: number;
     isPositive: boolean;
   };
   color: 'blue' | 'green' | 'yellow' | 'red';
+  onClick?: () => void;
+  className?: string;
 }
 
 const colorClasses = {
@@ -42,12 +45,19 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   subtitle,
   icon: Icon,
   trend,
-  color
+  color,
+  onClick,
+  className = ''
 }) => {
   const colors = colorClasses[color];
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+    <div
+      onClick={onClick}
+      className={`bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700 ${
+        onClick ? 'cursor-pointer transition-transform hover:shadow-md hover:-translate-y-0.5' : ''
+      } ${className}`}
+    >
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">{title}</p>

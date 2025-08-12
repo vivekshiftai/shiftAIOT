@@ -14,7 +14,10 @@ import {
   BookOpen,
   Zap,
   Target,
-  Settings
+  Settings,
+  Cpu,
+  BarChart3,
+  Clipboard
 } from 'lucide-react';
 import { pdfProcessingService, QueryRequest, QueryResponse } from '../../services/pdfProcessingService';
 
@@ -216,115 +219,123 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow-lg border border-slate-200">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-            <MessageSquare className="w-5 h-5 text-white" />
+    <div className="flex flex-col h-full bg-white rounded-lg shadow-sm border border-slate-200">
+      {/* Header with Device Information */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-t-lg">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center">
+            <Bot className="w-6 h-6 mr-2" />
+            <h2 className="text-lg font-semibold">AI Device Assistant</h2>
           </div>
-          <div>
-            <h3 className="font-semibold text-slate-800">Device Chat Assistant</h3>
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <span>{deviceName}</span>
-              {pdfFileName && (
-                <>
-                  <span>•</span>
-                  <div className="flex items-center gap-1">
-                    <FileText className="w-3 h-3" />
-                    <span>{pdfFileName}</span>
-                  </div>
-                </>
-              )}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-1 hover:bg-white/20 rounded transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+        
+        {/* Device Information */}
+        <div className="bg-white/10 rounded-lg p-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+            <div className="flex items-center">
+              <Cpu className="w-4 h-4 mr-2 opacity-80" />
+              <span className="font-medium">{deviceName}</span>
             </div>
+            {deviceType && (
+              <div className="flex items-center">
+                <Settings className="w-4 h-4 mr-2 opacity-80" />
+                <span>{deviceType}</span>
+              </div>
+            )}
+            {pdfFileName && (
+              <div className="flex items-center md:col-span-2">
+                <FileText className="w-4 h-4 mr-2 opacity-80" />
+                <span className="font-medium">Document: {pdfFileName}</span>
+              </div>
+            )}
           </div>
         </div>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-          >
-            <span className="sr-only">Close chat</span>
-            ×
-          </button>
-        )}
       </div>
 
-      {/* Messages */}
+      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <div
             key={message.id}
             className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
           >
-            <div className="flex items-start gap-3 max-w-3xl">
-              <div className={`p-2 rounded-full flex-shrink-0 shadow-sm ${
+            <div
+              className={`max-w-[80%] rounded-lg p-3 ${
                 message.type === 'user'
-                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
-                  : 'bg-white text-slate-600 border border-slate-200'
-              }`}>
-                {message.type === 'user' ? (
-                  <User className="w-4 h-4" />
-                ) : (
-                  <Bot className="w-4 h-4" />
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-800'
+              }`}
+            >
+              <div className="flex items-start space-x-2">
+                {message.type === 'assistant' && (
+                  <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                    <Bot className="w-3 h-3 text-white" />
+                  </div>
                 )}
-              </div>
-              <div className="flex-1">
-                <div
-                  className={`px-4 py-3 rounded-2xl shadow-sm ${
-                    message.type === 'user'
-                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
-                      : 'bg-white text-slate-800 border border-slate-200'
-                  }`}
-                >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                  
-                  {/* Message metadata */}
+                <div className="flex-1">
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  {message.type === 'assistant' && (
+                    <button
+                      aria-label="Copy message"
+                      title="Copy"
+                      onClick={() => navigator.clipboard.writeText(message.content)}
+                      className="mt-2 text-xs text-slate-500 hover:text-slate-700 inline-flex items-center gap-1"
+                    >
+                      <Clipboard className="w-3 h-3" /> Copy
+                    </button>
+                  )}
                   {message.metadata && (
-                    <div className={`mt-2 text-xs ${
-                      message.type === 'user' ? 'text-blue-100' : 'text-slate-500'
-                    }`}>
+                    <div className="mt-2 text-xs opacity-70">
                       {message.metadata.source && (
-                        <div className="flex items-center gap-1 mb-1">
-                          <FileText className="w-3 h-3" />
-                          <span>Source: {message.metadata.source}</span>
-                          {message.metadata.pageNumber && (
-                            <span>(Page {message.metadata.pageNumber})</span>
-                          )}
+                        <div className="flex items-center">
+                          <FileText className="w-3 h-3 mr-1" />
+                          Source: {message.metadata.source}
+                        </div>
+                      )}
+                      {message.metadata.pageNumber && (
+                        <div className="flex items-center">
+                          <BookOpen className="w-3 h-3 mr-1" />
+                          Page: {message.metadata.pageNumber}
                         </div>
                       )}
                       {message.metadata.confidence && (
-                        <div className="flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" />
-                          <span>Confidence: {Math.round(message.metadata.confidence * 100)}%</span>
+                        <div className="flex items-center">
+                          <BarChart3 className="w-3 h-3 mr-1" />
+                          Confidence: {Math.round(message.metadata.confidence * 100)}%
                         </div>
                       )}
                     </div>
                   )}
-                  
-                  <p className={`text-xs mt-2 ${
-                    message.type === 'user' ? 'text-blue-100' : 'text-slate-500'
-                  }`}>
+                  <div className="text-xs opacity-60 mt-1">
                     {formatTimestamp(message.timestamp)}
-                  </p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         ))}
         
-        {/* Typing indicator */}
         {isTyping && (
           <div className="flex justify-start">
-            <div className="flex items-start gap-3 max-w-3xl">
-              <div className="p-2 rounded-full bg-white text-slate-600 border border-slate-200">
-                <Bot className="w-4 h-4" />
-              </div>
-              <div className="px-4 py-3 bg-white text-slate-800 border border-slate-200 rounded-2xl">
+            <div className="bg-gray-100 rounded-lg p-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                  <Bot className="w-3 h-3 text-white" />
+                </div>
                 <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
               </div>
             </div>
@@ -337,54 +348,49 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
       {/* Suggested Questions */}
       {messages.length === 1 && (
         <div className="px-4 pb-4">
-          <div className="bg-slate-50 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-blue-500" />
-              Suggested Questions
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {suggestedQuestions.map((question, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleSuggestedQuestion(question)}
-                  className="text-left p-2 text-sm text-slate-600 hover:text-slate-800 hover:bg-white rounded-md transition-colors border border-transparent hover:border-slate-200"
-                >
-                  {question}
-                </button>
-              ))}
-            </div>
+          <p className="text-sm text-gray-600 mb-3">Try asking:</p>
+          <div className="flex flex-wrap gap-2">
+            {suggestedQuestions.map((question, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  setNewMessage(question);
+                  setTimeout(() => sendMessage(), 100);
+                }}
+                className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm hover:bg-blue-100 transition-colors"
+              >
+                {question}
+              </button>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Input */}
-      <div className="p-4 border-t border-slate-200 bg-slate-50">
-        <div className="flex gap-2">
+      {/* Input Area */}
+      <div className="border-t border-slate-200 p-4">
+        <div className="flex space-x-3">
           <div className="flex-1 relative">
             <textarea
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask about this device..."
-              className="w-full px-4 py-3 pr-12 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+              placeholder="Ask me anything about your device..."
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
               rows={1}
-              style={{ minHeight: '44px', maxHeight: '120px' }}
+              disabled={isTyping}
+              aria-label="Message input"
             />
-            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-slate-400">
-              Enter to send, Shift+Enter for new line
-            </div>
           </div>
           <button
             onClick={sendMessage}
             disabled={!newMessage.trim() || isTyping}
-            className="px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
+            className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center"
           >
-            {isTyping ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
+            <Send className="w-4 h-4" />
           </button>
+        </div>
+        <div className="text-xs text-gray-500 mt-2 text-center">
+          Press Enter to send, Shift+Enter for new line
         </div>
       </div>
     </div>

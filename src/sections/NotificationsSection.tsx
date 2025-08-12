@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Bell, Filter, Search, Check, X, AlertTriangle, Info, CheckCircle, Trash2, Archive } from 'lucide-react';
 import { useIoT } from '../contexts/IoTContext';
 import { Notification } from '../types';
@@ -6,12 +6,22 @@ import { LoadingSpinner } from '../components/Loading/LoadingComponents';
 
 export const NotificationsSection: React.FC = () => {
   const { notifications, markNotificationAsRead } = useIoT();
+  const params = new URLSearchParams(window.location.search);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
 
-  const filteredNotifications = notifications.filter(notification => {
+  useEffect(() => {
+    const filter = params.get('filter');
+    const range = params.get('range');
+    if (filter === 'maintenance') {
+      setSearchTerm('maintenance');
+    }
+    // "range" param is informational here; the dashboard card shows current week.
+  }, []);
+
+  const filteredNotifications = useMemo(() => notifications.filter(notification => {
     const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          notification.message.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === 'all' || notification.type === typeFilter;
@@ -20,7 +30,7 @@ export const NotificationsSection: React.FC = () => {
                          (statusFilter === 'unread' && !notification.read);
     
     return matchesSearch && matchesType && matchesStatus;
-  });
+  }), [notifications, searchTerm, typeFilter, statusFilter]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
   const totalCount = notifications.length;

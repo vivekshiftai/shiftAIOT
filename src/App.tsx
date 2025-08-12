@@ -11,6 +11,7 @@ import { DevicesSection } from './sections/DevicesSection';
 import { DeviceDetailsSection } from './sections/DeviceDetailsSection';
 import { KnowledgeSection } from './sections/KnowledgeSection';
 import { NotificationsSection } from './sections/NotificationsSection';
+import { AnalyticsSection } from './sections/AnalyticsSection';
 import { UsersSection } from './sections/UsersSection';
 import { DebugInfo } from './components/DebugInfo';
 import { BarChart3, Bell, Users, Settings, AlertTriangle } from 'lucide-react';
@@ -22,6 +23,7 @@ import {
   SettingsEmptyLoading,
   IoTLoadingScreen
 } from './components/Loading/LoadingComponents';
+import { SettingsSection } from './sections/SettingsSection';
 
 // Error Boundary Component
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error?: Error }> {
@@ -179,9 +181,9 @@ const MainAppLayout: React.FC = () => {
             <Route path="/devices/:deviceId" element={<DeviceDetailsSection />} />
             <Route path="/knowledge" element={<KnowledgeSection />} />
             <Route path="/notifications" element={<NotificationsSection />} />
-            <Route path="/analytics" element={<AnalyticsEmptyLoading />} />
+            <Route path="/analytics" element={<AnalyticsSection />} />
             <Route path="/users" element={<UsersSection />} />
-            <Route path="/settings" element={<SettingsEmptyLoading />} />
+            <Route path="/settings" element={<SettingsSection />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
