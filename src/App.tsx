@@ -11,6 +11,7 @@ import { DevicesSection } from './sections/DevicesSection';
 import { DeviceDetailsSection } from './sections/DeviceDetailsSection';
 import { KnowledgeSection } from './sections/KnowledgeSection';
 import { NotificationsSection } from './sections/NotificationsSection';
+import { UsersSection } from './sections/UsersSection';
 import { DebugInfo } from './components/DebugInfo';
 import { BarChart3, Bell, Users, Settings, AlertTriangle } from 'lucide-react';
 import { 
@@ -179,7 +180,7 @@ const MainAppLayout: React.FC = () => {
             <Route path="/knowledge" element={<KnowledgeSection />} />
             <Route path="/notifications" element={<NotificationsSection />} />
             <Route path="/analytics" element={<AnalyticsEmptyLoading />} />
-            <Route path="/users" element={<UsersEmptyLoading />} />
+            <Route path="/users" element={<UsersSection />} />
             <Route path="/settings" element={<SettingsEmptyLoading />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>

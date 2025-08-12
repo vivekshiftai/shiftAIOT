@@ -26,11 +26,13 @@ import {
   Key,
   Network,
   MapPin,
-  Tag
+  Tag,
+  Wrench
 } from 'lucide-react';
-import { pdfProcessingService, RulesGenerationResponse, IoTRule, MaintenanceData } from '../../services/pdfProcessingService';
+import { pdfProcessingService, RulesGenerationResponse, IoTRule, MaintenanceData, SafetyPrecaution } from '../../services/pdfProcessingService';
 import { AIProcessingLoader } from '../Loading/AIProcessingLoader';
 import { GeneratedRulesDisplay } from './GeneratedRulesDisplay';
+import { PDFProcessingResults, PDFProcessingResultsData } from './PDFProcessingResults';
 
 interface DeviceFormData {
   deviceId: string;
@@ -42,6 +44,13 @@ interface DeviceFormData {
   networkConfig: string;
   location: string;
   metadata: string;
+  pdfResults?: {
+    iot_rules: IoTRule[];
+    maintenance_data: MaintenanceData[];
+    safety_precautions: SafetyPrecaution[];
+    pdf_filename: string;
+    processing_summary: string;
+  };
 }
 
 interface FileUpload {
@@ -87,8 +96,14 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
   const [processingStage, setProcessingStage] = useState('uploading');
   const [generatedRules, setGeneratedRules] = useState<IoTRule[]>([]);
   const [maintenanceData, setMaintenanceData] = useState<MaintenanceData[]>([]);
+  const [safetyPrecautions, setSafetyPrecautions] = useState<SafetyPrecaution[]>([]);
   const [pdfProcessingStatus, setPdfProcessingStatus] = useState<string>('');
   const [showProcessingLoader, setShowProcessingLoader] = useState(false);
+  const [showPDFResults, setShowPDFResults] = useState(false);
+  const [pdfResultsData, setPdfResultsData] = useState<PDFProcessingResultsData | null>(null);
+  const [selectedRules, setSelectedRules] = useState<IoTRule[]>([]);
+  const [selectedMaintenance, setSelectedMaintenance] = useState<MaintenanceData[]>([]);
+  const [selectedSafety, setSelectedSafety] = useState<SafetyPrecaution[]>([]);
 
   const handleInputChange = useCallback((field: keyof DeviceFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -200,9 +215,28 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
         console.log('Rules generated successfully:', rulesResponse);
         console.log('IoT Rules count:', rulesResponse.iot_rules?.length || 0);
         console.log('Maintenance data count:', rulesResponse.maintenance_data?.length || 0);
+        console.log('Safety precautions count:', rulesResponse.safety_precautions?.length || 0);
         
+        // Store the complete response data
+        const resultsData: PDFProcessingResultsData = {
+          pdf_filename: rulesResponse.pdf_filename || file.name,
+          total_pages: rulesResponse.total_pages || 0,
+          processed_chunks: rulesResponse.processed_chunks || 0,
+          iot_rules: rulesResponse.iot_rules || [],
+          maintenance_data: rulesResponse.maintenance_data || [],
+          safety_precautions: rulesResponse.safety_precautions || [],
+          processing_time: rulesResponse.processing_time || 0,
+          summary: rulesResponse.summary || `Generated ${rulesResponse.iot_rules?.length || 0} IoT rules, ${rulesResponse.maintenance_data?.length || 0} maintenance records, and ${rulesResponse.safety_precautions?.length || 0} safety precautions from your device documentation.`
+        };
+        
+        setPdfResultsData(resultsData);
         setGeneratedRules(rulesResponse.iot_rules || []);
         setMaintenanceData(rulesResponse.maintenance_data || []);
+        setSafetyPrecautions(rulesResponse.safety_precautions || []);
+        
+        // Show the results for user selection
+        setShowPDFResults(true);
+        
       } catch (apiError) {
         console.error('PDF processing API failed, using mock data:', apiError);
         
@@ -256,8 +290,43 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
           }
         ];
 
+        const mockSafety = [
+          {
+            id: 'safety-1',
+            title: 'High Temperature Warning',
+            description: 'Equipment may reach dangerous temperatures during operation',
+            severity: 'high' as const,
+            category: 'Thermal Safety',
+            recommended_action: 'Ensure proper ventilation and monitor temperature sensors'
+          },
+          {
+            id: 'safety-2',
+            title: 'Electrical Safety',
+            description: 'High voltage components require proper grounding',
+            severity: 'critical' as const,
+            category: 'Electrical Safety',
+            recommended_action: 'Verify grounding connections before operation'
+          }
+        ];
+
+        const mockResultsData: PDFProcessingResultsData = {
+          pdf_filename: file.name,
+          total_pages: 50,
+          processed_chunks: 4,
+          iot_rules: mockRules,
+          maintenance_data: mockMaintenance,
+          safety_precautions: mockSafety,
+          processing_time: 45.2,
+          summary: 'Generated 3 IoT rules, 2 maintenance records, and 2 safety precautions from your device documentation.'
+        };
+
+        setPdfResultsData(mockResultsData);
         setGeneratedRules(mockRules);
         setMaintenanceData(mockMaintenance);
+        setSafetyPrecautions(mockSafety);
+        
+        // Show the results for user selection
+        setShowPDFResults(true);
       }
       
       // Stage 4: Maintenance Schedule
@@ -277,6 +346,7 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
       setProcessingStage('Processing failed. Please try again.');
       setGeneratedRules([]);
       setMaintenanceData([]);
+      setSafetyPrecautions([]);
     } finally {
       setIsProcessingPDF(false);
       // Keep the loader open for a moment to show completion
@@ -288,6 +358,40 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
 
   const removeFile = useCallback(() => {
     setUploadedFile(null);
+    setShowPDFResults(false);
+    setPdfResultsData(null);
+    setGeneratedRules([]);
+    setMaintenanceData([]);
+    setSafetyPrecautions([]);
+    setSelectedRules([]);
+    setSelectedMaintenance([]);
+    setSelectedSafety([]);
+  }, []);
+
+  const handlePDFResultsConfirm = useCallback((selectedData: {
+    iot_rules: IoTRule[];
+    maintenance_data: MaintenanceData[];
+    safety_precautions: SafetyPrecaution[];
+  }) => {
+    console.log('User confirmed PDF results selection:', selectedData);
+    setSelectedRules(selectedData.iot_rules);
+    setSelectedMaintenance(selectedData.maintenance_data);
+    setSelectedSafety(selectedData.safety_precautions);
+    setShowPDFResults(false);
+  }, []);
+
+  const handlePDFResultsUpdate = useCallback((field: 'rules' | 'maintenance' | 'safety', data: any[]) => {
+    switch (field) {
+      case 'rules':
+        setGeneratedRules(data);
+        break;
+      case 'maintenance':
+        setMaintenanceData(data);
+        break;
+      case 'safety':
+        setSafetyPrecautions(data);
+        break;
+    }
   }, []);
 
   const validateCurrentStep = useCallback((): boolean => {
@@ -317,15 +421,23 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
   const nextStep = useCallback(async () => {
     if (validateCurrentStep()) {
       setIsStepLoading(true);
-      setStepLoadingMessage('Preparing next step...');
       
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Show different loading messages based on current step
+      if (currentStep === 2) {
+        setStepLoadingMessage('Preparing AI analysis system...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setStepLoadingMessage('Loading documentation upload interface...');
+        await new Promise(resolve => setTimeout(resolve, 800));
+      } else {
+        setStepLoadingMessage('Preparing next step...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
       
       setIsStepLoading(false);
       setStepLoadingMessage('');
       setCurrentStep((prev) => (prev + 1) as Step);
     }
-  }, [validateCurrentStep]);
+  }, [validateCurrentStep, currentStep]);
 
   const prevStep = useCallback(() => {
     setCurrentStep((prev) => (prev - 1) as Step);
@@ -339,13 +451,45 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
     }
 
     setIsSubmitting(true);
-    setStepLoadingMessage('Creating your IoT device...');
+    setStepLoadingMessage('Initializing device creation...');
     
     try {
       console.log('DeviceOnboardingForm - Submitting device data:', formData);
       console.log('DeviceOnboardingForm - File data:', uploadedFile);
+      console.log('DeviceOnboardingForm - Selected rules:', selectedRules);
+      console.log('DeviceOnboardingForm - Selected maintenance:', selectedMaintenance);
+      console.log('DeviceOnboardingForm - Selected safety:', selectedSafety);
       
-      await onSubmit(formData, uploadedFile);
+      // Show progress messages
+      setTimeout(() => {
+        setStepLoadingMessage('Creating device in the system...');
+      }, 1000);
+      
+      setTimeout(() => {
+        setStepLoadingMessage('Configuring monitoring rules...');
+      }, 2000);
+      
+      setTimeout(() => {
+        setStepLoadingMessage('Setting up maintenance schedules...');
+      }, 3000);
+      
+      setTimeout(() => {
+        setStepLoadingMessage('Finalizing device setup...');
+      }, 4000);
+      
+      // Create enhanced device data with PDF results
+      const enhancedDeviceData = {
+        ...formData,
+        pdfResults: {
+          iot_rules: selectedRules,
+          maintenance_data: selectedMaintenance,
+          safety_precautions: selectedSafety,
+          pdf_filename: pdfResultsData?.pdf_filename || uploadedFile?.file.name || 'unknown.pdf',
+          processing_summary: pdfResultsData?.summary || 'AI-generated rules and maintenance data'
+        }
+      };
+      
+      await onSubmit(enhancedDeviceData, uploadedFile);
       
       setCreatedDeviceName(formData.deviceName);
       setDeviceCreated(true);
@@ -362,7 +506,7 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
       setIsSubmitting(false);
       setStepLoadingMessage('');
     }
-  }, [validateCurrentStep, formData, uploadedFile, onSubmit]);
+  }, [validateCurrentStep, formData, uploadedFile, selectedRules, selectedMaintenance, selectedSafety, pdfResultsData, onSubmit]);
 
   const getStepTitle = useCallback((step: Step): string => {
     switch (step) {
@@ -569,60 +713,125 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
               <p className="text-slate-600">Upload your device manual or specifications for AI-powered analysis and rule generation</p>
             </div>
 
-            <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 hover:border-blue-400 transition-colors">
-              <input
-                type="file"
-                onChange={handleFileUpload}
-                accept=".pdf"
-                className="hidden"
-                id="device-documentation"
-              />
-              <label
-                htmlFor="device-documentation"
-                className="flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 rounded-lg transition-colors p-6"
-              >
-                <Upload className="w-12 h-12 text-slate-400 mb-4" />
-                <span className="text-lg font-medium text-slate-700 mb-2">Click to upload PDF</span>
-                <span className="text-sm text-slate-500">Device manual, datasheet, or specifications</span>
-                <span className="text-xs text-slate-400 mt-1">Maximum file size: 10MB</span>
-              </label>
-              {errors.file && (
-                <p className="text-red-500 text-sm mt-2 text-center">{errors.file}</p>
-              )}
-            </div>
-
-            {uploadedFile && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-5 h-5 text-green-600" />
-                    <div>
-                      <p className="text-sm font-medium text-green-800">{uploadedFile.file.name}</p>
-                      <p className="text-xs text-green-600">
-                        {(uploadedFile.file.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
+            {!uploadedFile ? (
+              <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 hover:border-blue-400 transition-colors">
+                <input
+                  type="file"
+                  onChange={handleFileUpload}
+                  accept=".pdf"
+                  className="hidden"
+                  id="device-documentation"
+                />
+                <label
+                  htmlFor="device-documentation"
+                  className="flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 rounded-lg transition-colors p-6"
+                >
+                  <Upload className="w-12 h-12 text-slate-400 mb-4" />
+                  <span className="text-lg font-medium text-slate-700 mb-2">Click to upload PDF</span>
+                  <span className="text-sm text-slate-500">Device manual, datasheet, or specifications</span>
+                  <span className="text-xs text-slate-400 mt-1">Maximum file size: 10MB</span>
+                </label>
+                {errors.file && (
+                  <p className="text-red-500 text-sm mt-2 text-center">{errors.file}</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* File Upload Status */}
+                <div className={`border rounded-lg p-4 ${
+                  uploadedFile.status === 'success' 
+                    ? 'bg-green-50 border-green-200' 
+                    : uploadedFile.status === 'error'
+                    ? 'bg-red-50 border-red-200'
+                    : 'bg-blue-50 border-blue-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {uploadedFile.status === 'success' ? (
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      ) : uploadedFile.status === 'error' ? (
+                        <AlertCircle className="w-5 h-5 text-red-600" />
+                      ) : (
+                        <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-slate-800">{uploadedFile.file.name}</p>
+                        <p className="text-xs text-slate-600">
+                          {(uploadedFile.file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                        {uploadedFile.status === 'success' && (
+                          <p className="text-xs text-green-600 mt-1">✓ Successfully uploaded and processed</p>
+                        )}
+                        {uploadedFile.status === 'error' && (
+                          <p className="text-xs text-red-600 mt-1">✗ {uploadedFile.error}</p>
+                        )}
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={removeFile}
+                      className="p-1 hover:bg-slate-100 rounded transition-colors"
+                    >
+                      <X className="w-4 h-4 text-slate-600" />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={removeFile}
-                    className="p-1 hover:bg-green-100 rounded transition-colors"
-                  >
-                    <X className="w-4 h-4 text-green-600" />
-                  </button>
+                </div>
+
+                {/* Show PDF Processing Results */}
+                {showPDFResults && pdfResultsData && (
+                  <PDFProcessingResults
+                    results={pdfResultsData}
+                    onRulesUpdate={(rules) => handlePDFResultsUpdate('rules', rules)}
+                    onMaintenanceUpdate={(maintenance) => handlePDFResultsUpdate('maintenance', maintenance)}
+                    onSafetyUpdate={(safety) => handlePDFResultsUpdate('safety', safety)}
+                    onConfirm={handlePDFResultsConfirm}
+                  />
+                )}
+
+                {/* Show Selected Results Summary */}
+                {(selectedRules.length > 0 || selectedMaintenance.length > 0 || selectedSafety.length > 0) && (
+                  <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="text-sm font-medium text-green-800">Selection Confirmed!</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Target className="w-4 h-4 text-blue-600" />
+                        <span className="text-slate-700">
+                          {selectedRules.length} IoT Rules Selected
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Wrench className="w-4 h-4 text-orange-600" />
+                        <span className="text-slate-700">
+                          {selectedMaintenance.length} Maintenance Items
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-red-600" />
+                        <span className="text-slate-700">
+                          {selectedSafety.length} Safety Precautions
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-600 mt-2">
+                      These items will be automatically configured when you create your device.
+                    </p>
+                  </div>
+                )}
+
+                {/* Next Steps */}
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Rocket className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">Ready to Complete Onboarding</span>
+                  </div>
+                  <p className="text-sm text-blue-700">
+                    Your device is ready to be added to the system. Click "Complete Onboarding" to create your device with AI-generated rules and maintenance schedules.
+                  </p>
                 </div>
               </div>
-            )}
-
-            {/* Generated Rules Display */}
-            {(generatedRules.length > 0 || maintenanceData.length > 0) && (
-              <GeneratedRulesDisplay
-                iotRules={generatedRules}
-                maintenanceData={maintenanceData}
-                onRulesUpdate={setGeneratedRules}
-                onMaintenanceUpdate={setMaintenanceData}
-                isEditable={true}
-              />
             )}
 
             {/* AI Analysis Info */}
@@ -639,7 +848,7 @@ export const DeviceOnboardingForm: React.FC<DeviceOnboardingFormProps> = ({ onSu
           </div>
         );
     }
-  }, [currentStep, formData, uploadedFile, generatedRules, maintenanceData, handleInputChange, removeFile, handleFileUpload, errors]);
+  }, [currentStep, formData, uploadedFile, generatedRules, maintenanceData, handleInputChange, removeFile, handleFileUpload, errors, showPDFResults, pdfResultsData, selectedRules, selectedMaintenance, selectedSafety]);
 
   return (
     <>
