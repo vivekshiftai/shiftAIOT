@@ -423,42 +423,7 @@ public class DeviceController {
         }
     }
     
-    @PostMapping("/process-pdf-rag")
-    public ResponseEntity<?> processPDFWithRAG(@RequestParam("pdfFile") MultipartFile pdfFile,
-                                             @RequestParam("deviceId") String deviceId,
-                                             @AuthenticationPrincipal User user) {
-        try {
-            String userEmail = getUserEmail(user);
-            
-            logger.info("User {} requesting PDF RAG processing for device {}", userEmail, deviceId);
-            
-            if (pdfFile == null || pdfFile.isEmpty()) {
-                logger.warn("No PDF file provided for RAG processing by user {}", userEmail);
-                return ResponseEntity.badRequest().body(Map.of("error", "No PDF file provided"));
-            }
-            
-            if (deviceId == null || deviceId.trim().isEmpty()) {
-                logger.warn("Invalid device ID provided for RAG processing by user {}", userEmail);
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid device ID"));
-            }
-            
-            // Process PDF with RAG system
-            Map<String, Object> result = deviceService.processPDFWithRAG(pdfFile, deviceId.trim());
-            
-            if (Boolean.TRUE.equals(result.get("success"))) {
-                logger.info("PDF RAG processing completed successfully for device {}", deviceId);
-                return ResponseEntity.ok(result);
-            } else {
-                logger.error("PDF RAG processing failed for device {}", deviceId);
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
-            }
-            
-        } catch (Exception e) {
-            logger.error("Error in PDF RAG processing", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Failed to process PDF with RAG: " + e.getMessage()));
-        }
-    }
+
     
     // Helper methods
     private String getUserEmail(User user) {

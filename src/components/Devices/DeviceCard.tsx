@@ -1,7 +1,6 @@
 import React from 'react';
 import {
-  Cpu, Wifi, WifiOff, AlertTriangle, XCircle, Battery, Thermometer,
-  Droplets, ChevronRight
+  Cpu, Wifi, WifiOff, AlertTriangle, XCircle, ChevronRight
 } from 'lucide-react';
 import { Device } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -106,29 +105,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onStatusChange }
           </div>
         </div>
 
-        {/* Telemetry Data */}
-        {device.status === 'ONLINE' && (
-          <div className="flex items-center gap-4 mr-4">
-            {device.batteryLevel && (
-              <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                <Battery className="w-4 h-4 text-slate-500" />
-                <span className="text-sm font-medium text-slate-800">{device.batteryLevel}%</span>
-              </div>
-            )}
-            {device.temperature && (
-              <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                <Thermometer className="w-4 h-4 text-slate-500" />
-                <span className="text-sm font-medium text-slate-800">{device.temperature}°C</span>
-              </div>
-            )}
-            {device.humidity && (
-              <div className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                <Droplets className="w-4 h-4 text-slate-500" />
-                <span className="text-sm font-medium text-slate-800">{device.humidity}%</span>
-              </div>
-            )}
-          </div>
-        )}
+
 
         {/* Status Icon and Chevron */}
         <div className="flex items-center gap-3">

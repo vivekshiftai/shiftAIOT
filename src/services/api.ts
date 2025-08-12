@@ -14,11 +14,11 @@ const api = axios.create({
 // Add request interceptor to include auth token
 api.interceptors.request.use(
   (config) => {
-    console.log('API Request:', config.method?.toUpperCase(), config.url, config.data);
+    console.log('API Request Interceptor:', config.method?.toUpperCase(), config.url);
     
     // For device endpoints, don't require authentication
-    if (config.url?.includes('/devices/')) {
-      console.log('Device endpoint - proceeding without authentication');
+    if (config.url?.includes('/devices/') && !config.url?.includes('/auth/')) {
+      console.log('API - Device endpoint, skipping auth');
       // Remove any existing Authorization header for device endpoints
       delete config.headers.Authorization;
       return config;
@@ -26,7 +26,10 @@ api.interceptors.request.use(
     
     const token = localStorage.getItem('token');
     if (token) {
+      console.log('API - Adding auth token to request');
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      console.log('API - No auth token found');
     }
     return config;
   },
@@ -39,55 +42,20 @@ api.interceptors.request.use(
 // Add response interceptor to handle auth errors and token refresh
 api.interceptors.response.use(
   (response) => {
-    console.log('API Response:', response.status, response.config.url, response.data);
+    console.log('API Response Interceptor:', response.status, response.config.url);
     return response;
   },
   async (error) => {
     console.error('API Response Error:', error.response?.status, error.config?.url, error.message);
     
-    // Handle 401 errors with token refresh
+    // Handle 401 errors - just redirect to login without trying to refresh
     if (error.response?.status === 401) {
-      const originalRequest = error.config;
-      
-      // Try to refresh token if this is not a refresh request itself
-      if (!originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
-        originalRequest._retry = true;
-        
-        const token = localStorage.getItem('token');
-        if (token) {
-          try {
-            console.log('Attempting to refresh token...');
-            const refreshResponse = await authAPI.refreshToken(token);
-            
-            if (refreshResponse.data.token) {
-              console.log('Token refreshed successfully');
-              localStorage.setItem('token', refreshResponse.data.token);
-              
-              // Update the original request with new token
-              originalRequest.headers.Authorization = `Bearer ${refreshResponse.data.token}`;
-              
-              // Retry the original request
-              return api(originalRequest);
-            }
-          } catch (refreshError) {
-            console.error('Token refresh failed:', refreshError);
-            // If refresh fails, redirect to login
-            if (!window.location.pathname.includes('/login')) {
-              console.log('Redirecting to login page due to token refresh failure');
-              localStorage.removeItem('token');
-              localStorage.removeItem('user');
-              window.location.href = '/login';
-            }
-          }
-        } else {
-          // No token available, redirect to login
-          if (!window.location.pathname.includes('/login')) {
-            console.log('No token available, redirecting to login');
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
-          }
-        }
+      console.log('API - 401 Unauthorized, redirecting to login');
+      // Only redirect if not already on login page
+      if (!window.location.pathname.includes('/login')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
       }
     }
     
@@ -103,8 +71,16 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   login: (credentials: { email: string; password: string }) => {
-    console.log('authAPI.login called with:', credentials);
-    return api.post('/auth/signin', credentials);
+    console.log('API - Login request to:', `${API_BASE_URL}/auth/signin`);
+    console.log('API - Login credentials:', { email: credentials.email, password: '***' });
+    
+    return api.post('/auth/signin', credentials).then(response => {
+      console.log('API - Login response:', response.data);
+      return response;
+    }).catch(error => {
+      console.error('API - Login error:', error.response?.data || error.message);
+      throw error;
+    });
   },
   
   register: (userData: {
@@ -114,20 +90,13 @@ export const authAPI = {
     password: string;
     role: 'ADMIN' | 'USER';
   }) => {
-    console.log('authAPI.register called with:', userData);
     return api.post('/auth/signup', userData);
-  },
-
-  refreshToken: (token: string) => {
-    console.log('authAPI.refreshToken called');
-    return api.post('/auth/refresh', { token });
   },
 };
 
 // Device API
 export const deviceAPI = {
   getAll: (params?: { status?: string; type?: string; search?: string }) => {
-    console.log('deviceAPI.getAll called with params:', params);
     return api.get('/devices', { params });
   },
   

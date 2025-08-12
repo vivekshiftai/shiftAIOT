@@ -37,9 +37,6 @@ public class DeviceService {
 
     @Autowired
     private FileStorageService fileStorageService;
-    
-    @Autowired
-    private PDFRAGService pdfRAGService;
 
     public List<Device> getAllDevices(String organizationId) {
         logger.info("DeviceService.getAllDevices called with organizationId: {}", organizationId);
@@ -283,39 +280,7 @@ public class DeviceService {
         logger.info("PDF results processing completed for device: {}", device.getId());
     }
     
-    public Map<String, Object> processPDFWithRAG(MultipartFile pdfFile, String deviceId) {
-        try {
-            // Upload PDF to RAG system
-            Map<String, Object> uploadResult = pdfRAGService.uploadPDF(pdfFile, deviceId);
-            
-            if (!(Boolean) uploadResult.get("success")) {
-                return uploadResult;
-            }
-            
-            // Generate maintenance rules
-            Map<String, Object> maintenanceRules = pdfRAGService.generateMaintenanceRules(deviceId, null);
-            
-            // Generate device specifications
-            Map<String, Object> deviceSpecs = pdfRAGService.generateDeviceSpecifications(deviceId, null);
-            
-            // Combine results
-            Map<String, Object> result = new HashMap<>();
-            result.put("success", true);
-            result.put("document_id", uploadResult.get("document_id"));
-            result.put("extracted_text_length", uploadResult.get("extracted_text_length"));
-            result.put("maintenance_rules", maintenanceRules);
-            result.put("device_specifications", deviceSpecs);
-            
-            return result;
-            
-        } catch (Exception e) {
-            logger.error("Error processing PDF with RAG", e);
-            Map<String, Object> errorResult = new HashMap<>();
-            errorResult.put("success", false);
-            errorResult.put("message", "Error processing PDF with RAG: " + e.getMessage());
-            return errorResult;
-        }
-    }
+
 
     public Device updateDevice(String id, Device deviceDetails, String organizationId) {
         Device device = deviceRepository.findByIdAndOrganizationId(id, organizationId)

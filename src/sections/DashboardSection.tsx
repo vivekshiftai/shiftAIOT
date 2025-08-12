@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useIoT } from '../contexts/IoTContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { StatsCard } from '../components/Dashboard/StatsCard';
-import { RealtimeChart } from '../components/Dashboard/RealtimeChart';
 import Skeleton, { SkeletonCard } from '../components/UI/Skeleton';
 import Button from '../components/UI/Button';
+import Modal from '../components/UI/Modal';
+import TaskManager from '../components/TaskManager/TaskManager';
 import { 
   Cpu, 
   Wifi, 
@@ -23,7 +24,8 @@ import {
   Bell,
   ArrowRight,
   Plus,
-  Eye
+  Eye,
+  CheckSquare
 } from 'lucide-react';
 
 export const DashboardSection: React.FC = () => {
@@ -31,6 +33,7 @@ export const DashboardSection: React.FC = () => {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
+  const [showTaskManager, setShowTaskManager] = useState(false);
 
   // Calculate metrics
   const metrics = useMemo(() => {
@@ -151,6 +154,14 @@ export const DashboardSection: React.FC = () => {
             Add Device
           </Button>
           <Button
+            variant="secondary"
+            size="md"
+            leftIcon={<CheckSquare className="w-4 h-4" />}
+            onClick={() => setShowTaskManager(true)}
+          >
+            Task Manager
+          </Button>
+          <Button
             variant="primary"
             size="md"
             leftIcon={<Eye className="w-4 h-4" />}
@@ -233,12 +244,18 @@ export const DashboardSection: React.FC = () => {
               </div>
             </div>
             
-            <div className="h-80">
-              <RealtimeChart 
-                metric="temperature"
-                title="Device Activity"
-                color="#3b82f6"
-              />
+            <div className="h-80 flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Activity className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Device Activity Monitor
+                </h4>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  Real-time device monitoring will be available when telemetry data is configured
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -339,6 +356,14 @@ export const DashboardSection: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400 text-sm">View detailed performance insights</p>
         </div>
 
+        <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => setShowTaskManager(true)}>
+          <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <CheckSquare className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Task Manager</h4>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">Organize and track your tasks</p>
+        </div>
+
         <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/settings')}>
           <div className="w-12 h-12 bg-gray-100 dark:bg-gray-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Settings className="w-6 h-6 text-gray-600 dark:text-gray-400" />
@@ -347,6 +372,17 @@ export const DashboardSection: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400 text-sm">Configure platform preferences</p>
         </div>
       </div>
+
+      {/* Task Manager Modal */}
+      <Modal
+        isOpen={showTaskManager}
+        onClose={() => setShowTaskManager(false)}
+        title="Task Manager"
+        size="full"
+        className="max-w-7xl"
+      >
+        <TaskManager />
+      </Modal>
     </div>
   );
 };

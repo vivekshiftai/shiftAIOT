@@ -6,9 +6,6 @@ import {
   Settings, 
   CheckCircle, 
   AlertCircle,
-  Thermometer,
-  Droplets,
-  Battery,
   Wifi,
   Cpu,
   MapPin,
@@ -22,7 +19,6 @@ import {
   Wrench,
   Database,
   HardDrive,
-  Activity,
   AlertTriangle,
   ChevronRight,
   ChevronLeft
@@ -238,46 +234,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
               </div>
             </div>
 
-            {/* Telemetry Data */}
-            {device.status === 'ONLINE' && (
-              <div className="border-t border-slate-200 pt-6">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                  <Activity className="w-5 h-5" />
-                  Telemetry Data
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {device.batteryLevel && (
-                    <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl">
-                      <Battery className="w-5 h-5 text-blue-500" />
-                      <div>
-                        <p className="text-sm text-blue-600">Battery Level</p>
-                        <p className="font-semibold text-blue-800">{device.batteryLevel}%</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {device.temperature && (
-                    <div className="flex items-center gap-3 p-4 bg-orange-50 rounded-xl">
-                      <Thermometer className="w-5 h-5 text-orange-500" />
-                      <div>
-                        <p className="text-sm text-orange-600">Temperature</p>
-                        <p className="font-semibold text-orange-800">{device.temperature}°C</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {device.humidity && (
-                    <div className="flex items-center gap-3 p-4 bg-cyan-50 rounded-xl">
-                      <Droplets className="w-5 h-5 text-cyan-500" />
-                      <div>
-                        <p className="text-sm text-cyan-600">Humidity</p>
-                        <p className="font-semibold text-cyan-800">{device.humidity}%</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+
 
             {/* Tags */}
             {device.tags && device.tags.length > 0 && (

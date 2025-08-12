@@ -34,15 +34,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Check for existing session on mount
   useEffect(() => {
     const checkAuth = () => {
-      console.log('AuthProvider - Checking authentication status');
-      
       const savedUser = localStorage.getItem('user');
       const token = localStorage.getItem('token');
       
       if (savedUser && token) {
         try {
           const parsedUser = JSON.parse(savedUser);
-          console.log('AuthProvider - Found saved user:', parsedUser.email);
           setUser(parsedUser);
         } catch (error) {
           console.error('AuthProvider - Failed to parse saved user:', error);
@@ -51,7 +48,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(null);
         }
       } else {
-        console.log('AuthProvider - No saved session found');
         setUser(null);
       }
       
@@ -62,10 +58,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    console.log('AuthProvider - Login attempt for:', email);
+    console.log('AuthContext - Login attempt for:', email);
     
     try {
+      console.log('AuthContext - Making API call');
       const response = await authAPI.login({ email, password });
+      console.log('AuthContext - API response received:', response.data);
+      
       const { token, id, name, email: userEmail, role, organizationId } = response.data;
       
       const user: User = {
@@ -81,25 +80,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         lastLogin: new Date().toISOString()
       };
       
-      console.log('AuthProvider - Login successful, user role:', user.role);
-      
+      console.log('AuthContext - Created user object:', user);
+      console.log('AuthContext - Saving to localStorage');
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
+      
+      console.log('AuthContext - Setting user state');
       setUser(user);
+      console.log('AuthContext - Login completed successfully');
+      
     } catch (error) {
-      console.error('AuthProvider - Login failed:', error);
+      console.error('AuthContext - Login failed with error:', error);
+      console.error('AuthContext - Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        response: (error as any)?.response?.data,
+        status: (error as any)?.response?.status,
+        statusText: (error as any)?.response?.statusText
+      });
       throw error;
     }
   };
 
   const signup = async (data: { firstName: string; lastName: string; email: string; password: string; role: 'ADMIN' | 'USER' }) => {
-    console.log('AuthProvider - Signup attempt for:', data.email, 'role:', data.role);
     
     try {
       const response = await authAPI.register(data);
       const user = response.data;
-      
-      console.log('AuthProvider - Signup successful, user role:', user.role);
       
       // Don't automatically log in after signup - user should login separately
       setUser(null);
@@ -110,7 +116,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
-    console.log('AuthProvider - Logging out user');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
