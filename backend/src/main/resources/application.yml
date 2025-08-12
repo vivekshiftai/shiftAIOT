@@ -2,12 +2,11 @@ server:
   port: 8100
   servlet:
     context-path: /api
-  # File upload configuration
-  servlet:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
       enabled: true
+
 
 spring:
   application:
@@ -22,8 +21,7 @@ spring:
     url: jdbc:postgresql://localhost:5432/iotplatform
     driver-class-name: org.postgresql.Driver
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:1234}
-
+    password: ${DB_PASSWORD:123}
   jpa:
     hibernate:
       ddl-auto: update
