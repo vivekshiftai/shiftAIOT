@@ -3,10 +3,10 @@
 
 export const API_CONFIG = {
   // Backend API (your Spring Boot application)
-  BACKEND_BASE_URL: 'http://localhost:8100/api',
+  BACKEND_BASE_URL: 'http://20.75.50.202:8100/api',
   
   // External PDF Processing API
-  PDF_PROCESSING_API_URL: 'YOUR_EXTERNAL_API_ENDPOINT', // Replace with your actual endpoint
+  PDF_PROCESSING_API_URL: 'http://20.75.50.202:8000', // Updated to use VM IP
   
   // Example endpoints:
   // PDF_PROCESSING_API_URL: 'https://your-pdf-service.com/api',
