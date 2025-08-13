@@ -35,18 +35,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const location = useLocation();
 
   return (
-    <aside className={`bg-gradient-to-b from-primary-950 via-primary-900 to-secondary-900 text-white transition-all duration-300 ${
+    <aside className={`bg-card text-primary transition-all duration-300 ${
       collapsed ? 'w-16' : 'w-64'
-    } min-h-screen flex flex-col shadow-xl border-r border-secondary-500/20`}>
-      <div className="p-4 border-b border-white/10">
+    } min-h-screen flex flex-col shadow-sm border-r border-light`}>
+      <div className="p-4 border-b border-light">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-secondary-500 to-primary-600 rounded-xl flex items-center justify-center shadow-lg">
+          <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center shadow-sm">
             <Cpu className="w-6 h-6 text-white" />
           </div>
           {!collapsed && (
             <div>
-              <h1 className="font-bold text-lg text-white">shiftAIOT Platform</h1>
-              <p className="text-secondary-300 text-xs">Enterprise Edition</p>
+              <h1 className="font-bold text-lg text-primary">shiftAIOT Platform</h1>
+              <p className="text-secondary text-xs">Enterprise Edition</p>
             </div>
           )}
         </div>
@@ -65,8 +65,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => onSectionChange(item.id)}
                   className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 ${
                     isActive 
-                      ? 'bg-gradient-to-r from-secondary-500 to-primary-600 text-white shadow-lg animate-glow' 
-                      : 'text-secondary-200 hover:bg-secondary-500/10 hover:text-white'
+                      ? 'bg-primary-500 text-white shadow-sm' 
+                      : 'text-secondary hover:bg-tertiary hover:text-primary'
                   }`}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
@@ -83,15 +83,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-white/10">
+      <div className="p-4 border-t border-light">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-r from-secondary-400 to-primary-500 rounded-full flex items-center justify-center shadow-md">
+          <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center shadow-sm">
             <span className="text-white text-sm font-medium">JS</span>
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate text-white">John Smith</p>
-              <p className="text-xs text-secondary-300 truncate">Admin</p>
+              <p className="text-sm font-medium truncate text-primary">John Smith</p>
+              <p className="text-xs text-secondary truncate">Admin</p>
             </div>
           )}
         </div>

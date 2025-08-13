@@ -249,51 +249,51 @@ export const KnowledgeSection: React.FC = () => {
   );
 
   return (
-    <div className="h-full flex bg-gradient-to-br from-neutral-950 via-primary-950 to-secondary-950">
+         <div className="h-full flex bg-secondary">
       {/* Left Panel - Chat Interface */}
       <div className="w-2/3 flex flex-col">
         {/* Chat Header */}
-        <div className="p-4 border-b border-light bg-card/80 backdrop-blur-sm">
+                 <div className="p-4 border-b border-light bg-card">
                       <div className="flex items-center gap-3">
-              <div className="p-3 bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl shadow-lg">
+                             <div className="p-3 bg-primary-500 rounded-xl shadow-sm">
                 <Bot className="w-6 h-6 text-white" />
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-primary">AI Knowledge Assistant</h2>
-                <p className="text-secondary">
-                  Ask questions about your devices and PDF documents
-                  {selectedDocument && (
-                    <span className="ml-2 text-primary-600 font-medium">
-                      • Currently viewing: {selectedDocument.name}
-                    </span>
-                  )}
-                </p>
+                                  <p className="text-secondary">
+                   Ask questions about your devices and PDF documents
+                   {selectedDocument && (
+                     <span className="ml-2 text-primary-500 font-medium">
+                       • Currently viewing: {selectedDocument.name}
+                     </span>
+                   )}
+                 </p>
               </div>
             </div>
         </div>
 
                  {/* Chat Messages */}
-         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-card/50 to-secondary-950/30">
+                   <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-tertiary">
           {chatMessages.map((message) => (
             <div
               key={message.id}
               className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div className="flex items-start gap-3 max-w-3xl">
-                <div className={`p-3 rounded-full flex-shrink-0 shadow-lg ${
-                  message.type === 'user'
-                    ? 'bg-gradient-to-r from-primary-600 to-secondary-600 text-white'
-                    : 'bg-card text-secondary border border-light'
-                }`}>
+                                 <div className={`p-3 rounded-full flex-shrink-0 shadow-sm ${
+                   message.type === 'user'
+                     ? 'bg-primary-500 text-white'
+                     : 'bg-card text-secondary border border-light'
+                 }`}>
                   {message.type === 'user' ? (<User className="w-5 h-5" />) : (<Bot className="w-5 h-5" />)}
                 </div>
-                <div
-                  className={`px-4 py-3 rounded-2xl shadow-sm ${
-                    message.type === 'user'
-                      ? 'bg-gradient-to-r from-primary-600 to-secondary-600 text-white'
-                      : 'bg-card text-primary border border-light'
-                  }`}
-                >
+                                 <div
+                   className={`px-4 py-3 rounded-2xl shadow-sm ${
+                     message.type === 'user'
+                       ? 'bg-primary-500 text-white'
+                       : 'bg-card text-primary border border-light'
+                   }`}
+                 >
                   <p className="text-sm leading-relaxed">{message.content}</p>
                   <p className={`text-xs mt-2 ${
                     message.type === 'user' ? 'text-primary-100' : 'text-tertiary'
@@ -323,7 +323,7 @@ export const KnowledgeSection: React.FC = () => {
         </div>
 
         {/* Chat Input */}
-        <div className="p-4 border-t border-light bg-card/80 backdrop-blur-sm">
+                 <div className="p-4 border-t border-light bg-card">
           <div className="flex gap-3">
             <input
               type="text"
@@ -333,11 +333,11 @@ export const KnowledgeSection: React.FC = () => {
               placeholder={selectedDocument ? `Ask about "${selectedDocument.name}"...` : "Ask about your devices, documents, or troubleshooting..."}
               className="flex-1 px-4 py-3 border border-medium rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-card text-primary shadow-sm"
             />
-            <button
-              onClick={sendMessage}
-              disabled={!newMessage.trim() || isTyping}
-              className="px-6 py-3 bg-gradient-to-r from-primary-600 to-secondary-600 text-white rounded-xl hover:from-primary-700 hover:to-secondary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
-            >
+                         <button
+               onClick={sendMessage}
+               disabled={!newMessage.trim() || isTyping}
+               className="px-6 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+             >
               <Send className="w-4 h-4" />
               Send
             </button>
@@ -368,7 +368,7 @@ export const KnowledgeSection: React.FC = () => {
       </div>
 
       {/* Right Panel - PDF Document Library */}
-      <div className="w-1/3 border-l border-light flex flex-col bg-card/80 backdrop-blur-sm">
+             <div className="w-1/3 border-l border-light flex flex-col bg-card">
         {/* Header */}
         <div className="p-4 border-b border-light">
                       <div className="flex items-center justify-between mb-3">
@@ -381,7 +381,7 @@ export const KnowledgeSection: React.FC = () => {
                 className="hidden"
                 disabled={uploading}
               />
-              <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-primary-600 to-secondary-600 text-white rounded-lg hover:from-primary-700 hover:to-secondary-700 transition-all shadow-lg">
+                             <div className="flex items-center gap-2 px-3 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all shadow-sm">
                 {uploading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 ) : (

@@ -137,7 +137,7 @@ export const DashboardSection: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold gradient-text mb-2">
+          <h1 className="text-4xl font-bold text-primary mb-2">
             Dashboard
           </h1>
           <p className="text-secondary text-lg">
@@ -178,54 +178,54 @@ export const DashboardSection: React.FC = () => {
 
       {/* Top Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard
-          title="Total Devices"
-          value={metrics.totalDevices}
-          subtitle={`${metrics.onlineDevices} online`}
-          icon={Cpu}
-          color="blue"
-          onClick={handleNavigateDevices}
-          className="hover-lift glass animate-slide-in"
-        />
-        <StatsCard
-          title="Active Devices"
-          value={metrics.onlineDevices}
-          subtitle="Currently online"
-          icon={Wifi}
-          color="green"
-          onClick={handleShowActiveDevices}
-          className="hover-lift glass animate-slide-in"
-        />
-        <StatsCard
-          title="Maintenance (This Week)"
-          value={metrics.maintenanceThisWeek}
-          subtitle="Scheduled tasks"
-          icon={Calendar}
-          color="yellow"
-          onClick={handleShowMaintenanceWeek}
-          className="hover-lift glass animate-slide-in"
-        />
-        <StatsCard
-          title="Rules Completed"
-          value={metrics.rulesCompletedThisWeek}
-          subtitle="This week"
-          icon={CheckCircle}
-          color="purple"
-          onClick={handleShowRules}
-          className="hover-lift glass animate-slide-in"
-        />
+                 <StatsCard
+           title="Total Devices"
+           value={metrics.totalDevices}
+           subtitle={`${metrics.onlineDevices} online`}
+           icon={Cpu}
+           color="blue"
+           onClick={handleNavigateDevices}
+           className="hover-lift animate-fade-in"
+         />
+                 <StatsCard
+           title="Active Devices"
+           value={metrics.onlineDevices}
+           subtitle="Currently online"
+           icon={Wifi}
+           color="green"
+           onClick={handleShowActiveDevices}
+           className="hover-lift animate-fade-in"
+         />
+                 <StatsCard
+           title="Maintenance (This Week)"
+           value={metrics.maintenanceThisWeek}
+           subtitle="Scheduled tasks"
+           icon={Calendar}
+           color="yellow"
+           onClick={handleShowMaintenanceWeek}
+           className="hover-lift animate-fade-in"
+         />
+                 <StatsCard
+           title="Rules Completed"
+           value={metrics.rulesCompletedThisWeek}
+           subtitle="This week"
+           icon={CheckCircle}
+           color="purple"
+           onClick={handleShowRules}
+           className="hover-lift animate-fade-in"
+         />
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Real-time Chart */}
         <div className="lg:col-span-2">
-          <div className="card p-6 glass">
+                     <div className="card p-6 animate-fade-in">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-xl font-semibold gradient-text">
-                  Device Activity
-                </h3>
+                                 <h3 className="text-xl font-semibold text-primary">
+                   Device Activity
+                 </h3>
                 <p className="text-secondary">
                   Real-time monitoring of device performance
                 </p>
@@ -236,11 +236,11 @@ export const DashboardSection: React.FC = () => {
                   <button
                     key={range}
                     onClick={() => setSelectedTimeRange(range)}
-                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                      selectedTimeRange === range
-                        ? 'bg-secondary-500/20 text-secondary-300 border border-secondary-500/30'
-                        : 'text-secondary hover:bg-secondary-500/10 hover:text-secondary-200'
-                    }`}
+                                       className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                     selectedTimeRange === range
+                       ? 'bg-primary-300 text-white border border-primary-300'
+                       : 'text-secondary hover:bg-secondary hover:text-primary'
+                   }`}
                   >
                     {range}
                   </button>
@@ -250,9 +250,9 @@ export const DashboardSection: React.FC = () => {
             
             <div className="h-80 flex items-center justify-center">
               <div className="text-center">
-                <div className="w-16 h-16 bg-secondary-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-                  <Activity className="w-8 h-8 text-secondary-500" />
-                </div>
+                                 <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <Activity className="w-8 h-8 text-primary-300" />
+                 </div>
                 <h4 className="text-lg font-semibold text-primary mb-2">
                   Device Activity Monitor
                 </h4>
@@ -266,17 +266,17 @@ export const DashboardSection: React.FC = () => {
 
         {/* Upcoming Maintenance */}
         <div className="lg:col-span-1">
-          <div className="card p-6 h-full glass">
+                     <div className="card p-6 h-full">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-xl font-semibold gradient-text">
-                  Upcoming Maintenance
-                </h3>
+                                 <h3 className="text-xl font-semibold text-primary">
+                   Upcoming Maintenance
+                 </h3>
                 <p className="text-secondary">
                   Scheduled tasks and alerts
                 </p>
               </div>
-              <Bell className="w-5 h-5 text-secondary-400" />
+                             <Bell className="w-5 h-5 text-secondary" />
             </div>
 
             <div className="space-y-4">
@@ -284,7 +284,7 @@ export const DashboardSection: React.FC = () => {
                 upcomingMaintenance.map((item) => (
                   <div
                     key={item.id}
-                    className="p-4 rounded-xl border border-light hover:bg-secondary-500/10 transition-colors cursor-pointer"
+                    className="p-4 rounded-xl border border-light hover:bg-secondary transition-colors cursor-pointer"
                     onClick={() => navigate(`/notifications?id=${item.id}`)}
                   >
                     <div className="flex items-start justify-between">
@@ -305,13 +305,13 @@ export const DashboardSection: React.FC = () => {
                           </span>
                         </div>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-secondary-400" />
+                                             <ArrowRight className="w-4 h-4 text-secondary" />
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="text-center py-8">
-                  <Calendar className="w-12 h-12 text-secondary-400 mx-auto mb-4" />
+                  <Calendar className="w-12 h-12 text-secondary mx-auto mb-4" />
                   <p className="text-secondary text-sm">
                     No upcoming maintenance scheduled
                   </p>
@@ -323,7 +323,7 @@ export const DashboardSection: React.FC = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full text-secondary hover:text-secondary-300"
+                className="w-full text-secondary hover:text-primary"
                 rightIcon={<ArrowRight className="w-4 h-4" />}
                 onClick={() => navigate('/notifications')}
               >
@@ -336,42 +336,42 @@ export const DashboardSection: React.FC = () => {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="card p-6 text-center hover-lift cursor-pointer glass animate-slide-in" onClick={() => navigate('/devices')}>
-          <div className="w-12 h-12 bg-secondary-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Cpu className="w-6 h-6 text-secondary-500" />
-          </div>
+                 <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/devices')}>
+           <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+             <Cpu className="w-6 h-6 text-primary-300" />
+           </div>
           <h4 className="font-semibold text-primary mb-2">Manage Devices</h4>
           <p className="text-secondary text-sm">View and configure your IoT devices</p>
         </div>
 
-        <div className="card p-6 text-center hover-lift cursor-pointer glass animate-slide-in" onClick={() => navigate('/rules')}>
-          <div className="w-12 h-12 bg-warning-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Zap className="w-6 h-6 text-warning-500" />
-          </div>
+                 <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/rules')}>
+           <div className="w-12 h-12 bg-warning-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+             <Zap className="w-6 h-6 text-warning-200" />
+           </div>
           <h4 className="font-semibold text-primary mb-2">Automation Rules</h4>
           <p className="text-secondary text-sm">Create and manage automation workflows</p>
         </div>
 
-        <div className="card p-6 text-center hover-lift cursor-pointer glass animate-slide-in" onClick={() => navigate('/analytics')}>
-          <div className="w-12 h-12 bg-success-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <BarChart3 className="w-6 h-6 text-success-500" />
-          </div>
+                 <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/analytics')}>
+           <div className="w-12 h-12 bg-success-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+             <BarChart3 className="w-6 h-6 text-success-400" />
+           </div>
           <h4 className="font-semibold text-primary mb-2">Analytics</h4>
           <p className="text-secondary text-sm">View detailed performance insights</p>
         </div>
 
-        <div className="card p-6 text-center hover-lift cursor-pointer glass animate-slide-in" onClick={() => setShowTaskManager(true)}>
-          <div className="w-12 h-12 bg-error-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <CheckSquare className="w-6 h-6 text-error-500" />
-          </div>
+                 <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => setShowTaskManager(true)}>
+           <div className="w-12 h-12 bg-error-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+             <CheckSquare className="w-6 h-6 text-error-400" />
+           </div>
           <h4 className="font-semibold text-primary mb-2">Task Manager</h4>
           <p className="text-secondary text-sm">Organize and track your tasks</p>
         </div>
 
-        <div className="card p-6 text-center hover-lift cursor-pointer glass animate-slide-in" onClick={() => navigate('/settings')}>
-          <div className="w-12 h-12 bg-neutral-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Settings className="w-6 h-6 text-neutral-400" />
-          </div>
+                 <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/settings')}>
+           <div className="w-12 h-12 bg-secondary-50 rounded-xl flex items-center justify-center mx-auto mb-4">
+             <Settings className="w-6 h-6 text-secondary" />
+           </div>
           <h4 className="font-semibold text-primary mb-2">Settings</h4>
           <p className="text-secondary text-sm">Configure platform preferences</p>
         </div>

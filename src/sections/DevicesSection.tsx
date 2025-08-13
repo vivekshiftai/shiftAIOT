@@ -119,7 +119,7 @@ export const DevicesSection: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold gradient-text">Device Management</h1>
+          <h1 className="text-3xl font-bold text-primary">Device Management</h1>
           <p className="text-secondary mt-2">
             {isAdmin() ? 'Monitor and control your IoT devices' : 'View your IoT devices'}
           </p>
@@ -139,7 +139,7 @@ export const DevicesSection: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="card p-6 glass">
+      <div className="card p-6">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex-1 min-w-64">
             <div className="relative">
@@ -149,7 +149,7 @@ export const DevicesSection: React.FC = () => {
                 placeholder="Search devices..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-light rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 futuristic-input"
+                className="w-full pl-10 pr-4 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 minimal-input"
               />
             </div>
           </div>
@@ -159,7 +159,7 @@ export const DevicesSection: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 futuristic-input"
+              className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 minimal-input"
             >
               <option value="all">All Status</option>
               <option value="ONLINE">Online</option>
@@ -171,7 +171,7 @@ export const DevicesSection: React.FC = () => {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 futuristic-input"
+              className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 minimal-input"
             >
               <option value="all">All Types</option>
               <option value="SENSOR">Sensors</option>
@@ -183,7 +183,7 @@ export const DevicesSection: React.FC = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 futuristic-input"
+              className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 minimal-input"
               aria-label="Sort devices"
               title="Sort by"
             >
@@ -208,7 +208,7 @@ export const DevicesSection: React.FC = () => {
       </div>
 
       {filteredDevices.length === 0 && (
-        <div className="text-center py-12 card glass">
+        <div className="text-center py-12 card">
           <div className="w-16 h-16 bg-secondary-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Cpu className="w-8 h-8 text-secondary-400" />
           </div>

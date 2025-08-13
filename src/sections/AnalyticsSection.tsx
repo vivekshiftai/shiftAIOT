@@ -72,7 +72,7 @@ export const AnalyticsSection: React.FC = () => {
       {/* Header & Filters */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold gradient-text">Analytics</h1>
+          <h1 className="text-3xl font-bold text-primary">Analytics</h1>
           <p className="text-secondary mt-2">KPI-driven insights for maintenance, rules, and workforce efficiency</p>
         </div>
         <div className="flex items-center gap-2">
@@ -80,7 +80,7 @@ export const AnalyticsSection: React.FC = () => {
           <select
             value={range}
             onChange={(e) => setRange(e.target.value as DateRange)}
-            className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 futuristic-input"
+            className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 minimal-input"
           >
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
@@ -99,7 +99,7 @@ export const AnalyticsSection: React.FC = () => {
           icon={Wrench}
           color="yellow"
           onClick={() => navigate('/notifications?filter=maintenance')}
-          className="glass animate-slide-in"
+          className="animate-slide-in"
         />
         <StatsCard
           title="Performed Maintenances"
@@ -107,7 +107,7 @@ export const AnalyticsSection: React.FC = () => {
           subtitle={"Completed tasks"}
           icon={CheckCircle2}
           color="green"
-          className="glass animate-slide-in"
+          className="animate-slide-in"
         />
         <StatsCard
           title="Preventive Maintenances"
@@ -115,7 +115,7 @@ export const AnalyticsSection: React.FC = () => {
           subtitle={`${preventivePct}% of total`}
           icon={ShieldCheck}
           color="blue"
-          className="glass animate-slide-in"
+          className="animate-slide-in"
         />
         <StatsCard
           title="Breakdown Time Saved %"

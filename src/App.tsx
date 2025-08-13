@@ -46,25 +46,25 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-8 shadow-lg border border-slate-200 max-w-md">
+        <div className="min-h-screen bg-bg-secondary flex items-center justify-center">
+          <div className="card p-8 max-w-md">
             <div className="flex items-center gap-3 mb-4">
-              <AlertTriangle className="w-8 h-8 text-red-500" />
-              <h1 className="text-xl font-semibold text-slate-800">Something went wrong</h1>
+              <AlertTriangle className="w-8 h-8 text-error-500" />
+              <h1 className="text-xl font-semibold text-primary">Something went wrong</h1>
             </div>
-            <p className="text-slate-600 mb-4">
+            <p className="text-secondary mb-4">
               The application encountered an error. Please try refreshing the page.
             </p>
             <button
               onClick={() => window.location.reload()}
-              className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+              className="w-full btn-primary px-4 py-2"
             >
               Refresh Page
             </button>
             {this.state.error && (
               <details className="mt-4">
-                <summary className="text-sm text-slate-500 cursor-pointer">Error Details</summary>
-                <pre className="text-xs text-red-600 mt-2 p-2 bg-red-50 rounded border overflow-auto">
+                <summary className="text-sm text-tertiary cursor-pointer">Error Details</summary>
+                <pre className="text-xs text-error-500 mt-2 p-2 bg-error-50 rounded border overflow-auto">
                   {this.state.error.toString()}
                 </pre>
               </details>
@@ -140,7 +140,7 @@ const MainAppLayout: React.FC = () => {
   console.log('MainAppLayout - Rendering main layout');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-primary-950 to-secondary-950 flex">
+    <div className="min-h-screen bg-secondary flex">
       <Sidebar
         activeSection={section}
         onSectionChange={handleSectionChange}
@@ -152,15 +152,15 @@ const MainAppLayout: React.FC = () => {
           onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         
-        <main className="flex-1 p-4 overflow-auto">
+        <main className="flex-1 p-8 overflow-auto">
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+            <div className="mb-6 p-4 bg-error-50 border border-error-200 rounded-xl">
               <div className="flex items-center">
-                <AlertTriangle className="w-5 h-5 text-red-400 mr-3" />
-                <p className="text-red-600">{error}</p>
+                <AlertTriangle className="w-5 h-5 text-error-400 mr-3" />
+                <p className="text-error-600">{error}</p>
                 <button
                   onClick={() => setError(null)}
-                  className="ml-auto text-red-400 hover:text-red-600"
+                  className="ml-auto text-error-400 hover:text-error-600"
                 >
                   ×
                 </button>
