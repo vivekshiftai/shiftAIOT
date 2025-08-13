@@ -95,12 +95,48 @@ class PDFProcessor:
                 try:
                     logger.info(f"Trying MinerU command: {' '.join(cmd)}")
                     
-                    result = subprocess.run(
+                    # Run with real-time output streaming
+                    logger.info(f"Starting MinerU process with live output...")
+                    process = subprocess.Popen(
                         cmd,
-                        capture_output=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
                         text=True,
-                        timeout=1800  # 30 minutes timeout
+                        bufsize=1,
+                        universal_newlines=True
                     )
+                    
+                    # Stream output in real-time
+                    stdout_lines = []
+                    stderr_lines = []
+                    
+                    while True:
+                        stdout_line = process.stdout.readline()
+                        stderr_line = process.stderr.readline()
+                        
+                        if stdout_line:
+                            stdout_lines.append(stdout_line.strip())
+                            logger.info(f"MinerU STDOUT: {stdout_line.strip()}")
+                        
+                        if stderr_line:
+                            stderr_lines.append(stderr_line.strip())
+                            logger.info(f"MinerU STDERR: {stderr_line.strip()}")
+                        
+                        # Check if process has finished
+                        if process.poll() is not None:
+                            # Read any remaining output
+                            remaining_stdout, remaining_stderr = process.communicate()
+                            if remaining_stdout:
+                                logger.info(f"MinerU remaining STDOUT: {remaining_stdout}")
+                            if remaining_stderr:
+                                logger.info(f"MinerU remaining STDERR: {remaining_stderr}")
+                            break
+                    
+                    result = type('Result', (), {
+                        'returncode': process.returncode,
+                        'stdout': '\n'.join(stdout_lines),
+                        'stderr': '\n'.join(stderr_lines)
+                    })()
                     
                     if result.returncode == 0:
                         logger.info("MinerU processing completed successfully")
