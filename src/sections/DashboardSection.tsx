@@ -7,7 +7,7 @@ import Skeleton, { SkeletonCard } from '../components/UI/Skeleton';
 import Button from '../components/UI/Button';
 import Modal from '../components/UI/Modal';
 import TaskManager from '../components/TaskManager/TaskManager';
-import { AuthDebug } from '../components/Debug/AuthDebug';
+
 import { 
   Cpu, 
   Wifi, 
@@ -385,10 +385,7 @@ export const DashboardSection: React.FC = () => {
         <TaskManager />
       </Modal>
 
-      {/* Debug Component - Remove this after fixing the issue */}
-      <div className="mt-8">
-        <AuthDebug />
-      </div>
+      
     </div>
   );
 };

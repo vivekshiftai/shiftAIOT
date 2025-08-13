@@ -80,9 +80,8 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading: authLoading } = useAuth();
-  const { loading: iotLoading } = useIoT();
   
-  console.log('ProtectedRoute - user:', user, 'authLoading:', authLoading, 'iotLoading:', iotLoading);
+  console.log('ProtectedRoute - user:', user, 'authLoading:', authLoading);
   console.log('ProtectedRoute - localStorage token:', localStorage.getItem('token') ? 'exists' : 'not found');
   console.log('ProtectedRoute - localStorage user:', localStorage.getItem('user') ? 'exists' : 'not found');
   
@@ -98,13 +97,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     return <Navigate to="/login" replace />;
   }
   
-  // We have a user, but wait for IoTContext to finish loading if it's still loading
-  if (iotLoading) {
-    console.log('ProtectedRoute - IoTContext still loading, showing loading screen');
-    return <AppLoadingScreen />;
-  }
-  
-  console.log('ProtectedRoute - User authenticated and IoT loaded, rendering children');
+  // We have a user, render the app (IoTContext will load data in background)
+  console.log('ProtectedRoute - User authenticated, rendering children');
   return <>{children}</>;
 };
 

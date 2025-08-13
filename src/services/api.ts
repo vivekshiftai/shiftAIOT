@@ -43,35 +43,18 @@ api.interceptors.response.use(
   async (error) => {
     console.error('API Response Error:', error.response?.status, error.config?.url, error.message);
     
-    // Handle 401 errors - just redirect to login without trying to refresh
+    // Handle 401 errors - only clear auth data for non-login requests
     if (error.response?.status === 401) {
-      console.log('API - 401 Unauthorized, redirecting to login');
-      console.log('API - Current pathname:', window.location.pathname);
+      const isLoginRequest = error.config?.url?.includes('/auth/signin');
       
-          // Check if we're in the middle of a login process or initial load
-    const isLoggingIn = sessionStorage.getItem('isLoggingIn') === 'true';
-    const isInitialLoad = sessionStorage.getItem('isInitialLoad') === 'true';
-    
-    if (isLoggingIn || isInitialLoad) {
-      console.log('API - Login or initial load in progress, not redirecting');
-      return Promise.reject(error);
-    }
-      
-      // Only redirect if not already on login page
-      if (!window.location.pathname.includes('/login')) {
-        console.log('API - Removing token and user from localStorage');
+      if (!isLoginRequest) {
+        console.log('API - 401 Unauthorized on non-login request, clearing auth data');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        console.log('API - Redirecting to login page');
-        window.location.href = '/login';
+        console.log('API - Auth data cleared');
       } else {
-        console.log('API - Already on login page, not redirecting');
+        console.log('API - 401 on login request, not clearing auth data (normal for invalid credentials)');
       }
-    }
-    
-    // Handle network errors gracefully
-    if (!error.response) {
-      console.warn('Network error - no response from server');
     }
     
     return Promise.reject(error);

@@ -10,8 +10,6 @@ export const AuthDebug: React.FC = () => {
   const testAuth = async () => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    const isLoggingIn = sessionStorage.getItem('isLoggingIn');
-    const isInitialLoad = sessionStorage.getItem('isInitialLoad');
     
     let result = '=== AUTH DEBUG ===\n';
     result += `Token exists: ${!!token}\n`;
@@ -19,8 +17,6 @@ export const AuthDebug: React.FC = () => {
     result += `Auth context user: ${user ? 'exists' : 'null'}\n`;
     result += `Auth loading: ${authLoading}\n`;
     result += `IoT loading: ${iotLoading}\n`;
-    result += `isLoggingIn flag: ${isLoggingIn}\n`;
-    result += `isInitialLoad flag: ${isInitialLoad}\n`;
     
     if (token) {
       result += `Token preview: ${token.substring(0, 20)}...\n`;
@@ -64,37 +60,6 @@ export const AuthDebug: React.FC = () => {
   const clearAuth = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    sessionStorage.removeItem('isLoggingIn');
-    sessionStorage.removeItem('isInitialLoad');
-    window.location.reload();
-  };
-
-  const clearInitialLoadFlag = () => {
-    sessionStorage.removeItem('isInitialLoad');
-    console.log('Initial load flag cleared manually');
-  };
-
-  const simulateLogin = () => {
-    // Simulate a successful login
-    const mockUser = {
-      id: 'test-user-id',
-      firstName: 'Test',
-      lastName: 'User',
-      email: 'test@example.com',
-      role: 'ADMIN' as const,
-      organizationId: 'test-org',
-      enabled: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString()
-    };
-    
-    const mockToken = 'mock-jwt-token-for-testing';
-    
-    localStorage.setItem('token', mockToken);
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    
-    console.log('Simulated login with mock data');
     window.location.reload();
   };
 
@@ -133,20 +98,6 @@ export const AuthDebug: React.FC = () => {
             className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
           >
             Clear Auth Data
-          </button>
-          
-          <button
-            onClick={clearInitialLoadFlag}
-            className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600"
-          >
-            Clear Initial Load Flag
-          </button>
-          
-          <button
-            onClick={simulateLogin}
-            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-          >
-            Simulate Login
           </button>
         </div>
         

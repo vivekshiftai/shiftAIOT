@@ -36,9 +36,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const checkAuth = () => {
       console.log('AuthProvider - Checking authentication...');
       
-      // Set initial load flag to prevent redirects during startup
-      sessionStorage.setItem('isInitialLoad', 'true');
-      
       const savedUser = localStorage.getItem('user');
       const token = localStorage.getItem('token');
       
@@ -63,23 +60,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       console.log('AuthProvider - Setting isLoading to false');
       setIsLoading(false);
-      
-      // Clear initial load flag after a short delay
-      setTimeout(() => {
-        sessionStorage.removeItem('isInitialLoad');
-        console.log('AuthProvider - Initial load flag cleared');
-      }, 2000);
     };
 
     checkAuth();
   }, []);
 
+  // Add a listener for storage changes to keep user state in sync
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'user' || e.key === 'token') {
+        console.log('AuthProvider - Storage changed, rechecking auth');
+        const savedUser = localStorage.getItem('user');
+        const token = localStorage.getItem('token');
+        
+        if (savedUser && token) {
+          try {
+            const parsedUser = JSON.parse(savedUser);
+            setUser(parsedUser);
+          } catch (error) {
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const login = async (email: string, password: string) => {
     try {
       console.log('AuthContext - Starting login process...');
-      
-      // Set login flag to prevent redirects during login
-      sessionStorage.setItem('isLoggingIn', 'true');
       
       const response = await authAPI.login({ email, password });
       
@@ -103,28 +116,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('AuthContext - Created user object:', user);
       console.log('AuthContext - Storing token and user in localStorage...');
       
+      // Store in localStorage first
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
       
+      // Then update the state
       console.log('AuthContext - Setting user state...');
       setUser(user);
       
-      // Clear login flag after successful login
-      sessionStorage.removeItem('isLoggingIn');
-      
       console.log('AuthContext - Login completed successfully');
       
-    } catch (error) {
-      // Clear login flag on error
-      sessionStorage.removeItem('isLoggingIn');
+      // Force a small delay to ensure state is updated before any redirects
+      await new Promise(resolve => setTimeout(resolve, 100));
       
+    } catch (error) {
       console.error('AuthContext - Login failed with error:', error);
-      console.error('AuthContext - Error details:', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        response: (error as any)?.response?.data,
-        status: (error as any)?.response?.status,
-        statusText: (error as any)?.response?.statusText
-      });
       throw error;
     }
   };

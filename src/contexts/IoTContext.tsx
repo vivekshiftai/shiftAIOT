@@ -114,13 +114,9 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     console.log('IoTContext - User and token found, starting data load');
     setLoading(true);
     
-    // Add a small delay to ensure authentication is fully established
-    const timer = setTimeout(() => {
-      console.log('IoTContext - Starting data load after delay');
-      loadData();
-    }, 500); // 500ms delay
-
-    return () => clearTimeout(timer);
+    // Start loading data immediately without delay
+    console.log('IoTContext - Starting data load immediately');
+    loadData();
   }, [user, authLoading]); // Add authLoading dependency to wait for AuthContext
 
   const loadData = async () => {
