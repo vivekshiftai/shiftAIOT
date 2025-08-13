@@ -46,11 +46,26 @@ api.interceptors.response.use(
     // Handle 401 errors - just redirect to login without trying to refresh
     if (error.response?.status === 401) {
       console.log('API - 401 Unauthorized, redirecting to login');
+      console.log('API - Current pathname:', window.location.pathname);
+      
+          // Check if we're in the middle of a login process or initial load
+    const isLoggingIn = sessionStorage.getItem('isLoggingIn') === 'true';
+    const isInitialLoad = sessionStorage.getItem('isInitialLoad') === 'true';
+    
+    if (isLoggingIn || isInitialLoad) {
+      console.log('API - Login or initial load in progress, not redirecting');
+      return Promise.reject(error);
+    }
+      
       // Only redirect if not already on login page
       if (!window.location.pathname.includes('/login')) {
+        console.log('API - Removing token and user from localStorage');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        console.log('API - Redirecting to login page');
         window.location.href = '/login';
+      } else {
+        console.log('API - Already on login page, not redirecting');
       }
     }
     

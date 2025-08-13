@@ -34,12 +34,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Check for existing session on mount
   useEffect(() => {
     const checkAuth = () => {
+      console.log('AuthProvider - Checking authentication...');
+      
+      // Set initial load flag to prevent redirects during startup
+      sessionStorage.setItem('isInitialLoad', 'true');
+      
       const savedUser = localStorage.getItem('user');
       const token = localStorage.getItem('token');
+      
+      console.log('AuthProvider - Saved user:', savedUser ? 'exists' : 'not found');
+      console.log('AuthProvider - Token:', token ? 'exists' : 'not found');
       
       if (savedUser && token) {
         try {
           const parsedUser = JSON.parse(savedUser);
+          console.log('AuthProvider - Setting user:', parsedUser);
           setUser(parsedUser);
         } catch (error) {
           console.error('AuthProvider - Failed to parse saved user:', error);
@@ -48,10 +57,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(null);
         }
       } else {
+        console.log('AuthProvider - No saved user or token, setting user to null');
         setUser(null);
       }
       
+      console.log('AuthProvider - Setting isLoading to false');
       setIsLoading(false);
+      
+      // Clear initial load flag after a short delay
+      setTimeout(() => {
+        sessionStorage.removeItem('isInitialLoad');
+        console.log('AuthProvider - Initial load flag cleared');
+      }, 2000);
     };
 
     checkAuth();
@@ -59,7 +76,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('AuthContext - Starting login process...');
+      
+      // Set login flag to prevent redirects during login
+      sessionStorage.setItem('isLoggingIn', 'true');
+      
       const response = await authAPI.login({ email, password });
+      
+      console.log('AuthContext - Login response received:', response.data);
       
       const { token, id, name, email: userEmail, role, organizationId } = response.data;
       
@@ -76,12 +100,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         lastLogin: new Date().toISOString()
       };
       
+      console.log('AuthContext - Created user object:', user);
+      console.log('AuthContext - Storing token and user in localStorage...');
+      
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
       
+      console.log('AuthContext - Setting user state...');
       setUser(user);
       
+      // Clear login flag after successful login
+      sessionStorage.removeItem('isLoggingIn');
+      
+      console.log('AuthContext - Login completed successfully');
+      
     } catch (error) {
+      // Clear login flag on error
+      sessionStorage.removeItem('isLoggingIn');
+      
       console.error('AuthContext - Login failed with error:', error);
       console.error('AuthContext - Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',

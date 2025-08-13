@@ -45,7 +45,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const notificationService = user ? NotificationService.getInstance() : null;
 
   // Load notifications from database and subscribe to updates
@@ -76,8 +76,11 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
 
   // Load data from backend when user is authenticated
   useEffect(() => {
-    if (!user) {
-      console.log('IoTContext - No user, setting loading to false and skipping data load');
+    console.log('IoTContext - useEffect triggered, user:', user ? 'exists' : 'null');
+    
+    // Don't do anything if AuthContext is still loading
+    if (user === null && !authLoading) {
+      console.log('IoTContext - No user and auth not loading, setting loading to false and skipping data load');
       setLoading(false);
       setDevices([]);
       setRules([]);
@@ -86,8 +89,17 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       return;
     }
 
+    // If AuthContext is still loading, keep IoTContext in loading state
+    if (authLoading) {
+      console.log('IoTContext - AuthContext still loading, keeping IoTContext in loading state');
+      setLoading(true);
+      return;
+    }
+
     // Check if user has valid token
     const token = localStorage.getItem('token');
+    console.log('IoTContext - Token check:', token ? 'exists' : 'not found');
+    
     if (!token) {
       console.log('IoTContext - No token found, setting loading to false and skipping data load');
       setLoading(false);
@@ -98,82 +110,97 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       return;
     }
 
-    const loadData = async () => {
-      console.log('IoTContext - Loading data from backend');
-      setLoading(true);
-      
-      // Add a timeout to prevent getting stuck in loading state
-      const timeoutId = setTimeout(() => {
-        console.log('IoTContext - Loading timeout, setting loading to false');
-        setLoading(false);
-      }, 10000); // 10 second timeout
-      
+    // Add a small delay to ensure authentication is fully established
+    const timer = setTimeout(() => {
+      console.log('IoTContext - Starting data load after delay');
+      loadData();
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timer);
+  }, [user, authLoading]); // Add authLoading dependency to wait for AuthContext
+
+  const loadData = async () => {
+    console.log('IoTContext - Loading data from backend');
+    setLoading(true);
+    
+    // Add a timeout to prevent getting stuck in loading state
+    const timeoutId = setTimeout(() => {
+      console.log('IoTContext - Loading timeout, setting loading to false');
+      setLoading(false);
+    }, 10000); // 10 second timeout
+    
+    try {
+      // Check if backend is available first
       try {
-        // Load all data from backend independently to handle partial failures
-        console.log('IoTContext - Starting to load data from backend...');
+        await fetch('/api/auth/signin', { method: 'OPTIONS' });
+        console.log('IoTContext - Backend is available');
+      } catch (error) {
+        console.log('IoTContext - Backend not available, skipping data load');
+        setLoading(false);
+        return;
+      }
+      
+      // Load all data from backend independently to handle partial failures
+      console.log('IoTContext - Starting to load data from backend...');
+      
+      // Load devices first (most important)
+      try {
+        const devicesRes = await deviceAPI.getAll();
+        console.log('IoTContext - Raw device response:', devicesRes);
         
-        // Load devices first (most important)
-        try {
-          const devicesRes = await deviceAPI.getAll();
-          console.log('IoTContext - Raw device response:', devicesRes);
-          
-          if (devicesRes.data) {
-            console.log('IoTContext - Setting devices:', devicesRes.data);
-            setDevices(devicesRes.data);
-          } else {
-            console.log('IoTContext - No devices data in response');
-            setDevices([]);
-          }
-        } catch (error) {
-          console.error('IoTContext - Failed to load devices:', error);
+        if (devicesRes.data) {
+          console.log('IoTContext - Setting devices:', devicesRes.data);
+          setDevices(devicesRes.data);
+        } else {
+          console.log('IoTContext - No devices data in response');
           setDevices([]);
         }
+      } catch (error) {
+        console.error('IoTContext - Failed to load devices:', error);
+        setDevices([]);
+      }
 
-        // Load rules (optional) - skip if endpoint doesn't exist
-        try {
-          const rulesRes = await ruleAPI.getAll();
-          console.log('IoTContext - Raw rules response:', rulesRes);
-          
-          if (rulesRes.data) {
-            setRules(rulesRes.data);
-          } else {
-            setRules([]);
-          }
-        } catch (error) {
-          console.error('IoTContext - Failed to load rules:', error);
+      // Load rules (optional) - skip if endpoint doesn't exist
+      try {
+        const rulesRes = await ruleAPI.getAll();
+        console.log('IoTContext - Raw rules response:', rulesRes);
+        
+        if (rulesRes.data) {
+          setRules(rulesRes.data);
+        } else {
           setRules([]);
         }
+      } catch (error) {
+        console.error('IoTContext - Failed to load rules:', error);
+        setRules([]);
+      }
 
-        // Load notifications (optional) - skip if endpoint doesn't exist
-        try {
-          const notificationsRes = await notificationAPI.getAll();
-          console.log('IoTContext - Raw notifications response:', notificationsRes);
-          
-          if (notificationsRes.data) {
-            setNotifications(notificationsRes.data);
-          } else {
-            setNotifications([]);
-          }
-        } catch (error) {
-          console.error('IoTContext - Failed to load notifications:', error);
+      // Load notifications (optional) - skip if endpoint doesn't exist
+      try {
+        const notificationsRes = await notificationAPI.getAll();
+        console.log('IoTContext - Raw notifications response:', notificationsRes);
+        
+        if (notificationsRes.data) {
+          setNotifications(notificationsRes.data);
+        } else {
           setNotifications([]);
         }
-
-        console.log('IoTContext - Data loading completed');
       } catch (error) {
-        console.error('IoTContext - Failed to load data from backend:', error);
-        // Don't set any dummy data - let the UI show empty state if no data
-        console.log('IoTContext - No data loaded from backend, showing empty state');
-      } finally {
-        clearTimeout(timeoutId);
-        console.log('IoTContext - Setting loading to false');
-        setLoading(false);
+        console.error('IoTContext - Failed to load notifications:', error);
+        setNotifications([]);
       }
-    };
 
-    // Load data immediately when component mounts
-    loadData();
-  }, [user]); // Add user dependency to reload when user changes
+      console.log('IoTContext - Data loading completed');
+    } catch (error) {
+      console.error('IoTContext - Failed to load data from backend:', error);
+      // Don't set any dummy data - let the UI show empty state if no data
+      console.log('IoTContext - No data loaded from backend, showing empty state');
+    } finally {
+      clearTimeout(timeoutId);
+      console.log('IoTContext - Setting loading to false');
+      setLoading(false);
+    }
+  };
 
   // Note: Removed telemetry simulation to prevent unwanted notifications and data interference
 
@@ -194,7 +221,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         device.id === deviceId ? updatedDevice : device
       ));
       
-              // Note: Removed automatic status change notifications to prevent unwanted notifications
+      // Note: Removed automatic status change notifications to prevent unwanted notifications
     } catch (error) {
       console.error('Failed to update device status in backend:', error);
       // Don't update local state if backend fails

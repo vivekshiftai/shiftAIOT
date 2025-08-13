@@ -79,32 +79,37 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const { loading: iotLoading } = useIoT();
   
-  console.log('ProtectedRoute - user:', user, 'isLoading:', isLoading);
+  console.log('ProtectedRoute - user:', user, 'authLoading:', authLoading, 'iotLoading:', iotLoading);
+  console.log('ProtectedRoute - localStorage token:', localStorage.getItem('token') ? 'exists' : 'not found');
+  console.log('ProtectedRoute - localStorage user:', localStorage.getItem('user') ? 'exists' : 'not found');
   
-  if (isLoading) {
+  // Wait for both AuthContext and IoTContext to finish loading
+  if (authLoading || iotLoading) {
+    console.log('ProtectedRoute - Still loading (auth or IoT), showing loading screen');
     return <AppLoadingScreen />;
   }
   
   if (!user) {
-    console.log('ProtectedRoute - redirecting to login');
+    console.log('ProtectedRoute - No user, redirecting to login');
     return <Navigate to="/login" replace />;
   }
   
+  console.log('ProtectedRoute - User authenticated, rendering children');
   return <>{children}</>;
 };
 
 // Main App Layout Component
 const MainAppLayout: React.FC = () => {
   const { user } = useAuth();
-  const { loading: iotLoading } = useIoT();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  console.log('MainAppLayout - user:', user, 'location:', location.pathname, 'iotLoading:', iotLoading);
+  console.log('MainAppLayout - user:', user, 'location:', location.pathname);
 
   // Get current section from URL
   const getCurrentSection = () => {
@@ -129,12 +134,6 @@ const MainAppLayout: React.FC = () => {
     console.log('Navigating to section:', section);
     navigate(`/${section}`);
   };
-
-  // Show IoT loading screen while data is being loaded
-  if (iotLoading) {
-    console.log('MainAppLayout - Showing IoT loading screen');
-    return <IoTLoadingScreen />;
-  }
 
   console.log('MainAppLayout - Rendering main layout');
 
