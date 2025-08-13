@@ -51,6 +51,46 @@ public class KnowledgeController {
         }
     }
 
+    @PostMapping("/upload-pdf")
+    public ResponseEntity<?> uploadPDF(
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            
+            // Validate file type
+            if (!file.getContentType().equals("application/pdf")) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Only PDF files are allowed"
+                ));
+            }
+            
+            // Validate file size (10MB limit)
+            if (file.getSize() > 10 * 1024 * 1024) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "File size must be less than 10MB"
+                ));
+            }
+            
+            KnowledgeDocument document = knowledgeService.uploadDocument(file, organizationId);
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "pdf_filename", file.getOriginalFilename(),
+                "processing_status", "uploaded",
+                "document_id", document.getId(),
+                "message", "PDF uploaded successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+
     @GetMapping("/documents")
     public ResponseEntity<?> getDocuments(Authentication authentication) {
         try {

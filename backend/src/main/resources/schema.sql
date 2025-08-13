@@ -71,6 +71,59 @@ CREATE TABLE IF NOT EXISTS devices (
     operating_humidity_max DOUBLE PRECISION
 );
 
+-- Device Documentation table for onboarding flow
+CREATE TABLE IF NOT EXISTS device_documentation (
+    id VARCHAR(255) PRIMARY KEY,
+    device_id VARCHAR(255) NOT NULL,
+    document_type VARCHAR(50) NOT NULL, -- 'manual', 'datasheet', 'certificate'
+    filename VARCHAR(255) NOT NULL,
+    original_filename VARCHAR(255) NOT NULL,
+    file_size BIGINT NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    processing_status VARCHAR(50) DEFAULT 'PENDING', -- 'PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'
+    processing_summary TEXT,
+    total_pages INTEGER,
+    processed_chunks INTEGER,
+    processing_time DOUBLE PRECISION,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
+);
+
+-- Device Maintenance table for onboarding flow
+CREATE TABLE IF NOT EXISTS device_maintenance (
+    id VARCHAR(255) PRIMARY KEY,
+    device_id VARCHAR(255) NOT NULL,
+    component_name VARCHAR(255) NOT NULL,
+    maintenance_type VARCHAR(100) NOT NULL, -- 'preventive', 'corrective', 'predictive'
+    frequency VARCHAR(100) NOT NULL,
+    last_maintenance DATE,
+    next_maintenance DATE,
+    description TEXT,
+    priority VARCHAR(20) DEFAULT 'medium', -- 'low', 'medium', 'high', 'critical'
+    estimated_cost DECIMAL(10,2),
+    assigned_to VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'active', -- 'active', 'completed', 'cancelled'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
+);
+
+-- Device Safety Precautions table for onboarding flow
+CREATE TABLE IF NOT EXISTS device_safety_precautions (
+    id VARCHAR(255) PRIMARY KEY,
+    device_id VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    severity VARCHAR(20) NOT NULL, -- 'low', 'medium', 'high', 'critical'
+    category VARCHAR(100) NOT NULL,
+    recommended_action TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
+);
+
 -- Device Tags table
 CREATE TABLE IF NOT EXISTS device_tags (
     device_id VARCHAR(255) NOT NULL,
@@ -164,6 +217,9 @@ CREATE INDEX IF NOT EXISTS idx_rules_organization ON rules(organization_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_organization ON notifications(organization_id);
 CREATE INDEX IF NOT EXISTS idx_knowledge_organization ON knowledge_documents(organization_id);
+CREATE INDEX IF NOT EXISTS idx_device_documentation_device ON device_documentation(device_id);
+CREATE INDEX IF NOT EXISTS idx_device_maintenance_device ON device_maintenance(device_id);
+CREATE INDEX IF NOT EXISTS idx_device_safety_device ON device_safety_precautions(device_id);
 
 -- Insert default admin user if not exists
 INSERT INTO users (id, first_name, last_name, email, password, role, organization_id)

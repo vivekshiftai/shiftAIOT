@@ -3,7 +3,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Background Colors - Pure and Clean */
+  /* Light Theme Colors */
   --bg-primary: #FFFFFF;
   --bg-secondary: #F9FAFB;
   --bg-tertiary: #F3F4F6;
@@ -20,6 +20,7 @@
   --border-light: #E5E7EB;
   --border-medium: #D1D5DB;
   --border-dark: #9CA3AF;
+
 
   /* Primary Colors - Muted and Calm */
   --primary-50: #F0F9FF;
@@ -313,3 +314,24 @@
 .text-warning-400 { color: var(--warning-400); }
 .text-error-300 { color: var(--error-300); }
 .text-error-400 { color: var(--error-400); }
+
+/* Dark Theme Support */
+[data-theme="dark"] {
+  /* Dark Theme Colors */
+  --bg-primary: #111827;
+  --bg-secondary: #1F2937;
+  --bg-tertiary: #374151;
+  --bg-card: #1F2937;
+  --bg-overlay: rgba(0, 0, 0, 0.3);
+
+  /* Text Colors for Dark Theme */
+  --text-primary: #F9FAFB;
+  --text-secondary: #D1D5DB;
+  --text-tertiary: #9CA3AF;
+  --text-inverse: #111827;
+
+  /* Border Colors for Dark Theme */
+  --border-light: #374151;
+  --border-medium: #4B5563;
+  --border-dark: #6B7280;
+}

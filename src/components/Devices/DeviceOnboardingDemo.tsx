@@ -1,177 +1,126 @@
 import React, { useState } from 'react';
-import { DeviceOnboardingForm } from './DeviceOnboardingForm';
-import { DeviceOnboardingLoader } from '../Loading/DeviceOnboardingLoader';
-import { DeviceOnboardingSuccess } from './DeviceOnboardingSuccess';
-import { DeviceChatInterface } from './DeviceChatInterface';
-import { 
-  Plus, 
-  FileText, 
-  Target, 
-  Brain, 
-  MessageSquare,
-  CheckCircle,
-  ArrowRight
-} from 'lucide-react';
+import { Plus, X } from 'lucide-react';
+import { EnhancedDeviceOnboardingForm } from './EnhancedDeviceOnboardingForm';
 
-interface DeviceOnboardingDemoProps {
-  onClose?: () => void;
+interface OnboardingResult {
+  deviceId: string;
+  deviceName: string;
+  rulesGenerated: number;
+  maintenanceItems: number;
+  safetyPrecautions: number;
+  processingTime: number;
+  pdfFileName: string;
 }
 
-export const DeviceOnboardingDemo: React.FC<DeviceOnboardingDemoProps> = ({ onClose }) => {
-  const [currentStep, setCurrentStep] = useState<'form' | 'loading' | 'success' | 'chat'>('form');
-  const [deviceData, setDeviceData] = useState<any>(null);
-  const [pdfFileName, setPdfFileName] = useState<string>('');
-  const [processingDetails, setProcessingDetails] = useState<any>(null);
+export const DeviceOnboardingDemo: React.FC = () => {
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingResults, setOnboardingResults] = useState<OnboardingResult[]>([]);
 
-  const handleFormSubmit = async (formData: any, uploadedFile: any) => {
-    setDeviceData(formData);
-    setPdfFileName(uploadedFile?.file?.name || '');
-    setProcessingDetails(formData.pdfResults);
-    setCurrentStep('loading');
-    
-    // Simulate the three-stage process
-    setTimeout(() => {
-      setCurrentStep('success');
-    }, 8000); // 8 seconds to simulate the full process
+  const handleOnboardingSubmit = (result: OnboardingResult) => {
+    setOnboardingResults(prev => [...prev, result]);
+    setShowOnboarding(false);
   };
 
-  const handleSuccessContinue = () => {
-    setCurrentStep('chat');
-  };
-
-  const handleStartChat = () => {
-    setCurrentStep('chat');
-  };
-
-  const handleClose = () => {
-    if (onClose) {
-      onClose();
-    }
-  };
-
-  const resetDemo = () => {
-    setCurrentStep('form');
-    setDeviceData(null);
-    setPdfFileName('');
-    setProcessingDetails(null);
+  const handleOnboardingCancel = () => {
+    setShowOnboarding(false);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-6xl w-full max-h-[95vh] overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold mb-2">Device Onboarding Demo</h1>
-              <p className="text-blue-100">Complete IoT device onboarding with AI-powered intelligence</p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={resetDemo}
-                className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors text-sm"
-              >
-                Reset Demo
-              </button>
-              <button
-                onClick={handleClose}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
+    <div className="p-6">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Device Onboarding Demo</h1>
+        <p className="text-gray-600">
+          Experience the enhanced 3-step device onboarding process with AI-powered rule generation
+        </p>
+      </div>
 
-          {/* Progress Indicator */}
-          <div className="mt-4">
-            <div className="flex items-center justify-center space-x-8">
-              <div className={`flex items-center space-x-2 ${currentStep === 'form' ? 'text-white' : 'text-blue-200'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'form' ? 'bg-white text-blue-600' : 'bg-blue-200 text-blue-600'}`}>
-                  <Plus className="w-4 h-4" />
-                </div>
-                <span className="text-sm font-medium">Setup</span>
-              </div>
-              <div className={`flex items-center space-x-2 ${currentStep === 'loading' ? 'text-white' : currentStep === 'success' || currentStep === 'chat' ? 'text-white' : 'text-blue-200'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'loading' ? 'bg-white text-blue-600' : currentStep === 'success' || currentStep === 'chat' ? 'bg-white text-blue-600' : 'bg-blue-200 text-blue-600'}`}>
-                  <FileText className="w-4 h-4" />
-                </div>
-                <span className="text-sm font-medium">Processing</span>
-              </div>
-              <div className={`flex items-center space-x-2 ${currentStep === 'success' ? 'text-white' : currentStep === 'chat' ? 'text-white' : 'text-blue-200'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'success' ? 'bg-white text-blue-600' : currentStep === 'chat' ? 'bg-white text-blue-600' : 'bg-blue-200 text-blue-600'}`}>
-                  <CheckCircle className="w-4 h-4" />
-                </div>
-                <span className="text-sm font-medium">Complete</span>
-              </div>
-              <div className={`flex items-center space-x-2 ${currentStep === 'chat' ? 'text-white' : 'text-blue-200'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'chat' ? 'bg-white text-blue-600' : 'bg-blue-200 text-blue-600'}`}>
-                  <MessageSquare className="w-4 h-4" />
-                </div>
-                <span className="text-sm font-medium">Chat</span>
-              </div>
-            </div>
+      {/* Demo Controls */}
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Enhanced Onboarding Flow</h2>
+            <p className="text-gray-600">
+              Test the complete device onboarding process with PDF processing and AI rule generation
+            </p>
           </div>
+          <button
+            onClick={() => setShowOnboarding(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+          >
+            <Plus className="w-5 h-5" />
+            Start Onboarding Demo
+          </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-hidden">
-          {currentStep === 'form' && (
-            <div className="h-full">
-              <DeviceOnboardingForm
-                onSubmit={handleFormSubmit}
-                onCancel={handleClose}
-                isDemo={true}
-              />
-            </div>
-          )}
-
-          {currentStep === 'loading' && (
-            <div className="h-full">
-              <DeviceOnboardingLoader
-                isProcessing={true}
-                currentProcess="pdf"
-                progress={0}
-                onComplete={() => setCurrentStep('success')}
-                pdfFileName={pdfFileName}
-                currentSubStage="Starting PDF processing..."
-                subStageProgress={0}
-              />
-            </div>
-          )}
-
-          {currentStep === 'success' && deviceData && (
-            <div className="h-full">
-              <DeviceOnboardingSuccess
-                deviceName={deviceData.deviceName}
-                pdfFileName={pdfFileName}
-                rulesCount={deviceData.pdfResults?.iot_rules?.length || 0}
-                maintenanceCount={deviceData.pdfResults?.maintenance_data?.length || 0}
-                safetyCount={deviceData.pdfResults?.safety_precautions?.length || 0}
-                processingDetails={processingDetails}
-                onContinue={handleSuccessContinue}
-                onStartChat={handleStartChat}
-                onClose={handleClose}
-              />
-            </div>
-          )}
-
-          {currentStep === 'chat' && deviceData && (
-            <div className="h-full p-4">
-              <DeviceChatInterface
-                deviceId={deviceData.deviceId}
-                deviceName={deviceData.deviceName}
-                pdfFileName={pdfFileName}
-                deviceType={deviceData.productId}
-                manufacturer=""
-                model={deviceData.productId}
-                onClose={handleClose}
-              />
-            </div>
-          )}
+        {/* Feature Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-blue-50 rounded-lg p-4">
+            <h3 className="font-semibold text-blue-900 mb-2">Step 1: Device Information</h3>
+            <p className="text-blue-700 text-sm">
+              Collect device details, specifications, and connection settings with comprehensive form validation.
+            </p>
+          </div>
+          <div className="bg-purple-50 rounded-lg p-4">
+            <h3 className="font-semibold text-purple-900 mb-2">Step 2: PDF Processing</h3>
+            <p className="text-purple-700 text-sm">
+              Upload device documentation for AI analysis using MinerU technology to extract specifications.
+            </p>
+          </div>
+          <div className="bg-green-50 rounded-lg p-4">
+            <h3 className="font-semibold text-green-900 mb-2">Step 3: Rules Generation</h3>
+            <p className="text-green-700 text-sm">
+              Automatically generate IoT rules, maintenance schedules, and safety precautions from documentation.
+            </p>
+          </div>
         </div>
       </div>
+
+      {/* Onboarding Results */}
+      {onboardingResults.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Onboarding Results</h2>
+          <div className="space-y-4">
+            {onboardingResults.map((result, index) => (
+              <div key={index} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-gray-900">{result.deviceName}</h3>
+                  <span className="text-sm text-gray-500">ID: {result.deviceId}</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Rules Generated:</span>
+                    <span className="font-semibold text-purple-600 ml-2">{result.rulesGenerated}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Maintenance Items:</span>
+                    <span className="font-semibold text-orange-600 ml-2">{result.maintenanceItems}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Safety Precautions:</span>
+                    <span className="font-semibold text-red-600 ml-2">{result.safetyPrecautions}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Processing Time:</span>
+                    <span className="font-semibold text-green-600 ml-2">{result.processingTime.toFixed(1)}s</span>
+                  </div>
+                </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  Document: {result.pdfFileName}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced Onboarding Form */}
+      {showOnboarding && (
+        <EnhancedDeviceOnboardingForm
+          onSubmit={handleOnboardingSubmit}
+          onCancel={handleOnboardingCancel}
+        />
+      )}
     </div>
   );
 };

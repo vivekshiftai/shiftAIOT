@@ -92,13 +92,13 @@ export const KnowledgeSection: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
+        return <CheckCircle className="w-4 h-4 text-success-500" />;
       case 'processing':
-        return <Clock className="w-4 h-4 text-yellow-600" />;
+        return <Clock className="w-4 h-4 text-warning-500" />;
       case 'failed':
-        return <AlertTriangle className="w-4 h-4 text-red-600" />;
+        return <AlertTriangle className="w-4 h-4 text-error-500" />;
       default:
-        return <Clock className="w-4 h-4 text-gray-400" />;
+        return <Clock className="w-4 h-4 text-tertiary" />;
     }
   };
 
@@ -305,20 +305,20 @@ export const KnowledgeSection: React.FC = () => {
             </div>
           ))}
           {isTyping && (
-            <div className="flex justify-start">
-              <div className="flex items-start gap-3 max-w-3xl">
-                <div className="p-3 rounded-full flex-shrink-0 shadow-lg bg-white text-slate-600 border border-slate-200">
-                  <Bot className="w-5 h-5" />
-                </div>
-                <div className="px-6 py-4 rounded-2xl shadow-sm bg-white text-slate-800 border border-slate-200">
-                  <div className="flex space-x-2">
-                    <div className="w-3 h-3 bg-slate-400 rounded-full animate-bounce"></div>
-                    <div className="w-3 h-3 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-3 h-3 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+                         <div className="flex justify-start">
+               <div className="flex items-start gap-3 max-w-3xl">
+                 <div className="p-3 rounded-full flex-shrink-0 shadow-sm bg-card text-secondary border border-light">
+                   <Bot className="w-5 h-5" />
+                 </div>
+                 <div className="px-6 py-4 rounded-2xl shadow-sm bg-card text-primary border border-light">
+                   <div className="flex space-x-2">
+                     <div className="w-3 h-3 bg-tertiary rounded-full animate-bounce"></div>
+                     <div className="w-3 h-3 bg-tertiary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                     <div className="w-3 h-3 bg-tertiary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                   </div>
+                 </div>
+               </div>
+             </div>
           )}
         </div>
 
@@ -421,16 +421,16 @@ export const KnowledgeSection: React.FC = () => {
               {filteredDocuments.map((doc) => (
                 <div
                   key={doc.id}
-                  className={`p-4 hover:bg-tertiary cursor-pointer transition-colors ${
-                    selectedDocument?.id === doc.id ? 'bg-primary-50 border-r-4 border-primary-500' : ''
-                  }`}
+                                     className={`p-4 hover:bg-tertiary cursor-pointer transition-colors ${
+                     selectedDocument?.id === doc.id ? 'bg-primary-500/10 border-r-4 border-primary-500' : ''
+                   }`}
                   onClick={() => setSelectedDocument(doc)}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="p-2 bg-gradient-to-r from-primary-100 to-secondary-100 rounded-lg flex-shrink-0">
-                        <FileText className="w-4 h-4 text-primary-600" />
-                      </div>
+                                             <div className="p-2 bg-primary-500/10 rounded-lg flex-shrink-0">
+                         <FileText className="w-4 h-4 text-primary-500" />
+                       </div>
                       
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-primary truncate">{doc.name}</h4>
@@ -450,17 +450,17 @@ export const KnowledgeSection: React.FC = () => {
                     
                     <div className="flex items-center gap-2 ml-2">
                       {getStatusIcon(doc.status)}
-                      {doc.vectorized && (
-                        <Brain className="w-4 h-4 text-green-600" />
-                      )}
+                                             {doc.vectorized && (
+                         <Brain className="w-4 h-4 text-success-500" />
+                       )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           deleteDocument(doc.id);
                         }}
-                        className="p-1 hover:bg-red-100 rounded transition-colors"
+                                                 className="p-1 hover:bg-error-500/10 rounded transition-colors"
                       >
-                        <Trash2 className="w-4 h-4 text-red-500" />
+                                                 <Trash2 className="w-4 h-4 text-error-500" />
                       </button>
                     </div>
                   </div>

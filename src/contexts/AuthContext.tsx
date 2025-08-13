@@ -181,7 +181,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    window.location.href = '/login';
+    // Dispatch custom event for same-tab storage change
+    window.dispatchEvent(new Event('storageChange'));
   };
 
   const isAdmin = () => {

@@ -259,6 +259,56 @@ export const ruleAPI = {
   delete: (id: string) => api.delete(`/rules/${id}`),
   
   toggle: (id: string) => api.patch(`/rules/${id}/toggle`),
+  
+  generateRules: (request: {
+    pdf_filename: string;
+    chunk_size?: number;
+    rule_types?: string[];
+  }) => api.post('/rules/generate-rules', request),
+};
+
+// Knowledge API
+export const knowledgeAPI = {
+  uploadDocument: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/knowledge/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  
+  uploadPDF: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/knowledge/upload-pdf', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  
+  getDocuments: () => api.get('/knowledge/documents'),
+  
+  deleteDocument: (documentId: string) => api.delete(`/knowledge/documents/${documentId}`),
+  
+  downloadDocument: (documentId: string) => 
+    api.get(`/knowledge/documents/${documentId}/download`, {
+      responseType: 'blob'
+    }),
+  
+  getDocumentStatus: (documentId: string) => api.get(`/knowledge/documents/${documentId}/status`),
+  
+  searchDocuments: (query: string, limit: number = 10) => 
+    api.post('/knowledge/search', { query, limit }),
+  
+  sendChatMessage: (message: string, documentIds: string[]) => 
+    api.post('/knowledge/chat', { message, documentIds }),
+  
+  getChatHistory: () => api.get('/knowledge/chat/history'),
+  
+  getStatistics: () => api.get('/knowledge/statistics'),
 };
 
 // Notification API
