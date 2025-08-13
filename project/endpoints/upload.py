@@ -26,31 +26,39 @@ async def upload_pdf(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=f"File too large. Maximum size: {settings.max_file_size} bytes")
     
     logger.info(f"Processing PDF upload: {file.filename}")
+    logger.info(f"File size: {file.size} bytes")
+    logger.info(f"Content type: {file.content_type}")
     
-    # Save uploaded file
-    upload_path = Path(settings.upload_dir) / file.filename
+    # Sanitize filename to handle special characters
+    safe_filename = sanitize_filename(file.filename) + ".pdf"
+    upload_path = Path(settings.upload_dir) / safe_filename
+    
     try:
         with open(upload_path, "wb") as buffer:
             content = await file.read()
             buffer.write(content)
         
+        logger.info(f"PDF saved to: {upload_path}")
+        
         # Validate PDF
         if not validate_pdf_file(str(upload_path)):
             upload_path.unlink()  # Delete invalid file
-            raise HTTPException(status_code=400, detail="Invalid PDF file")
+            raise HTTPException(status_code=400, detail="Invalid PDF file - please ensure the file is a valid PDF document")
         
-        logger.info(f"PDF saved to: {upload_path}")
+        logger.info(f"PDF validation successful for: {file.filename}")
         
     except Exception as e:
         logger.error(f"Error saving uploaded file: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to save uploaded file")
+        if upload_path.exists():
+            upload_path.unlink()  # Clean up on error
+        raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {str(e)}")
     
     try:
         # Initialize services
         pdf_processor = PDFProcessor()
         vector_db = VectorDatabase()
         
-        # Generate collection name
+        # Generate collection name from original filename
         collection_name = sanitize_filename(file.filename)
         
         # Check if collection already exists

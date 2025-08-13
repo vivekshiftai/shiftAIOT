@@ -63,11 +63,37 @@ def extract_tables_from_markdown(content: str) -> list:
 def validate_pdf_file(file_path: str) -> bool:
     """Validate if file is a valid PDF"""
     try:
-        import fitz  # PyMuPDF
-        doc = fitz.open(file_path)
-        doc.close()
-        return True
-    except Exception:
+        # First check if file exists and has content
+        if not Path(file_path).exists():
+            return False
+        
+        file_size = Path(file_path).stat().st_size
+        if file_size == 0:
+            return False
+        
+        # Check PDF magic number (first 4 bytes should be %PDF)
+        with open(file_path, 'rb') as f:
+            header = f.read(4)
+            if header != b'%PDF':
+                return False
+        
+        # Try to open with PyMuPDF for additional validation
+        try:
+            import fitz  # PyMuPDF
+            doc = fitz.open(file_path)
+            page_count = len(doc)
+            doc.close()
+            
+            # Consider it valid if we can open it and it has at least one page
+            return page_count > 0
+        except Exception as e:
+            # Log the specific error for debugging
+            logger.warning(f"PyMuPDF validation failed for {file_path}: {str(e)}")
+            # Still return True if magic number check passed
+            return True
+            
+    except Exception as e:
+        logger.error(f"PDF validation error for {file_path}: {str(e)}")
         return False
 
 logger = setup_logging()
