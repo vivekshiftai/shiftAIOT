@@ -249,7 +249,7 @@ export const KnowledgeSection: React.FC = () => {
   );
 
   return (
-    <div className="h-full flex bg-gradient-to-br from-primary-50 to-secondary-50">
+    <div className="h-full flex bg-gradient-to-br from-neutral-950 via-primary-950 to-secondary-950">
       {/* Left Panel - Chat Interface */}
       <div className="w-2/3 flex flex-col">
         {/* Chat Header */}
@@ -272,8 +272,8 @@ export const KnowledgeSection: React.FC = () => {
             </div>
         </div>
 
-        {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-card/50 to-secondary-50/30">
+                 {/* Chat Messages */}
+         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-card/50 to-secondary-950/30">
           {chatMessages.map((message) => (
             <div
               key={message.id}

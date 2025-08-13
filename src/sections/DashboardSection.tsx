@@ -93,10 +93,10 @@ export const DashboardSection: React.FC = () => {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'overdue': return 'text-red-500 bg-red-100 dark:bg-red-900/20';
-      case 'soon': return 'text-orange-500 bg-orange-100 dark:bg-orange-900/20';
-      case 'later': return 'text-blue-500 bg-blue-100 dark:bg-blue-900/20';
-      default: return 'text-gray-500 bg-gray-100 dark:bg-gray-900/20';
+      case 'overdue': return 'text-error-500 bg-error-500/20';
+      case 'soon': return 'text-warning-500 bg-warning-500/20';
+      case 'later': return 'text-secondary-500 bg-secondary-500/20';
+      default: return 'text-tertiary bg-tertiary/20';
     }
   };
 
@@ -136,14 +136,14 @@ export const DashboardSection: React.FC = () => {
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-                 <div>
-           <h1 className="text-4xl font-bold text-primary mb-2">
-             Dashboard
-           </h1>
-           <p className="text-secondary text-lg">
-             Welcome back! Here's what's happening with your IoT devices.
-           </p>
-         </div>
+        <div>
+          <h1 className="text-4xl font-bold gradient-text mb-2">
+            Dashboard
+          </h1>
+          <p className="text-secondary text-lg">
+            Welcome back! Here's what's happening with your IoT devices.
+          </p>
+        </div>
         
         <div className="flex items-center gap-3">
           <Button
@@ -151,6 +151,7 @@ export const DashboardSection: React.FC = () => {
             size="md"
             leftIcon={<Plus className="w-4 h-4" />}
             onClick={handleAddDevice}
+            className="btn-secondary"
           >
             Add Device
           </Button>
@@ -159,6 +160,7 @@ export const DashboardSection: React.FC = () => {
             size="md"
             leftIcon={<CheckSquare className="w-4 h-4" />}
             onClick={() => setShowTaskManager(true)}
+            className="btn-warning"
           >
             Task Manager
           </Button>
@@ -167,6 +169,7 @@ export const DashboardSection: React.FC = () => {
             size="md"
             leftIcon={<Eye className="w-4 h-4" />}
             onClick={() => navigate('/analytics')}
+            className="btn-primary"
           >
             View Analytics
           </Button>
@@ -182,7 +185,7 @@ export const DashboardSection: React.FC = () => {
           icon={Cpu}
           color="blue"
           onClick={handleNavigateDevices}
-          className="hover-lift"
+          className="hover-lift glass animate-slide-in"
         />
         <StatsCard
           title="Active Devices"
@@ -191,7 +194,7 @@ export const DashboardSection: React.FC = () => {
           icon={Wifi}
           color="green"
           onClick={handleShowActiveDevices}
-          className="hover-lift"
+          className="hover-lift glass animate-slide-in"
         />
         <StatsCard
           title="Maintenance (This Week)"
@@ -200,7 +203,7 @@ export const DashboardSection: React.FC = () => {
           icon={Calendar}
           color="yellow"
           onClick={handleShowMaintenanceWeek}
-          className="hover-lift"
+          className="hover-lift glass animate-slide-in"
         />
         <StatsCard
           title="Rules Completed"
@@ -209,71 +212,71 @@ export const DashboardSection: React.FC = () => {
           icon={CheckCircle}
           color="purple"
           onClick={handleShowRules}
-          className="hover-lift"
+          className="hover-lift glass animate-slide-in"
         />
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Real-time Chart */}
-                 <div className="lg:col-span-2">
-           <div className="card p-6">
-             <div className="flex items-center justify-between mb-6">
-               <div>
-                 <h3 className="text-xl font-semibold text-primary">
-                   Device Activity
-                 </h3>
-                 <p className="text-secondary">
-                   Real-time monitoring of device performance
-                 </p>
-               </div>
+        <div className="lg:col-span-2">
+          <div className="card p-6 glass">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-semibold gradient-text">
+                  Device Activity
+                </h3>
+                <p className="text-secondary">
+                  Real-time monitoring of device performance
+                </p>
+              </div>
               
               <div className="flex items-center gap-2">
-                                 {['24h', '7d', '30d'].map((range) => (
-                   <button
-                     key={range}
-                     onClick={() => setSelectedTimeRange(range)}
-                     className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                       selectedTimeRange === range
-                         ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
-                         : 'text-secondary hover:bg-tertiary'
-                     }`}
-                   >
-                     {range}
-                   </button>
-                 ))}
+                {['24h', '7d', '30d'].map((range) => (
+                  <button
+                    key={range}
+                    onClick={() => setSelectedTimeRange(range)}
+                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                      selectedTimeRange === range
+                        ? 'bg-secondary-500/20 text-secondary-300 border border-secondary-500/30'
+                        : 'text-secondary hover:bg-secondary-500/10 hover:text-secondary-200'
+                    }`}
+                  >
+                    {range}
+                  </button>
+                ))}
               </div>
             </div>
             
-                         <div className="h-80 flex items-center justify-center">
-               <div className="text-center">
-                 <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                   <Activity className="w-8 h-8 text-primary-600 dark:text-primary-400" />
-                 </div>
-                 <h4 className="text-lg font-semibold text-primary mb-2">
-                   Device Activity Monitor
-                 </h4>
-                 <p className="text-secondary text-sm">
-                   Real-time device monitoring will be available when telemetry data is configured
-                 </p>
-               </div>
-             </div>
+            <div className="h-80 flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-secondary-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                  <Activity className="w-8 h-8 text-secondary-500" />
+                </div>
+                <h4 className="text-lg font-semibold text-primary mb-2">
+                  Device Activity Monitor
+                </h4>
+                <p className="text-secondary text-sm">
+                  Real-time device monitoring will be available when telemetry data is configured
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Upcoming Maintenance */}
         <div className="lg:col-span-1">
-          <div className="card p-6 h-full">
+          <div className="card p-6 h-full glass">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                <h3 className="text-xl font-semibold gradient-text">
                   Upcoming Maintenance
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-secondary">
                   Scheduled tasks and alerts
                 </p>
               </div>
-              <Bell className="w-5 h-5 text-gray-400" />
+              <Bell className="w-5 h-5 text-secondary-400" />
             </div>
 
             <div className="space-y-4">
@@ -281,15 +284,15 @@ export const DashboardSection: React.FC = () => {
                 upcomingMaintenance.map((item) => (
                   <div
                     key={item.id}
-                    className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                    className="p-4 rounded-xl border border-light hover:bg-secondary-500/10 transition-colors cursor-pointer"
                     onClick={() => navigate(`/notifications?id=${item.id}`)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <h4 className="font-medium text-gray-900 dark:text-white text-sm mb-1">
+                        <h4 className="font-medium text-primary text-sm mb-1">
                           {item.title}
                         </h4>
-                        <p className="text-gray-600 dark:text-gray-400 text-xs mb-2">
+                        <p className="text-secondary text-xs mb-2">
                           {item.message}
                         </p>
                         <div className="flex items-center gap-2">
@@ -297,30 +300,30 @@ export const DashboardSection: React.FC = () => {
                             {getPriorityIcon(item.priority)}
                             <span className="ml-1 capitalize">{item.priority}</span>
                           </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                          <span className="text-xs text-tertiary">
                             {new Date(item.timestamp).toLocaleDateString()}
                           </span>
                         </div>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-gray-400" />
+                      <ArrowRight className="w-4 h-4 text-secondary-400" />
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="text-center py-8">
-                  <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  <Calendar className="w-12 h-12 text-secondary-400 mx-auto mb-4" />
+                  <p className="text-secondary text-sm">
                     No upcoming maintenance scheduled
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="mt-6 pt-4 border-t border-light">
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full"
+                className="w-full text-secondary hover:text-secondary-300"
                 rightIcon={<ArrowRight className="w-4 h-4" />}
                 onClick={() => navigate('/notifications')}
               >
@@ -333,45 +336,45 @@ export const DashboardSection: React.FC = () => {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                 <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/devices')}>
-           <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-             <Cpu className="w-6 h-6 text-primary-600 dark:text-primary-400" />
-           </div>
-           <h4 className="font-semibold text-primary mb-2">Manage Devices</h4>
-           <p className="text-secondary text-sm">View and configure your IoT devices</p>
-         </div>
+        <div className="card p-6 text-center hover-lift cursor-pointer glass animate-slide-in" onClick={() => navigate('/devices')}>
+          <div className="w-12 h-12 bg-secondary-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Cpu className="w-6 h-6 text-secondary-500" />
+          </div>
+          <h4 className="font-semibold text-primary mb-2">Manage Devices</h4>
+          <p className="text-secondary text-sm">View and configure your IoT devices</p>
+        </div>
 
-         <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/rules')}>
-           <div className="w-12 h-12 bg-secondary-100 dark:bg-secondary-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-             <Zap className="w-6 h-6 text-secondary-600 dark:text-secondary-400" />
-           </div>
-           <h4 className="font-semibold text-primary mb-2">Automation Rules</h4>
-           <p className="text-secondary text-sm">Create and manage automation workflows</p>
-         </div>
+        <div className="card p-6 text-center hover-lift cursor-pointer glass animate-slide-in" onClick={() => navigate('/rules')}>
+          <div className="w-12 h-12 bg-warning-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Zap className="w-6 h-6 text-warning-500" />
+          </div>
+          <h4 className="font-semibold text-primary mb-2">Automation Rules</h4>
+          <p className="text-secondary text-sm">Create and manage automation workflows</p>
+        </div>
 
-         <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/analytics')}>
-           <div className="w-12 h-12 bg-success-100 dark:bg-success-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-             <BarChart3 className="w-6 h-6 text-success-600 dark:text-success-400" />
-           </div>
-           <h4 className="font-semibold text-primary mb-2">Analytics</h4>
-           <p className="text-secondary text-sm">View detailed performance insights</p>
-         </div>
+        <div className="card p-6 text-center hover-lift cursor-pointer glass animate-slide-in" onClick={() => navigate('/analytics')}>
+          <div className="w-12 h-12 bg-success-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <BarChart3 className="w-6 h-6 text-success-500" />
+          </div>
+          <h4 className="font-semibold text-primary mb-2">Analytics</h4>
+          <p className="text-secondary text-sm">View detailed performance insights</p>
+        </div>
 
-         <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => setShowTaskManager(true)}>
-           <div className="w-12 h-12 bg-warning-100 dark:bg-warning-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-             <CheckSquare className="w-6 h-6 text-warning-600 dark:text-warning-400" />
-           </div>
-           <h4 className="font-semibold text-primary mb-2">Task Manager</h4>
-           <p className="text-secondary text-sm">Organize and track your tasks</p>
-         </div>
+        <div className="card p-6 text-center hover-lift cursor-pointer glass animate-slide-in" onClick={() => setShowTaskManager(true)}>
+          <div className="w-12 h-12 bg-error-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <CheckSquare className="w-6 h-6 text-error-500" />
+          </div>
+          <h4 className="font-semibold text-primary mb-2">Task Manager</h4>
+          <p className="text-secondary text-sm">Organize and track your tasks</p>
+        </div>
 
-         <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/settings')}>
-           <div className="w-12 h-12 bg-neutral-100 dark:bg-neutral-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-             <Settings className="w-6 h-6 text-neutral-600 dark:text-neutral-400" />
-           </div>
-           <h4 className="font-semibold text-primary mb-2">Settings</h4>
-           <p className="text-secondary text-sm">Configure platform preferences</p>
-         </div>
+        <div className="card p-6 text-center hover-lift cursor-pointer glass animate-slide-in" onClick={() => navigate('/settings')}>
+          <div className="w-12 h-12 bg-neutral-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Settings className="w-6 h-6 text-neutral-400" />
+          </div>
+          <h4 className="font-semibold text-primary mb-2">Settings</h4>
+          <p className="text-secondary text-sm">Configure platform preferences</p>
+        </div>
       </div>
 
       {/* Task Manager Modal */}

@@ -140,7 +140,7 @@ const MainAppLayout: React.FC = () => {
   console.log('MainAppLayout - Rendering main layout');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-primary-100 dark:from-neutral-900 dark:via-secondary-900 dark:to-primary-900 flex">
+    <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-primary-950 to-secondary-950 flex">
       <Sidebar
         activeSection={section}
         onSectionChange={handleSectionChange}

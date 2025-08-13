@@ -184,17 +184,17 @@ export const SettingsSection: React.FC = () => {
   const renderProfileTab = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-semibold text-slate-800">Personal Information</h3>
+        <h3 className="text-xl font-semibold gradient-text">Personal Information</h3>
         <button
           onClick={() => setIsEditing(!isEditing)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all"
+          className="flex items-center gap-2 px-4 py-2 btn-secondary"
         >
           <Edit className="w-4 h-4" />
           {isEditing ? 'Cancel' : 'Edit Profile'}
         </button>
       </div>
 
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-slate-200">
+      <div className="card p-6 glass">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">First Name</label>
@@ -487,15 +487,15 @@ export const SettingsSection: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-slate-800">Settings</h1>
-        <p className="text-slate-600 mt-2">
+        <h1 className="text-3xl font-bold gradient-text">Settings</h1>
+        <p className="text-secondary mt-2">
           Manage your account preferences and platform settings
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200">
-        <div className="flex border-b border-slate-200">
+      <div className="card glass">
+        <div className="flex border-b border-light">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -504,8 +504,8 @@ export const SettingsSection: React.FC = () => {
                 onClick={() => handleTabChange(tab.id)}
                 className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-all ${
                   activeTab === tab.id
-                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                    : 'text-slate-600 hover:text-slate-800 hover:bg-slate-50'
+                    ? 'text-secondary-500 border-b-2 border-secondary-500 bg-secondary-500/10'
+                    : 'text-secondary hover:text-secondary-300 hover:bg-secondary-500/5'
                 }`}
               >
                 <Icon className="w-4 h-4" />

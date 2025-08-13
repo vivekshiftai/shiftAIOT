@@ -72,15 +72,15 @@ export const AnalyticsSection: React.FC = () => {
       {/* Header & Filters */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Analytics</h1>
-          <p className="text-slate-600 mt-2">KPI-driven insights for maintenance, rules, and workforce efficiency</p>
+          <h1 className="text-3xl font-bold gradient-text">Analytics</h1>
+          <p className="text-secondary mt-2">KPI-driven insights for maintenance, rules, and workforce efficiency</p>
         </div>
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-400" />
+          <Filter className="w-4 h-4 text-secondary-400" />
           <select
             value={range}
             onChange={(e) => setRange(e.target.value as DateRange)}
-            className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all"
+            className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 futuristic-input"
           >
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
@@ -99,6 +99,7 @@ export const AnalyticsSection: React.FC = () => {
           icon={Wrench}
           color="yellow"
           onClick={() => navigate('/notifications?filter=maintenance')}
+          className="glass animate-slide-in"
         />
         <StatsCard
           title="Performed Maintenances"
@@ -106,6 +107,7 @@ export const AnalyticsSection: React.FC = () => {
           subtitle={"Completed tasks"}
           icon={CheckCircle2}
           color="green"
+          className="glass animate-slide-in"
         />
         <StatsCard
           title="Preventive Maintenances"
@@ -113,6 +115,7 @@ export const AnalyticsSection: React.FC = () => {
           subtitle={`${preventivePct}% of total`}
           icon={ShieldCheck}
           color="blue"
+          className="glass animate-slide-in"
         />
         <StatsCard
           title="Breakdown Time Saved %"
@@ -120,21 +123,22 @@ export const AnalyticsSection: React.FC = () => {
           subtitle={downtimeSavedPct >= 50 ? 'Improving' : 'Needs attention'}
           icon={Hourglass}
           color={downtimeSavedPct >= 50 ? 'green' : 'red'}
+          className="glass animate-slide-in"
         />
       </div>
 
       {/* Row 2: Rules Performance */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard title="Total Rules" value={totalRules} subtitle="Configured" icon={Zap} color="blue" onClick={() => navigate('/rules')} />
-        <StatsCard title="Rules Executed" value={rulesExecuted} subtitle="In selected period" icon={CheckCircle2} color="green" />
-        <StatsCard title="Rules Success Rate" value={`${rulesSuccessRate}%`} subtitle="Success vs failure" icon={CheckCircle2} color="green" />
-        <StatsCard title="Automation Impact" value={`${automationImpactHrs} h/wk`} subtitle="Estimated saved" icon={Zap} color="yellow" />
+        <StatsCard title="Total Rules" value={totalRules} subtitle="Configured" icon={Zap} color="blue" onClick={() => navigate('/rules')} className="glass animate-slide-in" />
+        <StatsCard title="Rules Executed" value={rulesExecuted} subtitle="In selected period" icon={CheckCircle2} color="green" className="glass animate-slide-in" />
+        <StatsCard title="Rules Success Rate" value={`${rulesSuccessRate}%`} subtitle="Success vs failure" icon={CheckCircle2} color="green" className="glass animate-slide-in" />
+        <StatsCard title="Automation Impact" value={`${automationImpactHrs} h/wk`} subtitle="Estimated saved" icon={Zap} color="yellow" className="glass animate-slide-in" />
       </div>
 
       {/* Row 3: Employee Performance */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StatsCard title="Avg Reaction Time" value={`${avgReactionMins} min`} subtitle="vs previous period: -2m" icon={Zap} color="red" />
-        <StatsCard title="Employees Efficient" value={`${efficientPct}%`} subtitle="Above efficiency threshold" icon={Users} color="green" />
+        <StatsCard title="Avg Reaction Time" value={`${avgReactionMins} min`} subtitle="vs previous period: -2m" icon={Zap} color="red" className="glass animate-slide-in" />
+        <StatsCard title="Employees Efficient" value={`${efficientPct}%`} subtitle="Above efficiency threshold" icon={Users} color="green" className="glass animate-slide-in" />
       </div>
 
       {/* Charts */}

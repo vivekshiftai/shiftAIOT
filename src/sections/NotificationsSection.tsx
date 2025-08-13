@@ -65,26 +65,26 @@ export const NotificationsSection: React.FC = () => {
   const getNotificationIcon = (type: Notification['type']) => {
     switch (type) {
       case 'error':
-        return <AlertTriangle className="w-5 h-5 text-red-500" />;
+        return <AlertTriangle className="w-5 h-5 text-error-500" />;
       case 'warning':
-        return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
+        return <AlertTriangle className="w-5 h-5 text-warning-500" />;
       case 'success':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
+        return <CheckCircle className="w-5 h-5 text-success-500" />;
       default:
-        return <Info className="w-5 h-5 text-blue-500" />;
+        return <Info className="w-5 h-5 text-secondary-500" />;
     }
   };
 
   const getNotificationBadge = (type: Notification['type']) => {
     switch (type) {
       case 'error':
-        return 'bg-red-100 text-red-800';
+        return 'bg-error-500/20 text-error-300';
       case 'warning':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-warning-500/20 text-warning-300';
       case 'success':
-        return 'bg-green-100 text-green-800';
+        return 'bg-success-500/20 text-success-300';
       default:
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-secondary-500/20 text-secondary-300';
     }
   };
 
@@ -104,24 +104,24 @@ export const NotificationsSection: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Notification Center</h1>
-          <p className="text-slate-600 mt-2">
+          <h1 className="text-3xl font-bold gradient-text">Notification Center</h1>
+          <p className="text-secondary mt-2">
             Manage and view all your platform notifications
           </p>
         </div>
         
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
+          <div className="flex items-center gap-2 text-sm text-secondary">
             <Bell className="w-4 h-4" />
             <span>{unreadCount} unread</span>
-            <span className="text-slate-400">•</span>
+            <span className="text-tertiary">•</span>
             <span>{totalCount} total</span>
           </div>
           
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllAsRead}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all"
+              className="flex items-center gap-2 px-4 py-2 btn-secondary"
             >
               <Check className="w-4 h-4" />
               Mark all as read
@@ -131,27 +131,27 @@ export const NotificationsSection: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-slate-200">
+      <div className="card p-6 glass">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex-1 min-w-64">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400 w-4 h-4" />
               <input
                 type="text"
                 placeholder="Search notifications..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all"
+                className="w-full pl-10 pr-4 py-2 border border-light rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 futuristic-input"
               />
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400" />
+            <Filter className="w-4 h-4 text-secondary-400" />
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all"
+              className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 futuristic-input"
             >
               <option value="all">All Types</option>
               <option value="error">Errors</option>
@@ -163,7 +163,7 @@ export const NotificationsSection: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all"
+              className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 futuristic-input"
             >
               <option value="all">All Status</option>
               <option value="unread">Unread</option>
@@ -174,12 +174,12 @@ export const NotificationsSection: React.FC = () => {
       </div>
 
       {/* Notifications List */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+      <div className="card overflow-hidden glass">
         {filteredNotifications.length === 0 ? (
           <div className="p-12 text-center">
-            <Bell className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-slate-800 mb-2">No notifications found</h3>
-            <p className="text-slate-600">
+            <Bell className="w-12 h-12 text-secondary-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-primary mb-2">No notifications found</h3>
+            <p className="text-secondary">
               {notifications.length === 0 
                 ? "You don't have any notifications yet."
                 : "No notifications match your current filters."
@@ -190,13 +190,13 @@ export const NotificationsSection: React.FC = () => {
           <>
             {/* Bulk Actions */}
             {selectedNotifications.length > 0 && (
-              <div className="p-4 bg-blue-50 border-b border-slate-200">
+              <div className="p-4 bg-secondary-500/10 border-b border-light">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-blue-700">
+                  <span className="text-sm text-secondary-300">
                     {selectedNotifications.length} notification{selectedNotifications.length !== 1 ? 's' : ''} selected
                   </span>
                   <div className="flex items-center gap-2">
-                    <button className="flex items-center gap-2 px-3 py-1 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all">
+                    <button className="flex items-center gap-2 px-3 py-1 text-sm btn-secondary">
                       <Check className="w-3 h-3" />
                       Mark as read
                     </button>

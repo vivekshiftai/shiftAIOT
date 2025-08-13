@@ -219,13 +219,13 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-primary">User Management</h1>
+          <h1 className="text-2xl font-bold gradient-text">User Management</h1>
           <p className="text-secondary">Manage users and their permissions in your organization</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={fetchUsers}
-            className="flex items-center gap-2 px-3 py-2 text-secondary hover:text-primary transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-secondary-300 hover:text-secondary-100 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
@@ -234,7 +234,7 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
       </div>
 
       {/* Filters and Search */}
-      <div className="card p-4">
+      <div className="card p-4 glass">
         <div className="flex flex-col md:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
@@ -245,7 +245,7 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
                 placeholder="Search users by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-medium rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full pl-10 pr-4 py-2 border border-medium rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 futuristic-input"
               />
             </div>
           </div>
@@ -290,7 +290,7 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
       )}
 
       {/* Users List */}
-      <div className="card overflow-hidden">
+      <div className="card overflow-hidden glass">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-secondary border-b border-light">
@@ -523,48 +523,48 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg border border-slate-200 p-6">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-600" />
+              {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="card p-6 glass animate-slide-in">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-secondary-100/20 rounded-lg flex items-center justify-center">
+                <Users className="w-6 h-6 text-secondary-500" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-secondary">Total Users</p>
+                <p className="kpi-number">{users.length}</p>
+              </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-slate-600">Total Users</p>
-              <p className="text-2xl font-bold text-slate-800">{users.length}</p>
+          </div>
+          
+          <div className="card p-6 glass animate-slide-in" style={{animationDelay: '0.1s'}}>
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-warning-100/20 rounded-lg flex items-center justify-center">
+                <Shield className="w-6 h-6 text-warning-500" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-secondary">Admins</p>
+                <p className="kpi-number">
+                  {users.filter(user => user.role === 'ADMIN').length}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="card p-6 glass animate-slide-in" style={{animationDelay: '0.2s'}}>
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-success-100/20 rounded-lg flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-success-500" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-secondary">Active Users</p>
+                <p className="kpi-number">
+                  {users.filter(user => user.enabled).length}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-        
-        <div className="bg-white rounded-lg border border-slate-200 p-6">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Shield className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-slate-600">Admins</p>
-              <p className="text-2xl font-bold text-slate-800">
-                {users.filter(user => user.role === 'ADMIN').length}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg border border-slate-200 p-6">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-slate-600">Active Users</p>
-              <p className="text-2xl font-bold text-slate-800">
-                {users.filter(user => user.enabled).length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

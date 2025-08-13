@@ -47,7 +47,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   };
 
   return (
-    <header className="bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 text-white h-16 flex items-center justify-between px-6 shadow-lg sticky top-0 z-50">
+    <header className="bg-gradient-to-r from-primary-950 via-primary-900 to-secondary-900 text-white h-16 flex items-center justify-between px-6 shadow-xl sticky top-0 z-50 backdrop-blur-sm border-b border-secondary-500/20">
       <div className="flex items-center gap-4">
         {/* Sidebar Toggle */}
         <IconButton
@@ -56,18 +56,18 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           size="sm"
           onClick={onToggleSidebar}
           aria-label="Toggle sidebar"
-          className="text-blue-100 hover:text-white"
+          className="text-secondary-300 hover:text-secondary-100 transition-colors"
         />
 
         {/* Search Bar */}
         <form onSubmit={handleSearch} className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-200 w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-300 w-4 h-4" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search devices, rules, users..."
-            className="pl-10 pr-4 py-2 border border-blue-300/30 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent bg-white/90 text-gray-900 w-80 transition-all placeholder-blue-200"
+            className="pl-10 pr-4 py-2 border border-secondary-500/30 rounded-xl focus:ring-2 focus:ring-secondary-400 focus:border-transparent bg-neutral-900/90 text-white w-80 transition-all placeholder-secondary-300 futuristic-input"
           />
         </form>
       </div>
@@ -86,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           size="sm"
           onClick={toggleTheme}
           aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-          className="text-blue-100 hover:text-white"
+          className="text-secondary-300 hover:text-secondary-100 transition-colors"
         />
 
         {/* Help */}
@@ -96,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           size="sm"
           onClick={() => window.open('/help', '_blank')}
           aria-label="Help"
-          className="text-blue-100 hover:text-white"
+          className="text-secondary-300 hover:text-secondary-100 transition-colors"
         />
 
         {/* Settings */}
@@ -106,16 +106,16 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           size="sm"
           onClick={() => window.location.href = '/settings'}
           aria-label="Settings"
-          className="text-blue-100 hover:text-white"
+          className="text-secondary-300 hover:text-secondary-100 transition-colors"
         />
 
         {/* User Menu */}
         <div className="relative">
           <button
             onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-            className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 transition-colors"
+            className="flex items-center gap-3 p-2 rounded-xl hover:bg-secondary-500/10 transition-colors"
           >
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center shadow-md">
+            <div className="w-8 h-8 bg-gradient-to-r from-secondary-500 to-primary-600 rounded-full flex items-center justify-center shadow-md">
               <span className="text-white text-sm font-medium">
                 {user?.email?.charAt(0).toUpperCase() || 'U'}
               </span>
@@ -124,11 +124,11 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               <p className="text-sm font-medium text-white">
                 {user?.email || 'User'}
               </p>
-              <p className="text-xs text-blue-200 capitalize">
+              <p className="text-xs text-secondary-300 capitalize">
                 {user?.role?.toLowerCase() || 'User'}
               </p>
             </div>
-            <ChevronDown className={`w-4 h-4 text-blue-200 transition-transform ${
+            <ChevronDown className={`w-4 h-4 text-secondary-300 transition-transform ${
               userDropdownOpen ? 'rotate-180' : ''
             }`} />
           </button>

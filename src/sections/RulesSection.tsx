@@ -114,20 +114,20 @@ export const RulesSection: React.FC = () => {
   };
 
   const getRuleIcon = (rule: Rule) => {
-    if (!rule.active) return <Pause className="w-5 h-5 text-slate-400" />;
+    if (!rule.active) return <Pause className="w-5 h-5 text-tertiary" />;
     
     // Determine icon based on rule conditions
     const hasErrorCondition = rule.conditions.some(c => 
       c.operator === '>' && c.metric === 'temperature' && parseFloat(c.value.toString()) > 30
     );
     
-    if (hasErrorCondition) return <AlertTriangle className="w-5 h-5 text-red-500" />;
-    return <Zap className="w-5 h-5 text-green-500" />;
+    if (hasErrorCondition) return <AlertTriangle className="w-5 h-5 text-error-500" />;
+    return <Zap className="w-5 h-5 text-success-500" />;
   };
 
   const getRuleBadge = (rule: Rule) => {
-    if (!rule.active) return 'bg-slate-100 text-slate-600';
-    return 'bg-green-100 text-green-600';
+    if (!rule.active) return 'bg-tertiary/20 text-tertiary';
+    return 'bg-success-500/20 text-success-300';
   };
 
   const formatDate = (dateString: string) => {
@@ -177,8 +177,8 @@ export const RulesSection: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Automation Rules</h1>
-          <p className="text-slate-600 mt-2">
+          <h1 className="text-3xl font-bold gradient-text">Automation Rules</h1>
+          <p className="text-secondary mt-2">
             Create and manage automated responses to device events
           </p>
         </div>
@@ -187,14 +187,14 @@ export const RulesSection: React.FC = () => {
           <LoadingButton
             loading={isRefreshing}
             onClick={handleRefreshRules}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg"
+            className="flex items-center gap-2 px-4 py-2 btn-success"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
           </LoadingButton>
           <button 
             onClick={() => setShowRuleBuilder(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg"
+            className="flex items-center gap-2 px-4 py-2 btn-secondary"
           >
             <Plus className="w-4 h-4" />
             Create Rule
