@@ -80,7 +80,7 @@ class PDFProcessor:
         try:
             # Run MinerU command
             cmd = [
-                "python", "-m", "magic_pdf.cli.magicpdf",
+                "magic-pdf",
                 "-p", pdf_path,
                 "-o", str(output_dir),
                 "-m", "auto"
