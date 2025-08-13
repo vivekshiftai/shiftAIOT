@@ -86,8 +86,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
 
+    // Listen for storage events (cross-tab)
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    
+    // Also listen for custom events (same-tab)
+    const handleCustomStorageChange = () => {
+      console.log('AuthProvider - Custom storage change detected');
+      const savedUser = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+      
+      if (savedUser && token) {
+        try {
+          const parsedUser = JSON.parse(savedUser);
+          setUser(parsedUser);
+        } catch (error) {
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener('storageChange', handleCustomStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storageChange', handleCustomStorageChange);
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -119,6 +144,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Store in localStorage first
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
+      
+      // Dispatch custom event for same-tab storage change
+      window.dispatchEvent(new Event('storageChange'));
       
       // Then update the state
       console.log('AuthContext - Setting user state...');
@@ -177,7 +205,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           case 'RULE_READ':
           case 'NOTIFICATION_READ':
           case 'KNOWLEDGE_READ':
-            return true; // USER can read devices, rules, notifications, and knowledge
+          case 'USER_READ':
+            return true; // USER can read devices, rules, notifications, knowledge, and users
           case 'DEVICE_WRITE':
           case 'DEVICE_DELETE':
           case 'RULE_WRITE':

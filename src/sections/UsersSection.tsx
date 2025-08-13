@@ -38,7 +38,7 @@ interface UserSectionProps {
 }
 
 export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,18 +53,58 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
 
   // Fetch users on component mount
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    console.log('UsersSection - Component mounted');
+    console.log('UsersSection - Current user role:', currentUser?.role);
+    console.log('UsersSection - Has USER_READ permission:', hasPermission('USER_READ'));
+    
+    if (currentUser && hasPermission('USER_READ')) {
+      fetchUsers();
+    } else {
+      console.log('UsersSection - No permission to read users or no current user');
+      setError('You do not have permission to view users.');
+      setLoading(false);
+    }
+  }, [currentUser, hasPermission]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('UsersSection - Fetching users...');
+      console.log('UsersSection - Current user:', currentUser);
+      console.log('UsersSection - Token:', localStorage.getItem('token') ? 'exists' : 'not found');
+      
       const response = await userAPI.getAll();
+      console.log('UsersSection - API response:', response);
+      console.log('UsersSection - Users data:', response.data);
       setUsers(response.data);
-    } catch (err) {
-      console.error('Error fetching users:', err);
-      setError('Failed to load users. Please try again.');
+    } catch (err: any) {
+      console.error('UsersSection - Error fetching users:', err);
+      console.error('UsersSection - Error details:', {
+        message: err.message,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data
+      });
+      
+      // If API fails, at least show the current user
+      if (currentUser) {
+        console.log('UsersSection - API failed, showing current user as fallback');
+        setUsers([{
+          id: currentUser.id,
+          firstName: currentUser.firstName,
+          lastName: currentUser.lastName,
+          email: currentUser.email,
+          role: currentUser.role,
+          enabled: currentUser.enabled,
+          organizationId: currentUser.organizationId,
+          createdAt: currentUser.createdAt,
+          lastLoginAt: currentUser.lastLogin
+        }]);
+        setError('Could not load all users from server. Showing current user only.');
+      } else {
+        setError(`Failed to load users: ${err.response?.data?.message || err.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -149,22 +189,22 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
     return (
       <div className={`flex items-center justify-center py-12 ${className}`}>
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-slate-600">Loading users...</p>
+          <Loader2 className="w-8 h-8 animate-spin text-primary-600 mx-auto mb-4" />
+          <p className="text-secondary">Loading users...</p>
         </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && users.length === 0) {
     return (
       <div className={`flex items-center justify-center py-12 ${className}`}>
         <div className="text-center">
-          <AlertCircle className="w-8 h-8 text-red-600 mx-auto mb-4" />
-          <p className="text-red-600 mb-4">{error}</p>
+          <AlertCircle className="w-8 h-8 text-error-600 mx-auto mb-4" />
+          <p className="text-error-600 mb-4">{error}</p>
           <button
             onClick={fetchUsers}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Try Again
@@ -179,13 +219,13 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">User Management</h1>
-          <p className="text-slate-600">Manage users and their permissions in your organization</p>
+          <h1 className="text-2xl font-bold text-primary">User Management</h1>
+          <p className="text-secondary">Manage users and their permissions in your organization</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={fetchUsers}
-            className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-secondary hover:text-primary transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
@@ -194,29 +234,29 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white rounded-lg border border-slate-200 p-4">
+      <div className="card p-4">
         <div className="flex flex-col md:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary w-4 h-4" />
               <input
                 type="text"
                 placeholder="Search users by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-medium rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
           </div>
 
           {/* Role Filter */}
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400" />
+            <Filter className="w-4 h-4 text-tertiary" />
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value as any)}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-2 border border-medium rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="ALL">All Roles</option>
               <option value="ADMIN">Admin</option>
@@ -229,7 +269,7 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-2 border border-medium rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
               <option value="ALL">All Status</option>
               <option value="ENABLED">Active</option>
@@ -239,45 +279,55 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
         </div>
       </div>
 
+      {/* Error Warning */}
+      {error && users.length > 0 && (
+        <div className="mb-4 p-4 bg-warning-50 border border-warning-200 rounded-lg">
+          <div className="flex items-center">
+            <AlertCircle className="w-5 h-5 text-warning-600 mr-3" />
+            <p className="text-warning-800 text-sm">{error}</p>
+          </div>
+        </div>
+      )}
+
       {/* Users List */}
-      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+      <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-secondary border-b border-light">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-tertiary uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-tertiary uppercase tracking-wider">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-tertiary uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-tertiary uppercase tracking-wider">
                   Contact
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-tertiary uppercase tracking-wider">
                   Created
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-tertiary uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
+            <tbody className="bg-card divide-y divide-light">
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                <tr key={user.id} className="hover:bg-tertiary transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-slate-600" />
+                      <div className="w-10 h-10 bg-neutral-100 rounded-full flex items-center justify-center">
+                        <User className="w-5 h-5 text-neutral-600" />
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-slate-900">
+                        <div className="text-sm font-medium text-primary">
                           {user.firstName} {user.lastName}
                         </div>
-                        <div className="text-sm text-slate-500">{user.email}</div>
+                        <div className="text-sm text-secondary">{user.email}</div>
                       </div>
                     </div>
                   </td>

@@ -136,14 +136,14 @@ export const DashboardSection: React.FC = () => {
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 text-lg">
-            Welcome back! Here's what's happening with your IoT devices.
-          </p>
-        </div>
+                 <div>
+           <h1 className="text-4xl font-bold text-primary mb-2">
+             Dashboard
+           </h1>
+           <p className="text-secondary text-lg">
+             Welcome back! Here's what's happening with your IoT devices.
+           </p>
+         </div>
         
         <div className="flex items-center gap-3">
           <Button
@@ -216,48 +216,48 @@ export const DashboardSection: React.FC = () => {
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Real-time Chart */}
-        <div className="lg:col-span-2">
-          <div className="card p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Device Activity
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Real-time monitoring of device performance
-                </p>
-              </div>
+                 <div className="lg:col-span-2">
+           <div className="card p-6">
+             <div className="flex items-center justify-between mb-6">
+               <div>
+                 <h3 className="text-xl font-semibold text-primary">
+                   Device Activity
+                 </h3>
+                 <p className="text-secondary">
+                   Real-time monitoring of device performance
+                 </p>
+               </div>
               
               <div className="flex items-center gap-2">
-                {['24h', '7d', '30d'].map((range) => (
-                  <button
-                    key={range}
-                    onClick={() => setSelectedTimeRange(range)}
-                    className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                      selectedTimeRange === range
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    {range}
-                  </button>
-                ))}
+                                 {['24h', '7d', '30d'].map((range) => (
+                   <button
+                     key={range}
+                     onClick={() => setSelectedTimeRange(range)}
+                     className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                       selectedTimeRange === range
+                         ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300'
+                         : 'text-secondary hover:bg-tertiary'
+                     }`}
+                   >
+                     {range}
+                   </button>
+                 ))}
               </div>
             </div>
             
-            <div className="h-80 flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Activity className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                </div>
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Device Activity Monitor
-                </h4>
-                <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  Real-time device monitoring will be available when telemetry data is configured
-                </p>
-              </div>
-            </div>
+                         <div className="h-80 flex items-center justify-center">
+               <div className="text-center">
+                 <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                   <Activity className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+                 </div>
+                 <h4 className="text-lg font-semibold text-primary mb-2">
+                   Device Activity Monitor
+                 </h4>
+                 <p className="text-secondary text-sm">
+                   Real-time device monitoring will be available when telemetry data is configured
+                 </p>
+               </div>
+             </div>
           </div>
         </div>
 
@@ -333,45 +333,45 @@ export const DashboardSection: React.FC = () => {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/devices')}>
-          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Cpu className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-          </div>
-          <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Manage Devices</h4>
-          <p className="text-gray-600 dark:text-gray-400 text-sm">View and configure your IoT devices</p>
-        </div>
+                 <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/devices')}>
+           <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+             <Cpu className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+           </div>
+           <h4 className="font-semibold text-primary mb-2">Manage Devices</h4>
+           <p className="text-secondary text-sm">View and configure your IoT devices</p>
+         </div>
 
-        <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/rules')}>
-          <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Zap className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-          </div>
-          <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Automation Rules</h4>
-          <p className="text-gray-600 dark:text-gray-400 text-sm">Create and manage automation workflows</p>
-        </div>
+         <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/rules')}>
+           <div className="w-12 h-12 bg-secondary-100 dark:bg-secondary-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+             <Zap className="w-6 h-6 text-secondary-600 dark:text-secondary-400" />
+           </div>
+           <h4 className="font-semibold text-primary mb-2">Automation Rules</h4>
+           <p className="text-secondary text-sm">Create and manage automation workflows</p>
+         </div>
 
-        <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/analytics')}>
-          <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <BarChart3 className="w-6 h-6 text-green-600 dark:text-green-400" />
-          </div>
-          <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Analytics</h4>
-          <p className="text-gray-600 dark:text-gray-400 text-sm">View detailed performance insights</p>
-        </div>
+         <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/analytics')}>
+           <div className="w-12 h-12 bg-success-100 dark:bg-success-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+             <BarChart3 className="w-6 h-6 text-success-600 dark:text-success-400" />
+           </div>
+           <h4 className="font-semibold text-primary mb-2">Analytics</h4>
+           <p className="text-secondary text-sm">View detailed performance insights</p>
+         </div>
 
-        <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => setShowTaskManager(true)}>
-          <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <CheckSquare className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-          </div>
-          <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Task Manager</h4>
-          <p className="text-gray-600 dark:text-gray-400 text-sm">Organize and track your tasks</p>
-        </div>
+         <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => setShowTaskManager(true)}>
+           <div className="w-12 h-12 bg-warning-100 dark:bg-warning-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+             <CheckSquare className="w-6 h-6 text-warning-600 dark:text-warning-400" />
+           </div>
+           <h4 className="font-semibold text-primary mb-2">Task Manager</h4>
+           <p className="text-secondary text-sm">Organize and track your tasks</p>
+         </div>
 
-        <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/settings')}>
-          <div className="w-12 h-12 bg-gray-100 dark:bg-gray-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Settings className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-          </div>
-          <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Settings</h4>
-          <p className="text-gray-600 dark:text-gray-400 text-sm">Configure platform preferences</p>
-        </div>
+         <div className="card p-6 text-center hover-lift cursor-pointer" onClick={() => navigate('/settings')}>
+           <div className="w-12 h-12 bg-neutral-100 dark:bg-neutral-900/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+             <Settings className="w-6 h-6 text-neutral-600 dark:text-neutral-400" />
+           </div>
+           <h4 className="font-semibold text-primary mb-2">Settings</h4>
+           <p className="text-secondary text-sm">Configure platform preferences</p>
+         </div>
       </div>
 
       {/* Task Manager Modal */}

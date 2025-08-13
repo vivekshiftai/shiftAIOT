@@ -249,31 +249,31 @@ export const KnowledgeSection: React.FC = () => {
   );
 
   return (
-    <div className="h-full flex bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="h-full flex bg-gradient-to-br from-primary-50 to-secondary-50">
       {/* Left Panel - Chat Interface */}
       <div className="w-2/3 flex flex-col">
         {/* Chat Header */}
-        <div className="p-6 border-b border-slate-200 bg-white/80 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-              <Bot className="w-6 h-6 text-white" />
+        <div className="p-4 border-b border-light bg-card/80 backdrop-blur-sm">
+                      <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-r from-primary-600 to-secondary-600 rounded-xl shadow-lg">
+                <Bot className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-primary">AI Knowledge Assistant</h2>
+                <p className="text-secondary">
+                  Ask questions about your devices and PDF documents
+                  {selectedDocument && (
+                    <span className="ml-2 text-primary-600 font-medium">
+                      • Currently viewing: {selectedDocument.name}
+                    </span>
+                  )}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-800">AI Knowledge Assistant</h2>
-              <p className="text-slate-600">
-                Ask questions about your devices and PDF documents
-                {selectedDocument && (
-                  <span className="ml-2 text-blue-600 font-medium">
-                    • Currently viewing: {selectedDocument.name}
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gradient-to-b from-white/50 to-blue-50/30">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-card/50 to-secondary-50/30">
           {chatMessages.map((message) => (
             <div
               key={message.id}
@@ -282,21 +282,21 @@ export const KnowledgeSection: React.FC = () => {
               <div className="flex items-start gap-3 max-w-3xl">
                 <div className={`p-3 rounded-full flex-shrink-0 shadow-lg ${
                   message.type === 'user'
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
-                    : 'bg-white text-slate-600 border border-slate-200'
+                    ? 'bg-gradient-to-r from-primary-600 to-secondary-600 text-white'
+                    : 'bg-card text-secondary border border-light'
                 }`}>
                   {message.type === 'user' ? (<User className="w-5 h-5" />) : (<Bot className="w-5 h-5" />)}
                 </div>
                 <div
-                  className={`px-6 py-4 rounded-2xl shadow-sm ${
+                  className={`px-4 py-3 rounded-2xl shadow-sm ${
                     message.type === 'user'
-                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
-                      : 'bg-white text-slate-800 border border-slate-200'
+                      ? 'bg-gradient-to-r from-primary-600 to-secondary-600 text-white'
+                      : 'bg-card text-primary border border-light'
                   }`}
                 >
                   <p className="text-sm leading-relaxed">{message.content}</p>
-                  <p className={`text-xs mt-3 ${
-                    message.type === 'user' ? 'text-blue-100' : 'text-slate-500'
+                  <p className={`text-xs mt-2 ${
+                    message.type === 'user' ? 'text-primary-100' : 'text-tertiary'
                   }`}>
                     {message.timestamp.toLocaleTimeString()}
                   </p>
@@ -323,7 +323,7 @@ export const KnowledgeSection: React.FC = () => {
         </div>
 
         {/* Chat Input */}
-        <div className="p-6 border-t border-slate-200 bg-white/80 backdrop-blur-sm">
+        <div className="p-4 border-t border-light bg-card/80 backdrop-blur-sm">
           <div className="flex gap-3">
             <input
               type="text"
@@ -331,12 +331,12 @@ export const KnowledgeSection: React.FC = () => {
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
               placeholder={selectedDocument ? `Ask about "${selectedDocument.name}"...` : "Ask about your devices, documents, or troubleshooting..."}
-              className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800 shadow-sm"
+              className="flex-1 px-4 py-3 border border-medium rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-card text-primary shadow-sm"
             />
             <button
               onClick={sendMessage}
               disabled={!newMessage.trim() || isTyping}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
+              className="px-6 py-3 bg-gradient-to-r from-primary-600 to-secondary-600 text-white rounded-xl hover:from-primary-700 hover:to-secondary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg"
             >
               <Send className="w-4 h-4" />
               Send
@@ -344,22 +344,22 @@ export const KnowledgeSection: React.FC = () => {
           </div>
           
           {/* Quick Actions */}
-          <div className="flex gap-2 mt-4">
+          <div className="flex gap-2 mt-3">
             <button
               onClick={() => setNewMessage('How do I troubleshoot temperature sensor issues?')}
-              className="px-4 py-2 text-sm bg-white border border-slate-200 text-slate-700 rounded-full hover:bg-slate-50 transition-colors shadow-sm"
+              className="px-3 py-2 text-sm bg-card border border-light text-secondary rounded-full hover:bg-tertiary transition-colors shadow-sm"
             >
               Temperature sensors
             </button>
             <button
               onClick={() => setNewMessage('What maintenance procedures are recommended?')}
-              className="px-4 py-2 text-sm bg-white border border-slate-200 text-slate-700 rounded-full hover:bg-slate-50 transition-colors shadow-sm"
+              className="px-3 py-2 text-sm bg-card border border-light text-secondary rounded-full hover:bg-tertiary transition-colors shadow-sm"
             >
               Maintenance
             </button>
             <button
               onClick={() => setNewMessage('How do I install IoT gateways?')}
-              className="px-4 py-2 text-sm bg-white border border-slate-200 text-slate-700 rounded-full hover:bg-slate-50 transition-colors shadow-sm"
+              className="px-3 py-2 text-sm bg-card border border-light text-secondary rounded-full hover:bg-tertiary transition-colors shadow-sm"
             >
               Installation
             </button>
@@ -368,11 +368,11 @@ export const KnowledgeSection: React.FC = () => {
       </div>
 
       {/* Right Panel - PDF Document Library */}
-      <div className="w-1/3 border-l border-slate-200 flex flex-col bg-white/80 backdrop-blur-sm">
+      <div className="w-1/3 border-l border-light flex flex-col bg-card/80 backdrop-blur-sm">
         {/* Header */}
-        <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-slate-800">PDF Document Library</h2>
+        <div className="p-4 border-b border-light">
+                      <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xl font-bold text-primary">PDF Document Library</h2>
             <label className="cursor-pointer">
               <input
                 type="file"
@@ -381,7 +381,7 @@ export const KnowledgeSection: React.FC = () => {
                 className="hidden"
                 disabled={uploading}
               />
-              <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg">
+              <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-primary-600 to-secondary-600 text-white rounded-lg hover:from-primary-700 hover:to-secondary-700 transition-all shadow-lg">
                 {uploading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 ) : (
@@ -394,13 +394,13 @@ export const KnowledgeSection: React.FC = () => {
           
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary w-4 h-4" />
             <input
               type="text"
               placeholder="Search PDF documents..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-800 shadow-sm"
+              className="w-full pl-10 pr-4 py-2 border border-medium rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-card text-primary shadow-sm"
             />
           </div>
         </div>
@@ -408,33 +408,33 @@ export const KnowledgeSection: React.FC = () => {
         {/* Document List */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="p-6 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-              <p className="text-slate-500 mt-2">Loading PDF documents...</p>
+            <div className="p-4 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
+              <p className="text-secondary mt-2">Loading PDF documents...</p>
             </div>
           ) : filteredDocuments.length === 0 ? (
-            <div className="p-6 text-center text-slate-500">
+            <div className="p-4 text-center text-secondary">
               {searchQuery ? 'No PDF documents found' : 'No PDF documents uploaded yet'}
             </div>
           ) : (
-            <div className="divide-y divide-slate-200">
+            <div className="divide-y divide-light">
               {filteredDocuments.map((doc) => (
                 <div
                   key={doc.id}
-                  className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors ${
-                    selectedDocument?.id === doc.id ? 'bg-blue-50 border-r-4 border-blue-500' : ''
+                  className={`p-4 hover:bg-tertiary cursor-pointer transition-colors ${
+                    selectedDocument?.id === doc.id ? 'bg-primary-50 border-r-4 border-primary-500' : ''
                   }`}
                   onClick={() => setSelectedDocument(doc)}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="p-2 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg flex-shrink-0">
-                        <FileText className="w-4 h-4 text-blue-600" />
+                      <div className="p-2 bg-gradient-to-r from-primary-100 to-secondary-100 rounded-lg flex-shrink-0">
+                        <FileText className="w-4 h-4 text-primary-600" />
                       </div>
                       
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-slate-800 truncate">{doc.name}</h4>
-                        <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+                        <h4 className="font-medium text-primary truncate">{doc.name}</h4>
+                        <div className="flex items-center gap-2 text-sm text-secondary mt-1">
                           <span>{formatFileSize(doc.size)}</span>
                           <span>•</span>
                           <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
@@ -471,8 +471,8 @@ export const KnowledgeSection: React.FC = () => {
         </div>
 
         {/* Stats */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50">
-          <div className="flex items-center justify-between text-sm text-slate-600">
+        <div className="p-4 border-t border-light bg-secondary">
+          <div className="flex items-center justify-between text-sm text-secondary">
             <span>{documents.length} PDF documents</span>
             <span>{documents.filter(d => d.vectorized).length} AI ready</span>
           </div>

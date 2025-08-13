@@ -15,6 +15,7 @@ import { NotificationsSection } from './sections/NotificationsSection';
 import { AnalyticsSection } from './sections/AnalyticsSection';
 import { UsersSection } from './sections/UsersSection';
 import { ToastContainer, useToast } from './components/UI/Toast';
+import './styles/colors.css';
 
 import { BarChart3, Bell, Users, Settings, AlertTriangle } from 'lucide-react';
 import { 
@@ -139,7 +140,7 @@ const MainAppLayout: React.FC = () => {
   console.log('MainAppLayout - Rendering main layout');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 flex">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-primary-100 dark:from-neutral-900 dark:via-secondary-900 dark:to-primary-900 flex">
       <Sidebar
         activeSection={section}
         onSectionChange={handleSectionChange}
@@ -151,7 +152,7 @@ const MainAppLayout: React.FC = () => {
           onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-4 overflow-auto">
           {error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
               <div className="flex items-center">
