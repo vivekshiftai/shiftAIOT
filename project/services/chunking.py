@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class MarkdownChunker:
     def __init__(self):
-        self.heading_pattern = re.compile(r"^#+\s*\d+(?:\.\d+)*\b")
+        self.heading_pattern = re.compile(r"^#+\s+.*")  # Any heading with # followed by text
         self.image_pattern = re.compile(r"!\[.*?\]\((.*?)\)")
         self.table_pattern = re.compile(r"(<table>.*?</table>)", re.DOTALL | re.IGNORECASE)
     
@@ -38,9 +38,12 @@ class MarkdownChunker:
             if lines:
                 logger.info(f"First few lines: {lines[:3]}")
                 logger.info(f"File size: {len(''.join(lines))} characters")
+                logger.info(f"All content preview: {''.join(lines)[:500]}...")
+            else:
+                logger.warning("Markdown file is empty!")
             
             # If no headings found, create a single chunk with all content
-            has_headings = any(line.strip().startswith("#") and self.heading_pattern.match(line.strip()) for line in lines)
+            has_headings = any(line.strip().startswith("#") for line in lines)
             
             if not has_headings:
                 logger.info("No headings found, creating single chunk with all content")
@@ -59,7 +62,7 @@ class MarkdownChunker:
                 stripped = line.strip()
                 
                 # Detect heading
-                if stripped.startswith("#") and self.heading_pattern.match(stripped):
+                if stripped.startswith("#"):
                     # Save previous chunk if exists
                     if heading is not None:
                         chunk_text = "".join(content_lines).strip()
