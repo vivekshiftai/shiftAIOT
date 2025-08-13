@@ -42,13 +42,13 @@ class PDFProcessor:
     
     def setup_mineru_config(self) -> str:
         """Setup MinerU configuration"""
-        config_path = "magic-pdf.json"
+        config_path = "mineru-config.json"
         
         config = {
-            "device-mode": settings.device_mode,
-            "models-dir": self.models_dir,
-            "formula-enable": settings.formula_enable,
-            "table-enable": settings.table_enable,
+            "device_mode": settings.device_mode,
+            "models_dir": self.models_dir,
+            "formula_enable": settings.formula_enable,
+            "table_enable": settings.table_enable,
             "method": "auto"
         }
         
@@ -80,9 +80,10 @@ class PDFProcessor:
         try:
             # Run MinerU command - try different module paths
             possible_commands = [
-                ["python", "-m", "magic_pdf.cli", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"],
-                ["python", "-m", "magic_pdf", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"],
-                ["magic-pdf", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"]
+                ["mineru", "-p", pdf_path, "-o", str(output_dir), "-m", "auto", "-c", config_path],
+                ["mineru", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"],
+                ["python", "-m", "mineru", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"],
+                ["python", "-m", "mineru.cli", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"]
             ]
             
             success = False
@@ -121,14 +122,48 @@ class PDFProcessor:
                     continue
             
             if not success:
-                logger.error("All MinerU commands failed")
-                raise Exception(f"MinerU processing failed: {last_error}")
+                logger.warning("MinerU failed, falling back to PyMuPDF for basic text extraction")
+                # Fallback to PyMuPDF
+                return await self.process_pdf_with_pymupdf(pdf_path, output_dir)
             
             return str(output_dir)
         finally:
             # Cleanup config file
             if Path(config_path).exists():
                 Path(config_path).unlink()
+    
+    async def process_pdf_with_pymupdf(self, pdf_path: str, output_dir: Path) -> str:
+        """Process PDF using PyMuPDF for basic text extraction"""
+        logger.info(f"Processing PDF with PyMuPDF: {pdf_path}")
+        
+        try:
+            import fitz  # PyMuPDF
+            
+            # Open PDF
+            doc = fitz.open(pdf_path)
+            
+            # Extract text from all pages
+            full_text = ""
+            for page_num in range(len(doc)):
+                page = doc.load_page(page_num)
+                text = page.get_text()
+                full_text += f"\n--- Page {page_num + 1} ---\n{text}\n"
+            
+            doc.close()
+            
+            # Save as markdown
+            output_file = output_dir / "extracted_text.md"
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write(f"# PDF Text Extraction\n\n")
+                f.write(f"Source: {Path(pdf_path).name}\n\n")
+                f.write(full_text)
+            
+            logger.info(f"PyMuPDF processing completed. Text saved to: {output_file}")
+            return str(output_dir)
+            
+        except Exception as e:
+            logger.error(f"PyMuPDF processing failed: {str(e)}")
+            raise Exception(f"PyMuPDF processing failed: {str(e)}")
     
     async def process_pdf(self, pdf_path: str, output_base: str) -> List[ChunkData]:
         """
