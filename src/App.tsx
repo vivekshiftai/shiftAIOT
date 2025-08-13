@@ -86,18 +86,25 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   console.log('ProtectedRoute - localStorage token:', localStorage.getItem('token') ? 'exists' : 'not found');
   console.log('ProtectedRoute - localStorage user:', localStorage.getItem('user') ? 'exists' : 'not found');
   
-  // Wait for both AuthContext and IoTContext to finish loading
-  if (authLoading || iotLoading) {
-    console.log('ProtectedRoute - Still loading (auth or IoT), showing loading screen');
+  // Wait for AuthContext to finish loading first
+  if (authLoading) {
+    console.log('ProtectedRoute - AuthContext still loading, showing loading screen');
     return <AppLoadingScreen />;
   }
   
+  // After AuthContext is done, check if we have a user
   if (!user) {
-    console.log('ProtectedRoute - No user, redirecting to login');
+    console.log('ProtectedRoute - No user after auth finished, redirecting to login');
     return <Navigate to="/login" replace />;
   }
   
-  console.log('ProtectedRoute - User authenticated, rendering children');
+  // We have a user, but wait for IoTContext to finish loading if it's still loading
+  if (iotLoading) {
+    console.log('ProtectedRoute - IoTContext still loading, showing loading screen');
+    return <AppLoadingScreen />;
+  }
+  
+  console.log('ProtectedRoute - User authenticated and IoT loaded, rendering children');
   return <>{children}</>;
 };
 

@@ -76,11 +76,18 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
 
   // Load data from backend when user is authenticated
   useEffect(() => {
-    console.log('IoTContext - useEffect triggered, user:', user ? 'exists' : 'null');
+    console.log('IoTContext - useEffect triggered, user:', user ? 'exists' : 'null', 'authLoading:', authLoading);
     
-    // Don't do anything if AuthContext is still loading
-    if (user === null && !authLoading) {
-      console.log('IoTContext - No user and auth not loading, setting loading to false and skipping data load');
+    // If AuthContext is still loading, keep IoTContext in loading state
+    if (authLoading) {
+      console.log('IoTContext - AuthContext still loading, keeping IoTContext in loading state');
+      setLoading(true);
+      return;
+    }
+
+    // AuthContext has finished loading, now check if we have a user
+    if (!user) {
+      console.log('IoTContext - No user after auth finished loading, setting loading to false and skipping data load');
       setLoading(false);
       setDevices([]);
       setRules([]);
@@ -89,14 +96,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       return;
     }
 
-    // If AuthContext is still loading, keep IoTContext in loading state
-    if (authLoading) {
-      console.log('IoTContext - AuthContext still loading, keeping IoTContext in loading state');
-      setLoading(true);
-      return;
-    }
-
-    // Check if user has valid token
+    // We have a user, check if user has valid token
     const token = localStorage.getItem('token');
     console.log('IoTContext - Token check:', token ? 'exists' : 'not found');
     
@@ -110,6 +110,10 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       return;
     }
 
+    // We have both user and token, start loading data
+    console.log('IoTContext - User and token found, starting data load');
+    setLoading(true);
+    
     // Add a small delay to ensure authentication is fully established
     const timer = setTimeout(() => {
       console.log('IoTContext - Starting data load after delay');
@@ -130,16 +134,6 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     }, 10000); // 10 second timeout
     
     try {
-      // Check if backend is available first
-      try {
-        await fetch('/api/auth/signin', { method: 'OPTIONS' });
-        console.log('IoTContext - Backend is available');
-      } catch (error) {
-        console.log('IoTContext - Backend not available, skipping data load');
-        setLoading(false);
-        return;
-      }
-      
       // Load all data from backend independently to handle partial failures
       console.log('IoTContext - Starting to load data from backend...');
       
