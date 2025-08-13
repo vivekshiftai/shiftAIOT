@@ -78,37 +78,53 @@ class PDFProcessor:
         output_dir.mkdir(parents=True, exist_ok=True)
         
         try:
-            # Run MinerU command
-            cmd = [
-                "magic-pdf",
-                "-p", pdf_path,
-                "-o", str(output_dir),
-                "-m", "auto"
+            # Run MinerU command - try different module paths
+            possible_commands = [
+                ["python", "-m", "magic_pdf.cli", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"],
+                ["python", "-m", "magic_pdf", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"],
+                ["magic-pdf", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"]
             ]
             
-            logger.info(f"Running MinerU command: {' '.join(cmd)}")
+            success = False
+            last_error = None
             
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=1800  # 30 minutes timeout
-            )
+            for cmd in possible_commands:
+                try:
+                    logger.info(f"Trying MinerU command: {' '.join(cmd)}")
+                    
+                    result = subprocess.run(
+                        cmd,
+                        capture_output=True,
+                        text=True,
+                        timeout=1800  # 30 minutes timeout
+                    )
+                    
+                    if result.returncode == 0:
+                        logger.info("MinerU processing completed successfully")
+                        success = True
+                        break
+                    else:
+                        logger.warning(f"Command failed with return code {result.returncode}: {' '.join(cmd)}")
+                        logger.warning(f"STDERR: {result.stderr}")
+                        last_error = result.stderr
+                        
+                except FileNotFoundError:
+                    logger.warning(f"Command not found: {' '.join(cmd)}")
+                    last_error = f"Command not found: {' '.join(cmd)}"
+                    continue
+                except subprocess.TimeoutExpired:
+                    logger.error("MinerU processing timed out")
+                    raise Exception("PDF processing timed out")
+                except Exception as e:
+                    logger.warning(f"Command failed: {' '.join(cmd)} - {str(e)}")
+                    last_error = str(e)
+                    continue
             
-            if result.returncode == 0:
-                logger.info("MinerU processing completed successfully")
-                return str(output_dir)
-            else:
-                logger.error(f"MinerU failed with return code {result.returncode}")
-                logger.error(f"STDERR: {result.stderr}")
-                raise Exception(f"MinerU processing failed: {result.stderr}")
-                
-        except subprocess.TimeoutExpired:
-            logger.error("MinerU processing timed out")
-            raise Exception("PDF processing timed out")
-        except Exception as e:
-            logger.error(f"Error running MinerU: {str(e)}")
-            raise e
+            if not success:
+                logger.error("All MinerU commands failed")
+                raise Exception(f"MinerU processing failed: {last_error}")
+            
+            return str(output_dir)
         finally:
             # Cleanup config file
             if Path(config_path).exists():
