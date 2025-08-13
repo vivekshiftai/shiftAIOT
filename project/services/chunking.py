@@ -33,6 +33,28 @@ class MarkdownChunker:
             with open(md_path, "r", encoding="utf-8") as f:
                 lines = f.readlines()
             
+            # Log file content for debugging
+            logger.info(f"Markdown file has {len(lines)} lines")
+            if lines:
+                logger.info(f"First few lines: {lines[:3]}")
+                logger.info(f"File size: {len(''.join(lines))} characters")
+            
+            # If no headings found, create a single chunk with all content
+            has_headings = any(line.strip().startswith("#") and self.heading_pattern.match(line.strip()) for line in lines)
+            
+            if not has_headings:
+                logger.info("No headings found, creating single chunk with all content")
+                all_content = "".join(lines)
+                if all_content.strip():
+                    chunks.append(ChunkData(
+                        heading="PDF Content",
+                        text=all_content.strip(),
+                        images=[],
+                        tables=[]
+                    ))
+                logger.info(f"Created {len(chunks)} chunks from {md_path}")
+                return chunks
+            
             for line in lines:
                 stripped = line.strip()
                 

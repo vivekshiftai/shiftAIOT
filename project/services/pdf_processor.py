@@ -78,9 +78,11 @@ class PDFProcessor:
         output_dir.mkdir(parents=True, exist_ok=True)
         
         try:
-            # Run MinerU command - try different module paths
+            # Run MinerU command - try different module paths with verbose output
             possible_commands = [
-                ["mineru", "-p", pdf_path, "-o", str(output_dir), "-m", "auto", "-c", config_path],
+                ["mineru", "-p", pdf_path, "-o", str(output_dir), "-m", "auto", "-c", config_path, "--verbose"],
+                ["mineru", "-p", pdf_path, "-o", str(output_dir), "-m", "auto", "--verbose"],
+                ["mineru", "-p", pdf_path, "-o", str(output_dir), "-m", "auto", "-v"],
                 ["mineru", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"],
                 ["python", "-m", "mineru", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"],
                 ["python", "-m", "mineru.cli", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"]
