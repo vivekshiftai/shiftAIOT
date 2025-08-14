@@ -4,6 +4,16 @@ A comprehensive IoT platform with enhanced device management capabilities and an
 
 ## 🚀 New Features
 
+### 📱 Refactored Device Onboarding Flow
+The device onboarding process has been completely redesigned with the following improvements:
+
+- **Clean, Uniform Spacing**: Consistent 24px (6 in Tailwind) margins and padding throughout all forms, cards, and sections
+- **Equipment Intelligence Agent Workflow**: Redesigned loading screen with animated cards, prominent progress bar, and sequential steps
+- **Embedded Chat Interface**: AI-powered chat window integrated into the onboarding flow for querying uploaded PDFs
+- **Streamlined Success Screen**: Concise, celebratory design focusing on essential information
+- **Real-time Validation**: Instant field validation with visual feedback for key form fields
+- **Responsive Design**: Mobile-optimized layouts that adapt to different screen sizes
+
 ### 📱 Tabbed Device Details Interface
 The device details view now features a modern tabbed interface with the following sections:
 
@@ -41,7 +51,7 @@ A powerful AI-powered knowledge base with:
 
 ### Device Management
 - ✅ Real-time device monitoring
-- ✅ Device onboarding and configuration
+- ✅ Enhanced device onboarding with AI integration
 - ✅ Telemetry data visualization
 - ✅ Device status management
 - ✅ Tabbed device details interface
@@ -99,88 +109,130 @@ A powerful AI-powered knowledge base with:
 
 **Start all services:**
 ```bash
-npm run dev:all
-```
+# Terminal 1 - Backend
+cd backend && mvn spring-boot:run
 
-**Start frontend only:**
-```bash
+# Terminal 2 - Frontend
 npm run dev
 ```
-
-**Start backend only:**
-```bash
-npm run backend:dev
-```
-
-**Backend API**: http://localhost:8100/api
 
 ## 📁 Project Structure
 
 ```
 shiftAIOT/
-├── src/                          # Frontend React application
+├── backend/                 # Spring Boot backend
+│   ├── src/main/java/
+│   │   └── com/iotplatform/
+│   │       ├── controller/  # REST API controllers
+│   │       ├── service/     # Business logic
+│   │       ├── model/       # Entity models
+│   │       └── repository/  # Data access layer
+│   └── src/main/resources/
+│       └── schema.sql      # Database schema
+├── src/                    # React frontend
 │   ├── components/
-│   │   ├── Devices/
-│   │   │   └── DeviceDetails.tsx # Tabbed device interface
-│   │   └── ...
-│   ├── sections/
-│   │   └── KnowledgeSection.tsx  # ChatGPT-style knowledge base
-│   └── services/
-│       └── knowledgeApiService.ts # Knowledge base API client
-├── backend/                      # Spring Boot backend
-│   ├── src/main/java/com/iotplatform/
-│   │   ├── controller/
-│   │   │   └── KnowledgeController.java
-│   │   ├── model/
-│   │   │   └── KnowledgeDocument.java
-│   │   ├── repository/
-│   │   │   └── KnowledgeDocumentRepository.java
-│   │   └── service/
-│   │       └── KnowledgeService.java
-│   └── ...
-└── ...
+│   │   ├── Devices/        # Device management components
+│   │   ├── Loading/        # Loading and progress components
+│   │   └── Layout/         # Layout components
+│   ├── services/           # API services
+│   └── types/              # TypeScript type definitions
+└── README.md
 ```
+
+## 🔄 Device Onboarding Flow
+
+The enhanced device onboarding process follows this sequence:
+
+1. **Device Information Collection** (Step 1)
+   - Collect device details, specifications, and connection settings
+   - Real-time field validation with visual feedback
+   - Clean, responsive form layout
+
+2. **Connection Settings** (Step 2)
+   - Configure network connection and authentication
+   - Protocol selection (MQTT, HTTP, COAP, TCP, UDP)
+   - Network configuration validation
+
+3. **Documentation Upload** (Step 3)
+   - PDF upload with drag-and-drop interface
+   - File validation and processing status
+   - AI analysis preview
+
+4. **Equipment Intelligence Agent** (Loading)
+   - Animated processing cards with progress indicators
+   - Sequential steps: PDF Uploading → Rules Generation → Initializing Chat
+   - Prominent progress bar and minimal status text
+
+5. **AI Chat Interface** (New)
+   - Embedded chat window for querying uploaded PDF
+   - Quick action buttons for common queries
+   - Real-time AI responses based on device documentation
+
+6. **Success Confirmation** (Final)
+   - Concise, celebratory design
+   - Key metrics display (rules, maintenance, safety)
+   - Clear next steps and actions
+
+## 🎨 Design System
+
+### Spacing
+- **Base Unit**: 24px (6 in Tailwind)
+- **Consistent Margins**: Applied throughout all components
+- **Responsive Grid**: Adapts to mobile and desktop layouts
+
+### Color Palette
+- **Primary**: Blue (#3B82F6)
+- **Success**: Green (#10B981)
+- **Warning**: Orange (#F59E0B)
+- **Error**: Red (#EF4444)
+- **Neutral**: Gray scale for text and backgrounds
+
+### Typography
+- **Headings**: Bold, clear hierarchy
+- **Body Text**: Readable, appropriate line height
+- **Labels**: Medium weight for form fields
 
 ## 🔧 API Endpoints
 
-### Knowledge Base API
-- `POST /api/knowledge/upload` - Upload document
-- `GET /api/knowledge/documents` - Get all documents
-- `DELETE /api/knowledge/documents/{id}` - Delete document
-- `GET /api/knowledge/documents/{id}/download` - Download document
-- `POST /api/knowledge/search` - Search documents
-- `POST /api/knowledge/chat` - Send chat message
-- `GET /api/knowledge/chat/history` - Get chat history
-- `GET /api/knowledge/statistics` - Get knowledge base statistics
+### Device Management
+- `GET /devices` - Get all devices
+- `POST /devices` - Create new device
+- `PUT /devices/{id}` - Update device
+- `DELETE /devices/{id}` - Delete device
 
-## 🎨 UI Components
+### Knowledge Base
+- `POST /knowledge/upload-pdf` - Upload PDF for processing
+- `GET /knowledge/documents` - Get all documents
+- `POST /knowledge/search` - Search documents
+- `POST /knowledge/chat` - Send chat message
 
-### Device Details Tabs
-- **Modern tabbed interface** with smooth transitions
-- **Responsive design** that works on all screen sizes
-- **Loading states** and placeholder content
-- **Interactive elements** with hover effects
+### Rules Generation
+- `POST /rules/generate-rules` - Generate AI rules from PDF
+- `GET /rules` - Get all rules
+- `POST /rules` - Create new rule
 
-### Knowledge Base Chat
-- **ChatGPT-style interface** with message bubbles
-- **Real-time typing indicators**
-- **Quick action buttons** for common queries
-- **Document context** in chat responses
-- **File upload** with drag-and-drop support
+## 🚀 Deployment
 
-## 🔒 Security Features
+### Production Build
+```bash
+# Frontend
+npm run build
 
-- **JWT Authentication** for all API endpoints
-- **File upload validation** and virus scanning
-- **Organization-based access control**
-- **Secure document storage** with proper file permissions
+# Backend
+mvn clean package
+```
 
-## 📈 Performance
+### Environment Variables
+```bash
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/iotplatform
 
-- **Lazy loading** for device details tabs
-- **Optimized file uploads** with progress tracking
-- **Caching** for frequently accessed documents
-- **Async processing** for document vectorization
+# JWT Secret
+JWT_SECRET=your-secret-key
+
+# API Base URL
+VITE_API_BASE_URL=https://your-api-domain.com/api
+```
 
 ## 🤝 Contributing
 
@@ -197,10 +249,10 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🆘 Support
 
 For support and questions:
-- Create an issue in the repository
-- Check the documentation
-- Review the API endpoints
+- Create an issue in the GitHub repository
+- Check the documentation in the `/docs` folder
+- Review the API documentation
 
 ---
 
-**Built with ❤️ for the IoT community**
+**Built with ❤️ using React, Spring Boot, and AI-powered intelligence**

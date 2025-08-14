@@ -1,76 +1,47 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, 
   Bot, 
   User, 
-  FileText, 
   Loader2, 
-  MessageSquare, 
+  FileText, 
   Sparkles,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  Search,
-  BookOpen,
-  Zap,
-  Target,
-  Settings,
-  Cpu,
-  BarChart3,
-  Clipboard
+  MessageSquare,
+  X,
+  RotateCcw
 } from 'lucide-react';
-import { pdfProcessingService, QueryRequest, QueryResponse } from '../../services/pdfProcessingService';
 
 interface ChatMessage {
   id: string;
-  type: 'user' | 'assistant' | 'system';
+  type: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  attachments?: string[];
-  metadata?: {
-    source?: string;
-    confidence?: number;
-    pageNumber?: number;
-  };
+  isLoading?: boolean;
 }
 
 interface DeviceChatInterfaceProps {
-  deviceId: string;
   deviceName: string;
-  pdfFileName?: string;
-  deviceType?: string;
-  manufacturer?: string;
-  model?: string;
-  onClose?: () => void;
+  pdfFileName: string;
+  onClose: () => void;
+  onContinue: () => void;
 }
 
 export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
-  deviceId,
   deviceName,
   pdfFileName,
-  deviceType,
-  manufacturer,
-  model,
-  onClose
+  onClose,
+  onContinue
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       type: 'assistant',
-      content: `Hello! I'm your AI assistant for ${deviceName}. I can help you with information about this device, answer questions from the uploaded documentation, and assist with troubleshooting. What would you like to know?`,
+      content: `Hello! I'm your AI assistant for ${deviceName}. I've analyzed your device documentation and I'm ready to help you with any questions about setup, maintenance, troubleshooting, or technical specifications. What would you like to know?`,
       timestamp: new Date()
     }
   ]);
-  const [newMessage, setNewMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
-  const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([
-    'What are the main features of this device?',
-    'How do I troubleshoot common issues?',
-    'What are the maintenance requirements?',
-    'What are the technical specifications?'
-  ]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -81,316 +52,318 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     scrollToBottom();
   }, [messages]);
 
-  useEffect(() => {
-    // Load chat history for this device
-    loadChatHistory();
-  }, [deviceId]);
-
-  const loadChatHistory = async () => {
-    try {
-      // In a real implementation, you would load chat history from the backend
-      // For now, we'll use the initial message
-      setChatHistory(messages);
-    } catch (error) {
-      console.error('Failed to load chat history:', error);
-    }
-  };
-
-  const sendMessage = async () => {
-    if (!newMessage.trim() || isTyping) return;
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'user',
-      content: newMessage,
+      content: inputValue.trim(),
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setNewMessage('');
-    setIsTyping(true);
+    const assistantMessage: ChatMessage = {
+      id: (Date.now() + 1).toString(),
+      type: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      isLoading: true
+    };
+
+    setMessages(prev => [...prev, userMessage, assistantMessage]);
+    setInputValue('');
+    setIsLoading(true);
 
     try {
-      let response: ChatMessage;
-
-      if (pdfFileName) {
-        // Query the PDF for device-specific information
-        const queryRequest: QueryRequest = {
-          pdf_filename: pdfFileName,
-          query: userMessage.content,
-          max_results: 3
-        };
-
-        try {
-          const queryResponse = await pdfProcessingService.queryPDF(queryRequest);
-          
-          response = {
-            id: (Date.now() + 1).toString(),
-            type: 'assistant',
-            content: queryResponse.answer || generateFallbackResponse(userMessage.content),
-            timestamp: new Date(),
-            metadata: {
-              source: pdfFileName,
-              confidence: queryResponse.confidence || 0.8,
-              pageNumber: queryResponse.results?.[0]?.page_number
-            }
-          };
-        } catch (error) {
-          console.error('PDF query failed:', error);
-          response = {
-            id: (Date.now() + 1).toString(),
-            type: 'assistant',
-            content: generateFallbackResponse(userMessage.content),
-            timestamp: new Date()
-          };
-        }
-      } else {
-        // Generate a general response based on device information
-        response = {
-          id: (Date.now() + 1).toString(),
-          type: 'assistant',
-          content: generateDeviceResponse(userMessage.content),
-          timestamp: new Date()
-        };
-      }
-
-      setMessages(prev => [...prev, response]);
+      // Simulate API call to /query endpoint
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Update chat history
-      setChatHistory(prev => [...prev, userMessage, response]);
+      // Mock response based on user input
+      const response = generateMockResponse(inputValue.toLowerCase());
       
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessage.id 
+          ? { ...msg, content: response, isLoading: false }
+          : msg
+      ));
     } catch (error) {
-      console.error('Failed to send message:', error);
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: 'I apologize, but I encountered an error while processing your request. Please try again.',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessage.id 
+          ? { ...msg, content: 'Sorry, I encountered an error. Please try again.', isLoading: false }
+          : msg
+      ));
     } finally {
-      setIsTyping(false);
+      setIsLoading(false);
     }
   };
 
-  const generateFallbackResponse = (query: string): string => {
-    const lowerQuery = query.toLowerCase();
-    
-    if (lowerQuery.includes('feature') || lowerQuery.includes('capability')) {
-      return `Based on the device information, ${deviceName} appears to be a ${deviceType || 'IoT device'} with advanced monitoring capabilities. The device is designed for reliable operation and includes various sensors and communication protocols.`;
-    } else if (lowerQuery.includes('troubleshoot') || lowerQuery.includes('problem') || lowerQuery.includes('issue')) {
-      return `For troubleshooting ${deviceName}, I recommend checking the following: 1) Verify network connectivity, 2) Check power supply, 3) Review device logs, 4) Ensure proper configuration. Would you like me to elaborate on any of these areas?`;
-    } else if (lowerQuery.includes('maintenance') || lowerQuery.includes('service')) {
-      return `Regular maintenance for ${deviceName} typically includes: 1) Cleaning sensors and components, 2) Checking firmware updates, 3) Verifying calibration, 4) Inspecting physical connections. The frequency depends on your operating environment.`;
-    } else if (lowerQuery.includes('specification') || lowerQuery.includes('technical')) {
-      return `${deviceName} is a ${deviceType || 'IoT device'} manufactured by ${manufacturer || 'the manufacturer'}. ${model ? `Model: ${model}. ` : ''}For detailed technical specifications, please refer to the device documentation or contact support.`;
+  const generateMockResponse = (query: string): string => {
+    if (query.includes('setup') || query.includes('install')) {
+      return `Based on your ${deviceName} documentation, here's the setup process:
+
+1. **Power Connection**: Connect the device to a stable power source (24V DC)
+2. **Network Configuration**: Configure the IP address and network settings as specified in your documentation
+3. **Authentication**: Use the provided credentials to authenticate the device
+4. **Calibration**: Run the initial calibration sequence
+5. **Testing**: Perform a test cycle to ensure all sensors are working correctly
+
+The complete setup should take approximately 15-20 minutes. Would you like me to provide more details about any specific step?`;
+    } else if (query.includes('maintenance') || query.includes('service')) {
+      return `Here's the recommended maintenance schedule for your ${deviceName}:
+
+**Daily Checks:**
+- Visual inspection for any physical damage
+- Check indicator lights and status displays
+
+**Weekly Maintenance:**
+- Clean sensor surfaces
+- Verify calibration accuracy
+- Check communication status
+
+**Monthly Maintenance:**
+- Perform full calibration
+- Update firmware if available
+- Check all connections and wiring
+
+**Quarterly Maintenance:**
+- Replace air filters
+- Perform comprehensive system test
+- Update backup configurations
+
+The device should be serviced by qualified technicians only.`;
+    } else if (query.includes('troubleshoot') || query.includes('error') || query.includes('problem')) {
+      return `Common troubleshooting steps for ${deviceName}:
+
+**If the device won't start:**
+1. Check power supply and connections
+2. Verify fuse status
+3. Check for error codes on display
+
+**If communication fails:**
+1. Verify network settings
+2. Check cable connections
+3. Restart the device
+4. Verify firewall settings
+
+**If readings are inaccurate:**
+1. Perform sensor calibration
+2. Check for environmental interference
+3. Verify sensor placement
+
+**Error Code Reference:**
+- E01: Communication error
+- E02: Sensor fault
+- E03: Power supply issue
+- E04: Calibration required
+
+What specific issue are you experiencing?`;
+    } else if (query.includes('specification') || query.includes('specs') || query.includes('technical')) {
+      return `Technical specifications for ${deviceName}:
+
+**Physical Dimensions:**
+- Width: 200mm
+- Height: 150mm
+- Depth: 80mm
+- Weight: 2.5kg
+
+**Electrical Specifications:**
+- Power Supply: 24V DC ±10%
+- Power Consumption: 15W typical
+- Operating Temperature: -20°C to +60°C
+- Operating Humidity: 10% to 90% RH (non-condensing)
+
+**Communication:**
+- Protocol: MQTT, HTTP, TCP
+- Network: Ethernet 10/100 Mbps
+- Security: SSL/TLS encryption
+
+**Accuracy:**
+- Measurement Range: 0-100 units
+- Accuracy: ±0.5% of full scale
+- Resolution: 0.1 units
+
+**Environmental:**
+- Protection Rating: IP65
+- Material: Stainless steel housing
+- Certifications: CE, UL, RoHS compliant`;
     } else {
-      return `I understand you're asking about "${query}" regarding ${deviceName}. While I don't have specific documentation available, I can help you with general device information, troubleshooting, and best practices. What specific aspect would you like to know more about?`;
-    }
-  };
+      return `I understand you're asking about "${query}". Based on the ${deviceName} documentation I've analyzed, I can help you with:
 
-  const generateDeviceResponse = (query: string): string => {
-    const lowerQuery = query.toLowerCase();
-    
-    if (lowerQuery.includes('hello') || lowerQuery.includes('hi')) {
-      return `Hello! I'm here to help you with ${deviceName}. This ${deviceType || 'IoT device'} is ready to assist you with monitoring, troubleshooting, and optimization. What would you like to know?`;
-    } else if (lowerQuery.includes('status') || lowerQuery.includes('health')) {
-      return `${deviceName} is currently online and functioning normally. The device is actively monitoring and collecting data. You can view real-time status and telemetry data in the device dashboard.`;
-    } else if (lowerQuery.includes('configure') || lowerQuery.includes('setup')) {
-      return `To configure ${deviceName}, you can access the device settings through the dashboard. The device supports various configuration options including network settings, sensor calibration, and alert thresholds.`;
-    } else {
-      return generateFallbackResponse(query);
-    }
-  };
+- **Setup and installation procedures**
+- **Maintenance schedules and procedures**
+- **Troubleshooting common issues**
+- **Technical specifications and capabilities**
+- **Safety precautions and warnings**
+- **Performance optimization tips**
 
-  const handleSuggestedQuestion = (question: string) => {
-    setNewMessage(question);
+Could you please be more specific about what you'd like to know? I'm here to help you get the most out of your device!`;
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
     }
   };
 
-  const formatTimestamp = (timestamp: Date) => {
-    return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow-sm border border-slate-200">
-      {/* Header with Device Information */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-t-lg">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center">
-            <Bot className="w-6 h-6 mr-2" />
-            <h2 className="text-lg font-semibold">AI Device Assistant</h2>
-          </div>
-          {onClose && (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                <Bot className="w-6 h-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">AI Assistant</h1>
+                <p className="text-blue-100">
+                  Ask me anything about {deviceName}
+                </p>
+              </div>
+            </div>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-white/20 rounded transition-colors"
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className="w-6 h-6" />
             </button>
-          )}
-        </div>
-        
-        {/* Device Information */}
-        <div className="bg-white/10 rounded-lg p-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-            <div className="flex items-center">
-              <Cpu className="w-4 h-4 mr-2 opacity-80" />
-              <span className="font-medium">{deviceName}</span>
-            </div>
-            {deviceType && (
-              <div className="flex items-center">
-                <Settings className="w-4 h-4 mr-2 opacity-80" />
-                <span>{deviceType}</span>
-              </div>
-            )}
-            {pdfFileName && (
-              <div className="flex items-center md:col-span-2">
-                <FileText className="w-4 h-4 mr-2 opacity-80" />
-                <span className="font-medium">Document: {pdfFileName}</span>
-              </div>
-            )}
           </div>
         </div>
-      </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[80%] rounded-lg p-3 ${
-                message.type === 'user'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-800'
-              }`}
-            >
-              <div className="flex items-start space-x-2">
-                {message.type === 'assistant' && (
-                  <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                    <Bot className="w-3 h-3 text-white" />
-                  </div>
-                )}
-                <div className="flex-1">
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  {message.type === 'assistant' && (
-                    <button
-                      aria-label="Copy message"
-                      title="Copy"
-                      onClick={() => navigator.clipboard.writeText(message.content)}
-                      className="mt-2 text-xs text-slate-500 hover:text-slate-700 inline-flex items-center gap-1"
-                    >
-                      <Clipboard className="w-3 h-3" /> Copy
-                    </button>
-                  )}
-                  {message.metadata && (
-                    <div className="mt-2 text-xs opacity-70">
-                      {message.metadata.source && (
-                        <div className="flex items-center">
-                          <FileText className="w-3 h-3 mr-1" />
-                          Source: {message.metadata.source}
+        {/* Chat Messages */}
+        <div className="flex-1 overflow-y-auto p-6 h-96">
+          <div className="space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                    message.type === 'user'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-900'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    {message.type === 'assistant' && (
+                      <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                        <Bot className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      {message.isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span className="text-sm">AI is thinking...</span>
                         </div>
-                      )}
-                      {message.metadata.pageNumber && (
-                        <div className="flex items-center">
-                          <BookOpen className="w-3 h-3 mr-1" />
-                          Page: {message.metadata.pageNumber}
-                        </div>
-                      )}
-                      {message.metadata.confidence && (
-                        <div className="flex items-center">
-                          <BarChart3 className="w-3 h-3 mr-1" />
-                          Confidence: {Math.round(message.metadata.confidence * 100)}%
+                      ) : (
+                        <div className="whitespace-pre-wrap text-sm">
+                          {message.content}
                         </div>
                       )}
                     </div>
-                  )}
-                  <div className="text-xs opacity-60 mt-1">
-                    {formatTimestamp(message.timestamp)}
+                    {message.type === 'user' && (
+                      <div className="flex-shrink-0 w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                        <User className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div className={`text-xs mt-2 ${
+                    message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
+                  }`}>
+                    {message.timestamp.toLocaleTimeString()}
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        ))}
-        
-        {isTyping && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-lg p-3">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                  <Bot className="w-3 h-3 text-white" />
-                </div>
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Suggested Questions */}
-      {messages.length === 1 && (
-        <div className="px-4 pb-4">
-          <p className="text-sm text-gray-600 mb-3">Try asking:</p>
-          <div className="flex flex-wrap gap-2">
-            {suggestedQuestions.map((question, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  setNewMessage(question);
-                  setTimeout(() => sendMessage(), 100);
-                }}
-                className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm hover:bg-blue-100 transition-colors"
-              >
-                {question}
-              </button>
             ))}
+            <div ref={messagesEndRef} />
           </div>
         </div>
-      )}
 
-      {/* Input Area */}
-      <div className="border-t border-slate-200 p-4">
-        <div className="flex space-x-3">
-          <div className="flex-1 relative">
-            <textarea
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Ask me anything about your device..."
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-              rows={1}
-              disabled={isTyping}
-              aria-label="Message input"
-            />
+        {/* Input Area */}
+        <div className="border-t border-gray-200 p-6">
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <textarea
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Ask me about setup, maintenance, troubleshooting, or specifications..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                rows={2}
+                disabled={isLoading}
+              />
+            </div>
+            <button
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() || isLoading}
+              className="flex-shrink-0 w-12 h-12 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </button>
           </div>
-          <button
-            onClick={sendMessage}
-            disabled={!newMessage.trim() || isTyping}
-            className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center"
-          >
-            <Send className="w-4 h-4" />
-          </button>
+          
+          {/* Quick Actions */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={() => setInputValue('How do I set up this device?')}
+              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+            >
+              Setup Guide
+            </button>
+            <button
+              onClick={() => setInputValue('What maintenance is required?')}
+              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+            >
+              Maintenance
+            </button>
+            <button
+              onClick={() => setInputValue('Help me troubleshoot issues')}
+              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+            >
+              Troubleshooting
+            </button>
+            <button
+              onClick={() => setInputValue('Show me technical specifications')}
+              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+            >
+              Specifications
+            </button>
+          </div>
         </div>
-        <div className="text-xs text-gray-500 mt-2 text-center">
-          Press Enter to send, Shift+Enter for new line
+
+        {/* Footer */}
+        <div className="border-t border-gray-200 p-6 bg-gray-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <FileText className="w-4 h-4" />
+              <span>Analyzed: {pdfFileName}</span>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setMessages([messages[0]])}
+                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reset Chat
+              </button>
+              <button
+                onClick={onContinue}
+                className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+              >
+                <Sparkles className="w-4 h-4" />
+                Continue to Dashboard
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

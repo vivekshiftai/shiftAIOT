@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   Plus, 
   Upload, 
@@ -77,6 +77,7 @@ import {
 import { deviceAPI, knowledgeAPI, ruleAPI } from '../../services/api';
 import { EnhancedOnboardingLoader } from '../Loading/EnhancedOnboardingLoader';
 import { OnboardingSuccess } from './OnboardingSuccess';
+import { DeviceChatInterface } from './DeviceChatInterface';
 
 interface DeviceFormData {
   deviceId: string;
@@ -167,14 +168,106 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const [stepLoadingMessage, setStepLoadingMessage] = useState('');
   const [showOnboardingLoader, setShowOnboardingLoader] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const [onboardingResult, setOnboardingResult] = useState<OnboardingResult | null>(null);
+  const [fieldValidation, setFieldValidation] = useState<Record<string, { isValid: boolean; message: string }>>({});
+
+  // Real-time validation
+  const validateField = useCallback((field: keyof DeviceFormData, value: any) => {
+    const validations: Record<string, { isValid: boolean; message: string }> = {};
+    
+    switch (field) {
+      case 'deviceId':
+        if (!value.trim()) {
+          validations[field] = { isValid: false, message: 'Device ID is required' };
+        } else if (value.length < 3) {
+          validations[field] = { isValid: false, message: 'Device ID must be at least 3 characters' };
+        } else if (!/^[A-Za-z0-9-_]+$/.test(value)) {
+          validations[field] = { isValid: false, message: 'Device ID can only contain letters, numbers, hyphens, and underscores' };
+        } else {
+          validations[field] = { isValid: true, message: '' };
+        }
+        break;
+        
+      case 'deviceName':
+        if (!value.trim()) {
+          validations[field] = { isValid: false, message: 'Device name is required' };
+        } else if (value.length < 2) {
+          validations[field] = { isValid: false, message: 'Device name must be at least 2 characters' };
+        } else {
+          validations[field] = { isValid: true, message: '' };
+        }
+        break;
+        
+      case 'productId':
+        if (!value.trim()) {
+          validations[field] = { isValid: false, message: 'Product ID is required' };
+        } else {
+          validations[field] = { isValid: true, message: '' };
+        }
+        break;
+        
+      case 'serialNumber':
+        if (!value.trim()) {
+          validations[field] = { isValid: false, message: 'Serial number is required' };
+        } else {
+          validations[field] = { isValid: true, message: '' };
+        }
+        break;
+        
+      case 'authenticationCredential':
+        if (!value.trim()) {
+          validations[field] = { isValid: false, message: 'Authentication credential is required' };
+        } else if (value.length < 6) {
+          validations[field] = { isValid: false, message: 'Credential must be at least 6 characters' };
+        } else {
+          validations[field] = { isValid: true, message: '' };
+        }
+        break;
+        
+      case 'networkConfig':
+        if (!value.trim()) {
+          validations[field] = { isValid: false, message: 'Network configuration is required' };
+        } else {
+          validations[field] = { isValid: true, message: '' };
+        }
+        break;
+        
+      case 'ipAddress':
+        if (value && !/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(value)) {
+          validations[field] = { isValid: false, message: 'Please enter a valid IP address' };
+        } else {
+          validations[field] = { isValid: true, message: '' };
+        }
+        break;
+        
+      case 'port':
+        if (value && (value < 1 || value > 65535)) {
+          validations[field] = { isValid: false, message: 'Port must be between 1 and 65535' };
+        } else {
+          validations[field] = { isValid: true, message: '' };
+        }
+        break;
+        
+      default:
+        validations[field] = { isValid: true, message: '' };
+    }
+    
+    return validations[field];
+  }, []);
 
   const handleInputChange = useCallback((field: keyof DeviceFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
+    
+    // Real-time validation
+    const validation = validateField(field, value);
+    setFieldValidation(prev => ({ ...prev, [field]: validation }));
+    
+    // Clear error if field becomes valid
+    if (validation.isValid && errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
-  }, [errors]);
+  }, [errors, validateField]);
 
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -348,7 +441,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       
       setOnboardingResult(result);
       setShowOnboardingLoader(false);
-      setShowSuccess(true);
+      setShowChat(true);
       
     } catch (error) {
       console.error('Error during onboarding process:', error);
@@ -398,11 +491,23 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   value={formData.deviceId}
                   onChange={(e) => handleInputChange('deviceId', e.target.value)}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.deviceId ? 'border-red-500' : 'border-slate-300'
+                    fieldValidation.deviceId?.isValid === false ? 'border-red-500' : 
+                    fieldValidation.deviceId?.isValid === true ? 'border-green-500' : 'border-slate-300'
                   }`}
                   placeholder="e.g., DEV-001"
                 />
-                {errors.deviceId && <p className="text-red-500 text-sm mt-1">{errors.deviceId}</p>}
+                {fieldValidation.deviceId?.isValid === false && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {fieldValidation.deviceId.message}
+                  </p>
+                )}
+                {fieldValidation.deviceId?.isValid === true && (
+                  <p className="text-green-500 text-sm mt-1 flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" />
+                    Valid device ID
+                  </p>
+                )}
               </div>
 
               <div>
@@ -414,11 +519,23 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   value={formData.deviceName}
                   onChange={(e) => handleInputChange('deviceName', e.target.value)}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.deviceName ? 'border-red-500' : 'border-slate-300'
+                    fieldValidation.deviceName?.isValid === false ? 'border-red-500' : 
+                    fieldValidation.deviceName?.isValid === true ? 'border-green-500' : 'border-slate-300'
                   }`}
                   placeholder="e.g., Temperature Sensor 001"
                 />
-                {errors.deviceName && <p className="text-red-500 text-sm mt-1">{errors.deviceName}</p>}
+                {fieldValidation.deviceName?.isValid === false && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {fieldValidation.deviceName.message}
+                  </p>
+                )}
+                {fieldValidation.deviceName?.isValid === true && (
+                  <p className="text-green-500 text-sm mt-1 flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" />
+                    Valid device name
+                  </p>
+                )}
               </div>
 
               <div>
@@ -430,11 +547,17 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   value={formData.productId}
                   onChange={(e) => handleInputChange('productId', e.target.value)}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.productId ? 'border-red-500' : 'border-slate-300'
+                    fieldValidation.productId?.isValid === false ? 'border-red-500' : 
+                    fieldValidation.productId?.isValid === true ? 'border-green-500' : 'border-slate-300'
                   }`}
                   placeholder="e.g., ST-2000"
                 />
-                {errors.productId && <p className="text-red-500 text-sm mt-1">{errors.productId}</p>}
+                {fieldValidation.productId?.isValid === false && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {fieldValidation.productId.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -446,11 +569,17 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   value={formData.serialNumber}
                   onChange={(e) => handleInputChange('serialNumber', e.target.value)}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.serialNumber ? 'border-red-500' : 'border-slate-300'
+                    fieldValidation.serialNumber?.isValid === false ? 'border-red-500' : 
+                    fieldValidation.serialNumber?.isValid === true ? 'border-green-500' : 'border-slate-300'
                   }`}
                   placeholder="e.g., SN123456789"
                 />
-                {errors.serialNumber && <p className="text-red-500 text-sm mt-1">{errors.serialNumber}</p>}
+                {fieldValidation.serialNumber?.isValid === false && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {fieldValidation.serialNumber.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -542,12 +671,24 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                     value={formData.authenticationCredential}
                     onChange={(e) => handleInputChange('authenticationCredential', e.target.value)}
                     className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                      errors.authenticationCredential ? 'border-red-500' : 'border-slate-300'
+                      fieldValidation.authenticationCredential?.isValid === false ? 'border-red-500' : 
+                      fieldValidation.authenticationCredential?.isValid === true ? 'border-green-500' : 'border-slate-300'
                     }`}
                     placeholder="Enter authentication key or token"
                   />
                 </div>
-                {errors.authenticationCredential && <p className="text-red-500 text-sm mt-1">{errors.authenticationCredential}</p>}
+                {fieldValidation.authenticationCredential?.isValid === false && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {fieldValidation.authenticationCredential.message}
+                  </p>
+                )}
+                {fieldValidation.authenticationCredential?.isValid === true && (
+                  <p className="text-green-500 text-sm mt-1 flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" />
+                    Valid credential
+                  </p>
+                )}
               </div>
 
               <div>
@@ -559,9 +700,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   <select
                     value={formData.connectionProtocol}
                     onChange={(e) => handleInputChange('connectionProtocol', e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                      errors.connectionProtocol ? 'border-red-500' : 'border-slate-300'
-                    }`}
+                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   >
                     <option value="MQTT">MQTT</option>
                     <option value="HTTP">HTTP</option>
@@ -570,7 +709,6 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                     <option value="UDP">UDP</option>
                   </select>
                 </div>
-                {errors.connectionProtocol && <p className="text-red-500 text-sm mt-1">{errors.connectionProtocol}</p>}
               </div>
 
               <div>
@@ -581,9 +719,18 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   type="text"
                   value={formData.ipAddress || ''}
                   onChange={(e) => handleInputChange('ipAddress', e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    fieldValidation.ipAddress?.isValid === false ? 'border-red-500' : 
+                    fieldValidation.ipAddress?.isValid === true ? 'border-green-500' : 'border-slate-300'
+                  }`}
                   placeholder="e.g., 192.168.1.100"
                 />
+                {fieldValidation.ipAddress?.isValid === false && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {fieldValidation.ipAddress.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -594,9 +741,18 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   type="number"
                   value={formData.port || ''}
                   onChange={(e) => handleInputChange('port', parseInt(e.target.value) || 8100)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    fieldValidation.port?.isValid === false ? 'border-red-500' : 
+                    fieldValidation.port?.isValid === true ? 'border-green-500' : 'border-slate-300'
+                  }`}
                   placeholder="e.g., 8100"
                 />
+                {fieldValidation.port?.isValid === false && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {fieldValidation.port.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -633,12 +789,24 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   value={formData.networkConfig}
                   onChange={(e) => handleInputChange('networkConfig', e.target.value)}
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                    errors.networkConfig ? 'border-red-500' : 'border-slate-300'
+                    fieldValidation.networkConfig?.isValid === false ? 'border-red-500' : 
+                    fieldValidation.networkConfig?.isValid === true ? 'border-green-500' : 'border-slate-300'
                   }`}
                   rows={4}
                   placeholder="Enter detailed network configuration (broker URL, credentials, SSL settings, etc.)"
                 />
-                {errors.networkConfig && <p className="text-red-500 text-sm mt-1">{errors.networkConfig}</p>}
+                {fieldValidation.networkConfig?.isValid === false && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {fieldValidation.networkConfig.message}
+                  </p>
+                )}
+                {fieldValidation.networkConfig?.isValid === true && (
+                  <p className="text-green-500 text-sm mt-1 flex items-center gap-1">
+                    <CheckCircle className="w-4 h-4" />
+                    Valid configuration
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -743,7 +911,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           </div>
         );
     }
-  }, [currentStep, formData, uploadedFile, handleInputChange, removeFile, handleFileUpload, errors]);
+  }, [currentStep, formData, uploadedFile, handleInputChange, removeFile, handleFileUpload, errors, fieldValidation]);
 
   if (showOnboardingLoader) {
     return (
@@ -753,6 +921,23 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         progress={0}
         onComplete={() => setShowOnboardingLoader(false)}
         pdfFileName={uploadedFile?.file.name}
+      />
+    );
+  }
+
+  if (showChat && onboardingResult) {
+    return (
+      <DeviceChatInterface
+        deviceName={onboardingResult.deviceName}
+        pdfFileName={onboardingResult.pdfFileName}
+        onClose={() => {
+          setShowChat(false);
+          onCancel();
+        }}
+        onContinue={() => {
+          setShowChat(false);
+          setShowSuccess(true);
+        }}
       />
     );
   }
@@ -774,10 +959,10 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-slate-800">Device Onboarding</h2>
               <p className="text-slate-600 mt-1">{getStepDescription(currentStep)}</p>
@@ -791,7 +976,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           </div>
 
           {/* Progress Steps */}
-          <div className="flex items-center justify-center mt-6">
+          <div className="flex items-center justify-center">
             {[1, 2, 3].map((step) => (
               <div key={step} className="flex items-center">
                 <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all ${
@@ -819,7 +1004,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
         <div className="p-6">
           <div className="mb-6">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-3">
               <div className="text-blue-600">
                 {getStepIcon(currentStep)}
               </div>
@@ -840,7 +1025,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         </div>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between pt-6 border-t border-slate-200 px-6 pb-6">
+        <div className="flex items-center justify-between p-6 border-t border-slate-200">
           <button
             type="button"
             onClick={prevStep}
