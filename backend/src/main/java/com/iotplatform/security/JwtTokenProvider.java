@@ -47,13 +47,39 @@ public class JwtTokenProvider {
     }
 
     public String getUsernameFromToken(String token) {
-        Claims claims = Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
 
-        return claims.getSubject();
+            return claims.getSubject();
+        } catch (ExpiredJwtException ex) {
+            // For expired tokens, we can still extract the username for refresh purposes
+            return ex.getClaims().getSubject();
+        } catch (Exception ex) {
+            logger.error("Error extracting username from token", ex);
+            return null;
+        }
+    }
+
+    public String getUsernameFromExpiredToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            return claims.getSubject();
+        } catch (ExpiredJwtException ex) {
+            // For expired tokens, we can still extract the username
+            return ex.getClaims().getSubject();
+        } catch (Exception ex) {
+            logger.error("Error extracting username from expired token", ex);
+            return null;
+        }
     }
 
     public boolean validateToken(String authToken) {

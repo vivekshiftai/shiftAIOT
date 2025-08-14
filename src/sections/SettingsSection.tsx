@@ -13,10 +13,13 @@ import {
   AlertTriangle,
   CheckCircle,
   Info,
-  Zap
+  Zap,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { userAPI } from '../services/api';
+import { ConversationConfigTab } from '../components/Settings/ConversationConfigTab';
+import { handleAuthError } from '../utils/authUtils';
 
 interface UserProfile {
   id?: string;
@@ -111,7 +114,9 @@ export const SettingsSection: React.FC = () => {
       if (!user) return;
       setIsLoading(true);
       setError(null);
+      
       try {
+        // Try to load profile from backend
         const res = await userAPI.getProfile();
         const profile = res.data;
         setUserProfile({
@@ -152,7 +157,7 @@ export const SettingsSection: React.FC = () => {
             showAlerts: !!p.dashboardShowAlerts,
             showPerformanceMetrics: !!p.dashboardShowPerformanceMetrics,
           });
-        } catch {
+        } catch (prefError: any) {
           // Fallback to localStorage if backend prefs missing
           const notifKey = `settings:notifications:${profile.id}`;
           const dashKey = `settings:dashboard:${profile.id}`;
@@ -162,7 +167,24 @@ export const SettingsSection: React.FC = () => {
           if (savedDash) setDashboardSettings(JSON.parse(savedDash));
         }
       } catch (e: any) {
-        setError(e?.message || 'Failed to load profile');
+        // If backend profile loading fails, use cached user data
+        if (e.response?.status === 401) {
+          console.warn('Profile loading failed due to authentication, using cached user data');
+          setUserProfile({
+            id: user.id,
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email || '',
+            phone: '',
+            role: user.role,
+            organization: user.organizationId || '',
+            location: '',
+            timezone: 'America/New_York'
+          });
+          // Don't show error for 401, just use cached data
+        } else {
+          setError(e?.message || 'Failed to load profile');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -218,6 +240,7 @@ export const SettingsSection: React.FC = () => {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+    { id: 'conversation', label: 'Conversation Configuration', icon: MessageSquare },
     { id: 'security', label: 'Security', icon: Shield }
   ];
 
@@ -236,7 +259,7 @@ export const SettingsSection: React.FC = () => {
       setUserProfile(prev => ({ ...prev, ...res.data }));
       setIsEditing(false);
     } catch (e: any) {
-      setError(e?.message || 'Failed to save profile');
+      setError(handleAuthError(e, 'Failed to save profile'));
     } finally {
       setIsLoading(false);
     }
@@ -498,6 +521,10 @@ export const SettingsSection: React.FC = () => {
     </div>
   );
 
+  const renderConversationTab = () => (
+    <ConversationConfigTab />
+  );
+
   const renderSecurityTab = () => (
     <div className="space-y-6">
       <h3 className="text-xl font-semibold text-slate-800">Security Settings</h3>
@@ -600,6 +627,7 @@ export const SettingsSection: React.FC = () => {
           {activeTab === 'profile' && renderProfileTab()}
           {activeTab === 'notifications' && renderNotificationsTab()}
           {activeTab === 'dashboard' && renderDashboardTab()}
+          {activeTab === 'conversation' && renderConversationTab()}
           {activeTab === 'security' && renderSecurityTab()}
         </div>
       </div>

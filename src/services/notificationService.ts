@@ -152,8 +152,11 @@ class NotificationService {
       const response = await notificationAPI.getAll();
       this.notifications = response.data;
       this.notifyListeners();
-    } catch (error) {
-      console.error('Failed to load notifications from database:', error);
+    } catch (error: any) {
+      // Don't log 401 errors as they're expected when token is invalid
+      if (error.response?.status !== 401) {
+        console.error('Failed to load notifications from database:', error);
+      }
       this.notifications = [];
       this.notifyListeners();
     }

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api, { authAPI, userAPI } from '../services/api';
 import { User } from '../types';
+import { validateToken } from '../utils/authUtils';
 
 interface AuthContextType {
   user: User | null;
@@ -11,6 +12,7 @@ interface AuthContextType {
   isAdmin: () => boolean;
   isUser: () => boolean;
   hasPermission: (permission: string) => boolean;
+  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,37 +33,88 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Validate token and load user profile
+  const validateTokenAndLoadProfile = async (token: string): Promise<boolean> => {
+    try {
+      const result = await validateToken();
+      
+      if (result.isValid && result.user) {
+        const profileData = result.user;
+        
+        const userData: User = {
+          id: profileData.id,
+          firstName: profileData.firstName || '',
+          lastName: profileData.lastName || '',
+          email: profileData.email,
+          role: profileData.role as 'ADMIN' | 'USER',
+          organizationId: profileData.organizationId || '',
+          enabled: profileData.enabled !== false,
+          createdAt: profileData.createdAt || new Date().toISOString(),
+          updatedAt: profileData.updatedAt || new Date().toISOString(),
+          lastLogin: profileData.lastLogin
+        };
+        
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        return true;
+      } else {
+        console.warn('Token validation failed:', result.error);
+        return false;
+      }
+    } catch (error: any) {
+      console.warn('Token validation failed:', error.message);
+      return false;
+    }
+  };
+
   // Check for existing session on mount
   useEffect(() => {
     const checkAuth = async () => {
       const savedUser = localStorage.getItem('user');
       const token = localStorage.getItem('token');
 
-      if (token) {
-        api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      if (!token) {
+        setIsLoading(false);
+        return;
       }
 
-      if (savedUser && token) {
+      // Set token in API headers
+      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+      if (savedUser) {
         try {
           const parsedUser = JSON.parse(savedUser);
           setUser(parsedUser);
-          try {
-            await userAPI.getProfile();
-          } catch {
+          
+          // Validate token in background
+          const isValid = await validateTokenAndLoadProfile(token);
+          if (!isValid) {
+            // Try token refresh
             try {
-              const res = await authAPI.refresh(token);
-              const newToken = res.data?.token;
+              const refreshResponse = await authAPI.refresh(token);
+              const newToken = refreshResponse.data?.token;
               if (newToken) {
                 localStorage.setItem('token', newToken);
                 api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+                
+                // Try to validate with new token
+                const newTokenValid = await validateTokenAndLoadProfile(newToken);
+                if (!newTokenValid) {
+                  console.warn('Token refresh succeeded but profile still unavailable');
+                }
               }
-            } catch {
-              // Do not clear session; keep user until explicit logout
+            } catch (refreshError: any) {
+              console.warn('Token refresh failed:', refreshError.message);
             }
           }
-        } catch {
-          // If user parse fails, keep token and wait for app flows; do not clear
+        } catch (parseError) {
+          console.warn('Failed to parse saved user:', parseError);
+          // Try to validate token and load profile
+          await validateTokenAndLoadProfile(token);
         }
+      } else {
+        // No saved user, try to load profile with token
+        await validateTokenAndLoadProfile(token);
       }
 
       setIsLoading(false);
@@ -75,6 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const interval = setInterval(async () => {
       const token = localStorage.getItem('token');
       if (!token) return;
+      
       try {
         const res = await authAPI.refresh(token);
         const newToken = res.data?.token;
@@ -83,10 +137,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
           window.dispatchEvent(new Event('storageChange'));
         }
-      } catch {
-        // ignore; interceptor will handle on demand
+      } catch (error) {
+        console.warn('Proactive token refresh failed:', error);
+        // Don't clear auth data, let the interceptor handle it
       }
-    }, 15 * 60 * 1000); // every 15 minutes
+    }, 10 * 60 * 1000); // every 10 minutes (reduced from 15 minutes)
+    
     return () => clearInterval(interval);
   }, []);
 
@@ -95,6 +151,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const handleStorageChange = () => {
       const savedUser = localStorage.getItem('user');
       const token = localStorage.getItem('token');
+      
       if (token) {
         api.defaults.headers.common.Authorization = `Bearer ${token}`;
       } else {
@@ -159,6 +216,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     window.dispatchEvent(new Event('storageChange'));
   };
 
+  const refreshUserProfile = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    try {
+      await validateTokenAndLoadProfile(token);
+    } catch (error) {
+      console.warn('Failed to refresh user profile:', error);
+    }
+  };
+
   const isAdmin = () => user?.role === 'ADMIN';
   const isUser = () => user?.role === 'USER';
 
@@ -178,7 +246,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, isAdmin, isUser, hasPermission }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isLoading, 
+      login, 
+      signup, 
+      logout, 
+      isAdmin, 
+      isUser, 
+      hasPermission,
+      refreshUserProfile 
+    }}>
       {children}
     </AuthContext.Provider>
   );

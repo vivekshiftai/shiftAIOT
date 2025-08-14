@@ -26,7 +26,8 @@ import {
   ArrowRight,
   Plus,
   Eye,
-  CheckSquare
+  CheckSquare,
+  Wrench
 } from 'lucide-react';
 
 export const DashboardSection: React.FC = () => {
@@ -63,7 +64,9 @@ export const DashboardSection: React.FC = () => {
       totalDevices,
       onlineDevices,
       maintenanceThisWeek: maintenanceThisWeek.length,
-      rulesCompletedThisWeek
+      rulesCompletedThisWeek,
+      totalRules: rules.length,
+      totalMaintenance: notifications.filter(n => n.title?.toLowerCase().includes('maintenance')).length
     };
   }, [devices, notifications, rules]);
 
@@ -114,6 +117,7 @@ export const DashboardSection: React.FC = () => {
   const handleShowActiveDevices = () => navigate('/devices?status=ONLINE');
   const handleShowMaintenanceWeek = () => navigate('/notifications?filter=maintenance&range=this-week');
   const handleShowRules = () => navigate('/rules');
+  const handleShowMaintenance = () => navigate('/maintenance');
   const handleAddDevice = () => navigate('/devices?add=true');
 
   if (loading) {
@@ -197,21 +201,21 @@ export const DashboardSection: React.FC = () => {
            className="hover-lift animate-fade-in"
          />
                  <StatsCard
-           title="Maintenance (This Week)"
-           value={metrics.maintenanceThisWeek}
-           subtitle="Scheduled tasks"
-           icon={Calendar}
-           color="yellow"
-           onClick={handleShowMaintenanceWeek}
+           title="Total Rules"
+           value={metrics.totalRules}
+           subtitle="Automation rules"
+           icon={Zap}
+           color="purple"
+           onClick={handleShowRules}
            className="hover-lift animate-fade-in"
          />
                  <StatsCard
-           title="Rules Completed"
-           value={metrics.rulesCompletedThisWeek}
-           subtitle="This week"
-           icon={CheckCircle}
-           color="purple"
-           onClick={handleShowRules}
+           title="Total Maintenance"
+           value={metrics.totalMaintenance}
+           subtitle="Scheduled tasks"
+           icon={Wrench}
+           color="yellow"
+           onClick={handleShowMaintenance}
            className="hover-lift animate-fade-in"
          />
       </div>

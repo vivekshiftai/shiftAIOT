@@ -13,6 +13,19 @@ const api = axios.create({
 
 let isRefreshing = false;
 let refreshPromise: Promise<string> | null = null;
+let failedQueue: Array<{ resolve: (value: string) => void; reject: (error: any) => void }> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+    } else {
+      resolve(token!);
+    }
+  });
+  
+  failedQueue = [];
+};
 
 // Add request interceptor to include auth token
 api.interceptors.request.use(
@@ -44,6 +57,7 @@ const refreshToken = async (): Promise<string> => {
   if (isRefreshing && refreshPromise) {
     return refreshPromise;
   }
+  
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
@@ -53,17 +67,25 @@ const refreshToken = async (): Promise<string> => {
         if (fromHeader) currentToken = fromHeader;
       }
       if (!currentToken) throw new Error('No token available for refresh');
+      
       const res = await api.post('/auth/refresh', { token: currentToken });
       const newToken = res.data?.token;
       if (!newToken) throw new Error('No token in refresh response');
+      
       localStorage.setItem('token', newToken);
       api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+      
+      processQueue(null, newToken);
       return newToken;
+    } catch (error) {
+      processQueue(error, null);
+      throw error;
     } finally {
       isRefreshing = false;
       refreshPromise = null;
     }
   })();
+  
   return refreshPromise;
 };
 
@@ -77,31 +99,36 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const url: string = originalRequest?.url || '';
 
-    console.error('API Response Error:', status, url, error.message);
+    // Only log errors that aren't 401 auth errors to reduce noise
+    if (status !== 401) {
+      console.error('API Response Error:', status, url, error.message);
+    }
 
     // Ignore refresh attempts for auth endpoints
     const isAuthEndpoint = url.includes('/auth/signin') || url.includes('/auth/signup') || url.includes('/auth/refresh');
 
     if (status === 401 && !isAuthEndpoint) {
+      // If this is a retry, return the error
+      if (originalRequest._retry) {
+        return Promise.reject(error);
+      }
+
+      originalRequest._retry = true;
+
+      // Queue this request
+      const retryOriginalRequest = new Promise<string>((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      });
+
       try {
-        if (originalRequest._retry) {
-          // Already retried, do not loop
-          return Promise.reject(error);
-        }
-
-        originalRequest._retry = true;
-
         // Attempt token refresh
-        const newToken = await refreshToken();
-        // Set header on defaults and this request
-        originalRequest.headers = originalRequest.headers || {};
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        await refreshToken();
         // Retry the original request
         return api(originalRequest);
       } catch (refreshErr: any) {
-        console.error('Token refresh failed:', refreshErr);
-        // Do NOT clear local storage or headers; allow UI to continue until user explicitly logs out
-        return Promise.reject(refreshErr);
+        console.warn('Token refresh failed, continuing with existing session:', refreshErr.message);
+        // Don't clear auth data, let the UI continue
+        return Promise.reject(error);
       }
     }
 
@@ -179,11 +206,13 @@ export const ruleAPI = {
   getStats: () => api.get('/rules/stats'),
 };
 
-// Maintenance API (mapped to devices or dedicated endpoint if available)
+// Maintenance API
 export const maintenanceAPI = {
-  // If backend has a dedicated endpoint, replace with that. For now, use device stats or a placeholder route.
-  // Example: api.get('/maintenance') when available.
-  getAll: () => api.get('/devices'), // fallback: list devices; UI will adapt until backend endpoint exists
+  getAll: () => api.get('/maintenance'),
+  getById: (id: string) => api.get(`/maintenance/${id}`),
+  create: (item: any) => api.post('/maintenance', item),
+  update: (id: string, item: any) => api.put(`/maintenance/${id}`, item),
+  delete: (id: string) => api.delete(`/maintenance/${id}`),
 };
 
 // Knowledge API
@@ -241,6 +270,17 @@ export const notificationAPI = {
   markAllAsRead: () => api.patch('/notifications/read-all'),
   
   getUnreadCount: () => api.get('/notifications/unread-count'),
+};
+
+// Conversation Config API
+export const conversationConfigAPI = {
+  getAll: () => api.get('/conversation-configs'),
+  getById: (id: string) => api.get(`/conversation-configs/${id}`),
+  create: (config: any) => api.post('/conversation-configs', config),
+  update: (id: string, config: any) => api.put(`/conversation-configs/${id}`, config),
+  delete: (id: string) => api.delete(`/conversation-configs/${id}`),
+  getActive: () => api.get('/conversation-configs/active'),
+  getByPlatformType: (platformType: string) => api.get(`/conversation-configs/platform/${platformType}`),
 };
 
 // Device Connection API

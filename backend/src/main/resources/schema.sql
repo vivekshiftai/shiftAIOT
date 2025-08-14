@@ -93,17 +93,20 @@ CREATE TABLE IF NOT EXISTS device_documentation (
 -- Device Maintenance table for onboarding flow
 CREATE TABLE IF NOT EXISTS device_maintenance (
     id VARCHAR(255) PRIMARY KEY,
+    task_name VARCHAR(255) NOT NULL,
     device_id VARCHAR(255) NOT NULL,
-    component_name VARCHAR(255) NOT NULL,
-    maintenance_type VARCHAR(100) NOT NULL, -- 'preventive', 'corrective', 'predictive'
+    device_name VARCHAR(255),
+    component_name VARCHAR(255),
+    maintenance_type VARCHAR(100), -- 'preventive', 'corrective', 'predictive'
     frequency VARCHAR(100) NOT NULL,
     last_maintenance DATE,
-    next_maintenance DATE,
+    next_maintenance DATE NOT NULL,
     description TEXT,
     priority VARCHAR(20) DEFAULT 'medium', -- 'low', 'medium', 'high', 'critical'
-    estimated_cost DECIMAL(10,2),
     assigned_to VARCHAR(255),
-    status VARCHAR(50) DEFAULT 'active', -- 'active', 'completed', 'cancelled'
+    notes TEXT,
+    status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'in_progress', 'completed', 'overdue'
+    organization_id VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
@@ -209,6 +212,19 @@ CREATE TABLE IF NOT EXISTS knowledge_documents (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Conversation Configurations table
+CREATE TABLE IF NOT EXISTS conversation_configs (
+    id VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    platform_name VARCHAR(100) NOT NULL,
+    platform_type VARCHAR(50) NOT NULL, -- 'slack', 'gmail', 'teams', 'google_chat', 'sms'
+    credentials JSON NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_organization ON users(organization_id);
@@ -220,6 +236,8 @@ CREATE INDEX IF NOT EXISTS idx_knowledge_organization ON knowledge_documents(org
 CREATE INDEX IF NOT EXISTS idx_device_documentation_device ON device_documentation(device_id);
 CREATE INDEX IF NOT EXISTS idx_device_maintenance_device ON device_maintenance(device_id);
 CREATE INDEX IF NOT EXISTS idx_device_safety_device ON device_safety_precautions(device_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_configs_user ON conversation_configs(user_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_configs_platform ON conversation_configs(platform_type);
 
 -- Insert default admin user if not exists
 INSERT INTO users (id, first_name, last_name, email, password, role, organization_id)

@@ -86,34 +86,41 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest refreshRequest) {
         try {
-            // Validate the current token
+            String username = null;
+            
+            // First try to get username from valid token
             if (jwtTokenProvider.validateToken(refreshRequest.getToken())) {
-                String username = jwtTokenProvider.getUsernameFromToken(refreshRequest.getToken());
-                
-                // Find user by email
-                User user = authService.findUserByEmail(username);
-                if (user == null) {
-                    return ResponseEntity.status(401).body("User not found");
-                }
-                
-                // Create authentication object
-                Authentication authentication = new UsernamePasswordAuthenticationToken(
-                    user.getEmail(), null, user.getAuthorities());
-                
-                // Generate new token
-                String newJwt = jwtTokenProvider.generateToken(authentication);
-                
-                return ResponseEntity.ok(new JwtResponse(
-                        newJwt,
-                        user.getId(),
-                        user.getFirstName() + " " + user.getLastName(),
-                        user.getEmail(),
-                        user.getRole().name(),
-                        user.getOrganizationId()
-                ));
+                username = jwtTokenProvider.getUsernameFromToken(refreshRequest.getToken());
             } else {
-                return ResponseEntity.status(401).body("Invalid or expired token");
+                // If token is expired, try to extract username from expired token
+                username = jwtTokenProvider.getUsernameFromExpiredToken(refreshRequest.getToken());
             }
+            
+            if (username == null) {
+                return ResponseEntity.status(401).body("Invalid token - cannot extract user information");
+            }
+            
+            // Find user by email
+            User user = authService.findUserByEmail(username);
+            if (user == null) {
+                return ResponseEntity.status(401).body("User not found");
+            }
+            
+            // Create authentication object
+            Authentication authentication = new UsernamePasswordAuthenticationToken(
+                user.getEmail(), null, user.getAuthorities());
+            
+            // Generate new token
+            String newJwt = jwtTokenProvider.generateToken(authentication);
+            
+            return ResponseEntity.ok(new JwtResponse(
+                    newJwt,
+                    user.getId(),
+                    user.getFirstName() + " " + user.getLastName(),
+                    user.getEmail(),
+                    user.getRole().name(),
+                    user.getOrganizationId()
+            ));
         } catch (Exception e) {
             return ResponseEntity.status(401).body("Token refresh failed: " + e.getMessage());
         }

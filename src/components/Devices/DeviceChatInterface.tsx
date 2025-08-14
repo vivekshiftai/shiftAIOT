@@ -6,7 +6,7 @@ import {
   Loader2, 
   FileText, 
   Sparkles,
-  MessageSquare,
+  MessageSquare, 
   X,
   RotateCcw
 } from 'lucide-react';
@@ -63,10 +63,10 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     };
 
     const assistantMessage: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      type: 'assistant',
+            id: (Date.now() + 1).toString(),
+            type: 'assistant',
       content: '',
-      timestamp: new Date(),
+            timestamp: new Date(),
       isLoading: true
     };
 
@@ -223,38 +223,38 @@ Could you please be more specific about what you'd like to know? I'm here to hel
                   Ask me anything about {deviceName}
                 </p>
               </div>
-            </div>
+          </div>
             <button
               onClick={onClose}
               className="p-2 hover:bg-white/20 rounded-lg transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
-          </div>
         </div>
+      </div>
 
         {/* Chat Messages */}
         <div className="flex-1 overflow-y-auto p-6 h-96">
           <div className="space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
                   className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                    message.type === 'user'
-                      ? 'bg-blue-600 text-white'
+                message.type === 'user'
+                  ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-900'
-                  }`}
-                >
+              }`}
+            >
                   <div className="flex items-start gap-3">
-                    {message.type === 'assistant' && (
-                      <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                        <Bot className="w-3 h-3 text-white" />
-                      </div>
-                    )}
-                    <div className="flex-1">
+                {message.type === 'assistant' && (
+                  <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                    <Bot className="w-3 h-3 text-white" />
+                  </div>
+                )}
+                <div className="flex-1">
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -265,24 +265,24 @@ Could you please be more specific about what you'd like to know? I'm here to hel
                           {message.content}
                         </div>
                       )}
-                    </div>
+                        </div>
                     {message.type === 'user' && (
                       <div className="flex-shrink-0 w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
                         <User className="w-3 h-3 text-white" />
-                      </div>
-                    )}
-                  </div>
+                        </div>
+                      )}
+                    </div>
                   <div className={`text-xs mt-2 ${
                     message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
                   }`}>
                     {message.timestamp.toLocaleTimeString()}
-                  </div>
+              </div>
+            </div>
+          </div>
+        ))}
+            <div ref={messagesEndRef} />
                 </div>
               </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
 
         {/* Input Area */}
         <div className="border-t border-gray-200 p-6">
@@ -309,8 +309,8 @@ Could you please be more specific about what you'd like to know? I'm here to hel
                 <Send className="w-5 h-5" />
               )}
             </button>
-          </div>
-          
+      </div>
+
           {/* Quick Actions */}
           <div className="mt-4 flex flex-wrap gap-2">
             <button
@@ -331,12 +331,12 @@ Could you please be more specific about what you'd like to know? I'm here to hel
             >
               Troubleshooting
             </button>
-            <button
+              <button
               onClick={() => setInputValue('Show me technical specifications')}
               className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
             >
               Specifications
-            </button>
+              </button>
           </div>
         </div>
 
@@ -346,7 +346,7 @@ Could you please be more specific about what you'd like to know? I'm here to hel
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <FileText className="w-4 h-4" />
               <span>Analyzed: {pdfFileName}</span>
-            </div>
+          </div>
             <div className="flex gap-3">
               <button
                 onClick={() => setMessages([messages[0]])}
@@ -355,14 +355,14 @@ Could you please be more specific about what you'd like to know? I'm here to hel
                 <RotateCcw className="w-4 h-4" />
                 Reset Chat
               </button>
-              <button
+          <button
                 onClick={onContinue}
                 className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-              >
+          >
                 <Sparkles className="w-4 h-4" />
                 Continue to Dashboard
-              </button>
-            </div>
+          </button>
+        </div>
           </div>
         </div>
       </div>

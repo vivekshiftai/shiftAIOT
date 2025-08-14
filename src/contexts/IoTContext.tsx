@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { deviceAPI, ruleAPI, notificationAPI } from '../services/api';
+import { deviceAPI, ruleAPI, notificationAPI, userAPI, authAPI } from '../services/api';
 import { Device, TelemetryData, Rule, Notification } from '../types';
 import { useAuth } from './AuthContext';
 import NotificationService from '../services/notificationService';
+import api from '../services/api';
+import { ensureValidToken } from '../utils/authUtils';
 
 interface IoTContextType {
   devices: Device[];
@@ -110,13 +112,28 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       return;
     }
 
-    // We have both user and token, start loading data
-    console.log('IoTContext - User and token found, starting data load');
-    setLoading(true);
-    
-    // Start loading data immediately without delay
-    console.log('IoTContext - Starting data load immediately');
-    loadData();
+    // Validate token before making API calls
+    const validateAndLoadData = async () => {
+      try {
+        const isValid = await ensureValidToken();
+        
+        if (!isValid) {
+          console.warn('Token validation failed, skipping data load');
+          setLoading(false);
+          return;
+        }
+        
+        // Token is valid, proceed with data loading
+        console.log('IoTContext - Token validated, starting data load');
+        setLoading(true);
+        await loadData();
+      } catch (error) {
+        console.error('IoTContext - Token validation failed:', error);
+        setLoading(false);
+      }
+    };
+
+    validateAndLoadData();
   }, [user, authLoading]); // Add authLoading dependency to wait for AuthContext
 
   const loadData = async () => {
@@ -160,8 +177,11 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         } else {
           setRules([]);
         }
-      } catch (error) {
-        console.error('IoTContext - Failed to load rules:', error);
+      } catch (error: any) {
+        // Don't log 401 errors as they're expected when token is invalid
+        if (error.response?.status !== 401) {
+          console.error('IoTContext - Failed to load rules:', error);
+        }
         setRules([]);
       }
 
@@ -175,8 +195,11 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         } else {
           setNotifications([]);
         }
-      } catch (error) {
-        console.error('IoTContext - Failed to load notifications:', error);
+      } catch (error: any) {
+        // Don't log 401 errors as they're expected when token is invalid
+        if (error.response?.status !== 401) {
+          console.error('IoTContext - Failed to load notifications:', error);
+        }
         setNotifications([]);
       }
 
