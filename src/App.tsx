@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavig
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { IoTProvider } from './contexts/IoTContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { AuthStatusIndicator } from './components/UI/AuthStatusIndicator';
+
 import { LoginForm } from './components/Auth/LoginForm';
 import { SignupForm } from './components/Auth/SignupForm';
 import { Sidebar } from './components/Layout/Sidebar';
@@ -156,7 +156,7 @@ const MainAppLayout: React.FC = () => {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
           
-          <AuthStatusIndicator />
+
         </main>
       </div>
       

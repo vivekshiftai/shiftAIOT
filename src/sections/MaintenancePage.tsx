@@ -460,7 +460,7 @@ const MaintenancePage: React.FC = () => {
         title="Create Maintenance Task"
         size="lg"
       >
-        <div className="space-y-6">
+        <div className="space-y-6 bg-secondary p-6 rounded-lg">
           {/* Basic Info */}
           <div>
             <label className="block text-sm font-medium text-primary mb-2">
@@ -470,7 +470,7 @@ const MaintenancePage: React.FC = () => {
               type="text"
               value={formData.taskName}
               onChange={(e) => setFormData(prev => ({ ...prev, taskName: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
                 formErrors.taskName ? 'border-error-500' : 'border-light'
               }`}
               placeholder="Enter task name"
@@ -487,7 +487,7 @@ const MaintenancePage: React.FC = () => {
             <textarea
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
               rows={3}
               placeholder="Describe the maintenance task"
             />
@@ -603,7 +603,8 @@ const MaintenancePage: React.FC = () => {
           </div>
         </div>
         
-        <div className="flex justify-end gap-3 mt-6">
+        {/* Fixed Footer */}
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-light bg-white dark:bg-gray-800 sticky bottom-0">
           <Button
             variant="outline"
             onClick={() => setShowAddModal(false)}
@@ -769,7 +770,8 @@ const MaintenancePage: React.FC = () => {
           </div>
         </div>
         
-        <div className="flex justify-end gap-3 mt-6">
+        {/* Fixed Footer */}
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-light bg-white dark:bg-gray-800 sticky bottom-0">
           <Button
             variant="outline"
             onClick={() => setShowEditModal(false)}

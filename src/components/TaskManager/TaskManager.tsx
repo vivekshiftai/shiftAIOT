@@ -24,7 +24,7 @@ export const TaskManager: React.FC = () => {
     title: '',
     description: '',
     status: 'pending' as const,
-    priority: 'medium' as const,
+    priority: 'medium' as 'low' | 'medium' | 'high',
     dueDate: '',
     tags: [] as string[]
   });
@@ -281,28 +281,28 @@ export const TaskManager: React.FC = () => {
         title="Add New Task"
         size="lg"
       >
-        <div className="space-y-4">
+        <div className="space-y-4 bg-secondary p-6 rounded-lg">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-primary mb-2">
               Title *
             </label>
             <input
               type="text"
               value={newTask.title}
               onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-              className="input"
+              className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-primary"
               placeholder="Enter task title"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-primary mb-2">
               Description
             </label>
             <textarea
               value={newTask.description}
               onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-              className="input resize-none"
+              className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-primary resize-none"
               rows={3}
               placeholder="Enter task description"
             />
@@ -310,13 +310,13 @@ export const TaskManager: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-primary mb-2">
                 Priority
               </label>
               <select
                 value={newTask.priority}
                 onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as Task['priority'] })}
-                className="input"
+                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-primary"
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -325,26 +325,26 @@ export const TaskManager: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-primary mb-2">
                 Due Date
               </label>
               <input
                 type="date"
                 value={newTask.dueDate}
                 onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
-                className="input"
+                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-primary"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-primary mb-2">
               Tags
             </label>
             <input
               type="text"
               placeholder="Enter tags separated by commas"
-              className="input"
+              className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-primary"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && e.currentTarget.value.trim()) {
                   const tags = e.currentTarget.value.split(',').map(tag => tag.trim()).filter(Boolean);
@@ -358,12 +358,12 @@ export const TaskManager: React.FC = () => {
                 {newTask.tags.map((tag, index) => (
                   <span
                     key={index}
-                    className="inline-flex items-center px-2 py-1 rounded text-xs bg-indigo-100 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
+                    className="inline-flex items-center px-2 py-1 rounded text-xs bg-primary-100 text-primary-700"
                   >
                     {tag}
                     <button
                       onClick={() => setNewTask({ ...newTask, tags: newTask.tags.filter((_, i) => i !== index) })}
-                      className="ml-1 hover:text-indigo-900"
+                      className="ml-1 hover:text-primary-900 transition-colors"
                     >
                       ×
                     </button>
@@ -373,7 +373,8 @@ export const TaskManager: React.FC = () => {
             )}
           </div>
 
-          <div className="flex gap-3 pt-4">
+          {/* Fixed Footer */}
+          <div className="flex gap-3 pt-4 mt-6 border-t border-light bg-white sticky bottom-0">
             <Button
               variant="secondary"
               onClick={() => setShowAddModal(false)}
@@ -404,28 +405,28 @@ export const TaskManager: React.FC = () => {
         size="lg"
       >
         {editingTask && (
-          <div className="space-y-4">
+          <div className="space-y-4 bg-secondary p-6 rounded-lg">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-primary mb-2">
                 Title *
               </label>
               <input
                 type="text"
                 value={editingTask.title}
                 onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
-                className="input"
+                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-primary"
                 placeholder="Enter task title"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-primary mb-2">
                 Description
               </label>
               <textarea
                 value={editingTask.description}
                 onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
-                className="input resize-none"
+                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-primary resize-none"
                 rows={3}
                 placeholder="Enter task description"
               />
@@ -433,13 +434,13 @@ export const TaskManager: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-primary mb-2">
                   Status
                 </label>
                 <select
                   value={editingTask.status}
                   onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value as Task['status'] })}
-                  className="input"
+                  className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-primary"
                 >
                   <option value="pending">Pending</option>
                   <option value="in-progress">In Progress</option>
@@ -448,13 +449,13 @@ export const TaskManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-primary mb-2">
                   Priority
                 </label>
                 <select
                   value={editingTask.priority}
                   onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value as Task['priority'] })}
-                  className="input"
+                  className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-primary"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -464,18 +465,19 @@ export const TaskManager: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-primary mb-2">
                 Due Date
               </label>
               <input
                 type="date"
                 value={editingTask.dueDate || ''}
                 onChange={(e) => setEditingTask({ ...editingTask, dueDate: e.target.value })}
-                className="input"
+                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-primary"
               />
             </div>
 
-            <div className="flex gap-3 pt-4">
+            {/* Fixed Footer */}
+            <div className="flex gap-3 pt-4 mt-6 border-t border-light bg-white sticky bottom-0">
               <Button
                 variant="secondary"
                 onClick={() => {

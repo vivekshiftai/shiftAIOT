@@ -118,17 +118,17 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule,
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-light">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-xl font-semibold text-primary">
               {rule ? 'Edit Rule' : 'Create New Rule'}
             </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              className="p-2 hover:bg-secondary rounded-lg transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 text-secondary" />
             </button>
           </div>
         </div>
@@ -137,25 +137,25 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule,
           {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-primary mb-2">
                 Rule Name
               </label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-primary"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-primary mb-2">
                 Status
               </label>
               <select
                 value={formData.active ? 'active' : 'inactive'}
                 onChange={(e) => setFormData(prev => ({ ...prev, active: e.target.value === 'active' }))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-primary"
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -164,25 +164,25 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule,
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-primary mb-2">
               Description
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white text-primary"
             />
           </div>
 
           {/* Conditions */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Conditions</h3>
+              <h3 className="text-lg font-medium text-primary">Conditions</h3>
               <button
                 type="button"
                 onClick={addCondition}
-                className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Add Condition
@@ -191,14 +191,14 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule,
 
             <div className="space-y-4">
               {formData.conditions.map((condition, index) => (
-                <div key={condition.id} className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                <div key={condition.id} className="p-4 border border-light rounded-lg bg-secondary">
                   <div className="grid grid-cols-5 gap-4 items-end">
                     {index > 0 && (
                       <div>
                         <select
                           value={condition.logicOperator || 'AND'}
                           onChange={(e) => updateCondition(index, 'logicOperator', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          className="w-full px-3 py-2 border border-light rounded-lg bg-white text-primary"
                         >
                           <option value="AND">AND</option>
                           <option value="OR">OR</option>
@@ -207,13 +207,13 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule,
                     )}
                     
                     <div className={index === 0 ? 'col-span-1' : ''}>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-primary mb-2">
                         Device
                       </label>
                       <select
                         value={condition.deviceId || ''}
                         onChange={(e) => updateCondition(index, 'deviceId', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        className="w-full px-3 py-2 border border-light rounded-lg bg-white text-primary"
                       >
                         <option value="">Select device</option>
                         {devices.map(device => (
@@ -223,13 +223,13 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule,
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-primary mb-2">
                         Metric
                       </label>
                       <select
                         value={condition.metric || ''}
                         onChange={(e) => updateCondition(index, 'metric', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        className="w-full px-3 py-2 border border-light rounded-lg bg-white text-primary"
                       >
                         <option value="temperature">Temperature</option>
                         <option value="humidity">Humidity</option>
@@ -238,13 +238,13 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule,
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-primary mb-2">
                         Operator
                       </label>
                       <select
                         value={condition.operator}
                         onChange={(e) => updateCondition(index, 'operator', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        className="w-full px-3 py-2 border border-light rounded-lg bg-white text-primary"
                       >
                         <option value=">">Greater than</option>
                         <option value="<">Less than</option>
@@ -255,21 +255,21 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule,
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-primary mb-2">
                         Value
                       </label>
                       <input
                         type="number"
                         value={condition.value}
                         onChange={(e) => updateCondition(index, 'value', parseFloat(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        className="w-full px-3 py-2 border border-light rounded-lg bg-white text-primary"
                       />
                     </div>
 
                     <button
                       type="button"
                       onClick={() => removeCondition(index)}
-                      className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                      className="p-2 text-error-500 hover:bg-error-50 rounded-lg transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -282,11 +282,11 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule,
           {/* Actions */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Actions</h3>
+              <h3 className="text-lg font-medium text-primary">Actions</h3>
               <button
                 type="button"
                 onClick={addAction}
-                className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 bg-success-500 text-white rounded-lg hover:bg-success-600 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 Add Action
@@ -295,15 +295,15 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule,
 
             <div className="space-y-4">
               {formData.actions.map((action, index) => (
-                <div key={action.id} className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                <div key={action.id} className="p-4 border border-light rounded-lg bg-secondary">
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-primary mb-2">
                         Action Type
                       </label>
                       <select
                         value={action.type}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        className="w-full px-3 py-2 border border-light rounded-lg bg-white text-primary"
                       >
                         <option value="notification">Send Notification</option>
                         <option value="webhook">Webhook</option>
@@ -312,21 +312,21 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule,
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      <label className="block text-sm font-medium text-primary mb-2">
                         Channels
                       </label>
                       <div className="flex gap-2">
                         <label className="flex items-center">
-                          <input type="checkbox" defaultChecked className="mr-1" />
-                          <span className="text-sm">Email</span>
+                          <input type="checkbox" defaultChecked className="mr-1 text-primary-500 border-light rounded focus:ring-primary-500" />
+                          <span className="text-sm text-primary">Email</span>
                         </label>
                         <label className="flex items-center">
-                          <input type="checkbox" className="mr-1" />
-                          <span className="text-sm">Slack</span>
+                          <input type="checkbox" className="mr-1 text-primary-500 border-light rounded focus:ring-primary-500" />
+                          <span className="text-sm text-primary">Slack</span>
                         </label>
                         <label className="flex items-center">
-                          <input type="checkbox" className="mr-1" />
-                          <span className="text-sm">Teams</span>
+                          <input type="checkbox" className="mr-1 text-primary-500 border-light rounded focus:ring-primary-500" />
+                          <span className="text-sm text-primary">Teams</span>
                         </label>
                       </div>
                     </div>
@@ -334,7 +334,7 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule,
                     <div className="flex items-end">
                       <button
                         type="button"
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                        className="p-2 text-error-500 hover:bg-error-50 rounded-lg transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -346,17 +346,17 @@ export const RuleBuilder: React.FC<RuleBuilderProps> = ({ isOpen, onClose, rule,
           </div>
 
           {/* Submit */}
-          <div className="flex justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex justify-end gap-4 pt-4 border-t border-light">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              className="px-4 py-2 text-secondary hover:text-primary transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
             >
               <Save className="w-4 h-4" />
               {rule ? 'Update Rule' : 'Create Rule'}

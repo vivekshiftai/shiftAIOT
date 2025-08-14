@@ -145,8 +145,9 @@ export const ConversationConfigTab: React.FC = () => {
       resetForm();
       fetchConfigs();
     } catch (err: any) {
+      // Don't show authentication errors - let the user continue using the app
       if (err.response?.status === 401) {
-        setError('Authentication required. Please log in again.');
+        console.warn('Authentication error in ConversationConfigTab, but not showing to user');
       } else {
         setError(err.response?.data?.message || 'Failed to save configuration');
       }
@@ -161,8 +162,9 @@ export const ConversationConfigTab: React.FC = () => {
       await conversationConfigAPI.delete(configId);
       fetchConfigs();
     } catch (err: any) {
+      // Don't show authentication errors - let the user continue using the app
       if (err.response?.status === 401) {
-        setError('Authentication required. Please log in again.');
+        console.warn('Authentication error in ConversationConfigTab delete, but not showing to user');
       } else {
         setError(err.response?.data?.message || 'Failed to delete configuration');
       }
@@ -378,7 +380,7 @@ export const ConversationConfigTab: React.FC = () => {
         title={editingConfig ? "Edit Platform Configuration" : "Add Platform Configuration"}
         size="lg"
       >
-        <div className="space-y-6">
+        <div className="space-y-6 bg-secondary p-6 rounded-lg">
           {/* Platform Name */}
           <div>
             <label className="block text-sm font-medium text-primary mb-2">
@@ -388,7 +390,7 @@ export const ConversationConfigTab: React.FC = () => {
               type="text"
               value={formData.platformName}
               onChange={(e) => setFormData(prev => ({ ...prev, platformName: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
                 formErrors.platformName ? 'border-error-500' : 'border-light'
               }`}
               placeholder="e.g., Production Slack, Team Gmail"
@@ -412,7 +414,7 @@ export const ConversationConfigTab: React.FC = () => {
                   credentials: {} // Reset credentials when platform changes
                 }));
               }}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
                 formErrors.platformType ? 'border-error-500' : 'border-light'
               }`}
             >
@@ -453,7 +455,7 @@ export const ConversationConfigTab: React.FC = () => {
                           [field.key]: e.target.value
                         }
                       }))}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
                         formErrors[`credential_${field.key}`] ? 'border-error-500' : 'border-light'
                       }`}
                       placeholder={`Enter ${field.label.toLowerCase()}`}
@@ -474,7 +476,7 @@ export const ConversationConfigTab: React.FC = () => {
               id="isActive"
               checked={formData.isActive}
               onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-              className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+              className="w-4 h-4 text-primary-500 border-light rounded focus:ring-primary-500"
             />
             <label htmlFor="isActive" className="text-sm font-medium text-primary">
               Active (Enable this configuration)

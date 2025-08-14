@@ -87,14 +87,14 @@ const Modal: React.FC<ModalProps> = ({
       
       {/* Modal */}
       <div
-        className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full transition-all duration-300 ${
+        className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-h-[90vh] flex flex-col transition-all duration-300 ${
           isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
         } ${getSizeClasses()} ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             {title && (
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                 {title}
@@ -118,7 +118,7 @@ const Modal: React.FC<ModalProps> = ({
         )}
         
         {/* Content */}
-        <div className="p-6">
+        <div className="flex-1 overflow-y-auto p-6">
           {children}
         </div>
       </div>

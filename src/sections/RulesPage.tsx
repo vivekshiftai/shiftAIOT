@@ -697,7 +697,8 @@ const RulesPage: React.FC = () => {
           </div>
         </div>
         
-        <div className="flex justify-end gap-3 mt-6">
+        {/* Fixed Footer */}
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-light bg-white dark:bg-gray-800 sticky bottom-0">
           <Button
             variant="outline"
             onClick={() => setShowAddModal(false)}
@@ -943,7 +944,8 @@ const RulesPage: React.FC = () => {
           </div>
         </div>
         
-        <div className="flex justify-end gap-3 mt-6">
+        {/* Fixed Footer */}
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-light bg-white dark:bg-gray-800 sticky bottom-0">
           <Button
             variant="outline"
             onClick={() => setShowEditModal(false)}
