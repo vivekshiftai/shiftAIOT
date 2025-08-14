@@ -86,10 +86,11 @@ export interface QueryRequest {
   max_results?: number;
 }
 
+// Simplified PDF Processing Service - API Calls Only
 class PDFProcessingService {
   private base = PDF_API_BASE;
 
-  // Upload PDF
+  // Upload PDF to external API
   async uploadPDF(file: File): Promise<PDFUploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
@@ -98,14 +99,14 @@ class PDFProcessingService {
     return res.json();
   }
 
-  // List PDFs
+  // List PDFs from external API
   async listPDFs(): Promise<PDFListResponse> {
     const res = await fetch(`${this.base}/pdfs`, { method: 'GET' });
     if (!res.ok) throw new Error(`Failed to list PDFs: ${res.status} ${res.statusText}`);
     return res.json();
   }
 
-  // Query
+  // Query PDF via external API
   async queryPDF(request: QueryRequest): Promise<QueryResponse> {
     const res = await fetch(`${this.base}/query`, {
       method: 'POST',
@@ -116,25 +117,36 @@ class PDFProcessingService {
     return res.json();
   }
 
-  // Generate rules
+  // Generate rules via external API
   async generateRules(pdfName: string): Promise<RulesGenerationResponse> {
     const res = await fetch(`${this.base}/generate-rules/${encodeURIComponent(pdfName)}`, { method: 'POST' });
     if (!res.ok) throw new Error(`Failed to generate rules: ${res.status} ${res.statusText} - ${await res.text()}`);
     return res.json();
   }
 
-  // Generate maintenance
+  // Generate maintenance data via external API
   async generateMaintenance(pdfName: string): Promise<{ maintenance_data: MaintenanceData[] }> {
     const res = await fetch(`${this.base}/generate-maintenance/${encodeURIComponent(pdfName)}`, { method: 'POST' });
     if (!res.ok) throw new Error(`Failed to generate maintenance: ${res.status} ${res.statusText} - ${await res.text()}`);
     return res.json();
   }
 
-  // Generate safety
+  // Generate safety precautions via external API
   async generateSafety(pdfName: string): Promise<{ safety_precautions: SafetyPrecaution[] }> {
     const res = await fetch(`${this.base}/generate-safety/${encodeURIComponent(pdfName)}`, { method: 'POST' });
     if (!res.ok) throw new Error(`Failed to generate safety: ${res.status} ${res.statusText} - ${await res.text()}`);
     return res.json();
+  }
+
+  // Health check for external API
+  async healthCheck(): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.base}/health`);
+      return response.ok;
+    } catch (error) {
+      console.error('PDF API health check failed:', error);
+      return false;
+    }
   }
 }
 

@@ -1,7 +1,7 @@
 import { getApiConfig } from '../config/api';
 
 // PDF Processing API Service
-// This service handles communication with your external PDF processing API
+// This service handles communication with external PDF processing API only
 
 export interface PDFProcessingRequest {
   deviceName: string;
@@ -26,6 +26,7 @@ export interface PDFProcessingResponse {
   error?: string;
 }
 
+// Simplified PDF API Service - External API Calls Only
 export class PDFApiService {
   private baseUrl: string;
 
@@ -33,6 +34,7 @@ export class PDFApiService {
     this.baseUrl = baseUrl || getApiConfig().PDF_PROCESSING_API_URL;
   }
 
+  // Process PDF via external API
   async processPDF(request: PDFProcessingRequest): Promise<PDFProcessingResponse> {
     try {
       const formData = new FormData();
@@ -75,6 +77,20 @@ export class PDFApiService {
     } catch (error) {
       console.error('PDF API health check failed:', error);
       return false;
+    }
+  }
+
+  // Get API status
+  async getStatus(): Promise<{ status: string; version?: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/status`);
+      if (!response.ok) {
+        throw new Error(`Status check failed: ${response.statusText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('PDF API status check failed:', error);
+      throw error;
     }
   }
 }

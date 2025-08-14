@@ -33,19 +33,36 @@ A powerful AI-powered knowledge base with:
 - **Document Processing**: Automatic document vectorization for AI search
 - **Real-time Chat**: Interactive chat with contextual responses
 
+### 🎨 Enhanced UI/UX Design
+Recent improvements include:
+
+- **Light Theme Consistency**: All forms and components now use a consistent light color palette
+- **Improved Form Styling**: Enhanced input fields, buttons, and modal designs across all components
+- **Better Visual Hierarchy**: Clear typography and spacing for improved readability
+- **Responsive Design**: Mobile-first approach with adaptive layouts
+
+### 🔐 Robust Authentication System
+Enhanced security features:
+
+- **JWT Token Management**: Secure token-based authentication with automatic refresh
+- **Role-Based Access Control**: Admin and User roles with specific permissions
+- **Maintenance Permissions**: Granular access control for maintenance operations
+- **Organization Isolation**: Multi-tenant architecture with data separation
+
 ## 🛠️ Technology Stack
 
 ### Frontend
 - **React 18** with TypeScript
 - **Tailwind CSS** for modern, responsive styling
 - **Lucide React** for consistent iconography
-- **Axios** for API communication
+- **Axios** for API communication with interceptors
 
 ### Backend
 - **Spring Boot 3** with Java 17
-- **Spring Security** for authentication
+- **Spring Security** for authentication and authorization
 - **Spring Data JPA** for database operations
 - **PostgreSQL** for data persistence
+- **JWT** for secure token-based authentication
 
 ## 📋 Features
 
@@ -65,11 +82,25 @@ A powerful AI-powered knowledge base with:
 - ✅ Chat history and context
 - ✅ Quick action buttons for common queries
 
+### Maintenance Management
+- ✅ Maintenance schedule creation and management
+- ✅ Task assignment and tracking
+- ✅ Priority-based task organization
+- ✅ Maintenance history and reporting
+
+### Rules & Automation
+- ✅ Rule creation and management
+- ✅ Condition-based automation
+- ✅ Action execution and monitoring
+- ✅ Rule validation and testing
+
 ### Security
 - ✅ JWT-based authentication
-- ✅ Role-based access control
+- ✅ Role-based access control (ADMIN/USER)
 - ✅ Organization-based data isolation
 - ✅ Secure file upload handling
+- ✅ Token refresh mechanism
+- ✅ Granular permissions for maintenance operations
 
 ## 🚀 Getting Started
 
@@ -126,6 +157,7 @@ shiftAIOT/
 │   │       ├── controller/  # REST API controllers
 │   │       ├── service/     # Business logic
 │   │       ├── model/       # Entity models
+│   │       ├── security/    # Security configuration
 │   │       └── repository/  # Data access layer
 │   └── src/main/resources/
 │       └── schema.sql      # Database schema
@@ -133,8 +165,12 @@ shiftAIOT/
 │   ├── components/
 │   │   ├── Devices/        # Device management components
 │   │   ├── Loading/        # Loading and progress components
-│   │   └── Layout/         # Layout components
+│   │   ├── Layout/         # Layout components
+│   │   ├── Rules/          # Rule management components
+│   │   └── Settings/       # Settings and configuration
+│   ├── sections/           # Page sections
 │   ├── services/           # API services
+│   ├── utils/              # Utility functions
 │   └── types/              # TypeScript type definitions
 └── README.md
 ```
@@ -182,10 +218,12 @@ The enhanced device onboarding process follows this sequence:
 
 ### Color Palette
 - **Primary**: Blue (#3B82F6)
+- **Secondary**: Light blue (#E0F2FE)
 - **Success**: Green (#10B981)
 - **Warning**: Orange (#F59E0B)
 - **Error**: Red (#EF4444)
 - **Neutral**: Gray scale for text and backgrounds
+- **Light Theme**: Consistent light backgrounds with dark text
 
 ### Typography
 - **Headings**: Bold, clear hierarchy
@@ -194,11 +232,28 @@ The enhanced device onboarding process follows this sequence:
 
 ## 🔧 API Endpoints
 
+### Authentication
+- `POST /auth/signin` - User sign in
+- `POST /auth/signup` - User registration
+- `POST /auth/refresh` - Refresh JWT token
+
 ### Device Management
 - `GET /devices` - Get all devices
 - `POST /devices` - Create new device
 - `PUT /devices/{id}` - Update device
 - `DELETE /devices/{id}` - Delete device
+
+### Maintenance Management
+- `GET /maintenance` - Get all maintenance tasks
+- `POST /maintenance` - Create new maintenance task
+- `PUT /maintenance/{id}` - Update maintenance task
+- `DELETE /maintenance/{id}` - Delete maintenance task
+
+### Rules Management
+- `GET /rules` - Get all rules
+- `POST /rules` - Create new rule
+- `PUT /rules/{id}` - Update rule
+- `DELETE /rules/{id}` - Delete rule
 
 ### Knowledge Base
 - `POST /knowledge/upload-pdf` - Upload PDF for processing
@@ -206,10 +261,18 @@ The enhanced device onboarding process follows this sequence:
 - `POST /knowledge/search` - Search documents
 - `POST /knowledge/chat` - Send chat message
 
-### Rules Generation
-- `POST /rules/generate-rules` - Generate AI rules from PDF
-- `GET /rules` - Get all rules
-- `POST /rules` - Create new rule
+## 🔐 Security Features
+
+### Authentication Flow
+1. **User Login**: JWT token generation with refresh token
+2. **Token Validation**: Automatic token validation on API requests
+3. **Token Refresh**: Automatic refresh when token expires
+4. **Logout**: Token invalidation and cleanup
+
+### Authorization
+- **ADMIN Role**: Full access to all features including maintenance management
+- **USER Role**: Limited access with maintenance read/write permissions
+- **Organization Isolation**: Data separation by organization ID
 
 ## 🚀 Deployment
 
