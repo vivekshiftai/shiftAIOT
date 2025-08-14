@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import api, { authAPI, userAPI } from '../services/api';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -33,73 +33,87 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Check for existing session on mount
   useEffect(() => {
-    const checkAuth = () => {
-      console.log('AuthProvider - Checking authentication...');
-      
+    const checkAuth = async () => {
       const savedUser = localStorage.getItem('user');
       const token = localStorage.getItem('token');
-      
-      console.log('AuthProvider - Saved user:', savedUser ? 'exists' : 'not found');
-      console.log('AuthProvider - Token:', token ? 'exists' : 'not found');
-      
+
+      if (token) {
+        api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      }
+
       if (savedUser && token) {
         try {
           const parsedUser = JSON.parse(savedUser);
-          console.log('AuthProvider - Setting user:', parsedUser);
           setUser(parsedUser);
+          // Optional: validate token by pinging profile; if fails, clear
+          try {
+            await userAPI.getProfile();
+          } catch {
+            // attempt one refresh
+            try {
+              const res = await authAPI.refresh(token);
+              const newToken = res.data?.token;
+              if (newToken) {
+                localStorage.setItem('token', newToken);
+                api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+              }
+            } catch {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              delete api.defaults.headers.common.Authorization;
+              setUser(null);
+            }
+          }
         } catch (error) {
-          console.error('AuthProvider - Failed to parse saved user:', error);
           localStorage.removeItem('user');
-          localStorage.removeItem('token');
           setUser(null);
         }
       } else {
-        console.log('AuthProvider - No saved user or token, setting user to null');
         setUser(null);
       }
-      
-      console.log('AuthProvider - Setting isLoading to false');
+
       setIsLoading(false);
     };
 
     checkAuth();
   }, []);
 
-  // Add a listener for storage changes to keep user state in sync
+  // Proactive token refresh timer
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'user' || e.key === 'token') {
-        console.log('AuthProvider - Storage changed, rechecking auth');
-        const savedUser = localStorage.getItem('user');
-        const token = localStorage.getItem('token');
-        
-        if (savedUser && token) {
-          try {
-            const parsedUser = JSON.parse(savedUser);
-            setUser(parsedUser);
-          } catch (error) {
-            setUser(null);
-          }
-        } else {
-          setUser(null);
+    const interval = setInterval(async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      try {
+        const res = await authAPI.refresh(token);
+        const newToken = res.data?.token;
+        if (newToken) {
+          localStorage.setItem('token', newToken);
+          api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+          window.dispatchEvent(new Event('storageChange'));
         }
+      } catch {
+        // ignore; interceptor will handle on demand
       }
-    };
+    }, 15 * 60 * 1000); // every 15 minutes
+    return () => clearInterval(interval);
+  }, []);
 
-    // Listen for storage events (cross-tab)
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Also listen for custom events (same-tab)
-    const handleCustomStorageChange = () => {
-      console.log('AuthProvider - Custom storage change detected');
+  // Keep user state in sync with storage
+  useEffect(() => {
+    const handleStorageChange = () => {
       const savedUser = localStorage.getItem('user');
       const token = localStorage.getItem('token');
-      
+      if (token) {
+        api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      } else {
+        delete api.defaults.headers.common.Authorization;
+      }
+
       if (savedUser && token) {
         try {
           const parsedUser = JSON.parse(savedUser);
           setUser(parsedUser);
-        } catch (error) {
+        } catch {
           setUser(null);
         }
       } else {
@@ -107,133 +121,72 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
 
-    window.addEventListener('storageChange', handleCustomStorageChange);
-    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('storageChange', handleStorageChange as any);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('storageChange', handleCustomStorageChange);
+      window.removeEventListener('storageChange', handleStorageChange as any);
     };
   }, []);
 
   const login = async (email: string, password: string) => {
-    try {
-      console.log('AuthContext - Starting login process...');
-      
-      const response = await authAPI.login({ email, password });
-      
-      console.log('AuthContext - Login response received:', response.data);
-      
-      const { token, id, name, email: userEmail, role, organizationId } = response.data;
-      
-      const user: User = {
-        id,
-        firstName: name.split(' ')[0],
-        lastName: name.split(' ').slice(1).join(' '),
-        email: userEmail,
-        role: role as 'ADMIN' | 'USER',
-        organizationId,
-        enabled: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString()
-      };
-      
-      console.log('AuthContext - Created user object:', user);
-      console.log('AuthContext - Storing token and user in localStorage...');
-      
-      // Store in localStorage first
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      
-      // Dispatch custom event for same-tab storage change
-      window.dispatchEvent(new Event('storageChange'));
-      
-      // Then update the state
-      console.log('AuthContext - Setting user state...');
-      setUser(user);
-      
-      console.log('AuthContext - Login completed successfully');
-      
-      // Force a small delay to ensure state is updated before any redirects
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-    } catch (error) {
-      console.error('AuthContext - Login failed with error:', error);
-      throw error;
-    }
+    const response = await authAPI.login({ email, password });
+    const { token, id, name, email: userEmail, role, organizationId } = response.data;
+
+    const user: User = {
+      id,
+      firstName: name.split(' ')[0],
+      lastName: name.split(' ').slice(1).join(' '),
+      email: userEmail,
+      role: role as 'ADMIN' | 'USER',
+      organizationId,
+      enabled: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastLogin: new Date().toISOString()
+    };
+
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+
+    window.dispatchEvent(new Event('storageChange'));
+    setUser(user);
   };
 
   const signup = async (data: { firstName: string; lastName: string; email: string; password: string; role: 'ADMIN' | 'USER' }) => {
-    
-    try {
-      const response = await authAPI.register(data);
-      const user = response.data;
-      
-      // Don't automatically log in after signup - user should login separately
-      setUser(null);
-    } catch (error) {
-      console.error('AuthProvider - Signup failed:', error);
-      throw error;
-    }
+    await authAPI.register(data);
+    setUser(null);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    delete api.defaults.headers.common.Authorization;
     setUser(null);
-    // Dispatch custom event for same-tab storage change
     window.dispatchEvent(new Event('storageChange'));
   };
 
-  const isAdmin = () => {
-    return user?.role === 'ADMIN';
-  };
-
-  const isUser = () => {
-    return user?.role === 'USER';
-  };
+  const isAdmin = () => user?.role === 'ADMIN';
+  const isUser = () => user?.role === 'USER';
 
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
-    
-    if (isAdmin()) {
-      return true; // Admin has all permissions
+    if (isAdmin()) return true;
+    switch (permission) {
+      case 'DEVICE_READ':
+      case 'RULE_READ':
+      case 'NOTIFICATION_READ':
+      case 'KNOWLEDGE_READ':
+      case 'USER_READ':
+        return true;
+      default:
+        return false;
     }
-    
-    // Check specific permissions for USER role
-            switch (permission) {
-          case 'DEVICE_READ':
-          case 'RULE_READ':
-          case 'NOTIFICATION_READ':
-          case 'KNOWLEDGE_READ':
-          case 'USER_READ':
-            return true; // USER can read devices, rules, notifications, knowledge, and users
-          case 'DEVICE_WRITE':
-          case 'DEVICE_DELETE':
-          case 'RULE_WRITE':
-          case 'RULE_DELETE':
-          case 'USER_WRITE':
-          case 'USER_DELETE':
-          case 'NOTIFICATION_WRITE':
-          case 'KNOWLEDGE_WRITE':
-          case 'KNOWLEDGE_DELETE':
-            return false; // USER cannot perform write/delete actions
-          default:
-            return false;
-        }
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      isLoading,
-      login,
-      signup,
-      logout,
-      isAdmin,
-      isUser,
-      hasPermission
-    }}>
+    <AuthContext.Provider value={{ user, isLoading, login, signup, logout, isAdmin, isUser, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

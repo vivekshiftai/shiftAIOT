@@ -5,31 +5,29 @@ import {
   BarChart3, 
   Shield, 
   Mail, 
-  Phone, 
-  MapPin, 
   Calendar,
   Save,
   Edit,
   Eye,
   EyeOff,
-  ToggleLeft,
-  ToggleRight,
   AlertTriangle,
   CheckCircle,
   Info,
   Zap
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { userAPI } from '../services/api';
 
 interface UserProfile {
+  id?: string;
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
+  phone?: string;
   role: string;
-  organization: string;
-  location: string;
-  timezone: string;
+  organization?: string;
+  location?: string;
+  timezone?: string;
   avatar?: string;
 }
 
@@ -62,15 +60,18 @@ export const SettingsSection: React.FC = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    firstName: 'John',
-    lastName: 'Smith',
-    email: user?.email || 'admin@shiftaiot.com',
-    phone: '+1 (555) 123-4567',
-    role: 'ORG_ADMIN',
-    organization: 'shiftAIOT Platform',
-    location: 'New York, NY',
+    id: undefined,
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    role: '',
+    organization: '',
+    location: '',
     timezone: 'America/New_York'
   });
 
@@ -104,14 +105,107 @@ export const SettingsSection: React.FC = () => {
     confirmPassword: ''
   });
 
-  // Update URL when tab changes
+  // Load profile and settings on mount
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tabParam = urlParams.get('tab');
-    if (tabParam && ['profile', 'notifications', 'dashboard', 'security'].includes(tabParam)) {
-      setActiveTab(tabParam);
+    const loadData = async () => {
+      if (!user) return;
+      setIsLoading(true);
+      setError(null);
+      try {
+        const res = await userAPI.getProfile();
+        const profile = res.data;
+        setUserProfile({
+          id: profile.id,
+          firstName: profile.firstName || '',
+          lastName: profile.lastName || '',
+          email: profile.email || '',
+          phone: profile.phone || '',
+          role: profile.role || user.role,
+          organization: profile.organizationId,
+          location: '',
+          timezone: 'America/New_York'
+        });
+
+        // Try load preferences from backend first
+        try {
+          const prefRes = await userAPI.getPreferences();
+          const p = prefRes.data;
+          setNotificationSettings({
+            emailNotifications: !!p.emailNotifications,
+            pushNotifications: !!p.pushNotifications,
+            deviceAlerts: !!p.deviceAlerts,
+            systemUpdates: !!p.systemUpdates,
+            weeklyReports: !!p.weeklyReports,
+            criticalAlerts: !!p.criticalAlerts,
+            performanceAlerts: !!p.performanceAlerts,
+            securityAlerts: !!p.securityAlerts,
+            maintenanceAlerts: !!p.maintenanceAlerts,
+            dataBackupAlerts: !!p.dataBackupAlerts,
+            userActivityAlerts: !!p.userActivityAlerts,
+            ruleTriggerAlerts: !!p.ruleTriggerAlerts,
+          });
+          setDashboardSettings({
+            showRealTimeCharts: !!p.dashboardShowRealTimeCharts,
+            autoRefresh: !!p.dashboardAutoRefresh,
+            refreshInterval: p.dashboardRefreshInterval ?? 30,
+            showDeviceStatus: !!p.dashboardShowDeviceStatus,
+            showAlerts: !!p.dashboardShowAlerts,
+            showPerformanceMetrics: !!p.dashboardShowPerformanceMetrics,
+          });
+        } catch {
+          // Fallback to localStorage if backend prefs missing
+          const notifKey = `settings:notifications:${profile.id}`;
+          const dashKey = `settings:dashboard:${profile.id}`;
+          const savedNotif = localStorage.getItem(notifKey);
+          const savedDash = localStorage.getItem(dashKey);
+          if (savedNotif) setNotificationSettings(JSON.parse(savedNotif));
+          if (savedDash) setDashboardSettings(JSON.parse(savedDash));
+        }
+      } catch (e: any) {
+        setError(e?.message || 'Failed to load profile');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, [user]);
+
+  const persistNotificationSettings = async () => {
+    if (!userProfile.id) return;
+    try {
+      await userAPI.savePreferences({
+        ...notificationSettings,
+        ...{
+          dashboardShowRealTimeCharts: dashboardSettings.showRealTimeCharts,
+          dashboardAutoRefresh: dashboardSettings.autoRefresh,
+          dashboardRefreshInterval: dashboardSettings.refreshInterval,
+          dashboardShowDeviceStatus: dashboardSettings.showDeviceStatus,
+          dashboardShowAlerts: dashboardSettings.showAlerts,
+          dashboardShowPerformanceMetrics: dashboardSettings.showPerformanceMetrics,
+        },
+      });
+    } catch {
+      localStorage.setItem(`settings:notifications:${userProfile.id}`, JSON.stringify(notificationSettings));
     }
-  }, []);
+  };
+  const persistDashboardSettings = async () => {
+    if (!userProfile.id) return;
+    try {
+      await userAPI.savePreferences({
+        ...notificationSettings,
+        ...{
+          dashboardShowRealTimeCharts: dashboardSettings.showRealTimeCharts,
+          dashboardAutoRefresh: dashboardSettings.autoRefresh,
+          dashboardRefreshInterval: dashboardSettings.refreshInterval,
+          dashboardShowDeviceStatus: dashboardSettings.showDeviceStatus,
+          dashboardShowAlerts: dashboardSettings.showAlerts,
+          dashboardShowPerformanceMetrics: dashboardSettings.showPerformanceMetrics,
+        },
+      });
+    } catch {
+      localStorage.setItem(`settings:dashboard:${userProfile.id}`, JSON.stringify(dashboardSettings));
+    }
+  };
 
   const handleTabChange = (tabId: string) => {
     setActiveTab(tabId);
@@ -127,21 +221,37 @@ export const SettingsSection: React.FC = () => {
     { id: 'security', label: 'Security', icon: Shield }
   ];
 
-  const handleSaveProfile = () => {
-    // Save profile logic
-    setIsEditing(false);
+  const handleSaveProfile = async () => {
+    if (!userProfile.id) return;
+    try {
+      setIsLoading(true);
+      setError(null);
+      const payload: Partial<UserProfile> = {
+        firstName: userProfile.firstName,
+        lastName: userProfile.lastName,
+        email: userProfile.email,
+        phone: userProfile.phone
+      };
+      const res = await userAPI.update(userProfile.id, payload);
+      setUserProfile(prev => ({ ...prev, ...res.data }));
+      setIsEditing(false);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to save profile');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSaveNotifications = () => {
-    // Save notification settings logic
+  const handleSaveNotifications = async () => {
+    await persistNotificationSettings();
   };
 
-  const handleSaveDashboard = () => {
-    // Save dashboard settings logic
+  const handleSaveDashboard = async () => {
+    await persistDashboardSettings();
   };
 
   const handleChangePassword = () => {
-    // Change password logic
+    // Placeholder: would call backend change-password endpoint if available
     setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
   };
 
@@ -159,7 +269,7 @@ export const SettingsSection: React.FC = () => {
       dataBackupAlerts: 'Backup completion and failure alerts',
       userActivityAlerts: 'User login and activity notifications',
       ruleTriggerAlerts: 'Alerts when automation rules are triggered'
-    };
+    } as const;
     return descriptions[key as keyof typeof descriptions] || '';
   };
 
@@ -177,12 +287,15 @@ export const SettingsSection: React.FC = () => {
       dataBackupAlerts: CheckCircle,
       userActivityAlerts: User,
       ruleTriggerAlerts: Zap
-    };
+    } as const;
     return icons[key as keyof typeof icons] || Bell;
   };
 
   const renderProfileTab = () => (
     <div className="space-y-6">
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
+      )}
       <div className="flex items-center justify-between">
         <h3 className="text-xl font-semibold gradient-text">Personal Information</h3>
         <button
@@ -230,7 +343,7 @@ export const SettingsSection: React.FC = () => {
             <label className="block text-sm font-medium text-slate-700 mb-2">Phone</label>
             <input
               type="tel"
-              value={userProfile.phone}
+              value={userProfile.phone || ''}
               onChange={(e) => setUserProfile(prev => ({ ...prev, phone: e.target.value }))}
               disabled={!isEditing}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
@@ -245,43 +358,6 @@ export const SettingsSection: React.FC = () => {
               className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-100 text-slate-600"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Organization</label>
-            <input
-              type="text"
-              value={userProfile.organization}
-              onChange={(e) => setUserProfile(prev => ({ ...prev, organization: e.target.value }))}
-              disabled={!isEditing}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Location</label>
-            <input
-              type="text"
-              value={userProfile.location}
-              onChange={(e) => setUserProfile(prev => ({ ...prev, location: e.target.value }))}
-              disabled={!isEditing}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Timezone</label>
-            <select
-              value={userProfile.timezone}
-              onChange={(e) => setUserProfile(prev => ({ ...prev, timezone: e.target.value }))}
-              disabled={!isEditing}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
-            >
-              <option value="America/New_York">Eastern Time (ET)</option>
-              <option value="America/Chicago">Central Time (CT)</option>
-              <option value="America/Denver">Mountain Time (MT)</option>
-              <option value="America/Los_Angeles">Pacific Time (PT)</option>
-              <option value="Europe/London">London (GMT)</option>
-              <option value="Europe/Paris">Paris (CET)</option>
-              <option value="Asia/Tokyo">Tokyo (JST)</option>
-            </select>
-          </div>
         </div>
 
         {isEditing && (
@@ -289,15 +365,17 @@ export const SettingsSection: React.FC = () => {
             <button
               onClick={() => setIsEditing(false)}
               className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+              disabled={isLoading}
             >
               Cancel
             </button>
             <button
               onClick={handleSaveProfile}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all disabled:opacity-50"
+              disabled={isLoading}
             >
               <Save className="w-4 h-4" />
-              Save Changes
+              {isLoading ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         )}
@@ -380,7 +458,7 @@ export const SettingsSection: React.FC = () => {
               </div>
               {key === 'refreshInterval' ? (
                 <select
-                  value={value}
+                  value={value as number}
                   onChange={(e) => setDashboardSettings(prev => ({ ...prev, [key]: parseInt(e.target.value) }))}
                   className="px-3 py-2 border border-slate-300 rounded-lg bg-white/80 text-slate-900"
                 >
@@ -391,7 +469,7 @@ export const SettingsSection: React.FC = () => {
                 </select>
               ) : (
                 <button
-                  onClick={() => setDashboardSettings(prev => ({ ...prev, [key]: !value }))}
+                  onClick={() => setDashboardSettings(prev => ({ ...prev, [key]: !(value as boolean) }))}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                     value ? 'bg-blue-600' : 'bg-slate-300'
                   }`}
@@ -516,6 +594,9 @@ export const SettingsSection: React.FC = () => {
         </div>
 
         <div className="p-6">
+          {isLoading && (
+            <div className="text-sm text-slate-500 mb-3">Loading...</div>
+          )}
           {activeTab === 'profile' && renderProfileTab()}
           {activeTab === 'notifications' && renderNotificationsTab()}
           {activeTab === 'dashboard' && renderDashboardTab()}

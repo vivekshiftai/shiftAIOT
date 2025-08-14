@@ -2,17 +2,17 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Filter, Search, Cpu, CheckCircle, X } from 'lucide-react';
 import { DeviceCard } from '../components/Devices/DeviceCard';
-import { DeviceOnboardingForm } from '../components/Devices/DeviceOnboardingForm';
+// import { DeviceOnboardingForm } from '../components/Devices/DeviceOnboardingForm';
+import { EnhancedDeviceOnboardingForm } from '../components/Devices/EnhancedDeviceOnboardingForm';
 import { useIoT } from '../contexts/IoTContext';
 import { useAuth } from '../contexts/AuthContext';
-import { deviceAPI } from '../services/api';
 import { Device } from '../types';
 import { DevicesLoading } from '../components/Loading/LoadingComponents';
 
 export const DevicesSection: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { devices, updateDeviceStatus, addDevice, loading } = useIoT();
+  const { devices, updateDeviceStatus, loading } = useIoT();
   const { isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -67,26 +67,6 @@ export const DevicesSection: React.FC = () => {
     setShowAddForm(false);
   };
 
-  // const handleTestModalClick = () => {
-  //   if (!isAdmin()) {
-  //     alert('This feature is only available to administrators.');
-  //     return;
-  //   }
-  //   console.log('Test modal button clicked');
-  //   setShowTestModal(true);
-  // };
-
-  // const handleRefreshDevices = async () => {
-  //   setIsRefreshing(true);
-  //   try {
-  //     await refreshDevices();
-  //   } catch (error) {
-  //     console.error('Failed to refresh devices:', error);
-  //   } finally {
-  //     setIsRefreshing(false);
-  //   }
-  // };
-
   const handleDeviceClick = (device: Device) => {
     navigate(`/devices/${device.id}`);
   };
@@ -133,8 +113,6 @@ export const DevicesSection: React.FC = () => {
             <Plus className="w-4 h-4" />
             Add Device
           </button>
-          
-
         </div>
       </div>
 
@@ -230,97 +208,13 @@ export const DevicesSection: React.FC = () => {
         Debug: showAddForm = {showAddForm.toString()}
       </div>
 
-
-
-             {/* Device Onboarding Form Modal */}
-       {showAddForm && (
-        <DeviceOnboardingForm
-          onSubmit={async (deviceData: any, file: any) => {
-            try {
-              console.log('DevicesSection - Submitting device data:', deviceData);
-              console.log('DevicesSection - File data:', file);
-              
-              // Create a complete device object with all required fields
-              const completeDeviceData: Omit<Device, 'id'> = {
-                name: deviceData.deviceName,
-                type: 'SENSOR', // Default type
-                status: 'ONLINE',
-                location: deviceData.location || '',
-                protocol: deviceData.connectionProtocol || 'MQTT',
-                lastSeen: new Date().toISOString(),
-                batteryLevel: 100,
-                organizationId: '1', // Will be set by backend
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                manufacturer: '',
-                model: deviceData.productId || '',
-                serialNumber: deviceData.serialNumber || '',
-                macAddress: '',
-                ipAddress: '',
-                port: 8100,
-                description: deviceData.metadata || '',
-                installationNotes: '',
-                maintenanceSchedule: '',
-                warrantyInfo: '',
-                wifiSsid: '',
-                mqttBroker: '',
-                mqttTopic: '',
-                powerSource: '',
-                powerConsumption: 0,
-                operatingTemperatureMin: 0,
-                operatingTemperatureMax: 50,
-                operatingHumidityMin: 0,
-                operatingHumidityMax: 100,
-                tags: []
-              };
-              
-              let createdDevice;
-              
-              // Create device using the appropriate method based on whether there's a file
-              if (file && file.file && file.status === 'success') {
-                console.log('DevicesSection - Creating device with file and PDF results');
-                try {
-                  // For files, we need to use the API directly
-                  const fileObject = { manual: file.file };
-                  
-                  // Include PDF results if available
-                  const deviceRequestData = {
-                    ...completeDeviceData,
-                    pdfResults: deviceData.pdfResults || null
-                  };
-                  
-                  const response = await deviceAPI.createWithFiles(deviceRequestData, fileObject);
-                  createdDevice = response.data;
-                } catch (fileError) {
-                  console.error('Failed to create device with file, trying without file:', fileError);
-                  // Fallback: create device without file
-                  createdDevice = await addDevice(completeDeviceData);
-                }
-              } else {
-                console.log('DevicesSection - Creating device without file');
-                // Use the addDevice function from IoTContext
-                createdDevice = await addDevice(completeDeviceData);
-              }
-              
-              console.log('DevicesSection - Device created successfully:', createdDevice);
-              
-              // Show success message
-              setSuccessMessage(`Device "${deviceData.deviceName}" has been successfully added to the platform!`);
-              
-              // Clear success message after 5 seconds
-              setTimeout(() => {
-                setSuccessMessage('');
-              }, 5000);
-              
-              // Close the form after a short delay to show success message
-              setTimeout(() => {
-                setShowAddForm(false);
-              }, 1000);
-              
-            } catch (error) {
-              console.error('DevicesSection - Failed to create device:', error);
-              alert(`Failed to create device: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            }
+      {/* Device Onboarding Form Modal */}
+      {showAddForm && (
+        <EnhancedDeviceOnboardingForm
+          onSubmit={(result) => {
+            setSuccessMessage(`Device "${result.deviceName}" has been successfully added to the platform!`);
+            setTimeout(() => setSuccessMessage(''), 5000);
+            setShowAddForm(false);
           }}
           onCancel={handleCancelAddDevice}
         />

@@ -11,21 +11,15 @@ const api = axios.create({
   timeout: 10000, // 10 second timeout
 });
 
+let isRefreshing = false;
+let refreshPromise: Promise<string> | null = null;
+
 // Add request interceptor to include auth token
 api.interceptors.request.use(
   (config) => {
-    
-    // For device endpoints, don't require authentication
-    if (config.url?.includes('/devices/') && !config.url?.includes('/auth/')) {
-      // Remove any existing Authorization header for device endpoints
-      delete config.headers.Authorization;
-      return config;
-    }
-    
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-    } else {
     }
     return config;
   },
@@ -35,28 +29,73 @@ api.interceptors.request.use(
   }
 );
 
+// Helper to refresh token
+const refreshToken = async (): Promise<string> => {
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const currentToken = localStorage.getItem('token');
+      if (!currentToken) throw new Error('No token available for refresh');
+      const res = await api.post('/auth/refresh', { token: currentToken });
+      const newToken = res.data?.token;
+      if (!newToken) throw new Error('No token in refresh response');
+      localStorage.setItem('token', newToken);
+      return newToken;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
+};
+
 // Add response interceptor to handle auth errors and token refresh
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   async (error) => {
-    console.error('API Response Error:', error.response?.status, error.config?.url, error.message);
-    
-    // Handle 401 errors - only clear auth data for non-login requests
-    if (error.response?.status === 401) {
-      const isLoginRequest = error.config?.url?.includes('/auth/signin');
-      
-      if (!isLoginRequest) {
-        console.log('API - 401 Unauthorized on non-login request, clearing auth data');
+    const originalRequest = error.config || {};
+    const status = error.response?.status;
+    const url: string = originalRequest?.url || '';
+
+    console.error('API Response Error:', status, url, error.message);
+
+    // Ignore refresh attempts for auth endpoints
+    const isAuthEndpoint = url.includes('/auth/signin') || url.includes('/auth/signup') || url.includes('/auth/refresh');
+
+    if (status === 401 && !isAuthEndpoint) {
+      try {
+        if (originalRequest._retry) {
+          // Already retried, clear and fail
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          return Promise.reject(error);
+        }
+
+        originalRequest._retry = true;
+
+        // Attempt token refresh
+        const newToken = await refreshToken();
+        // Set header on defaults and this request
+        api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        // Retry the original request
+        return api(originalRequest);
+      } catch (refreshErr) {
+        console.error('Token refresh failed:', refreshErr);
+        // Clear auth data on refresh failure
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        console.log('API - Auth data cleared');
-      } else {
-        console.log('API - 401 on login request, not clearing auth data (normal for invalid credentials)');
+        return Promise.reject(refreshErr);
       }
     }
-    
+
+    // For other errors just reject
     return Promise.reject(error);
   }
 );
@@ -76,6 +115,8 @@ export const authAPI = {
   }) => {
     return api.post('/auth/signup', userData);
   },
+
+  refresh: (token: string) => api.post('/auth/refresh', { token }),
 };
 
 // Device API
@@ -98,168 +139,28 @@ export const deviceAPI = {
       location: device.location || '',
       manufacturer: device.manufacturer || '',
       model: device.model || '',
-      serialNumber: device.serialNumber || '',
-      macAddress: device.macAddress || '',
-      ipAddress: device.ipAddress || '',
-              port: device.port || 8100,
-      firmware: device.firmware || '',
-      description: device.description || '',
-      installationNotes: device.installationNotes || '',
-      maintenanceSchedule: device.maintenanceSchedule || '',
-      warrantyInfo: device.warrantyInfo || '',
-      powerSource: device.powerSource || '',
-      powerConsumption: device.powerConsumption || 0,
-      operatingTemperatureMin: device.operatingTemperatureMin || 0,
-      operatingTemperatureMax: device.operatingTemperatureMax || 50,
-      operatingHumidityMin: device.operatingHumidityMin || 0,
-      operatingHumidityMax: device.operatingHumidityMax || 100,
-      wifiSsid: device.wifiSsid || '',
-      mqttBroker: device.mqttBroker || '',
-      mqttTopic: device.mqttTopic || '',
-      tags: device.tags || []
     };
     return api.post('/devices', processedDevice);
-  },
-  
-  createWithFiles: (deviceData: any, files: { manual?: File; datasheet?: File; certificate?: File }) => {
-    const formData = new FormData();
-    
-    // Ensure device data has proper enum values and handle null/undefined values
-    const processedDeviceData = {
-      ...deviceData,
-      status: deviceData.status?.toUpperCase() || 'ONLINE',
-      type: deviceData.type?.toUpperCase() || 'SENSOR',
-      protocol: deviceData.protocol?.toUpperCase() || 'MQTT',
-      // Ensure all required fields are present
-      name: deviceData.name || '',
-      location: deviceData.location || '',
-      manufacturer: deviceData.manufacturer || '',
-      model: deviceData.model || '',
-      serialNumber: deviceData.serialNumber || '',
-      macAddress: deviceData.macAddress || '',
-      ipAddress: deviceData.ipAddress || '',
-      port: deviceData.port || 8100,
-      firmware: deviceData.firmware || '',
-      description: deviceData.description || '',
-      installationNotes: deviceData.installationNotes || '',
-      maintenanceSchedule: deviceData.maintenanceSchedule || '',
-      warrantyInfo: deviceData.warrantyInfo || '',
-      powerSource: deviceData.powerSource || '',
-      powerConsumption: deviceData.powerConsumption || 0,
-      operatingTemperatureMin: deviceData.operatingTemperatureMin || 0,
-      operatingTemperatureMax: deviceData.operatingTemperatureMax || 50,
-      operatingHumidityMin: deviceData.operatingHumidityMin || 0,
-      operatingHumidityMax: deviceData.operatingHumidityMax || 100,
-      wifiSsid: deviceData.wifiSsid || '',
-      mqttBroker: deviceData.mqttBroker || '',
-      mqttTopic: deviceData.mqttTopic || '',
-      tags: deviceData.tags || []
-    };
-    
-    formData.append('deviceData', JSON.stringify(processedDeviceData));
-    
-    if (files.manual) formData.append('manualFile', files.manual);
-    if (files.datasheet) formData.append('datasheetFile', files.datasheet);
-    if (files.certificate) formData.append('certificateFile', files.certificate);
-    
-    return api.post('/devices/with-files', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-  },
-  
-  onboardWithAI: (deviceData: any, files: { manual?: File; datasheet?: File; certificate?: File }, aiRules: any[]) => {
-    const formData = new FormData();
-    
-    // Ensure device data has proper enum values and handle null/undefined values
-    const processedDeviceData = {
-      ...deviceData,
-      status: deviceData.status?.toUpperCase() || 'ONLINE',
-      type: deviceData.type?.toUpperCase() || 'SENSOR',
-      protocol: deviceData.protocol?.toUpperCase() || 'MQTT',
-      // Ensure all required fields are present
-      name: deviceData.name || '',
-      location: deviceData.location || '',
-      manufacturer: deviceData.manufacturer || '',
-      model: deviceData.model || '',
-      serialNumber: deviceData.serialNumber || '',
-      macAddress: deviceData.macAddress || '',
-      ipAddress: deviceData.ipAddress || '',
-      port: deviceData.port || 8100,
-      firmware: deviceData.firmware || '',
-      description: deviceData.description || '',
-      installationNotes: deviceData.installationNotes || '',
-      maintenanceSchedule: deviceData.maintenanceSchedule || '',
-      warrantyInfo: deviceData.warrantyInfo || '',
-      powerSource: deviceData.powerSource || '',
-      powerConsumption: deviceData.powerConsumption || 0,
-      operatingTemperatureMin: deviceData.operatingTemperatureMin || 0,
-      operatingTemperatureMax: deviceData.operatingTemperatureMax || 50,
-      operatingHumidityMin: deviceData.operatingHumidityMin || 0,
-      operatingHumidityMax: deviceData.operatingHumidityMax || 100,
-      wifiSsid: deviceData.wifiSsid || '',
-      mqttBroker: deviceData.mqttBroker || '',
-      mqttTopic: deviceData.mqttTopic || '',
-      tags: deviceData.tags || []
-    };
-    
-    formData.append('deviceData', JSON.stringify(processedDeviceData));
-    
-    if (files.manual) formData.append('manualFile', files.manual);
-    if (files.datasheet) formData.append('datasheetFile', files.datasheet);
-    if (files.certificate) formData.append('certificateFile', files.certificate);
-    
-    if (aiRules && aiRules.length > 0) {
-      formData.append('aiRules', JSON.stringify(aiRules));
-    }
-    
-    return api.post('/devices/onboard-with-ai', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
   },
   
   update: (id: string, device: any) => api.put(`/devices/${id}`, device),
   
   delete: (id: string) => api.delete(`/devices/${id}`),
   
-  updateStatus: (id: string, status: string) =>
-    api.patch(`/devices/${id}/status`, status, {
-      headers: { 'Content-Type': 'text/plain' }
-    }),
+  updateStatus: (id: string, status: string) => api.patch(`/devices/${id}/status`, { status }),
   
-  getTelemetry: (id: string, range: string = '1h') =>
-    api.get(`/devices/${id}/telemetry`, { params: { range } }),
-  
-  postTelemetry: (id: string, data: any) =>
-    api.post(`/devices/${id}/telemetry`, data),
-  
-  getStats: () => api.get('/devices/stats'),
-  
-  getDocumentation: (id: string) => api.get(`/devices/${id}/documentation`),
-  
-  downloadDocumentation: (id: string, type: string) => 
-    api.get(`/devices/${id}/documentation/${type}`, {
-      responseType: 'blob'
-    }),
+  postTelemetry: (deviceId: string, data: any) => api.post(`/devices/${deviceId}/telemetry`, data),
 };
 
 // Rule API
 export const ruleAPI = {
   getAll: () => api.get('/rules'),
-  
   getById: (id: string) => api.get(`/rules/${id}`),
-  
   create: (rule: any) => api.post('/rules', rule),
-  
   update: (id: string, rule: any) => api.put(`/rules/${id}`, rule),
-  
   delete: (id: string) => api.delete(`/rules/${id}`),
-  
   toggle: (id: string) => api.patch(`/rules/${id}/toggle`),
-  
+  // Added new endpoint for rules generation
   generateRules: (request: {
     pdf_filename: string;
     chunk_size?: number;
@@ -356,6 +257,13 @@ export const userAPI = {
   delete: (id: string) => api.delete(`/users/${id}`),
   
   getProfile: () => api.get('/users/profile'),
+  
+  changePassword: (payload: { currentPassword: string; newPassword: string; confirmPassword: string }) => 
+    api.post('/users/change-password', payload),
+  
+  // Preferences
+  getPreferences: () => api.get('/user-preferences'),
+  savePreferences: (prefs: any) => api.post('/user-preferences', prefs),
 };
 
 export default api;
