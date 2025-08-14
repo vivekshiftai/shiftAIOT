@@ -63,10 +63,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       } else {
         console.warn('AuthContext - Token validation failed:', result.error);
+        // Never logout user automatically - keep existing session
         return false;
       }
     } catch (error: any) {
       console.warn('AuthContext - Token validation failed:', error.message);
+      // Never logout user on validation errors - keep existing session
       return false;
     }
   };
@@ -118,21 +120,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 console.log('AuthContext - New token validation result:', newTokenValid);
                 if (!newTokenValid) {
                   console.warn('AuthContext - Token refresh succeeded but profile still unavailable');
+                  // Never logout user automatically - keep existing user data
                 }
               }
             } catch (refreshError: any) {
               console.warn('AuthContext - Token refresh failed:', refreshError.message);
+              // Never logout user on refresh failure - keep existing session
             }
           }
         } catch (parseError) {
           console.warn('AuthContext - Failed to parse saved user:', parseError);
-          // Try to validate token and load profile
+          // Try to validate token and load profile, but never logout automatically
           await validateTokenAndLoadProfile(token);
         }
       } else {
         console.log('AuthContext - No saved user, loading profile with token');
         // No saved user, try to load profile with token
-        await validateTokenAndLoadProfile(token);
+        const profileLoaded = await validateTokenAndLoadProfile(token);
+        if (!profileLoaded) {
+          console.warn('AuthContext - Failed to load profile, but never logging out automatically');
+          // Never logout user automatically - just keep loading state false
+        }
       }
 
       console.log('AuthContext - Authentication check complete, setting loading to false');

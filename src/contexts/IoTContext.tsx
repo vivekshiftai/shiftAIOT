@@ -118,8 +118,10 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         const isValid = await ensureValidToken();
         
         if (!isValid) {
-          console.warn('Token validation failed, skipping data load');
-          setLoading(false);
+          console.warn('IoTContext - Token validation failed, but continuing with data load attempt');
+          // Don't skip data load, try anyway with existing token
+          setLoading(true);
+          await loadData();
           return;
         }
         
@@ -129,7 +131,10 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         await loadData();
       } catch (error) {
         console.error('IoTContext - Token validation failed:', error);
-        setLoading(false);
+        // Don't stop loading, try to load data anyway
+        console.log('IoTContext - Attempting data load despite token validation failure');
+        setLoading(true);
+        await loadData();
       }
     };
 

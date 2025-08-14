@@ -53,12 +53,14 @@ export const validateToken = async (): Promise<TokenValidationResult> => {
           return { isValid: false, error: 'Token refresh failed - no new token received' };
         }
       } catch (refreshError: any) {
-        // Graceful fallback - don't clear auth data immediately
+        // Never automatically logout - keep session for graceful degradation
         console.warn('authUtils - Token refresh failed, but keeping session for graceful degradation:', refreshError.message);
         return { isValid: false, error: `Token refresh failed: ${refreshError.message}` };
       }
     } else {
       console.log('authUtils - Non-401 error:', error.message);
+      // For non-401 errors, don't treat as authentication failure
+      // This could be network issues, server errors, etc.
       return { isValid: false, error: `Profile validation failed: ${error.message}` };
     }
   }

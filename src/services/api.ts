@@ -119,17 +119,14 @@ api.interceptors.response.use(
           return api(originalRequest);
         } catch (refreshErr: any) {
           console.warn('Token refresh failed:', refreshErr.message);
-          // Clear auth data on refresh failure
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          delete api.defaults.headers.common.Authorization;
-          window.dispatchEvent(new Event('storageChange'));
+          // Never automatically logout the user - let them manually logout if needed
+          // Just reject the request and let the UI handle it gracefully
           return Promise.reject(error);
         }
       }
     }
 
-    // For other errors just reject
+    // For other errors just reject without logging out
     return Promise.reject(error);
   }
 );

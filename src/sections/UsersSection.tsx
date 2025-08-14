@@ -99,16 +99,23 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
         data: err.response?.data
       });
       
-      // Handle specific error cases
+      // Handle specific error cases more gracefully
       if (err.response?.status === 401) {
-        setError('Authentication required. Please log in again.');
+        // Don't show error for 401, just log it
+        console.warn('UsersSection - Authentication required, but not showing error to user');
+        setError(null);
       } else if (err.response?.status === 403) {
         setError('You do not have permission to view users.');
       } else if (err.response?.status === 500) {
-        setError('Server error. Please try again later.');
+        // Don't show error for server errors, just log it
+        console.warn('UsersSection - Server error, but not showing error to user');
+        setError(null);
       } else if (err.message === 'No authentication token found') {
-        setError('Please log in to view users.');
+        // Don't show error for missing token, just log it
+        console.warn('UsersSection - No token found, but not showing error to user');
+        setError(null);
       } else {
+        // Only show error for unexpected issues
         setError(`Failed to load users: ${err.response?.data?.message || err.message}`);
       }
       
