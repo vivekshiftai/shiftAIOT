@@ -202,12 +202,16 @@ CREATE TABLE IF NOT EXISTS user_permissions (
 
 -- Knowledge Documents table
 CREATE TABLE IF NOT EXISTS knowledge_documents (
-    id VARCHAR(255) PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    content TEXT,
-    document_type VARCHAR(50) NOT NULL,
-    processing_status VARCHAR(50) DEFAULT 'PENDING',
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    size BIGINT NOT NULL,
+    status VARCHAR(50) DEFAULT 'processing',
+    vectorized BOOLEAN DEFAULT false,
     organization_id VARCHAR(255) NOT NULL,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
