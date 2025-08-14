@@ -1,4 +1,5 @@
 import os
+import shutil
 import json
 import time
 import subprocess
@@ -41,23 +42,30 @@ class PDFProcessor:
         return self.models_dir
     
     def setup_mineru_config(self) -> str:
-        """Setup MinerU configuration"""
-        config_path = "mineru-config.json"
-        
+        """Setup MinerU configuration and ensure it's written to disk (absolute path)."""
+        config_path = str(Path.cwd() / "mineru-config.json")
+
+        # Use absolute paths and hyphenated keys expected by MinerU
+        models_dir_abs = str(Path(self.models_dir).resolve())
         config = {
-            "device_mode": settings.device_mode,
-            "models_dir": self.models_dir,
-            "formula_enable": settings.formula_enable,
-            "table_enable": settings.table_enable,
+            "device-mode": settings.device_mode,
+            "models-dir": models_dir_abs,
+            "formula-enable": settings.formula_enable,
+            "table-enable": settings.table_enable,
             "method": "auto"
         }
-        
+
         try:
             with open(config_path, "w") as f:
                 json.dump(config, f, indent=2)
-            logger.info(f"MinerU config created: {config_path}")
+                f.flush()
+                os.fsync(f.fileno())
+            # Verify and log
+            size_bytes = Path(config_path).stat().st_size if Path(config_path).exists() else 0
+            logger.info(f"MinerU config written to: {config_path} ({size_bytes} bytes)")
+            logger.info(f"MinerU config content: {json.dumps(config)}")
             return config_path
-            
+
         except Exception as e:
             logger.error(f"Failed to create MinerU config: {str(e)}")
             raise e
@@ -84,8 +92,8 @@ class PDFProcessor:
                 ["mineru", "-p", pdf_path, "-o", str(output_dir), "-m", "auto", "--verbose"],
                 ["mineru", "-p", pdf_path, "-o", str(output_dir), "-m", "auto", "-v"],
                 ["mineru", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"],
-                ["python", "-m", "mineru", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"],
-                ["python", "-m", "mineru.cli", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"]
+                ["python", "-u", "-m", "mineru", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"],
+                ["python", "-u", "-m", "mineru.cli", "-p", pdf_path, "-o", str(output_dir), "-m", "auto"]
             ]
             
             success = False
@@ -95,47 +103,42 @@ class PDFProcessor:
                 try:
                     logger.info(f"Trying MinerU command: {' '.join(cmd)}")
                     
-                    # Run with real-time output streaming
-                    logger.info(f"Starting MinerU process with live output...")
+                    # Prepare environment and enforce unbuffered output
+                    env = os.environ.copy()
+                    env["PYTHONUNBUFFERED"] = "1"
+
+                    # Prefer line-buffered stdio on Unix if available
+                    effective_cmd = cmd
+                    stdbuf_path = shutil.which("stdbuf")
+                    if stdbuf_path and effective_cmd[0] != "stdbuf":
+                        effective_cmd = [stdbuf_path, "-oL", "-eL", *effective_cmd]
+
+                    logger.info("Starting MinerU process with live output (unbuffered)...")
                     process = subprocess.Popen(
-                        cmd,
+                        effective_cmd,
                         stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
                         text=True,
                         bufsize=1,
-                        universal_newlines=True
+                        universal_newlines=True,
+                        env=env
                     )
-                    
+
                     # Stream output in real-time
                     stdout_lines = []
-                    stderr_lines = []
-                    
-                    while True:
-                        stdout_line = process.stdout.readline()
-                        stderr_line = process.stderr.readline()
-                        
-                        if stdout_line:
-                            stdout_lines.append(stdout_line.strip())
-                            logger.info(f"MinerU STDOUT: {stdout_line.strip()}")
-                        
-                        if stderr_line:
-                            stderr_lines.append(stderr_line.strip())
-                            logger.info(f"MinerU STDERR: {stderr_line.strip()}")
-                        
-                        # Check if process has finished
-                        if process.poll() is not None:
-                            # Read any remaining output
-                            remaining_stdout, remaining_stderr = process.communicate()
-                            if remaining_stdout:
-                                logger.info(f"MinerU remaining STDOUT: {remaining_stdout}")
-                            if remaining_stderr:
-                                logger.info(f"MinerU remaining STDERR: {remaining_stderr}")
-                            break
-                    
+                    for line in process.stdout:
+                        if not line:
+                            continue
+                        cleaned = line.rstrip()
+                        stdout_lines.append(cleaned)
+                        logger.info(f"MinerU: {cleaned}")
+
+                    process.wait()
+
                     result = type('Result', (), {
                         'returncode': process.returncode,
                         'stdout': '\n'.join(stdout_lines),
-                        'stderr': '\n'.join(stderr_lines)
+                        'stderr': ''
                     })()
                     
                     if result.returncode == 0:

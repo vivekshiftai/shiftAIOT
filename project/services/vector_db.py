@@ -11,10 +11,20 @@ from models.schemas import ChunkData, PDFListItem
 
 logger = logging.getLogger(__name__)
 
+_EMBEDDING_MODEL_SINGLETON: Optional[SentenceTransformer] = None
+
+
+def _get_embedding_model(model_name: str) -> SentenceTransformer:
+    global _EMBEDDING_MODEL_SINGLETON
+    if _EMBEDDING_MODEL_SINGLETON is None:
+        _EMBEDDING_MODEL_SINGLETON = SentenceTransformer(model_name)
+    return _EMBEDDING_MODEL_SINGLETON
+
+
 class VectorDatabase:
     def __init__(self):
         self.db_type = settings.vector_db_type
-        self.embedding_model = SentenceTransformer(settings.embedding_model)
+        self.embedding_model = _get_embedding_model(settings.embedding_model)
         self.client = self._initialize_client()
     
     def _initialize_client(self):
@@ -156,8 +166,18 @@ class VectorDatabase:
                     # Extract PDF name from collection name
                     pdf_name = collection.name.replace("pdf_", "").replace("_", " ")
                     
-                    # Get creation date from metadata
-                    created_at = collection.metadata.get("created_at")
+                    # Get creation date from metadata with robust fallback
+                    created_at = None
+                    meta = getattr(collection, "metadata", None) or {}
+                    if isinstance(meta, dict):
+                        created_at = meta.get("created_at")
+                    if not created_at:
+                        try:
+                            sample = coll.get(include=["metadatas"], limit=1)
+                            if sample and sample.get("metadatas"):
+                                created_at = sample["metadatas"][0].get("created_at")
+                        except Exception:
+                            created_at = None
                     if created_at:
                         created_at = datetime.fromisoformat(created_at)
                     else:
