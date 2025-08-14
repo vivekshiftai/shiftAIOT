@@ -106,8 +106,15 @@ class PDFProcessor:
                     # Prepare environment and enforce unbuffered output
                     env = os.environ.copy()
                     env["PYTHONUNBUFFERED"] = "1"
+                    env["PYTHONIOENCODING"] = "utf-8"
+                    # Constrain resource usage to reduce VM instability
+                    env.setdefault("TOKENIZERS_PARALLELISM", "false")
+                    env.setdefault("OMP_NUM_THREADS", "2")
+                    # Force CPU when configured to avoid GPU driver issues on VMs
+                    if str(settings.device_mode).lower() == "cpu":
+                        env["CUDA_VISIBLE_DEVICES"] = ""
 
-                    # Prefer line-buffered stdio on Unix if available
+                    # Prefer line-buffered stdio on Unix if available; try to preserve TTY-like behavior
                     effective_cmd = cmd
                     stdbuf_path = shutil.which("stdbuf")
                     if stdbuf_path and effective_cmd[0] != "stdbuf":
@@ -124,14 +131,33 @@ class PDFProcessor:
                         env=env
                     )
 
-                    # Stream output in real-time
+                    # Stream output in real-time without throttling
                     stdout_lines = []
-                    for line in process.stdout:
-                        if not line:
+                    buffer = ""
+                    while True:
+                        ch = process.stdout.read(1)
+                        if ch == "" and process.poll() is not None:
+                            if buffer:
+                                line = buffer.rstrip()
+                                logger.info(f"MinerU: {line}")
+                                stdout_lines.append(line)
+                            break
+                        if not ch:
                             continue
-                        cleaned = line.rstrip()
-                        stdout_lines.append(cleaned)
-                        logger.info(f"MinerU: {cleaned}")
+                        if ch == "\r":
+                            if buffer:
+                                line = buffer.rstrip()
+                                logger.info(f"MinerU: {line}")
+                                stdout_lines.append(line)
+                                buffer = ""
+                            continue
+                        if ch == "\n":
+                            line = buffer.rstrip()
+                            logger.info(f"MinerU: {line}")
+                            stdout_lines.append(line)
+                            buffer = ""
+                        else:
+                            buffer += ch
 
                     process.wait()
 
