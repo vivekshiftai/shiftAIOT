@@ -45,11 +45,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           const parsedUser = JSON.parse(savedUser);
           setUser(parsedUser);
-          // Optional: validate token by pinging profile; if fails, clear
           try {
             await userAPI.getProfile();
           } catch {
-            // attempt one refresh
             try {
               const res = await authAPI.refresh(token);
               const newToken = res.data?.token;
@@ -58,18 +56,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
               }
             } catch {
-              localStorage.removeItem('token');
-              localStorage.removeItem('user');
-              delete api.defaults.headers.common.Authorization;
-              setUser(null);
+              // Do not clear session; keep user until explicit logout
             }
           }
-        } catch (error) {
-          localStorage.removeItem('user');
-          setUser(null);
+        } catch {
+          // If user parse fails, keep token and wait for app flows; do not clear
         }
-      } else {
-        setUser(null);
       }
 
       setIsLoading(false);

@@ -1,7 +1,7 @@
-import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useState, Component, ErrorInfo, ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { IoTProvider, useIoT } from './contexts/IoTContext';
+import { IoTProvider } from './contexts/IoTContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LoginForm } from './components/Auth/LoginForm';
 import { SignupForm } from './components/Auth/SignupForm';
@@ -17,15 +17,9 @@ import { UsersSection } from './sections/UsersSection';
 import { ToastContainer, useToast } from './components/UI/Toast';
 import './styles/colors.css';
 
-import { BarChart3, Bell, Users, Settings, AlertTriangle } from 'lucide-react';
-import { 
-  AppLoadingScreen, 
-  DevicesEmptyLoading, 
-  AnalyticsEmptyLoading, 
-  UsersEmptyLoading, 
-  SettingsEmptyLoading,
-  IoTLoadingScreen
-} from './components/Loading/LoadingComponents';
+import { AlertTriangle } from 'lucide-react';
+import RulesPage from './sections/RulesPage';
+import MaintenancePage from './sections/MaintenancePage';
 import { SettingsSection } from './sections/SettingsSection';
 
 // Error Boundary Component
@@ -81,63 +75,42 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading: authLoading } = useAuth();
-  
-  console.log('ProtectedRoute - user:', user, 'authLoading:', authLoading);
-  console.log('ProtectedRoute - localStorage token:', localStorage.getItem('token') ? 'exists' : 'not found');
-  console.log('ProtectedRoute - localStorage user:', localStorage.getItem('user') ? 'exists' : 'not found');
-  
-  // Wait for AuthContext to finish loading first
   if (authLoading) {
-    console.log('ProtectedRoute - AuthContext still loading, showing loading screen');
-    return <AppLoadingScreen />;
+    return null;
   }
-  
-  // After AuthContext is done, check if we have a user
   if (!user) {
-    console.log('ProtectedRoute - No user after auth finished, redirecting to login');
     return <Navigate to="/login" replace />;
   }
-  
-  // We have a user, render the app (IoTContext will load data in background)
-  console.log('ProtectedRoute - User authenticated, rendering children');
   return <>{children}</>;
 };
 
 // Main App Layout Component
 const MainAppLayout: React.FC = () => {
-  const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  console.log('MainAppLayout - user:', user, 'location:', location.pathname);
-
-  // Get current section from URL
   const getCurrentSection = () => {
     const path = location.pathname;
     if (path === '/dashboard' || path === '/') return 'dashboard';
-    if (path.startsWith('/devices/')) return 'devices'; // Device details are part of devices section
+    if (path.startsWith('/devices/')) return 'devices';
     if (path === '/devices') return 'devices';
     if (path === '/knowledge') return 'knowledge';
     if (path === '/analytics') return 'analytics';
     if (path === '/notifications') return 'notifications';
     if (path === '/users') return 'users';
     if (path === '/settings') return 'settings';
+    if (path === '/rules') return 'rules';
+    if (path === '/maintenance') return 'maintenance';
     return 'dashboard';
   };
 
   const section = getCurrentSection();
 
-  // Theme is now handled by ThemeContext
-
-  // Handle section change
   const handleSectionChange = (section: string) => {
-    console.log('Navigating to section:', section);
     navigate(`/${section}`);
   };
-
-  console.log('MainAppLayout - Rendering main layout');
 
   return (
     <div className="min-h-screen bg-secondary flex">
@@ -177,6 +150,8 @@ const MainAppLayout: React.FC = () => {
             <Route path="/analytics" element={<AnalyticsSection />} />
             <Route path="/users" element={<UsersSection />} />
             <Route path="/settings" element={<SettingsSection />} />
+            <Route path="/rules" element={<RulesPage />} />
+            <Route path="/maintenance" element={<MaintenancePage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
@@ -188,8 +163,6 @@ const MainAppLayout: React.FC = () => {
 };
 
 function App() {
-  console.log('App component rendering');
-  
   return (
     <ErrorBoundary>
       <ThemeProvider>
@@ -205,7 +178,6 @@ function App() {
   );
 }
 
-// Component to handle toast notifications
 const AppWithToast: React.FC = () => {
   const { toasts, removeToast } = useToast();
 

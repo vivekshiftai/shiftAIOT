@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useIoT } from '../../contexts/IoTContext';
 
 export const AuthDebug: React.FC = () => {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, logout } = useAuth();
   const { loading: iotLoading, devices } = useIoT();
   const [testResult, setTestResult] = useState<string>('');
 
@@ -57,27 +57,21 @@ export const AuthDebug: React.FC = () => {
     setTestResult(result);
   };
 
-  const clearAuth = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.reload();
-  };
-
   return (
     <div className="p-6 bg-white rounded-lg shadow-lg">
       <h2 className="text-xl font-bold mb-4">Authentication Debug</h2>
       
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-                      <div>
-              <h3 className="font-semibold">Auth Context</h3>
-              <p>User: {user ? 'Logged in' : 'Not logged in'}</p>
-              <p>Loading: {authLoading ? 'Yes' : 'No'}</p>
-              {user && (
-                <p>Email: {user.email}</p>
-              )}
-            </div>
-          
+          <div>
+            <h3 className="font-semibold">Auth Context</h3>
+            <p>User: {user ? 'Logged in' : 'Not logged in'}</p>
+            <p>Loading: {authLoading ? 'Yes' : 'No'}</p>
+            {user && (
+              <p>Email: {user.email}</p>
+            )}
+          </div>
+        
           <div>
             <h3 className="font-semibold">IoT Context</h3>
             <p>Loading: {iotLoading ? 'Yes' : 'No'}</p>
@@ -92,12 +86,11 @@ export const AuthDebug: React.FC = () => {
           >
             Test Authentication
           </button>
-          
           <button
-            onClick={clearAuth}
+            onClick={logout}
             className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
           >
-            Clear Auth Data
+            Logout
           </button>
         </div>
         

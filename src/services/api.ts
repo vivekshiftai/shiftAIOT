@@ -24,10 +24,20 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('API Request Error:', error);
     return Promise.reject(error);
   }
 );
+
+// Helper to safely extract bearer token from axios defaults
+const getTokenFromDefaults = (): string | null => {
+  try {
+    const hdr = (api.defaults.headers.common as any)?.Authorization as string | undefined;
+    if (hdr && hdr.startsWith('Bearer ')) return hdr.slice(7);
+    return null;
+  } catch {
+    return null;
+  }
+};
 
 // Helper to refresh token
 const refreshToken = async (): Promise<string> => {
@@ -37,12 +47,17 @@ const refreshToken = async (): Promise<string> => {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
-      const currentToken = localStorage.getItem('token');
+      let currentToken = localStorage.getItem('token');
+      if (!currentToken) {
+        const fromHeader = getTokenFromDefaults();
+        if (fromHeader) currentToken = fromHeader;
+      }
       if (!currentToken) throw new Error('No token available for refresh');
       const res = await api.post('/auth/refresh', { token: currentToken });
       const newToken = res.data?.token;
       if (!newToken) throw new Error('No token in refresh response');
       localStorage.setItem('token', newToken);
+      api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
       return newToken;
     } finally {
       isRefreshing = false;
@@ -70,9 +85,7 @@ api.interceptors.response.use(
     if (status === 401 && !isAuthEndpoint) {
       try {
         if (originalRequest._retry) {
-          // Already retried, clear and fail
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          // Already retried, do not loop
           return Promise.reject(error);
         }
 
@@ -81,16 +94,13 @@ api.interceptors.response.use(
         // Attempt token refresh
         const newToken = await refreshToken();
         // Set header on defaults and this request
-        api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
         originalRequest.headers = originalRequest.headers || {};
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         // Retry the original request
         return api(originalRequest);
-      } catch (refreshErr) {
+      } catch (refreshErr: any) {
         console.error('Token refresh failed:', refreshErr);
-        // Clear auth data on refresh failure
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        // Do NOT clear local storage or headers; allow UI to continue until user explicitly logs out
         return Promise.reject(refreshErr);
       }
     }
@@ -166,6 +176,14 @@ export const ruleAPI = {
     chunk_size?: number;
     rule_types?: string[];
   }) => api.post('/rules/generate-rules', request),
+  getStats: () => api.get('/rules/stats'),
+};
+
+// Maintenance API (mapped to devices or dedicated endpoint if available)
+export const maintenanceAPI = {
+  // If backend has a dedicated endpoint, replace with that. For now, use device stats or a placeholder route.
+  // Example: api.get('/maintenance') when available.
+  getAll: () => api.get('/devices'), // fallback: list devices; UI will adapt until backend endpoint exists
 };
 
 // Knowledge API
