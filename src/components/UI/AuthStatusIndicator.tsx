@@ -35,10 +35,6 @@ export const AuthStatusIndicator: React.FC<AuthStatusIndicatorProps> = ({ classN
     };
 
     checkAuthStatus();
-
-    // Check auth status every 3 minutes (reduced from 5 minutes)
-    const interval = setInterval(checkAuthStatus, 3 * 60 * 1000);
-    return () => clearInterval(interval);
   }, [user]);
 
   if (!user) return null;

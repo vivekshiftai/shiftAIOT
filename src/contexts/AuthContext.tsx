@@ -35,11 +35,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Validate token and load user profile
   const validateTokenAndLoadProfile = async (token: string): Promise<boolean> => {
+    console.log('AuthContext - validateTokenAndLoadProfile called');
     try {
       const result = await validateToken();
+      console.log('AuthContext - validateToken result:', result);
       
       if (result.isValid && result.user) {
         const profileData = result.user;
+        console.log('AuthContext - Profile data received:', profileData);
         
         const userData: User = {
           id: profileData.id,
@@ -54,15 +57,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           lastLogin: profileData.lastLogin
         };
         
+        console.log('AuthContext - Setting user data:', userData);
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
         return true;
       } else {
-        console.warn('Token validation failed:', result.error);
+        console.warn('AuthContext - Token validation failed:', result.error);
         return false;
       }
     } catch (error: any) {
-      console.warn('Token validation failed:', error.message);
+      console.warn('AuthContext - Token validation failed:', error.message);
       return false;
     }
   };
@@ -70,80 +74,72 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Check for existing session on mount
   useEffect(() => {
     const checkAuth = async () => {
+      console.log('AuthContext - Starting authentication check');
       const savedUser = localStorage.getItem('user');
       const token = localStorage.getItem('token');
 
+      console.log('AuthContext - Token exists:', !!token);
+      console.log('AuthContext - Saved user exists:', !!savedUser);
+
       if (!token) {
+        console.log('AuthContext - No token found, setting loading to false');
         setIsLoading(false);
         return;
       }
 
       // Set token in API headers
       api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      console.log('AuthContext - Token set in API headers');
 
       if (savedUser) {
         try {
           const parsedUser = JSON.parse(savedUser);
+          console.log('AuthContext - Setting user from localStorage:', parsedUser);
           setUser(parsedUser);
           
           // Validate token in background
+          console.log('AuthContext - Validating token in background');
           const isValid = await validateTokenAndLoadProfile(token);
+          console.log('AuthContext - Token validation result:', isValid);
+          
           if (!isValid) {
+            console.log('AuthContext - Token invalid, attempting refresh');
             // Try token refresh
             try {
               const refreshResponse = await authAPI.refresh(token);
               const newToken = refreshResponse.data?.token;
               if (newToken) {
+                console.log('AuthContext - Token refresh successful');
                 localStorage.setItem('token', newToken);
                 api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
                 
                 // Try to validate with new token
                 const newTokenValid = await validateTokenAndLoadProfile(newToken);
+                console.log('AuthContext - New token validation result:', newTokenValid);
                 if (!newTokenValid) {
-                  console.warn('Token refresh succeeded but profile still unavailable');
+                  console.warn('AuthContext - Token refresh succeeded but profile still unavailable');
                 }
               }
             } catch (refreshError: any) {
-              console.warn('Token refresh failed:', refreshError.message);
+              console.warn('AuthContext - Token refresh failed:', refreshError.message);
             }
           }
         } catch (parseError) {
-          console.warn('Failed to parse saved user:', parseError);
+          console.warn('AuthContext - Failed to parse saved user:', parseError);
           // Try to validate token and load profile
           await validateTokenAndLoadProfile(token);
         }
       } else {
+        console.log('AuthContext - No saved user, loading profile with token');
         // No saved user, try to load profile with token
         await validateTokenAndLoadProfile(token);
       }
 
+      console.log('AuthContext - Authentication check complete, setting loading to false');
       setIsLoading(false);
     };
 
     checkAuth();
-  }, []);
-
-  // Proactive token refresh timer
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      
-      try {
-        const res = await authAPI.refresh(token);
-        const newToken = res.data?.token;
-        if (newToken) {
-          localStorage.setItem('token', newToken);
-          api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
-          window.dispatchEvent(new Event('storageChange'));
-        }
-      } catch (error) {
-        console.warn('Proactive token refresh failed:', error);
-        // Don't clear auth data, let the interceptor handle it
-      }
-    }, 10 * 60 * 1000); // every 10 minutes (reduced from 15 minutes)
-    
-    return () => clearInterval(interval);
   }, []);
 
   // Keep user state in sync with storage

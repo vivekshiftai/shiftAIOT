@@ -356,9 +356,9 @@ const MaintenancePage: React.FC = () => {
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${
-                  task.status === 'completed' ? 'bg-green-500' :
-                  task.status === 'in_progress' ? 'bg-blue-500' :
-                  isOverdue(task.nextMaintenance) ? 'bg-red-500' : 'bg-yellow-500'
+                  task.status === 'completed' ? 'bg-success-500' :
+                  task.status === 'in_progress' ? 'bg-primary-500' :
+                  isOverdue(task.nextMaintenance) ? 'bg-error-500' : 'bg-warning-500'
                 }`} />
                 <h3 className="font-semibold text-primary">{task.taskName}</h3>
               </div>
@@ -386,31 +386,19 @@ const MaintenancePage: React.FC = () => {
             )}
             
             <div className="space-y-3 mb-4">
-                             <div className="flex items-center gap-2 text-sm">
-                 <Cog className="w-4 h-4 text-primary" />
-                 <span className="text-secondary">Device:</span>
-                 <span className="font-medium">{task.deviceName}</span>
-               </div>
-              
-              <div className="flex items-center gap-2 text-sm">
-                <Repeat className="w-4 h-4 text-secondary" />
-                <span className="text-secondary">Frequency:</span>
-                <span className="font-medium capitalize">{task.frequency}</span>
-              </div>
-              
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="w-4 h-4 text-secondary" />
                 <span className="text-secondary">Next Due:</span>
-                <span className={`font-medium ${isOverdue(task.nextMaintenance) ? 'text-red-600' : ''}`}>
+                <span className={`font-medium ${isOverdue(task.nextMaintenance) ? 'text-error-600' : 'text-primary'}`}>
                   {new Date(task.nextMaintenance).toLocaleDateString()}
                 </span>
               </div>
               
               {task.lastMaintenance && (
                 <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <CheckCircle className="w-4 h-4 text-success-500" />
                   <span className="text-secondary">Last performed:</span>
-                  <span className="font-medium">
+                  <span className="font-medium text-primary">
                     {new Date(task.lastMaintenance).toLocaleDateString()}
                   </span>
                 </div>
@@ -418,9 +406,9 @@ const MaintenancePage: React.FC = () => {
               
               {task.assignedTo && (
                 <div className="flex items-center gap-2 text-sm">
-                  <Bell className="w-4 h-4 text-blue-500" />
+                  <Bell className="w-4 h-4 text-primary-500" />
                   <span className="text-secondary">Assigned to:</span>
-                  <span className="font-medium">{task.assignedTo}</span>
+                  <span className="font-medium text-primary">{task.assignedTo}</span>
                 </div>
               )}
             </div>

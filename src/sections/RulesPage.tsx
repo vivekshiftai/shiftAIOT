@@ -18,7 +18,8 @@ import {
   Calendar,
   Wifi,
   Thermometer,
-  Gauge
+  Gauge,
+  Target
 } from 'lucide-react';
 import Button from '../components/UI/Button';
 import Modal from '../components/UI/Modal';
@@ -35,6 +36,8 @@ interface Rule {
   updatedAt: string;
   lastTriggered?: string;
   triggerCount: number;
+  type: string; // Added for new card
+  priority: string; // Added for new card
 }
 
 interface RuleCondition {
@@ -385,7 +388,7 @@ const RulesPage: React.FC = () => {
           <div key={rule.id} className="card p-6 hover-lift">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${rule.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+                <div className={`w-2 h-2 rounded-full ${rule.isActive ? 'bg-success-500' : 'bg-neutral-400'}`} />
                 <h3 className="font-semibold text-primary">{rule.name}</h3>
               </div>
               <div className="flex items-center gap-2">
@@ -413,32 +416,26 @@ const RulesPage: React.FC = () => {
             
             <div className="space-y-3 mb-4">
               <div className="flex items-center gap-2 text-sm">
-                <Zap className="w-4 h-4 text-warning-500" />
-                <span className="text-secondary">Conditions:</span>
-                <span className="font-medium">{rule.conditions.length}</span>
+                <Target className="w-4 h-4 text-primary" />
+                <span className="text-secondary">Type:</span>
+                <span className="font-medium text-primary capitalize">{rule.type}</span>
               </div>
               
               <div className="flex items-center gap-2 text-sm">
-                <Settings className="w-4 h-4 text-primary" />
-                <span className="text-secondary">Actions:</span>
-                <span className="font-medium">{rule.actions.length}</span>
+                <Zap className="w-4 h-4 text-warning-500" />
+                <span className="text-secondary">Priority:</span>
+                <span className="font-medium text-primary capitalize">{rule.priority}</span>
               </div>
               
               {rule.lastTriggered && (
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="w-4 h-4 text-secondary" />
                   <span className="text-secondary">Last triggered:</span>
-                  <span className="font-medium">
+                  <span className="font-medium text-primary">
                     {new Date(rule.lastTriggered).toLocaleDateString()}
                   </span>
                 </div>
               )}
-              
-              <div className="flex items-center gap-2 text-sm">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span className="text-secondary">Triggered:</span>
-                <span className="font-medium">{rule.triggerCount} times</span>
-              </div>
             </div>
             
             <div className="flex items-center justify-between text-xs text-tertiary">

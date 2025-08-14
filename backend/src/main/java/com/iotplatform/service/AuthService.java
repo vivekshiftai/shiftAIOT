@@ -17,6 +17,7 @@ import com.iotplatform.dto.LoginRequest;
 import com.iotplatform.dto.SignupRequest;
 import com.iotplatform.model.User;
 import com.iotplatform.repository.UserRepository;
+import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.security.JwtTokenProvider;
 
 @Service
@@ -43,7 +44,8 @@ public class AuthService {
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = jwtTokenProvider.generateToken(authentication);
 
-            User user = (User) authentication.getPrincipal();
+            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            User user = userDetails.getUser();
             
             // Validate user role before proceeding
             try {

@@ -99,36 +99,33 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const url: string = originalRequest?.url || '';
 
-    // Only log errors that aren't 401 auth errors to reduce noise
-    if (status !== 401) {
-      console.error('API Response Error:', status, url, error.message);
-    }
+    // Only handle 401/403 auth errors
+    if ((status === 401 || status === 403) && !originalRequest._retry) {
+      // Ignore refresh attempts for auth endpoints
+      const isAuthEndpoint = url.includes('/auth/signin') || url.includes('/auth/signup') || url.includes('/auth/refresh');
 
-    // Ignore refresh attempts for auth endpoints
-    const isAuthEndpoint = url.includes('/auth/signin') || url.includes('/auth/signup') || url.includes('/auth/refresh');
+      if (!isAuthEndpoint) {
+        originalRequest._retry = true;
 
-    if (status === 401 && !isAuthEndpoint) {
-      // If this is a retry, return the error
-      if (originalRequest._retry) {
-        return Promise.reject(error);
-      }
+        // Queue this request
+        const retryOriginalRequest = new Promise<string>((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        });
 
-      originalRequest._retry = true;
-
-      // Queue this request
-      const retryOriginalRequest = new Promise<string>((resolve, reject) => {
-        failedQueue.push({ resolve, reject });
-      });
-
-      try {
-        // Attempt token refresh
-        await refreshToken();
-        // Retry the original request
-        return api(originalRequest);
-      } catch (refreshErr: any) {
-        console.warn('Token refresh failed, continuing with existing session:', refreshErr.message);
-        // Don't clear auth data, let the UI continue
-        return Promise.reject(error);
+        try {
+          // Attempt token refresh
+          await refreshToken();
+          // Retry the original request
+          return api(originalRequest);
+        } catch (refreshErr: any) {
+          console.warn('Token refresh failed:', refreshErr.message);
+          // Clear auth data on refresh failure
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          delete api.defaults.headers.common.Authorization;
+          window.dispatchEvent(new Event('storageChange'));
+          return Promise.reject(error);
+        }
       }
     }
 

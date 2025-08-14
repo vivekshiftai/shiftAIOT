@@ -74,10 +74,22 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
       console.log('UsersSection - Current user:', currentUser);
       console.log('UsersSection - Token:', localStorage.getItem('token') ? 'exists' : 'not found');
       
+      // Ensure we have a valid token before making the request
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      
       const response = await userAPI.getAll();
       console.log('UsersSection - API response:', response);
       console.log('UsersSection - Users data:', response.data);
-      setUsers(response.data);
+      
+      if (response.data && Array.isArray(response.data)) {
+        setUsers(response.data);
+      } else {
+        console.warn('UsersSection - Invalid response format:', response.data);
+        setUsers([]);
+      }
     } catch (err: any) {
       console.error('UsersSection - Error fetching users:', err);
       console.error('UsersSection - Error details:', {
@@ -86,6 +98,19 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
         statusText: err.response?.statusText,
         data: err.response?.data
       });
+      
+      // Handle specific error cases
+      if (err.response?.status === 401) {
+        setError('Authentication required. Please log in again.');
+      } else if (err.response?.status === 403) {
+        setError('You do not have permission to view users.');
+      } else if (err.response?.status === 500) {
+        setError('Server error. Please try again later.');
+      } else if (err.message === 'No authentication token found') {
+        setError('Please log in to view users.');
+      } else {
+        setError(`Failed to load users: ${err.response?.data?.message || err.message}`);
+      }
       
       // If API fails, at least show the current user
       if (currentUser) {
@@ -101,9 +126,6 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
           createdAt: currentUser.createdAt,
           lastLoginAt: currentUser.lastLogin
         }]);
-        setError('Could not load all users from server. Showing current user only.');
-      } else {
-        setError(`Failed to load users: ${err.response?.data?.message || err.message}`);
       }
     } finally {
       setLoading(false);

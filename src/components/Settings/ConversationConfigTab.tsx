@@ -44,26 +44,22 @@ const platformOptions = [
 
 const credentialFields = {
   slack: [
-    { key: 'bot_token', label: 'Bot Token', type: 'password', required: true },
-    { key: 'channel_id', label: 'Channel ID', type: 'text', required: true }
+    { key: 'token', label: 'Bot Token', type: 'password', required: true },
+    { key: 'channel', label: 'Channel ID', type: 'text', required: true }
   ],
   gmail: [
-    { key: 'client_id', label: 'Client ID', type: 'text', required: true },
-    { key: 'client_secret', label: 'Client Secret', type: 'password', required: true },
+    { key: 'token', label: 'Access Token', type: 'password', required: true },
     { key: 'refresh_token', label: 'Refresh Token', type: 'password', required: true }
   ],
   teams: [
-    { key: 'webhook_url', label: 'Webhook URL', type: 'text', required: true },
-    { key: 'tenant_id', label: 'Tenant ID', type: 'text', required: false }
+    { key: 'webhook_url', label: 'Webhook URL', type: 'text', required: true }
   ],
   google_chat: [
-    { key: 'webhook_url', label: 'Webhook URL', type: 'text', required: true },
-    { key: 'space_name', label: 'Space Name', type: 'text', required: false }
+    { key: 'webhook_url', label: 'Webhook URL', type: 'text', required: true }
   ],
   sms: [
     { key: 'api_key', label: 'API Key', type: 'password', required: true },
-    { key: 'phone_number', label: 'Phone Number', type: 'text', required: true },
-    { key: 'provider', label: 'Provider (Twilio, etc.)', type: 'text', required: false }
+    { key: 'phone_number', label: 'Phone Number', type: 'text', required: true }
   ]
 };
 
