@@ -34,10 +34,10 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
     List<MaintenanceSchedule> searchByOrganizationIdAndTaskNameOrDescription(@Param("organizationId") String organizationId, @Param("searchTerm") String searchTerm);
     
     // Find overdue tasks
-    @Query("SELECT m FROM MaintenanceSchedule m WHERE m.organizationId = :organizationId AND m.nextMaintenance < CURRENT_DATE AND m.status != 'completed'")
+    @Query(value = "SELECT * FROM device_maintenance m WHERE m.organization_id = :organizationId AND m.next_maintenance < CURRENT_DATE AND m.status != 'completed'", nativeQuery = true)
     List<MaintenanceSchedule> findOverdueTasks(@Param("organizationId") String organizationId);
     
     // Find upcoming tasks (next 7 days)
-    @Query("SELECT m FROM MaintenanceSchedule m WHERE m.organizationId = :organizationId AND m.nextMaintenance BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days' AND m.status != 'completed'")
+    @Query(value = "SELECT * FROM device_maintenance m WHERE m.organization_id = :organizationId AND m.next_maintenance BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days' AND m.status != 'completed'", nativeQuery = true)
     List<MaintenanceSchedule> findUpcomingTasks(@Param("organizationId") String organizationId);
 }
