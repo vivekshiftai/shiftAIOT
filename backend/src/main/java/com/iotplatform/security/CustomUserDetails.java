@@ -31,6 +31,10 @@ public class CustomUserDetails implements UserDetails {
             authorities.add(new SimpleGrantedAuthority("RULE_READ"));
             authorities.add(new SimpleGrantedAuthority("RULE_WRITE"));
             authorities.add(new SimpleGrantedAuthority("RULE_DELETE"));
+            // Maintenance permissions for admins
+            authorities.add(new SimpleGrantedAuthority("MAINTENANCE_READ"));
+            authorities.add(new SimpleGrantedAuthority("MAINTENANCE_WRITE"));
+            authorities.add(new SimpleGrantedAuthority("MAINTENANCE_DELETE"));
             authorities.add(new SimpleGrantedAuthority("USER_READ"));
             authorities.add(new SimpleGrantedAuthority("USER_WRITE"));
             authorities.add(new SimpleGrantedAuthority("USER_DELETE"));
@@ -43,6 +47,9 @@ public class CustomUserDetails implements UserDetails {
             // Regular user can only read
             authorities.add(new SimpleGrantedAuthority("DEVICE_READ"));
             authorities.add(new SimpleGrantedAuthority("RULE_READ"));
+            // Allow regular users to read and create/update maintenance tasks
+            authorities.add(new SimpleGrantedAuthority("MAINTENANCE_READ"));
+            authorities.add(new SimpleGrantedAuthority("MAINTENANCE_WRITE"));
             authorities.add(new SimpleGrantedAuthority("NOTIFICATION_READ"));
             authorities.add(new SimpleGrantedAuthority("KNOWLEDGE_READ"));
         }

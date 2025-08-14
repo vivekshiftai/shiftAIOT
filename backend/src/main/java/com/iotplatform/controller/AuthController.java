@@ -106,9 +106,10 @@ public class AuthController {
                 return ResponseEntity.status(401).body("User not found");
             }
             
-            // Create authentication object
+            // Create authentication object using CustomUserDetails as principal (not a String)
+            CustomUserDetails userDetails = new CustomUserDetails(user);
             Authentication authentication = new UsernamePasswordAuthenticationToken(
-                user.getEmail(), null, user.getAuthorities());
+                userDetails, null, userDetails.getAuthorities());
             
             // Generate new token
             String newJwt = jwtTokenProvider.generateToken(authentication);

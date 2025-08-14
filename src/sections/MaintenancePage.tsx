@@ -311,7 +311,7 @@ const MaintenancePage: React.FC = () => {
             placeholder="Search maintenance tasks..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
           />
         </div>
         
@@ -319,7 +319,7 @@ const MaintenancePage: React.FC = () => {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="px-4 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="px-4 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
@@ -331,7 +331,7 @@ const MaintenancePage: React.FC = () => {
           <select
             value={filterPriority}
             onChange={(e) => setFilterPriority(e.target.value as any)}
-            className="px-4 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="px-4 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
           >
             <option value="all">All Priority</option>
             <option value="low">Low</option>
@@ -508,7 +508,7 @@ const MaintenancePage: React.FC = () => {
                   deviceName: device?.name || ''
                 }));
               }}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
                 formErrors.deviceId ? 'border-error-500' : 'border-light'
               }`}
             >
@@ -531,7 +531,7 @@ const MaintenancePage: React.FC = () => {
               <select
                 value={formData.frequency}
                 onChange={(e) => setFormData(prev => ({ ...prev, frequency: e.target.value }))}
-                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
               >
                 {frequencyOptions.map(freq => (
                   <option key={freq.value} value={freq.value}>{freq.label}</option>
@@ -547,7 +547,7 @@ const MaintenancePage: React.FC = () => {
                 type="date"
                 value={formData.nextMaintenance}
                 onChange={(e) => setFormData(prev => ({ ...prev, nextMaintenance: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
                   formErrors.nextMaintenance ? 'border-error-500' : 'border-light'
                 }`}
               />
@@ -566,7 +566,7 @@ const MaintenancePage: React.FC = () => {
               <select
                 value={formData.priority}
                 onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as any }))}
-                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
               >
                 {priorityOptions.map(priority => (
                   <option key={priority.value} value={priority.value}>{priority.label}</option>
@@ -582,7 +582,7 @@ const MaintenancePage: React.FC = () => {
                 type="text"
                 value={formData.assignedTo}
                 onChange={(e) => setFormData(prev => ({ ...prev, assignedTo: e.target.value }))}
-                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
                 placeholder="Enter assignee name"
               />
             </div>
@@ -596,7 +596,7 @@ const MaintenancePage: React.FC = () => {
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
               rows={3}
               placeholder="Additional notes or instructions"
             />
@@ -604,7 +604,7 @@ const MaintenancePage: React.FC = () => {
         </div>
         
         {/* Fixed Footer */}
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-light bg-white dark:bg-gray-800 sticky bottom-0">
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-light bg-white sticky bottom-0">
           <Button
             variant="outline"
             onClick={() => setShowAddModal(false)}
@@ -637,7 +637,7 @@ const MaintenancePage: React.FC = () => {
               type="text"
               value={formData.taskName}
               onChange={(e) => setFormData(prev => ({ ...prev, taskName: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
                 formErrors.taskName ? 'border-error-500' : 'border-light'
               }`}
               placeholder="Enter task name"
@@ -654,7 +654,7 @@ const MaintenancePage: React.FC = () => {
             <textarea
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+            className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
               rows={3}
               placeholder="Describe the maintenance task"
             />
@@ -675,7 +675,7 @@ const MaintenancePage: React.FC = () => {
                   deviceName: device?.name || ''
                 }));
               }}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
                 formErrors.deviceId ? 'border-error-500' : 'border-light'
               }`}
             >
@@ -698,7 +698,7 @@ const MaintenancePage: React.FC = () => {
               <select
                 value={formData.frequency}
                 onChange={(e) => setFormData(prev => ({ ...prev, frequency: e.target.value }))}
-                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
               >
                 {frequencyOptions.map(freq => (
                   <option key={freq.value} value={freq.value}>{freq.label}</option>
@@ -714,7 +714,7 @@ const MaintenancePage: React.FC = () => {
                 type="date"
                 value={formData.nextMaintenance}
                 onChange={(e) => setFormData(prev => ({ ...prev, nextMaintenance: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
                   formErrors.nextMaintenance ? 'border-error-500' : 'border-light'
                 }`}
               />
@@ -733,7 +733,7 @@ const MaintenancePage: React.FC = () => {
               <select
                 value={formData.priority}
                 onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as any }))}
-                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
               >
                 {priorityOptions.map(priority => (
                   <option key={priority.value} value={priority.value}>{priority.label}</option>
@@ -749,7 +749,7 @@ const MaintenancePage: React.FC = () => {
                 type="text"
                 value={formData.assignedTo}
                 onChange={(e) => setFormData(prev => ({ ...prev, assignedTo: e.target.value }))}
-                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
                 placeholder="Enter assignee name"
               />
             </div>
@@ -771,7 +771,7 @@ const MaintenancePage: React.FC = () => {
         </div>
         
         {/* Fixed Footer */}
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-light bg-white dark:bg-gray-800 sticky bottom-0">
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-light bg-white sticky bottom-0">
           <Button
             variant="outline"
             onClick={() => setShowEditModal(false)}
