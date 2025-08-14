@@ -8,6 +8,7 @@ import uvicorn
 from config import settings
 from utils.helpers import setup_logging
 from endpoints import upload, query, pdfs, rules, maintenance, safety
+from models.schemas import PDFUploadResponse
 
 # Setup logging
 logger = setup_logging(settings.log_level)
@@ -50,6 +51,22 @@ app.include_router(rules.router)
 app.include_router(maintenance.router)
 app.include_router(safety.router)
 
+# Alias upload endpoint to support /upload-pdf and /upload-pdf/
+app.add_api_route(
+    "/upload-pdf",
+    upload.upload_pdf,
+    methods=["POST"],
+    response_model=PDFUploadResponse,
+    tags=["upload"],
+)
+app.add_api_route(
+    "/upload-pdf/",
+    upload.upload_pdf,
+    methods=["POST"],
+    response_model=PDFUploadResponse,
+    tags=["upload"],
+)
+
 @app.get("/")
 async def root():
     """Root endpoint"""
@@ -59,6 +76,7 @@ async def root():
         "status": "operational",
         "endpoints": {
             "upload": "/upload/pdf",
+            "upload_alias": "/upload-pdf",
             "query": "/query",
             "list_pdfs": "/pdfs",
             "generate_rules": "/generate-rules/{pdf_name}",

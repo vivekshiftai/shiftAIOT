@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     embedding_model: str = "all-MiniLM-L6-v2"
     
     # MinerU Configuration
-    device_mode: str = "cuda"  # or "cpu"
+    device_mode: str = "cpu"  # or "cuda"
     formula_enable: bool = True
     table_enable: bool = True
     
