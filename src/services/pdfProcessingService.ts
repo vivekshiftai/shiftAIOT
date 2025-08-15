@@ -4,86 +4,81 @@ const PDF_API_BASE = (import.meta as any).env?.VITE_PDF_API_URL || '/pdf-api';
 export interface PDFUploadResponse {
   success: boolean;
   message: string;
-  pdf_filename: string;
-  processing_status: string;
+  pdf_name: string;
+  chunks_processed: number;
+  processing_time: string;
+  collection_name: string;
 }
 
 export interface PDFDocument {
-  filename: string;
+  collection_name: string;
+  pdf_name: string;
+  created_at: string;
   chunk_count: number;
-  file_size: number;
-  upload_date: string;
 }
 
 export interface PDFListResponse {
+  success: boolean;
   pdfs: PDFDocument[];
   total_count: number;
 }
 
-export interface QueryResult {
-  heading: string;
-  text: string;
-  score: number;
-  page_number: number;
-  images: {
-    filename: string;
-    url: string;
-    page_number: number;
-  }[];
+export interface QueryRequest {
+  pdf_name: string;
+  query: string;
+  top_k?: number;
 }
 
 export interface QueryResponse {
-  pdf_filename: string;
-  query: string;
-  answer: string;
-  results: QueryResult[];
-  total_matches: number;
-  processing_time: number;
+  success: boolean;
+  message: string;
+  response: string;
+  chunks_used: string[];
+  images: string[];
+  tables: string[];
+  processing_time: string;
 }
 
 export interface IoTRule {
-  device_name: string;
-  rule_type: 'monitoring' | 'maintenance' | 'alert';
   condition: string;
   action: string;
-  priority: 'low' | 'medium' | 'high';
-  frequency: string;
-  description: string;
+  category: string;
+  priority: string;
 }
 
 export interface MaintenanceData {
-  component_name: string;
-  maintenance_type: string;
+  task: string;
   frequency: string;
-  last_maintenance: string;
-  next_maintenance: string;
+  category: string;
   description: string;
 }
 
 export interface SafetyPrecaution {
-  id: string;
+  type: string;
   title: string;
   description: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
   category: string;
-  recommended_action: string;
 }
 
 export interface RulesGenerationResponse {
-  pdf_filename: string;
-  total_pages?: number;
-  processed_chunks?: number;
-  iot_rules: IoTRule[];
-  maintenance_data?: MaintenanceData[];
-  safety_precautions?: SafetyPrecaution[];
-  processing_time?: number;
-  summary?: string;
+  success: boolean;
+  pdf_name: string;
+  rules: IoTRule[];
+  processing_time: string;
 }
 
-export interface QueryRequest {
-  pdf_filename: string;
-  query: string;
-  max_results?: number;
+export interface MaintenanceGenerationResponse {
+  success: boolean;
+  pdf_name: string;
+  maintenance_tasks: MaintenanceData[];
+  processing_time: string;
+}
+
+export interface SafetyGenerationResponse {
+  success: boolean;
+  pdf_name: string;
+  safety_information: SafetyPrecaution[];
+  processing_time: string;
 }
 
 // Simplified PDF Processing Service - API Calls Only
@@ -94,14 +89,14 @@ class PDFProcessingService {
   async uploadPDF(file: File): Promise<PDFUploadResponse> {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await fetch(`${this.base}/upload-pdf`, { method: 'POST', body: formData });
+    const res = await fetch(`${this.base}/upload/pdf`, { method: 'POST', body: formData });
     if (!res.ok) throw new Error(`Failed to upload PDF: ${res.status} ${res.statusText} - ${await res.text()}`);
     return res.json();
   }
 
   // List PDFs from external API
-  async listPDFs(): Promise<PDFListResponse> {
-    const res = await fetch(`${this.base}/pdfs`, { method: 'GET' });
+  async listPDFs(page: number = 1, limit: number = 10): Promise<PDFListResponse> {
+    const res = await fetch(`${this.base}/pdfs?page=${page}&limit=${limit}`, { method: 'GET' });
     if (!res.ok) throw new Error(`Failed to list PDFs: ${res.status} ${res.statusText}`);
     return res.json();
   }
@@ -111,40 +106,39 @@ class PDFProcessingService {
     const res = await fetch(`${this.base}/query`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
+      body: JSON.stringify(request)
     });
-    if (!res.ok) throw new Error(`Failed to query PDF: ${res.status} ${res.statusText} - ${await res.text()}`);
+    if (!res.ok) throw new Error(`Failed to query PDF: ${res.status} ${res.statusText}`);
     return res.json();
   }
 
-  // Generate rules via external API
+  // Generate IoT Rules from PDF
   async generateRules(pdfName: string): Promise<RulesGenerationResponse> {
     const res = await fetch(`${this.base}/generate-rules/${encodeURIComponent(pdfName)}`, { method: 'POST' });
-    if (!res.ok) throw new Error(`Failed to generate rules: ${res.status} ${res.statusText} - ${await res.text()}`);
+    if (!res.ok) throw new Error(`Failed to generate rules: ${res.status} ${res.statusText}`);
     return res.json();
   }
 
-  // Generate maintenance data via external API
-  async generateMaintenance(pdfName: string): Promise<{ maintenance_data: MaintenanceData[] }> {
+  // Generate Maintenance Schedule from PDF
+  async generateMaintenance(pdfName: string): Promise<MaintenanceGenerationResponse> {
     const res = await fetch(`${this.base}/generate-maintenance/${encodeURIComponent(pdfName)}`, { method: 'POST' });
-    if (!res.ok) throw new Error(`Failed to generate maintenance: ${res.status} ${res.statusText} - ${await res.text()}`);
+    if (!res.ok) throw new Error(`Failed to generate maintenance: ${res.status} ${res.statusText}`);
     return res.json();
   }
 
-  // Generate safety precautions via external API
-  async generateSafety(pdfName: string): Promise<{ safety_precautions: SafetyPrecaution[] }> {
+  // Generate Safety Information from PDF
+  async generateSafety(pdfName: string): Promise<SafetyGenerationResponse> {
     const res = await fetch(`${this.base}/generate-safety/${encodeURIComponent(pdfName)}`, { method: 'POST' });
-    if (!res.ok) throw new Error(`Failed to generate safety: ${res.status} ${res.statusText} - ${await res.text()}`);
+    if (!res.ok) throw new Error(`Failed to generate safety: ${res.status} ${res.statusText}`);
     return res.json();
   }
 
-  // Health check for external API
+  // Health check
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.base}/health`);
-      return response.ok;
-    } catch (error) {
-      console.error('PDF API health check failed:', error);
+      const res = await fetch(`${this.base}/health`);
+      return res.ok;
+    } catch {
       return false;
     }
   }

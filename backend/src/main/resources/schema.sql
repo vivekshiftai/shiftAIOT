@@ -1,6 +1,5 @@
--- Database Schema Initialization Script
--- This script creates all necessary tables for the shiftAIOT Platform
--- Using existing iotplatform database
+-- Complete Database Schema for shiftAIOT Platform
+-- This script creates all necessary tables with proper existence checks
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
@@ -90,35 +89,35 @@ CREATE TABLE IF NOT EXISTS device_documentation (
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
 );
 
--- Device Maintenance table for onboarding flow
+-- Device Maintenance table for onboarding flow - Updated to match new model
 CREATE TABLE IF NOT EXISTS device_maintenance (
     id VARCHAR(255) PRIMARY KEY,
     task_name VARCHAR(255) NOT NULL,
     device_id VARCHAR(255) NOT NULL,
     device_name VARCHAR(255),
     component_name VARCHAR(255),
-    maintenance_type VARCHAR(100), -- 'preventive', 'corrective', 'predictive'
+    maintenance_type VARCHAR(100), -- 'PREVENTIVE', 'CORRECTIVE', 'PREDICTIVE'
     frequency VARCHAR(100) NOT NULL,
     last_maintenance DATE,
     next_maintenance DATE NOT NULL,
     description TEXT,
-    priority VARCHAR(20) DEFAULT 'medium', -- 'low', 'medium', 'high', 'critical'
+    priority VARCHAR(20) DEFAULT 'MEDIUM', -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
+    estimated_cost DECIMAL(10,2),
     assigned_to VARCHAR(255),
-    notes TEXT,
-    status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'in_progress', 'completed', 'overdue'
+    status VARCHAR(50) DEFAULT 'ACTIVE', -- 'ACTIVE', 'COMPLETED', 'CANCELLED', 'OVERDUE'
     organization_id VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
 );
 
--- Device Safety Precautions table for onboarding flow
+-- Device Safety Precautions table for onboarding flow - Updated to match new model
 CREATE TABLE IF NOT EXISTS device_safety_precautions (
     id VARCHAR(255) PRIMARY KEY,
     device_id VARCHAR(255) NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
-    severity VARCHAR(20) NOT NULL, -- 'low', 'medium', 'high', 'critical'
+    severity VARCHAR(20) NOT NULL, -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
     category VARCHAR(100) NOT NULL,
     recommended_action TEXT,
     is_active BOOLEAN DEFAULT true,
@@ -156,24 +155,26 @@ CREATE TABLE IF NOT EXISTS rules (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Rule Conditions table
+-- Rule Conditions table - Updated to match new model
 CREATE TABLE IF NOT EXISTS rule_conditions (
     id VARCHAR(255) PRIMARY KEY,
     rule_id VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL,
+    type VARCHAR(50) NOT NULL, -- 'DEVICE_STATUS', 'TELEMETRY_THRESHOLD', 'TIME_BASED'
+    device_id VARCHAR(255),
     metric VARCHAR(100),
-    operator VARCHAR(50),
+    operator VARCHAR(50), -- 'GREATER_THAN', 'LESS_THAN', 'EQUALS', 'GREATER_THAN_OR_EQUAL', 'LESS_THAN_OR_EQUAL'
     value VARCHAR(255),
-    logic_operator VARCHAR(20) DEFAULT 'AND',
+    logic_operator VARCHAR(20) DEFAULT 'AND', -- 'AND', 'OR'
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (rule_id) REFERENCES rules(id) ON DELETE CASCADE
+    FOREIGN KEY (rule_id) REFERENCES rules(id) ON DELETE CASCADE,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
 );
 
--- Rule Actions table
+-- Rule Actions table - Updated to match new model
 CREATE TABLE IF NOT EXISTS rule_actions (
     id VARCHAR(255) PRIMARY KEY,
     rule_id VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL,
+    type VARCHAR(50) NOT NULL, -- 'NOTIFICATION', 'EMAIL', 'SMS', 'WEBHOOK'
     action_data JSON,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (rule_id) REFERENCES rules(id) ON DELETE CASCADE
@@ -192,15 +193,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- User Permissions table
-CREATE TABLE IF NOT EXISTS user_permissions (
-    user_id VARCHAR(255) NOT NULL,
-    permissions VARCHAR(100) NOT NULL,
-    PRIMARY KEY (user_id, permissions),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
--- Knowledge Documents table
+-- Knowledge Documents table - Fixed schema
 CREATE TABLE IF NOT EXISTS knowledge_documents (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -229,7 +222,7 @@ CREATE TABLE IF NOT EXISTS conversation_configs (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Create indexes for better performance
+-- Create all indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_organization ON users(organization_id);
 CREATE INDEX IF NOT EXISTS idx_devices_organization ON devices(organization_id);
@@ -239,9 +232,14 @@ CREATE INDEX IF NOT EXISTS idx_notifications_organization ON notifications(organ
 CREATE INDEX IF NOT EXISTS idx_knowledge_organization ON knowledge_documents(organization_id);
 CREATE INDEX IF NOT EXISTS idx_device_documentation_device ON device_documentation(device_id);
 CREATE INDEX IF NOT EXISTS idx_device_maintenance_device ON device_maintenance(device_id);
+CREATE INDEX IF NOT EXISTS idx_device_maintenance_organization ON device_maintenance(organization_id);
 CREATE INDEX IF NOT EXISTS idx_device_safety_device ON device_safety_precautions(device_id);
+CREATE INDEX IF NOT EXISTS idx_device_safety_active ON device_safety_precautions(is_active);
 CREATE INDEX IF NOT EXISTS idx_conversation_configs_user ON conversation_configs(user_id);
 CREATE INDEX IF NOT EXISTS idx_conversation_configs_platform ON conversation_configs(platform_type);
+CREATE INDEX IF NOT EXISTS idx_rule_conditions_rule ON rule_conditions(rule_id);
+CREATE INDEX IF NOT EXISTS idx_rule_conditions_device ON rule_conditions(device_id);
+CREATE INDEX IF NOT EXISTS idx_rule_actions_rule ON rule_actions(rule_id);
 
 -- Insert default admin user if not exists
 INSERT INTO users (id, first_name, last_name, email, password, role, organization_id)
@@ -348,11 +346,12 @@ SELECT
 WHERE NOT EXISTS (SELECT 1 FROM rules WHERE id = 'rule-001');
 
 -- Insert sample rule conditions
-INSERT INTO rule_conditions (id, rule_id, type, metric, operator, value)
+INSERT INTO rule_conditions (id, rule_id, type, device_id, metric, operator, value)
 SELECT 
     'condition-001',
     'rule-001',
     'TELEMETRY_THRESHOLD',
+    'device-001',
     'temperature',
     'GREATER_THAN',
     '30'
@@ -366,6 +365,36 @@ SELECT
     'NOTIFICATION',
     '{"notificationType": "EMAIL", "recipients": ["admin@shiftaiot.com"], "subject": "High Temperature Alert", "message": "Temperature has exceeded 30°C"}'
 WHERE NOT EXISTS (SELECT 1 FROM rule_actions WHERE id = 'action-001');
+
+-- Insert sample maintenance data for device-001
+INSERT INTO device_maintenance (id, task_name, device_id, device_name, component_name, maintenance_type, frequency, next_maintenance, description, priority, status, organization_id)
+SELECT 
+    'maintenance-001',
+    'Temperature Sensor Calibration',
+    'device-001',
+    'Temperature Sensor 1',
+    'Temperature Sensor',
+    'PREVENTIVE',
+    'monthly',
+    CURRENT_DATE + INTERVAL '1 month',
+    'Calibrate temperature sensor to ensure accurate readings',
+    'MEDIUM',
+    'ACTIVE',
+    'default'
+WHERE NOT EXISTS (SELECT 1 FROM device_maintenance WHERE id = 'maintenance-001');
+
+-- Insert sample safety precautions for device-001
+INSERT INTO device_safety_precautions (id, device_id, title, description, severity, category, recommended_action, is_active)
+SELECT 
+    'safety-001',
+    'device-001',
+    'High Temperature Warning',
+    'Device may reach high temperatures during operation',
+    'HIGH',
+    'thermal_hazard',
+    'Ensure proper ventilation and monitor temperature readings',
+    true
+WHERE NOT EXISTS (SELECT 1 FROM device_safety_precautions WHERE id = 'safety-001');
 
 -- Insert default user account for testing
 INSERT INTO users (id, first_name, last_name, email, password, role, organization_id)

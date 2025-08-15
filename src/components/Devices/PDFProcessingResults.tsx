@@ -21,26 +21,16 @@ import {
   Brain,
   Sparkles
 } from 'lucide-react';
-import { IoTRule, MaintenanceData } from '../../services/pdfProcessingService';
-
-export interface SafetyPrecaution {
-  id: string;
-  title: string;
-  description: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  category: string;
-  recommended_action: string;
-}
+import { IoTRule, MaintenanceData, SafetyPrecaution } from '../../services/pdfProcessingService';
 
 export interface PDFProcessingResultsData {
-  pdf_filename: string;
-  total_pages: number;
-  processed_chunks: number;
+  pdf_name: string;
+  chunks_processed: number;
   iot_rules: IoTRule[];
   maintenance_data: MaintenanceData[];
   safety_precautions: SafetyPrecaution[];
-  processing_time: number;
-  summary: string;
+  processing_time: string;
+  summary?: string;
 }
 
 interface PDFProcessingResultsProps {
@@ -74,18 +64,22 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
 
   // Initialize all items as selected by default
   useEffect(() => {
-    setSelectedRules(new Set(results.iot_rules.map(rule => rule.device_name)));
-    setSelectedMaintenance(new Set(results.maintenance_data.map(m => m.component_name)));
-    setSelectedSafety(new Set(results.safety_precautions.map(s => s.id)));
+    setSelectedRules(new Set(results.iot_rules.map((rule, index) => `rule_${index}`)));
+    setSelectedMaintenance(new Set(results.maintenance_data.map((m, index) => `maintenance_${index}`)));
+    setSelectedSafety(new Set(results.safety_precautions.map((s, index) => `safety_${index}`)));
   }, [results]);
 
-  const getRuleIcon = (ruleType: string) => {
-    switch (ruleType) {
+  const getRuleIcon = (category: string) => {
+    switch (category.toLowerCase()) {
       case 'monitoring':
+      case 'temperature_monitoring':
+      case 'performance_monitoring':
         return <Target className="w-4 h-4" />;
       case 'maintenance':
+      case 'preventive_maintenance':
         return <Shield className="w-4 h-4" />;
       case 'alert':
+      case 'safety_alert':
         return <AlertTriangle className="w-4 h-4" />;
       default:
         return <Zap className="w-4 h-4" />;
@@ -121,7 +115,8 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
     }
   };
 
-  const toggleRuleSelection = (ruleId: string) => {
+  const toggleRuleSelection = (ruleIndex: number) => {
+    const ruleId = `rule_${ruleIndex}`;
     const newSelected = new Set(selectedRules);
     if (newSelected.has(ruleId)) {
       newSelected.delete(ruleId);
@@ -131,7 +126,8 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
     setSelectedRules(newSelected);
   };
 
-  const toggleMaintenanceSelection = (maintenanceId: string) => {
+  const toggleMaintenanceSelection = (maintenanceIndex: number) => {
+    const maintenanceId = `maintenance_${maintenanceIndex}`;
     const newSelected = new Set(selectedMaintenance);
     if (newSelected.has(maintenanceId)) {
       newSelected.delete(maintenanceId);
@@ -141,7 +137,8 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
     setSelectedMaintenance(newSelected);
   };
 
-  const toggleSafetySelection = (safetyId: string) => {
+  const toggleSafetySelection = (safetyIndex: number) => {
+    const safetyId = `safety_${safetyIndex}`;
     const newSelected = new Set(selectedSafety);
     if (newSelected.has(safetyId)) {
       newSelected.delete(safetyId);
@@ -153,28 +150,28 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
 
   const handleConfirm = () => {
     const selectedData = {
-      iot_rules: editedRules.filter(rule => selectedRules.has(rule.device_name)),
-      maintenance_data: editedMaintenance.filter(m => selectedMaintenance.has(m.component_name)),
-      safety_precautions: editedSafety.filter(s => selectedSafety.has(s.id))
+      iot_rules: editedRules.filter((rule, index) => selectedRules.has(`rule_${index}`)),
+      maintenance_data: editedMaintenance.filter((m, index) => selectedMaintenance.has(`maintenance_${index}`)),
+      safety_precautions: editedSafety.filter((s, index) => selectedSafety.has(`safety_${index}`))
     };
     onConfirm(selectedData);
   };
 
-  const updateRuleField = (ruleId: string, field: keyof IoTRule, value: any) => {
-    setEditedRules(prev => prev.map(rule => 
-      rule.device_name === ruleId ? { ...rule, [field]: value } : rule
+  const updateRuleField = (ruleIndex: number, field: keyof IoTRule, value: any) => {
+    setEditedRules(prev => prev.map((rule, index) => 
+      index === ruleIndex ? { ...rule, [field]: value } : rule
     ));
   };
 
-  const updateMaintenanceField = (maintenanceId: string, field: keyof MaintenanceData, value: any) => {
-    setEditedMaintenance(prev => prev.map(maintenance => 
-      maintenance.component_name === maintenanceId ? { ...maintenance, [field]: value } : maintenance
+  const updateMaintenanceField = (maintenanceIndex: number, field: keyof MaintenanceData, value: any) => {
+    setEditedMaintenance(prev => prev.map((maintenance, index) => 
+      index === maintenanceIndex ? { ...maintenance, [field]: value } : maintenance
     ));
   };
 
-  const updateSafetyField = (safetyId: string, field: keyof SafetyPrecaution, value: any) => {
-    setEditedSafety(prev => prev.map(safety => 
-      safety.id === safetyId ? { ...safety, [field]: value } : safety
+  const updateSafetyField = (safetyIndex: number, field: keyof SafetyPrecaution, value: any) => {
+    setEditedSafety(prev => prev.map((safety, index) => 
+      index === safetyIndex ? { ...safety, [field]: value } : safety
     ));
   };
 
@@ -189,7 +186,7 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div className="flex items-center gap-2">
             <FileText className="w-4 h-4 text-blue-600" />
-            <span className="text-slate-700">{results.total_pages} pages processed</span>
+            <span className="text-slate-700">{results.chunks_processed} chunks processed</span>
           </div>
           <div className="flex items-center gap-2">
             <Target className="w-4 h-4 text-green-600" />
@@ -204,7 +201,7 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
             <span className="text-slate-700">{results.safety_precautions.length} Safety Precautions</span>
           </div>
         </div>
-        <p className="text-xs text-slate-600 mt-2">{results.summary}</p>
+        <p className="text-xs text-slate-600 mt-2">{results.summary || `Processing completed in ${results.processing_time}`}</p>
       </div>
 
       {/* IoT Rules Section */}
@@ -233,13 +230,13 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
           
           <div className="p-6 space-y-4">
             {editedRules.map((rule, index) => (
-              <div key={`${rule.device_name}-${index}`} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div key={`rule-${index}`} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                 <div className="flex items-start gap-3">
                   <button
-                    onClick={() => toggleRuleSelection(rule.device_name)}
+                    onClick={() => toggleRuleSelection(index)}
                     className="mt-1"
                   >
-                    {selectedRules.has(rule.device_name) ? (
+                    {selectedRules.has(`rule_${index}`) ? (
                       <CheckSquare className="w-5 h-5 text-blue-600" />
                     ) : (
                       <Square className="w-5 h-5 text-slate-400" />
@@ -247,12 +244,12 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
                   </button>
                   
                   <div className="flex-1">
-                    {editingRuleId === rule.device_name ? (
+                    {editingRuleId === `rule_${index}` ? (
                       // Edit Mode
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            {getRuleIcon(rule.rule_type)}
+                            {getRuleIcon(rule.category)}
                             <span className="font-medium text-slate-800">Editing Rule</span>
                           </div>
                           <div className="flex gap-2">
@@ -276,31 +273,19 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Device Name</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
                             <input
                               type="text"
-                              value={rule.device_name}
-                              onChange={(e) => updateRuleField(rule.device_name, 'device_name', e.target.value)}
+                              value={rule.category}
+                              onChange={(e) => updateRuleField(index, 'category', e.target.value)}
                               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Rule Type</label>
-                            <select
-                              value={rule.rule_type}
-                              onChange={(e) => updateRuleField(rule.device_name, 'rule_type', e.target.value)}
-                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            >
-                              <option value="monitoring">Monitoring</option>
-                              <option value="maintenance">Maintenance</option>
-                              <option value="alert">Alert</option>
-                            </select>
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>
                             <select
                               value={rule.priority}
-                              onChange={(e) => updateRuleField(rule.device_name, 'priority', e.target.value)}
+                              onChange={(e) => updateRuleField(index, 'priority', e.target.value)}
                               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             >
                               <option value="low">Low</option>
@@ -308,22 +293,13 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
                               <option value="high">High</option>
                             </select>
                           </div>
-                          <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Frequency</label>
-                            <input
-                              type="text"
-                              value={rule.frequency}
-                              onChange={(e) => updateRuleField(rule.device_name, 'frequency', e.target.value)}
-                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
-                          </div>
                         </div>
                         
                         <div>
                           <label className="block text-sm font-medium text-slate-700 mb-1">Condition</label>
                           <textarea
                             value={rule.condition}
-                            onChange={(e) => updateRuleField(rule.device_name, 'condition', e.target.value)}
+                            onChange={(e) => updateRuleField(index, 'condition', e.target.value)}
                             rows={2}
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           />
@@ -333,17 +309,7 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
                           <label className="block text-sm font-medium text-slate-700 mb-1">Action</label>
                           <textarea
                             value={rule.action}
-                            onChange={(e) => updateRuleField(rule.device_name, 'action', e.target.value)}
-                            rows={2}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                          <textarea
-                            value={rule.description}
-                            onChange={(e) => updateRuleField(rule.device_name, 'description', e.target.value)}
+                            onChange={(e) => updateRuleField(index, 'action', e.target.value)}
                             rows={2}
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           />
@@ -354,10 +320,10 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
                       <div>
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-3">
-                            {getRuleIcon(rule.rule_type)}
+                            {getRuleIcon(rule.category)}
                             <div>
-                              <h4 className="font-semibold text-slate-800">{rule.device_name}</h4>
-                              <p className="text-sm text-slate-600 capitalize">{rule.rule_type} Rule</p>
+                              <h4 className="font-semibold text-slate-800">{rule.category} Rule</h4>
+                              <p className="text-sm text-slate-600 capitalize">{rule.category}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
@@ -365,7 +331,7 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
                               {rule.priority}
                             </span>
                             <button
-                              onClick={() => setEditingRuleId(rule.device_name)}
+                              onClick={() => setEditingRuleId(`rule_${index}`)}
                               className="p-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                             >
                               <Edit className="w-4 h-4" />
@@ -374,19 +340,12 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
                         </div>
                         
                         <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Clock className="w-4 h-4 text-slate-400" />
-                            <span className="text-slate-600">Frequency: {rule.frequency}</span>
-                          </div>
                           <div>
                             <p className="text-sm text-slate-700 mb-1">
                               <span className="font-medium">Condition:</span> {rule.condition}
                             </p>
                             <p className="text-sm text-slate-700 mb-1">
                               <span className="font-medium">Action:</span> {rule.action}
-                            </p>
-                            <p className="text-sm text-slate-600">
-                              {rule.description}
                             </p>
                           </div>
                         </div>
@@ -426,13 +385,13 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
           
           <div className="p-6 space-y-4">
             {editedMaintenance.map((maintenance, index) => (
-              <div key={`${maintenance.component_name}-${index}`} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div key={`maintenance-${index}`} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                 <div className="flex items-start gap-3">
                   <button
-                    onClick={() => toggleMaintenanceSelection(maintenance.component_name)}
+                    onClick={() => toggleMaintenanceSelection(index)}
                     className="mt-1"
                   >
-                    {selectedMaintenance.has(maintenance.component_name) ? (
+                    {selectedMaintenance.has(`maintenance_${index}`) ? (
                       <CheckSquare className="w-5 h-5 text-orange-600" />
                     ) : (
                       <Square className="w-5 h-5 text-slate-400" />
@@ -444,12 +403,12 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
                       <div className="flex items-center gap-3">
                         <Wrench className="w-5 h-5 text-orange-600" />
                         <div>
-                          <h4 className="font-semibold text-slate-800">{maintenance.component_name}</h4>
-                          <p className="text-sm text-slate-600 capitalize">{maintenance.maintenance_type} Maintenance</p>
+                          <h4 className="font-semibold text-slate-800">{maintenance.task}</h4>
+                          <p className="text-sm text-slate-600 capitalize">{maintenance.category} Maintenance</p>
                         </div>
                       </div>
                       <button
-                        onClick={() => setEditingMaintenanceId(maintenance.component_name)}
+                        onClick={() => setEditingMaintenanceId(`maintenance_${index}`)}
                         className="p-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                       >
                         <Edit className="w-4 h-4" />
@@ -460,16 +419,6 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
                       <div className="flex items-center gap-2 text-sm">
                         <Clock className="w-4 h-4 text-slate-400" />
                         <span className="text-slate-600">Frequency: {maintenance.frequency}</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium text-slate-700">Last Maintenance:</span>
-                          <p className="text-slate-600">{maintenance.last_maintenance}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-slate-700">Next Maintenance:</span>
-                          <p className="text-slate-600">{maintenance.next_maintenance}</p>
-                        </div>
                       </div>
                       <p className="text-sm text-slate-600">
                         {maintenance.description}
@@ -509,13 +458,13 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
           
           <div className="p-6 space-y-4">
             {editedSafety.map((safety, index) => (
-              <div key={`${safety.id}-${index}`} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+              <div key={`safety-${index}`} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                 <div className="flex items-start gap-3">
                   <button
-                    onClick={() => toggleSafetySelection(safety.id)}
+                    onClick={() => toggleSafetySelection(index)}
                     className="mt-1"
                   >
-                    {selectedSafety.has(safety.id) ? (
+                    {selectedSafety.has(`safety_${index}`) ? (
                       <CheckSquare className="w-5 h-5 text-red-600" />
                     ) : (
                       <Square className="w-5 h-5 text-slate-400" />
@@ -532,11 +481,11 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 text-xs rounded-full border ${getSeverityColor(safety.severity)}`}>
-                          {safety.severity}
+                        <span className={`px-2 py-1 text-xs rounded-full border ${getSeverityColor(safety.type)}`}>
+                          {safety.type}
                         </span>
                         <button
-                          onClick={() => setEditingSafetyId(safety.id)}
+                          onClick={() => setEditingSafetyId(`safety_${index}`)}
                           className="p-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                         >
                           <Edit className="w-4 h-4" />
@@ -548,10 +497,6 @@ export const PDFProcessingResults: React.FC<PDFProcessingResultsProps> = ({
                       <p className="text-sm text-slate-700">
                         {safety.description}
                       </p>
-                      <div>
-                        <span className="font-medium text-slate-700 text-sm">Recommended Action:</span>
-                        <p className="text-sm text-slate-600">{safety.recommended_action}</p>
-                      </div>
                     </div>
                   </div>
                 </div>

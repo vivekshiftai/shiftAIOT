@@ -171,6 +171,11 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const [showChat, setShowChat] = useState(false);
   const [onboardingResult, setOnboardingResult] = useState<OnboardingResult | null>(null);
   const [fieldValidation, setFieldValidation] = useState<Record<string, { isValid: boolean; message: string }>>({});
+  
+  // Progress tracking states
+  const [currentProcess, setCurrentProcess] = useState<'pdf' | 'rules' | 'knowledgebase'>('pdf');
+  const [progress, setProgress] = useState(0);
+  const [currentSubStage, setCurrentSubStage] = useState('');
 
   // Real-time validation
   const validateField = useCallback((field: keyof DeviceFormData, value: any) => {
@@ -360,25 +365,43 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
     setIsSubmitting(true);
     setShowOnboardingLoader(true);
+    setProgress(0);
+    setCurrentProcess('pdf');
+    setCurrentSubStage('Initializing...');
     
     try {
       let pdfFilename = '';
       let rulesData: any = null;
       
-      // Step 1: Upload PDF
+      // Step 1: Upload PDF (0-33%)
       if (uploadedFile?.file) {
+        setCurrentSubStage('Uploading PDF...');
+        setProgress(10);
+        
         try {
           const uploadResponse = await knowledgeAPI.uploadPDF(uploadedFile.file);
           pdfFilename = uploadResponse.data.pdf_filename;
           console.log('PDF uploaded successfully:', uploadResponse.data);
+          
+          setCurrentSubStage('Processing PDF content...');
+          setProgress(20);
+          
+          // Simulate PDF processing time
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          setProgress(33);
+          
         } catch (error) {
           console.error('PDF upload failed:', error);
           throw new Error('Failed to upload PDF document');
         }
       }
       
-      // Step 2: Generate Rules
+      // Step 2: Generate Rules (33-66%)
       if (pdfFilename) {
+        setCurrentProcess('rules');
+        setCurrentSubStage('Analyzing device specifications...');
+        setProgress(40);
+        
         try {
           const rulesResponse = await ruleAPI.generateRules({
             pdf_filename: pdfFilename,
@@ -387,14 +410,36 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           });
           rulesData = rulesResponse.data;
           console.log('Rules generated successfully:', rulesData);
+          
+          setCurrentSubStage('Generating monitoring rules...');
+          setProgress(50);
+          
+          // Simulate rules generation time
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          setProgress(66);
+          
         } catch (error) {
           console.error('Rules generation failed:', error);
           // Continue with fallback data
           console.log('Using fallback rules data');
+          setProgress(66);
         }
       }
       
-      // Step 3: Create Device
+      // Step 3: Knowledge Base Setup (66-100%)
+      setCurrentProcess('knowledgebase');
+      setCurrentSubStage('Setting up chat interface...');
+      setProgress(75);
+      
+      // Simulate knowledge base setup
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setProgress(90);
+      
+      setCurrentSubStage('Finalizing setup...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setProgress(100);
+      
+      // Step 4: Create Device
       try {
         const deviceData = {
           id: formData.deviceId,
@@ -917,10 +962,11 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     return (
       <EnhancedOnboardingLoader
         isProcessing={true}
-        currentProcess="pdf"
-        progress={0}
+        currentProcess={currentProcess}
+        progress={progress}
         onComplete={() => setShowOnboardingLoader(false)}
         pdfFileName={uploadedFile?.file.name}
+        currentSubStage={currentSubStage}
       />
     );
   }
