@@ -233,31 +233,45 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
     }, 200);
 
     try {
-      // Prepare request for PDF processing API
-      const request = {
-        deviceName: formData.name,
-        deviceType: formData.type,
-        manufacturer: formData.manufacturer,
-        model: formData.model,
-        files: fileUploads.map(fu => fu.file),
-        fileTypes: fileUploads.map(fu => fu.type)
-      };
+      // Step 1: Upload the first PDF file
+      if (fileUploads.length === 0) {
+        throw new Error('No PDF files to process');
+      }
 
-      // Call external PDF processing API
-      const result = await pdfApiService.processPDF(request);
+      const firstFile = fileUploads[0].file;
+      console.log('Uploading PDF:', firstFile.name);
+      
+      // Upload PDF to the external API
+      const uploadResult = await pdfApiService.uploadPDF(firstFile);
+      console.log('PDF uploaded successfully:', uploadResult);
+
+      // Step 2: Generate IoT Rules from the uploaded PDF
+      console.log('Generating IoT rules...');
+      const rulesResult = await pdfApiService.generateRules(uploadResult.pdf_name);
+      console.log('IoT rules generated:', rulesResult);
+
+      // Step 3: Generate Maintenance Schedule
+      console.log('Generating maintenance schedule...');
+      const maintenanceResult = await pdfApiService.generateMaintenance(uploadResult.pdf_name);
+      console.log('Maintenance schedule generated:', maintenanceResult);
+
+      // Step 4: Generate Safety Information
+      console.log('Generating safety information...');
+      const safetyResult = await pdfApiService.generateSafety(uploadResult.pdf_name);
+      console.log('Safety information generated:', safetyResult);
       
       // Update progress to 100%
       setProcessingProgress(100);
 
-      // Convert API response to AIGeneratedRule format
-      const apiRules: AIGeneratedRule[] = result.rules.map((rule, index) => ({
+      // Convert API responses to AIGeneratedRule format
+      const apiRules: AIGeneratedRule[] = rulesResult.rules.map((rule, index) => ({
         id: `rule_${index}`,
-        name: rule.name || `Rule ${index + 1}`,
-        description: rule.description || 'AI-generated rule based on device documentation',
-        condition: rule.condition || 'condition_placeholder',
-        action: rule.action || 'action_placeholder',
-        priority: rule.priority || 'MEDIUM',
-        isSelected: rule.recommended !== false // Default to selected unless explicitly not recommended
+        name: `${rule.category} Rule`,
+        description: `AI-generated ${rule.category} rule based on device documentation`,
+        condition: rule.condition,
+        action: rule.action,
+        priority: rule.priority.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH',
+        isSelected: true // Default to selected
       }));
 
       setAiGeneratedRules(apiRules);

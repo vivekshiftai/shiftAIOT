@@ -38,6 +38,9 @@ public class DeviceService {
     @Autowired
     private FileStorageService fileStorageService;
 
+    @Autowired
+    private PDFProcessingService pdfProcessingService;
+
     public List<Device> getAllDevices(String organizationId) {
         logger.info("DeviceService.getAllDevices called with organizationId: {}", organizationId);
         List<Device> devices = deviceRepository.findByOrganizationId(organizationId);
@@ -178,8 +181,8 @@ public class DeviceService {
         // Process PDF results if provided
         if (request.getPdfResults() != null) {
             try {
-                processPDFResults(savedDevice, request.getPdfResults());
-                logger.info("PDF results processed successfully for device: {}", savedDevice.getId());
+                pdfProcessingService.savePDFProcessingResults(savedDevice, request.getPdfResults());
+                logger.info("PDF results processed and saved successfully for device: {}", savedDevice.getId());
             } catch (Exception e) {
                 logger.error("Failed to process PDF results for device: {}", savedDevice.getId(), e);
                 // Continue with device creation even if PDF processing fails

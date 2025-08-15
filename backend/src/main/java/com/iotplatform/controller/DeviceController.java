@@ -34,6 +34,11 @@ import com.iotplatform.model.User;
 import com.iotplatform.service.DeviceService;
 import com.iotplatform.service.FileStorageService;
 import com.iotplatform.service.TelemetryService;
+import com.iotplatform.model.Rule;
+import com.iotplatform.model.DeviceMaintenance;
+import com.iotplatform.model.DeviceSafetyPrecaution;
+import com.iotplatform.service.PDFProcessingService;
+import org.springframework.security.core.Authentication;
 
 import jakarta.validation.Valid;
 
@@ -51,11 +56,13 @@ public class DeviceController {
     private final DeviceService deviceService;
     private final TelemetryService telemetryService;
     private final FileStorageService fileStorageService;
+    private final PDFProcessingService pdfProcessingService;
 
-    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService) {
+    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.fileStorageService = fileStorageService;
+        this.pdfProcessingService = pdfProcessingService;
     }
 
     @GetMapping
@@ -423,8 +430,94 @@ public class DeviceController {
         }
     }
     
+    @GetMapping("/{id}/pdf-results")
+    public ResponseEntity<?> getDevicePDFResults(@PathVariable String id, Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            
+            Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
+            if (deviceOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Device device = deviceOpt.get();
+            
+            // Get PDF processing results
+            List<Rule> rules = pdfProcessingService.getDeviceRules(id);
+            List<DeviceMaintenance> maintenance = pdfProcessingService.getDeviceMaintenance(id);
+            List<DeviceSafetyPrecaution> safetyPrecautions = pdfProcessingService.getDeviceSafetyPrecautions(id);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("device", device);
+            response.put("rules", rules);
+            response.put("maintenance", maintenance);
+            response.put("safetyPrecautions", safetyPrecautions);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error retrieving PDF results for device: {}", id, e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to retrieve PDF results"));
+        }
+    }
 
-    
+    @GetMapping("/{id}/maintenance")
+    public ResponseEntity<?> getDeviceMaintenance(@PathVariable String id, Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            
+            Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
+            if (deviceOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            List<DeviceMaintenance> maintenance = pdfProcessingService.getDeviceMaintenance(id);
+            return ResponseEntity.ok(maintenance);
+            
+        } catch (Exception e) {
+            logger.error("Error retrieving maintenance for device: {}", id, e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to retrieve maintenance data"));
+        }
+    }
+
+    @GetMapping("/{id}/safety-precautions")
+    public ResponseEntity<?> getDeviceSafetyPrecautions(@PathVariable String id, Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            
+            Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
+            if (deviceOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            List<DeviceSafetyPrecaution> safetyPrecautions = pdfProcessingService.getDeviceSafetyPrecautions(id);
+            return ResponseEntity.ok(safetyPrecautions);
+            
+        } catch (Exception e) {
+            logger.error("Error retrieving safety precautions for device: {}", id, e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to retrieve safety precautions"));
+        }
+    }
+
+    @GetMapping("/{id}/rules")
+    public ResponseEntity<?> getDeviceRules(@PathVariable String id, Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            
+            Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
+            if (deviceOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            List<Rule> rules = pdfProcessingService.getDeviceRules(id);
+            return ResponseEntity.ok(rules);
+            
+        } catch (Exception e) {
+            logger.error("Error retrieving rules for device: {}", id, e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to retrieve rules"));
+        }
+    }
+
     // Helper methods
     private String getUserEmail(User user) {
         return user != null ? user.getEmail() : ANONYMOUS_USER;

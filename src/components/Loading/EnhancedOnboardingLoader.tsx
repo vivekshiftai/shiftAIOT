@@ -224,6 +224,11 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
             <p className="text-blue-100 text-sm">
               {currentStage?.title} • {Math.round(progress)}% complete
             </p>
+            {currentSubStage && (
+              <p className="text-blue-200 text-xs mt-1">
+                {currentSubStage}
+              </p>
+            )}
           </div>
         </div>
 
@@ -308,7 +313,7 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
                     Processing: {pdfFileName}
                   </span>
                   <p className="text-xs text-blue-700 mt-1">
-                    AI analysis in progress...
+                    {currentSubStage || 'AI analysis in progress...'}
                   </p>
                 </div>
               </div>
