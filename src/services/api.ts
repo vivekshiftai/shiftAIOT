@@ -181,6 +181,13 @@ export const deviceAPI = {
   updateStatus: (id: string, status: string) => api.patch(`/devices/${id}/status`, { status }),
   
   postTelemetry: (deviceId: string, data: any) => api.post(`/devices/${deviceId}/telemetry`, data),
+  
+  getDocumentation: (deviceId: string) => api.get(`/devices/${deviceId}/documentation`),
+  
+  downloadDocumentation: (deviceId: string, type: string) => 
+    api.get(`/devices/${deviceId}/documentation/${type}`, {
+      responseType: 'blob'
+    }),
 };
 
 // Rule API
@@ -221,9 +228,15 @@ export const knowledgeAPI = {
     });
   },
   
-  uploadPDF: (file: File) => {
+  uploadPDF: (file: File, deviceId?: string, deviceName?: string) => {
     const formData = new FormData();
     formData.append('file', file);
+    if (deviceId) {
+      formData.append('deviceId', deviceId);
+    }
+    if (deviceName) {
+      formData.append('deviceName', deviceName);
+    }
     return api.post('/knowledge/upload-pdf', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -231,7 +244,14 @@ export const knowledgeAPI = {
     });
   },
   
-  getDocuments: () => api.get('/knowledge/documents'),
+  getDocuments: (deviceId?: string) => {
+    const params = deviceId ? { deviceId } : {};
+    return api.get('/knowledge/documents', { params });
+  },
+  
+  getDocumentsByDevice: (deviceId: string) => api.get(`/knowledge/documents/device/${deviceId}`),
+  
+  getGeneralDocuments: () => api.get('/knowledge/documents/general'),
   
   deleteDocument: (documentId: string) => api.delete(`/knowledge/documents/${documentId}`),
   

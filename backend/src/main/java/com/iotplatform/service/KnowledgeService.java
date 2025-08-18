@@ -38,7 +38,7 @@ public class KnowledgeService {
         }
     }
 
-    public KnowledgeDocument uploadDocument(MultipartFile file, String organizationId) throws IOException {
+    public KnowledgeDocument uploadDocument(MultipartFile file, String organizationId, String deviceId, String deviceName) throws IOException {
         // Generate unique filename
         String originalFilename = file.getOriginalFilename();
         String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
@@ -57,6 +57,12 @@ public class KnowledgeService {
             organizationId
         );
         
+        // Set device association if provided
+        if (deviceId != null && !deviceId.trim().isEmpty()) {
+            document.setDeviceId(deviceId);
+            document.setDeviceName(deviceName);
+        }
+        
         // Save to database
         KnowledgeDocument savedDocument = knowledgeDocumentRepository.save(document);
         
@@ -65,9 +71,24 @@ public class KnowledgeService {
         
         return savedDocument;
     }
+    
+    public KnowledgeDocument uploadDocument(MultipartFile file, String organizationId) throws IOException {
+        return uploadDocument(file, organizationId, null, null);
+    }
 
     public List<KnowledgeDocument> getDocuments(String organizationId) {
         return knowledgeDocumentRepository.findByOrganizationIdOrderByUploadedAtDesc(organizationId);
+    }
+    
+    public List<KnowledgeDocument> getDocumentsByDevice(String organizationId, String deviceId) {
+        if (deviceId == null || deviceId.trim().isEmpty()) {
+            return getDocuments(organizationId);
+        }
+        return knowledgeDocumentRepository.findByOrganizationIdAndDeviceIdOrderByUploadedAtDesc(organizationId, deviceId);
+    }
+    
+    public List<KnowledgeDocument> getGeneralDocuments(String organizationId) {
+        return knowledgeDocumentRepository.findByOrganizationIdAndDeviceIdIsNullOrderByUploadedAtDesc(organizationId);
     }
 
     public void deleteDocument(String documentId, String organizationId) {

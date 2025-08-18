@@ -51,6 +51,12 @@ public class KnowledgeDocument {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
     
+    @Column(name = "device_id")
+    private String deviceId;
+    
+    @Column(name = "device_name")
+    private String deviceName;
+    
     // Constructors
     public KnowledgeDocument() {
         this.createdAt = LocalDateTime.now();
@@ -163,6 +169,22 @@ public class KnowledgeDocument {
     
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+    
+    public String getDeviceId() {
+        return deviceId;
+    }
+    
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
+    }
+    
+    public String getDeviceName() {
+        return deviceName;
+    }
+    
+    public void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
     }
     
     @PreUpdate

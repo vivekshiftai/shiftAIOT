@@ -203,10 +203,13 @@ CREATE TABLE IF NOT EXISTS knowledge_documents (
     status VARCHAR(50) DEFAULT 'processing',
     vectorized BOOLEAN DEFAULT false,
     organization_id VARCHAR(255) NOT NULL,
+    device_id VARCHAR(255),
+    device_name VARCHAR(255),
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     processed_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE SET NULL
 );
 
 -- Conversation Configurations table

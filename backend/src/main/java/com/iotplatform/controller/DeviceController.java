@@ -38,7 +38,6 @@ import com.iotplatform.model.Rule;
 import com.iotplatform.model.DeviceMaintenance;
 import com.iotplatform.model.DeviceSafetyPrecaution;
 import com.iotplatform.service.PDFProcessingService;
-import org.springframework.security.core.Authentication;
 
 import jakarta.validation.Valid;
 
@@ -431,9 +430,9 @@ public class DeviceController {
     }
     
     @GetMapping("/{id}/pdf-results")
-    public ResponseEntity<?> getDevicePDFResults(@PathVariable String id, Authentication authentication) {
+    public ResponseEntity<?> getDevicePDFResults(@PathVariable String id, @AuthenticationPrincipal User user) {
         try {
-            String organizationId = getOrganizationId(authentication);
+            String organizationId = getOrganizationId(user);
             
             Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
             if (deviceOpt.isEmpty()) {
@@ -462,9 +461,9 @@ public class DeviceController {
     }
 
     @GetMapping("/{id}/maintenance")
-    public ResponseEntity<?> getDeviceMaintenance(@PathVariable String id, Authentication authentication) {
+    public ResponseEntity<?> getDeviceMaintenance(@PathVariable String id, @AuthenticationPrincipal User user) {
         try {
-            String organizationId = getOrganizationId(authentication);
+            String organizationId = getOrganizationId(user);
             
             Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
             if (deviceOpt.isEmpty()) {
@@ -481,9 +480,9 @@ public class DeviceController {
     }
 
     @GetMapping("/{id}/safety-precautions")
-    public ResponseEntity<?> getDeviceSafetyPrecautions(@PathVariable String id, Authentication authentication) {
+    public ResponseEntity<?> getDeviceSafetyPrecautions(@PathVariable String id, @AuthenticationPrincipal User user) {
         try {
-            String organizationId = getOrganizationId(authentication);
+            String organizationId = getOrganizationId(user);
             
             Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
             if (deviceOpt.isEmpty()) {
@@ -500,9 +499,9 @@ public class DeviceController {
     }
 
     @GetMapping("/{id}/rules")
-    public ResponseEntity<?> getDeviceRules(@PathVariable String id, Authentication authentication) {
+    public ResponseEntity<?> getDeviceRules(@PathVariable String id, @AuthenticationPrincipal User user) {
         try {
-            String organizationId = getOrganizationId(authentication);
+            String organizationId = getOrganizationId(user);
             
             Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
             if (deviceOpt.isEmpty()) {

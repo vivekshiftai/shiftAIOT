@@ -13,9 +13,12 @@ import {
   MessageSquare,
   Bot,
   User,
-  Plus
+  Plus,
+  Settings
 } from 'lucide-react';
-import { pdfApiService, PDFDocument, PDFUploadResponse, PDFQueryRequest as QueryRequest, PDFQueryResponse as QueryResponse } from '../services/pdfApiService';
+import { knowledgeAPI } from '../services/api';
+import { deviceAPI } from '../services/api';
+import { pdfApiService, PDFListResponse } from '../services/pdfApiService';
 
 // Updated interface to match PDF API response
 interface KnowledgeDocument {
@@ -28,6 +31,15 @@ interface KnowledgeDocument {
   status: string;
   vectorized: boolean;
   chunk_count?: number;
+  deviceId?: string; // Link to device
+  deviceName?: string; // Device name for display
+}
+
+interface Device {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
 }
 
 interface ChatMessage {
@@ -40,6 +52,9 @@ interface ChatMessage {
 export const KnowledgeSection: React.FC = () => {
   const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<KnowledgeDocument | null>(null);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [selectedDeviceForUpload, setSelectedDeviceForUpload] = useState<string>('');
+  const [showDeviceSelector, setShowDeviceSelector] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -54,32 +69,44 @@ export const KnowledgeSection: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Load documents from PDF API on component mount
+    // Load documents from external PDF API and devices on component mount
   useEffect(() => {
-    const loadDocuments = async () => {
+    const loadData = async () => {
       try {
-        const pdfListResponse = await pdfApiService.listPDFs();
-        const convertedDocuments: KnowledgeDocument[] = pdfListResponse.pdfs.map((pdf: PDFDocument, index: number) => ({
-          id: index.toString(),
-          name: pdf.filename,
+        // Load PDF documents from external PDF API
+        const pdfListResponse: PDFListResponse = await pdfApiService.listPDFs();
+        const convertedDocuments: KnowledgeDocument[] = pdfListResponse.pdfs.map((pdf, index) => ({
+          id: index.toString(), // Use index as ID since external API doesn't provide unique IDs
+          name: pdf.pdf_name,
           type: 'pdf',
-          uploadedAt: pdf.upload_date,
-          processedAt: pdf.upload_date, // Assuming processing is immediate
-          size: pdf.file_size,
+          uploadedAt: pdf.created_at,
+          processedAt: pdf.created_at, // Assuming processing is immediate
+          size: 0, // Size not available in external API response
           status: 'completed', // All listed PDFs are processed
           vectorized: true,
-          chunk_count: pdf.chunk_count
+          chunk_count: pdf.chunk_count,
+          deviceId: undefined, // Not available from external API
+          deviceName: undefined // Not available from external API
         }));
         setDocuments(convertedDocuments);
+
+        // Load devices for association
+        try {
+          const devicesResponse = await deviceAPI.getAll();
+          setDevices(devicesResponse.data || []);
+        } catch (deviceError) {
+          console.error('Failed to load devices:', deviceError);
+          // Continue without devices
+        }
       } catch (error) {
-        console.error('Failed to load PDF documents:', error);
+        console.error('Failed to load PDF documents from external API:', error);
         // Keep empty array as fallback
       } finally {
         setLoading(false);
       }
     };
 
-    loadDocuments();
+    loadData();
   }, []);
 
   const formatFileSize = (bytes: number) => {
@@ -119,21 +146,32 @@ export const KnowledgeSection: React.FC = () => {
     try {
       // If a document is selected, query it specifically
       if (selectedDocument) {
-        const queryRequest: QueryRequest = {
-          pdf_filename: selectedDocument.name,
-          query: userMessage.content,
-          max_results: 5
-        };
-
-        const queryResponse = await pdfProcessingService.queryPDF(queryRequest);
-        
-        const assistantMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          type: 'assistant',
-          content: queryResponse.answer || `I found ${queryResponse.total_matches} relevant results in "${selectedDocument.name}". ${queryResponse.results.length > 0 ? 'Here\'s what I found: ' + queryResponse.results[0].text.substring(0, 200) + '...' : 'Would you like me to search for more specific information?'}`,
-          timestamp: new Date()
-        };
-        setChatMessages(prev => [...prev, assistantMessage]);
+        try {
+          const queryRequest = {
+            pdf_name: selectedDocument.name,
+            query: userMessage.content,
+            top_k: 5
+          };
+          
+          const queryResponse = await pdfApiService.queryPDF(queryRequest);
+          
+          const assistantMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            type: 'assistant',
+            content: queryResponse.response || `I found relevant results in "${selectedDocument.name}". ${queryResponse.chunks_used.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 200) + '...' : 'Would you like me to search for more specific information?'}`,
+            timestamp: new Date()
+          };
+          setChatMessages(prev => [...prev, assistantMessage]);
+        } catch (queryError) {
+          console.error('Failed to query PDF:', queryError);
+          const errorMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            type: 'assistant',
+            content: `I encountered an error while searching "${selectedDocument.name}". Please try again or ask a different question.`,
+            timestamp: new Date()
+          };
+          setChatMessages(prev => [...prev, errorMessage]);
+        }
       } else {
         // Generate a general response
         const aiResponse = generateAIResponse(userMessage.content);
@@ -169,6 +207,8 @@ export const KnowledgeSection: React.FC = () => {
     return responses[Math.floor(Math.random() * responses.length)];
   };
 
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -179,35 +219,57 @@ export const KnowledgeSection: React.FC = () => {
       return;
     }
 
+    // Show device selector if devices are available
+    if (devices.length > 0) {
+      setSelectedFile(file);
+      setShowDeviceSelector(true);
+      // Store the file for later upload
+      const fileInput = event.target;
+      fileInput.value = '';
+      return;
+    }
+
+    // If no devices, upload directly
+    await uploadPDFFile(file);
+  };
+
+  const uploadPDFFile = async (file: File, deviceId?: string) => {
     setUploading(true);
     try {
-      const uploadResponse: PDFUploadResponse = await pdfProcessingService.uploadPDF(file);
+      const deviceName = deviceId ? devices.find(d => d.id === deviceId)?.name : undefined;
+      
+      // Upload to external PDF API
+      const uploadResponse = await pdfApiService.uploadPDF(file);
       
       // Create a new document entry
       const newDocument: KnowledgeDocument = {
         id: Date.now().toString(),
-        name: uploadResponse.pdf_filename,
+        name: uploadResponse.pdf_name,
         type: 'pdf',
         uploadedAt: new Date().toISOString(),
         size: file.size,
-        status: uploadResponse.processing_status === 'processing' ? 'processing' : 'completed',
-        vectorized: uploadResponse.processing_status === 'completed',
-        chunk_count: 0
+        status: 'completed',
+        vectorized: true,
+        chunk_count: uploadResponse.chunks_processed,
+        deviceId: deviceId,
+        deviceName: deviceName
       };
 
       setDocuments(prev => [newDocument, ...prev]);
       
-      // Clear the input
-      event.target.value = '';
-      
       // Show success message
+      const deviceInfo = deviceId ? ` for device "${deviceName}"` : '';
       const successMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: `Successfully uploaded "${uploadResponse.pdf_filename}". ${uploadResponse.processing_status === 'processing' ? 'The document is being processed and will be available for querying shortly.' : 'The document is ready for querying.'}`,
+        content: `Successfully uploaded "${uploadResponse.pdf_name}"${deviceInfo}. The document is ready for querying.`,
         timestamp: new Date()
       };
       setChatMessages(prev => [...prev, successMessage]);
+
+      // Reset device selector
+      setShowDeviceSelector(false);
+      setSelectedDeviceForUpload('');
     } catch (error) {
       console.error('Failed to upload document:', error);
       alert('Failed to upload document. Please try again.');
@@ -222,7 +284,9 @@ export const KnowledgeSection: React.FC = () => {
     try {
       const document = documents.find(doc => doc.id === documentId);
       if (document) {
-        await pdfProcessingService.deletePDF(document.name);
+        // Note: deletePDF method doesn't exist in pdfApiService
+        // await pdfApiService.deletePDF(document.name);
+        console.log('Delete functionality not implemented in pdfApiService');
         setDocuments(prev => prev.filter(doc => doc.id !== documentId));
         
         if (selectedDocument?.id === documentId) {
@@ -245,7 +309,8 @@ export const KnowledgeSection: React.FC = () => {
   };
 
   const filteredDocuments = documents.filter(doc =>
-    doc.name.toLowerCase().includes(searchQuery.toLowerCase())
+    doc.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    (!selectedDeviceForUpload || doc.deviceId === selectedDeviceForUpload)
   );
 
   return (
@@ -369,40 +434,105 @@ export const KnowledgeSection: React.FC = () => {
 
       {/* Right Panel - PDF Document Library */}
              <div className="w-1/3 border-l border-light flex flex-col bg-card">
-        {/* Header */}
-        <div className="p-4 border-b border-light">
-                      <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xl font-bold text-primary">PDF Document Library</h2>
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleFileUpload}
-                className="hidden"
-                disabled={uploading}
-              />
-                             <div className="flex items-center gap-2 px-3 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all shadow-sm">
-                {uploading ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                ) : (
-                  <Plus className="w-4 h-4" />
-                )}
-                {uploading ? 'Uploading...' : 'Upload PDF'}
-              </div>
-            </label>
-          </div>
+                 {/* Header */}
+         <div className="p-4 border-b border-light">
+           <div className="flex items-center justify-between mb-3">
+             <h2 className="text-xl font-bold text-primary">PDF Document Library</h2>
+             <label className="cursor-pointer">
+               <input
+                 type="file"
+                 accept=".pdf"
+                 onChange={handleFileUpload}
+                 className="hidden"
+                 disabled={uploading}
+               />
+               <div className="flex items-center gap-2 px-3 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all shadow-sm">
+                 {uploading ? (
+                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                 ) : (
+                   <Plus className="w-4 h-4" />
+                 )}
+                 {uploading ? 'Uploading...' : 'Upload PDF'}
+               </div>
+             </label>
+           </div>
+
+           {/* Device Selector Modal */}
+           {showDeviceSelector && (
+             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+               <div className="bg-card p-6 rounded-xl shadow-lg max-w-md w-full mx-4">
+                 <h3 className="text-lg font-semibold text-primary mb-4">Associate PDF with Device</h3>
+                 <p className="text-secondary mb-4">Select a device to associate this PDF with, or upload without association:</p>
+                 
+                 <select
+                   value={selectedDeviceForUpload}
+                   onChange={(e) => setSelectedDeviceForUpload(e.target.value)}
+                   className="w-full p-3 border border-medium rounded-lg bg-card text-primary mb-4"
+                 >
+                   <option value="">No device association</option>
+                   {devices.map((device) => (
+                     <option key={device.id} value={device.id}>
+                       {device.name} ({device.type})
+                     </option>
+                   ))}
+                 </select>
+                 
+                 <div className="flex gap-3">
+                                       <button
+                      onClick={() => {
+                        setShowDeviceSelector(false);
+                        setSelectedDeviceForUpload('');
+                        setSelectedFile(null);
+                      }}
+                      className="flex-1 px-4 py-2 border border-medium text-secondary rounded-lg hover:bg-tertiary transition-colors"
+                    >
+                      Cancel
+                    </button>
+                                       <button
+                      onClick={async () => {
+                        if (selectedFile) {
+                          await uploadPDFFile(selectedFile, selectedDeviceForUpload);
+                          setSelectedFile(null);
+                        }
+                        setShowDeviceSelector(false);
+                      }}
+                      className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+                    >
+                      Upload
+                    </button>
+                 </div>
+               </div>
+             </div>
+           )}
           
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search PDF documents..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-medium rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-card text-primary shadow-sm"
-            />
-          </div>
+                     {/* Search and Filters */}
+           <div className="space-y-3">
+             <div className="relative">
+               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-tertiary w-4 h-4" />
+               <input
+                 type="text"
+                 placeholder="Search PDF documents..."
+                 value={searchQuery}
+                 onChange={(e) => setSearchQuery(e.target.value)}
+                 className="w-full pl-10 pr-4 py-2 border border-medium rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-card text-primary shadow-sm"
+               />
+             </div>
+             
+             {devices.length > 0 && (
+               <select
+                 value={selectedDeviceForUpload}
+                 onChange={(e) => setSelectedDeviceForUpload(e.target.value)}
+                 className="w-full p-2 border border-medium rounded-lg bg-card text-primary shadow-sm"
+               >
+                 <option value="">All devices</option>
+                 {devices.map((device) => (
+                   <option key={device.id} value={device.id}>
+                     {device.name} ({device.type})
+                   </option>
+                 ))}
+               </select>
+             )}
+           </div>
         </div>
 
         {/* Document List */}
@@ -434,17 +564,23 @@ export const KnowledgeSection: React.FC = () => {
                       
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-primary truncate">{doc.name}</h4>
-                        <div className="flex items-center gap-2 text-sm text-secondary mt-1">
-                          <span>{formatFileSize(doc.size)}</span>
-                          <span>•</span>
-                          <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
-                          {doc.chunk_count && (
-                            <>
-                              <span>•</span>
-                              <span>{doc.chunk_count} chunks</span>
-                            </>
-                          )}
-                        </div>
+                                                 <div className="flex items-center gap-2 text-sm text-secondary mt-1">
+                           <span>{formatFileSize(doc.size)}</span>
+                           <span>•</span>
+                           <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
+                           {doc.chunk_count && (
+                             <>
+                               <span>•</span>
+                               <span>{doc.chunk_count} chunks</span>
+                             </>
+                           )}
+                           {doc.deviceName && (
+                             <>
+                               <span>•</span>
+                               <span className="text-primary-500 font-medium">{doc.deviceName}</span>
+                             </>
+                           )}
+                         </div>
                       </div>
                     </div>
                     

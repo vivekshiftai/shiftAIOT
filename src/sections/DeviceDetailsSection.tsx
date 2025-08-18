@@ -21,7 +21,10 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle,
-  Download
+  Download,
+  Send,
+  Bot,
+  User
 } from 'lucide-react';
 import { useIoT } from '../contexts/IoTContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,6 +32,7 @@ import { Device } from '../types';
 import { DeviceRules } from '../components/Devices/DeviceRules';
 import { DeviceConnectionManager } from '../components/Devices/DeviceConnectionManager';
 import { deviceAPI } from '../services/api';
+import { pdfApiService, PDFListResponse } from '../services/pdfApiService';
 
 interface DocumentationInfo {
   deviceId: string;
@@ -45,6 +49,20 @@ interface ChatMessage {
   type: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+}
+
+interface KnowledgeDocument {
+  id: string;
+  name: string;
+  type: string;
+  uploadedAt: string;
+  processedAt?: string;
+  size: number;
+  status: string;
+  vectorized: boolean;
+  chunk_count?: number;
+  deviceId?: string;
+  deviceName?: string;
 }
 
 const tabs = [
@@ -68,6 +86,8 @@ export const DeviceDetailsSection: React.FC = () => {
   const [documentationInfo, setDocumentationInfo] = useState<DocumentationInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [devicePDFs, setDevicePDFs] = useState<KnowledgeDocument[]>([]);
+  const [selectedPDF, setSelectedPDF] = useState<KnowledgeDocument | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -91,8 +111,72 @@ export const DeviceDetailsSection: React.FC = () => {
   useEffect(() => {
     if (device) {
       fetchDocumentationInfo();
+      loadDevicePDFs();
     }
   }, [device?.id]);
+
+  const loadDevicePDFs = async () => {
+    if (!device) return;
+    
+    try {
+      // Load all PDFs from external API
+      const pdfListResponse: PDFListResponse = await pdfApiService.listPDFs();
+      
+      // Filter PDFs that might be associated with this device
+      // We'll look for PDFs that contain the device name or are likely related
+      const deviceNameLower = device.name.toLowerCase();
+      const deviceTypeLower = device.type.toLowerCase();
+      
+      const filteredPDFs: KnowledgeDocument[] = pdfListResponse.pdfs
+        .map((pdf, index) => ({
+          id: index.toString(),
+          name: pdf.pdf_name,
+          type: 'pdf',
+          uploadedAt: pdf.created_at,
+          processedAt: pdf.created_at,
+          size: 0,
+          status: 'completed',
+          vectorized: true,
+          chunk_count: pdf.chunk_count,
+          deviceId: device.id,
+          deviceName: device.name
+        }))
+        .filter(pdf => {
+          const pdfNameLower = pdf.name.toLowerCase();
+          // Check if PDF name contains device name, device type, or common device-related terms
+          return pdfNameLower.includes(deviceNameLower) ||
+                 pdfNameLower.includes(deviceTypeLower) ||
+                 pdfNameLower.includes('manual') ||
+                 pdfNameLower.includes('datasheet') ||
+                 pdfNameLower.includes('specification') ||
+                 pdfNameLower.includes('guide') ||
+                 pdfNameLower.includes('instruction') ||
+                 pdfNameLower.includes('user') ||
+                 pdfNameLower.includes('technical');
+        });
+      
+      setDevicePDFs(filteredPDFs);
+      
+      // Auto-select the first PDF if available
+      if (filteredPDFs.length > 0 && !selectedPDF) {
+        setSelectedPDF(filteredPDFs[0]);
+      }
+      
+      // Update initial chat message if PDFs are found
+      if (filteredPDFs.length > 0) {
+        setChatMessages(prev => [
+          {
+            id: '1',
+            type: 'assistant',
+            content: `Hello! I found ${filteredPDFs.length} PDF document(s) related to the ${device.name} device. I can help you find information from these documents. What would you like to know?`,
+            timestamp: new Date()
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('Failed to load device PDFs:', error);
+    }
+  };
 
   const handleTabChange = (tabId: string) => {
     setIsTabLoading(true);
@@ -210,7 +294,7 @@ export const DeviceDetailsSection: React.FC = () => {
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || isTyping) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -223,17 +307,57 @@ export const DeviceDetailsSection: React.FC = () => {
     setNewMessage('');
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: ChatMessage = {
+    try {
+      // If we have a selected PDF, query it specifically
+      if (selectedPDF) {
+        try {
+          const queryRequest = {
+            pdf_name: selectedPDF.name,
+            query: userMessage.content,
+            top_k: 5
+          };
+          
+          const queryResponse = await pdfApiService.queryPDF(queryRequest);
+          
+          const assistantMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            type: 'assistant',
+            content: queryResponse.response || `I found relevant information in the "${selectedPDF.name}" document. ${queryResponse.chunks_used.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 300) + '...' : 'Would you like me to search for more specific information?'}`,
+            timestamp: new Date()
+          };
+          setChatMessages(prev => [...prev, assistantMessage]);
+        } catch (queryError) {
+          console.error('Failed to query PDF:', queryError);
+          const errorMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            type: 'assistant',
+            content: `I encountered an error while searching the "${selectedPDF.name}" document. Please try again or ask a different question.`,
+            timestamp: new Date()
+          };
+          setChatMessages(prev => [...prev, errorMessage]);
+        }
+      } else {
+        // Generate a general response about the device
+        const aiResponse: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: `I understand you're asking about "${userMessage.content}" for the ${device?.name} device. ${devicePDFs.length > 0 ? `I found ${devicePDFs.length} PDF document(s) related to this device. Would you like me to search through them for specific information?` : 'I don\'t have any PDF documents specifically associated with this device, but I can help you with general device information.'}`,
+          timestamp: new Date()
+        };
+        setChatMessages(prev => [...prev, aiResponse]);
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: `I understand you're asking about "${userMessage.content}". Based on the device information, I can help you with that. What specific aspect would you like me to elaborate on?`,
+        content: 'I apologize, but I encountered an error while processing your request. Please try again.',
         timestamp: new Date()
       };
-      setChatMessages(prev => [...prev, aiResponse]);
+      setChatMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const renderTabContent = () => {
@@ -406,57 +530,176 @@ export const DeviceDetailsSection: React.FC = () => {
       case 'chat':
         return (
           <div className="flex flex-col h-96">
+            {/* PDF Selection */}
+            {devicePDFs.length > 0 && (
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">Available PDFs ({devicePDFs.length}):</span>
+                  </div>
+                  <select
+                    value={selectedPDF?.id || ''}
+                    onChange={(e) => {
+                      const pdf = devicePDFs.find(p => p.id === e.target.value);
+                      setSelectedPDF(pdf || null);
+                    }}
+                    className="text-sm border border-blue-200 rounded px-2 py-1 bg-white"
+                  >
+                    <option value="">Select a PDF to query...</option>
+                    {devicePDFs.map((pdf) => (
+                      <option key={pdf.id} value={pdf.id}>
+                        {pdf.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {selectedPDF && (
+                  <div className="text-xs text-blue-600">
+                    <p className="font-medium">Currently querying: {selectedPDF.name}</p>
+                    {selectedPDF.chunk_count && (
+                      <p className="text-blue-500">Contains {selectedPDF.chunk_count} knowledge chunks</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {devicePDFs.length === 0 && (
+              <div className="mb-4 p-3 bg-yellow-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                  <span className="text-sm font-medium text-yellow-800">No PDF documents found for this device</span>
+                </div>
+                <p className="text-xs text-yellow-600 mt-1">
+                  Upload PDF documents in the Knowledge section to enable AI-powered chat assistance.
+                </p>
+              </div>
+            )}
+
+            {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-slate-50 rounded-lg">
               {chatMessages.map((message) => (
                 <div
                   key={message.id}
                   className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                  <div className="flex items-start gap-3 max-w-3xl">
+                    <div className={`p-2 rounded-full flex-shrink-0 shadow-sm ${
                       message.type === 'user'
                         ? 'bg-blue-500 text-white'
-                        : 'bg-white text-slate-800 border border-slate-200'
-                    }`}
-                  >
-                    <p className="text-sm">{message.content}</p>
-                    <p className={`text-xs mt-1 ${
-                      message.type === 'user' ? 'text-blue-100' : 'text-slate-500'
+                        : 'bg-white text-slate-600 border border-slate-200'
                     }`}>
-                      {message.timestamp.toLocaleTimeString()}
-                    </p>
+                      {message.type === 'user' ? (<User className="w-4 h-4" />) : (<Bot className="w-4 h-4" />)}
+                    </div>
+                    <div
+                      className={`px-4 py-2 rounded-lg max-w-xs lg:max-w-md ${
+                        message.type === 'user'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-white text-slate-800 border border-slate-200'
+                      }`}
+                    >
+                      <p className="text-sm leading-relaxed">{message.content}</p>
+                      <p className={`text-xs mt-1 ${
+                        message.type === 'user' ? 'text-blue-100' : 'text-slate-500'
+                      }`}>
+                        {message.timestamp.toLocaleTimeString()}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}
               {isTyping && (
                 <div className="flex justify-start">
-                  <div className="bg-white text-slate-800 border border-slate-200 px-4 py-2 rounded-lg">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="flex items-start gap-3 max-w-3xl">
+                    <div className="p-2 rounded-full flex-shrink-0 shadow-sm bg-white text-slate-600 border border-slate-200">
+                      <Bot className="w-4 h-4" />
+                    </div>
+                    <div className="px-4 py-2 rounded-lg bg-white text-slate-800 border border-slate-200">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Chat Input */}
             <div className="flex gap-2 mt-4">
               <input
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                placeholder="Ask about this device..."
+                placeholder={selectedPDF ? `Ask about "${selectedPDF.name}"...` : "Ask about this device..."}
                 className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               <button
                 onClick={sendMessage}
-                disabled={!newMessage.trim()}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!newMessage.trim() || isTyping}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
+                <Send className="w-4 h-4" />
                 Send
               </button>
             </div>
+
+            {/* Quick Actions */}
+            {devicePDFs.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  onClick={() => setNewMessage('How do I set up this device?')}
+                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                >
+                  Setup Guide
+                </button>
+                <button
+                  onClick={() => setNewMessage('What maintenance is required?')}
+                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                >
+                  Maintenance
+                </button>
+                <button
+                  onClick={() => setNewMessage('Help me troubleshoot issues')}
+                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                >
+                  Troubleshooting
+                </button>
+                <button
+                  onClick={() => setNewMessage('Show me technical specifications')}
+                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                >
+                  Specifications
+                </button>
+                {device?.type === 'SENSOR' && (
+                  <button
+                    onClick={() => setNewMessage('What are the sensor calibration procedures?')}
+                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                  >
+                    Calibration
+                  </button>
+                )}
+                {device?.type === 'GATEWAY' && (
+                  <button
+                    onClick={() => setNewMessage('How do I configure network settings?')}
+                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                  >
+                    Network Config
+                  </button>
+                )}
+                {device?.type === 'ACTUATOR' && (
+                  <button
+                    onClick={() => setNewMessage('What are the safety procedures for this actuator?')}
+                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                  >
+                    Safety Procedures
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         );
 

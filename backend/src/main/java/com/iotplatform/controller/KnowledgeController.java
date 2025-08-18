@@ -54,6 +54,8 @@ public class KnowledgeController {
     @PostMapping("/upload-pdf")
     public ResponseEntity<?> uploadPDF(
             @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "deviceId", required = false) String deviceId,
+            @RequestParam(value = "deviceName", required = false) String deviceName,
             Authentication authentication) {
         try {
             String organizationId = getOrganizationId(authentication);
@@ -74,13 +76,15 @@ public class KnowledgeController {
                 ));
             }
             
-            KnowledgeDocument document = knowledgeService.uploadDocument(file, organizationId);
+            KnowledgeDocument document = knowledgeService.uploadDocument(file, organizationId, deviceId, deviceName);
             
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "pdf_filename", file.getOriginalFilename(),
                 "processing_status", "uploaded",
                 "document_id", document.getId(),
+                "device_id", document.getDeviceId(),
+                "device_name", document.getDeviceName(),
                 "message", "PDF uploaded successfully"
             ));
         } catch (Exception e) {
@@ -92,13 +96,109 @@ public class KnowledgeController {
     }
 
     @GetMapping("/documents")
-    public ResponseEntity<?> getDocuments(Authentication authentication) {
+    public ResponseEntity<?> getDocuments(
+            @RequestParam(value = "deviceId", required = false) String deviceId,
+            Authentication authentication) {
         try {
             String organizationId = getOrganizationId(authentication);
-            List<KnowledgeDocument> documents = knowledgeService.getDocuments(organizationId);
-            return ResponseEntity.ok(Map.of("documents", documents));
+            List<KnowledgeDocument> documents;
+            
+            if (deviceId != null && !deviceId.trim().isEmpty()) {
+                documents = knowledgeService.getDocumentsByDevice(organizationId, deviceId);
+            } else {
+                documents = knowledgeService.getDocuments(organizationId);
+            }
+            
+            List<Map<String, Object>> response = documents.stream()
+                .map(doc -> Map.of(
+                    "id", doc.getId(),
+                    "name", doc.getName(),
+                    "type", doc.getType(),
+                    "size", doc.getSize(),
+                    "status", doc.getStatus(),
+                    "vectorized", doc.getVectorized(),
+                    "uploadedAt", doc.getUploadedAt(),
+                    "processedAt", doc.getProcessedAt(),
+                    "deviceId", doc.getDeviceId(),
+                    "deviceName", doc.getDeviceName()
+                ))
+                .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "documents", response
+            ));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/documents/device/{deviceId}")
+    public ResponseEntity<?> getDocumentsByDevice(@PathVariable String deviceId, Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            List<KnowledgeDocument> documents = knowledgeService.getDocumentsByDevice(organizationId, deviceId);
+            
+            List<Map<String, Object>> response = documents.stream()
+                .map(doc -> Map.of(
+                    "id", doc.getId(),
+                    "name", doc.getName(),
+                    "type", doc.getType(),
+                    "size", doc.getSize(),
+                    "status", doc.getStatus(),
+                    "vectorized", doc.getVectorized(),
+                    "uploadedAt", doc.getUploadedAt(),
+                    "processedAt", doc.getProcessedAt(),
+                    "deviceId", doc.getDeviceId(),
+                    "deviceName", doc.getDeviceName()
+                ))
+                .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "documents", response
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+    
+    @GetMapping("/documents/general")
+    public ResponseEntity<?> getGeneralDocuments(Authentication authentication) {
+        try {
+            String organizationId = getOrganizationId(authentication);
+            List<KnowledgeDocument> documents = knowledgeService.getGeneralDocuments(organizationId);
+            
+            List<Map<String, Object>> response = documents.stream()
+                .map(doc -> Map.of(
+                    "id", doc.getId(),
+                    "name", doc.getName(),
+                    "type", doc.getType(),
+                    "size", doc.getSize(),
+                    "status", doc.getStatus(),
+                    "vectorized", doc.getVectorized(),
+                    "uploadedAt", doc.getUploadedAt(),
+                    "processedAt", doc.getProcessedAt(),
+                    "deviceId", doc.getDeviceId(),
+                    "deviceName", doc.getDeviceName()
+                ))
+                .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "documents", response
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
         }
     }
 

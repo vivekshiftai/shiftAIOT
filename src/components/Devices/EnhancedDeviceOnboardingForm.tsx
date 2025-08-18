@@ -1,80 +1,24 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
-  Plus, 
   Upload, 
   FileText, 
   Settings, 
-  Wifi, 
-  Cpu, 
-  Thermometer, 
-  Zap,
   AlertCircle,
   CheckCircle,
   X,
   ArrowRight,
   ArrowLeft,
   Brain,
-  Sparkles,
   Loader2,
   FileSearch,
-  Bot,
   Rocket,
-  Target,
-  Shield,
-  Activity,
   Key,
   Network,
   MapPin,
-  Tag,
-  Wrench,
-  Database,
-  GitBranch,
-  Search,
-  Code,
-  Layers,
-  BarChart3,
-  AlertTriangle,
-  RotateCcw,
-  MessageSquare,
-  GitCommit,
-  FileCode,
-  FolderGit2,
-  Clock,
-  BarChart3 as BarChart3Icon,
-  Settings as SettingsIcon,
-  Wrench as WrenchIcon,
-  AlertTriangle as AlertTriangleIcon,
-  RotateCcw as RotateCcwIcon,
-  Upload as UploadIcon,
-  Zap as Lightning,
-  MessageSquare as MessageSquareIcon,
-  Bot as BotIcon,
-  GitBranch as GitBranchIcon,
-  GitCommit as GitCommitIcon,
-  GitMerge,
-  GitPullRequest,
-  GitCompare,
-  CheckCircle2,
-  XCircle,
-  Info,
-  FileCheck,
-  GitBranch as GitBranchIcon2,
-  GitCommit as GitCommitIcon2,
-  GitMerge as GitMergeIcon2,
-  GitPullRequest as GitPullRequestIcon2,
-  GitCompare as GitCompareIcon2,
-  GitBranch as GitBranchIcon3,
-  GitCommit as GitCommitIcon3,
-  GitMerge as GitMergeIcon3,
-  GitPullRequest as GitPullRequestIcon3,
-  GitCompare as GitCompareIcon3,
-  GitBranch as GitBranchIcon4,
-  GitCommit as GitCommitIcon4,
-  GitMerge as GitMergeIcon4,
-  GitPullRequest as GitPullRequestIcon4,
-  GitCompare as GitCompareIcon4
+  Tag
 } from 'lucide-react';
-import { deviceAPI, knowledgeAPI, ruleAPI } from '../../services/api';
+import { deviceAPI, ruleAPI } from '../../services/api';
+import { pdfApiService } from '../../services/pdfApiService';
 import { EnhancedOnboardingLoader } from '../Loading/EnhancedOnboardingLoader';
 import { OnboardingSuccess } from './OnboardingSuccess';
 import { DeviceChatInterface } from './DeviceChatInterface';
@@ -379,9 +323,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         setProgress(10);
         
         try {
-          const uploadResponse = await knowledgeAPI.uploadPDF(uploadedFile.file);
-          pdfFilename = uploadResponse.data.pdf_filename;
-          console.log('PDF uploaded successfully:', uploadResponse.data);
+          const uploadResponse = await pdfApiService.uploadPDF(uploadedFile.file);
+          pdfFilename = uploadResponse.pdf_name;
+          console.log('PDF uploaded successfully:', uploadResponse);
           
           setCurrentSubStage('Processing PDF content...');
           setProgress(20);

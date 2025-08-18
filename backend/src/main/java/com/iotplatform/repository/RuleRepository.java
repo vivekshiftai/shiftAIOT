@@ -12,4 +12,5 @@ public interface RuleRepository extends JpaRepository<Rule, String> {
     List<Rule> findByOrganizationId(String organizationId);
     List<Rule> findByOrganizationIdAndActive(String organizationId, boolean active);
     Optional<Rule> findByIdAndOrganizationId(String id, String organizationId);
+    List<Rule> findByActiveTrue();
 }

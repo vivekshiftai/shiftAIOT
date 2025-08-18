@@ -24,4 +24,11 @@ public interface KnowledgeDocumentRepository extends JpaRepository<KnowledgeDocu
     
     @Query("SELECT COUNT(d) FROM KnowledgeDocument d WHERE d.organizationId = :organizationId AND d.vectorized = true")
     long countByOrganizationIdAndVectorizedTrue(@Param("organizationId") String organizationId);
+    
+    List<KnowledgeDocument> findByOrganizationIdAndDeviceIdOrderByUploadedAtDesc(String organizationId, String deviceId);
+    
+    List<KnowledgeDocument> findByOrganizationIdAndDeviceIdIsNullOrderByUploadedAtDesc(String organizationId);
+    
+    @Query("SELECT d FROM KnowledgeDocument d WHERE d.organizationId = :organizationId AND (d.deviceId = :deviceId OR :deviceId IS NULL) ORDER BY d.uploadedAt DESC")
+    List<KnowledgeDocument> findByOrganizationIdAndOptionalDeviceIdOrderByUploadedAtDesc(@Param("organizationId") String organizationId, @Param("deviceId") String deviceId);
 }

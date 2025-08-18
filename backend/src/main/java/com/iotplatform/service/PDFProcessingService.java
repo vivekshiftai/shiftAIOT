@@ -2,6 +2,7 @@ package com.iotplatform.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -103,10 +104,13 @@ public class PDFProcessingService {
             // Create rule action
             RuleAction action = new RuleAction();
             action.setRule(savedRule);
-            action.setType("notification");
-            action.setActionData("{\"message\": \"" + ruleData.getAction() + "\", \"priority\": \"" + ruleData.getPriority() + "\"}");
+            action.setType(RuleAction.ActionType.NOTIFICATION);
+            // Note: Using config map instead of actionData string
+            action.setConfig(Map.of("message", ruleData.getAction(), "priority", ruleData.getPriority()));
             
             ruleActionRepository.save(action);
+            
+            logger.info("Created rule with condition and action: {} for device: {}", savedRule.getName(), device.getId());
         }
     }
     
