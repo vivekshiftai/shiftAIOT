@@ -1,5 +1,6 @@
 package com.iotplatform.controller;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -111,18 +112,20 @@ public class KnowledgeController {
             }
             
             List<Map<String, Object>> response = documents.stream()
-                .map(doc -> Map.of(
-                    "id", doc.getId(),
-                    "name", doc.getName(),
-                    "type", doc.getType(),
-                    "size", doc.getSize(),
-                    "status", doc.getStatus(),
-                    "vectorized", doc.getVectorized(),
-                    "uploadedAt", doc.getUploadedAt(),
-                    "processedAt", doc.getProcessedAt(),
-                    "deviceId", doc.getDeviceId(),
-                    "deviceName", doc.getDeviceName()
-                ))
+                .map(doc -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", doc.getId());
+                    map.put("name", doc.getName());
+                    map.put("type", doc.getType());
+                    map.put("size", doc.getSize());
+                    map.put("status", doc.getStatus());
+                    map.put("vectorized", doc.getVectorized());
+                    map.put("uploadedAt", doc.getUploadedAt());
+                    map.put("processedAt", doc.getProcessedAt());
+                    map.put("deviceId", doc.getDeviceId());
+                    map.put("deviceName", doc.getDeviceName());
+                    return map;
+                })
                 .collect(Collectors.toList());
             
             return ResponseEntity.ok(Map.of(
@@ -144,18 +147,20 @@ public class KnowledgeController {
             List<KnowledgeDocument> documents = knowledgeService.getDocumentsByDevice(organizationId, deviceId);
             
             List<Map<String, Object>> response = documents.stream()
-                .map(doc -> Map.of(
-                    "id", doc.getId(),
-                    "name", doc.getName(),
-                    "type", doc.getType(),
-                    "size", doc.getSize(),
-                    "status", doc.getStatus(),
-                    "vectorized", doc.getVectorized(),
-                    "uploadedAt", doc.getUploadedAt(),
-                    "processedAt", doc.getProcessedAt(),
-                    "deviceId", doc.getDeviceId(),
-                    "deviceName", doc.getDeviceName()
-                ))
+                .map(doc -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", doc.getId());
+                    map.put("name", doc.getName());
+                    map.put("type", doc.getType());
+                    map.put("size", doc.getSize());
+                    map.put("status", doc.getStatus());
+                    map.put("vectorized", doc.getVectorized());
+                    map.put("uploadedAt", doc.getUploadedAt());
+                    map.put("processedAt", doc.getProcessedAt());
+                    map.put("deviceId", doc.getDeviceId());
+                    map.put("deviceName", doc.getDeviceName());
+                    return map;
+                })
                 .collect(Collectors.toList());
             
             return ResponseEntity.ok(Map.of(
@@ -177,18 +182,20 @@ public class KnowledgeController {
             List<KnowledgeDocument> documents = knowledgeService.getGeneralDocuments(organizationId);
             
             List<Map<String, Object>> response = documents.stream()
-                .map(doc -> Map.of(
-                    "id", doc.getId(),
-                    "name", doc.getName(),
-                    "type", doc.getType(),
-                    "size", doc.getSize(),
-                    "status", doc.getStatus(),
-                    "vectorized", doc.getVectorized(),
-                    "uploadedAt", doc.getUploadedAt(),
-                    "processedAt", doc.getProcessedAt(),
-                    "deviceId", doc.getDeviceId(),
-                    "deviceName", doc.getDeviceName()
-                ))
+                .map(doc -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", doc.getId());
+                    map.put("name", doc.getName());
+                    map.put("type", doc.getType());
+                    map.put("size", doc.getSize());
+                    map.put("status", doc.getStatus());
+                    map.put("vectorized", doc.getVectorized());
+                    map.put("uploadedAt", doc.getUploadedAt());
+                    map.put("processedAt", doc.getProcessedAt());
+                    map.put("deviceId", doc.getDeviceId());
+                    map.put("deviceName", doc.getDeviceName());
+                    return map;
+                })
                 .collect(Collectors.toList());
             
             return ResponseEntity.ok(Map.of(
