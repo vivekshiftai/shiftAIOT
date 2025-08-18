@@ -51,6 +51,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+pdf_rag_system/
 
 # Test files
 *.test.js
