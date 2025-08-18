@@ -240,7 +240,7 @@ spring:
 # PDF Processing API
 pdf:
   processing:
-    url: http://20.75.50.202:8000
+    url: http://20.57.36.66:8000
     timeout: 30000
 ```
 
@@ -249,7 +249,7 @@ pdf:
 // API Configuration
 export const API_CONFIG = {
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8080',
-  pdfProcessingURL: process.env.REACT_APP_PDF_API_URL || 'http://20.75.50.202:8000'
+  pdfProcessingURL: process.env.REACT_APP_PDF_API_URL || 'http://20.57.36.66:8000'
 };
 ```
 

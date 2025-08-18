@@ -160,7 +160,7 @@ curl -X GET "http://localhost:8080/api/devices/{device-id}/rules" \
 ### Frontend to Backend Flow:
 1. **Device Form** → `AddDeviceForm.tsx`
 2. **PDF Processing** → `pdfApiService.ts`
-3. **API Calls** → External PDF service (`http://20.75.50.202:8000`)
+3. **API Calls** → External PDF service (`http://20.57.36.66:8000`)
 4. **Device Creation** → `DeviceController.createDeviceWithFiles()`
 5. **PDF Results Processing** → `PDFProcessingService.savePDFProcessingResults()`
 6. **Database Storage** → JPA repositories
