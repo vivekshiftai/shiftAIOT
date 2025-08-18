@@ -110,6 +110,7 @@ export class PDFApiService {
   // Upload PDF to external API
   async uploadPDF(file: File): Promise<PDFUploadResponse> {
     try {
+      console.log('PDF API Service: Starting upload to', `${this.baseUrl}/upload/pdf`);
       const formData = new FormData();
       formData.append('file', file);
 
@@ -118,16 +119,20 @@ export class PDFApiService {
         body: formData,
       });
 
+      console.log('PDF API Service: Upload response status:', response.status);
+      
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('PDF API Service: Upload failed:', response.status, response.statusText, errorText);
         throw new Error(`API call failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('PDF API Service: Upload successful:', result);
       return result as PDFUploadResponse;
 
     } catch (error) {
-      console.error('PDF upload API error:', error);
+      console.error('PDF API Service: Upload error:', error);
       throw error;
     }
   }
@@ -181,20 +186,26 @@ export class PDFApiService {
   // Generate IoT Rules from PDF
   async generateRules(pdfName: string): Promise<RulesGenerationResponse> {
     try {
+      console.log('PDF API Service: Generating rules for', pdfName, 'at', `${this.baseUrl}/generate-rules/${encodeURIComponent(pdfName)}`);
+      
       const response = await fetch(`${this.baseUrl}/generate-rules/${encodeURIComponent(pdfName)}`, {
         method: 'POST',
       });
 
+      console.log('PDF API Service: Rules generation response status:', response.status);
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('PDF API Service: Rules generation failed:', response.status, response.statusText, errorText);
         throw new Error(`API call failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('PDF API Service: Rules generation successful:', result);
       return result as RulesGenerationResponse;
 
     } catch (error) {
-      console.error('PDF rules generation API error:', error);
+      console.error('PDF API Service: Rules generation error:', error);
       throw error;
     }
   }

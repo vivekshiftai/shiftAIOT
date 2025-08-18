@@ -33,6 +33,14 @@ interface OnboardingResult {
   safetyPrecautions: number;
   processingTime: number;
   pdfFileName: string;
+  customRules?: Array<{
+    id: string;
+    condition: string;
+    action: string;
+    category: string;
+    priority: string;
+    description?: string;
+  }>;
 }
 
 interface OnboardingSuccessProps {
@@ -97,6 +105,36 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
               <div className="text-sm text-red-700">Safety Alerts</div>
             </div>
           </div>
+
+          {/* Custom Rules Section */}
+          {result.customRules && result.customRules.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-4">
+                <Settings className="w-5 h-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Custom Rules Added</h3>
+              </div>
+              <div className="bg-blue-50 rounded-lg p-4">
+                <p className="text-sm text-blue-800 mb-3">
+                  You've added {result.customRules.length} custom rule{result.customRules.length !== 1 ? 's' : ''} for {result.deviceName}:
+                </p>
+                <div className="space-y-2">
+                  {result.customRules.slice(0, 3).map((rule, index) => (
+                    <div key={rule.id} className="flex items-center gap-2 text-sm">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      <span className="text-blue-900 font-medium">{rule.condition}</span>
+                      <span className="text-blue-600">→</span>
+                      <span className="text-blue-900">{rule.action}</span>
+                    </div>
+                  ))}
+                  {result.customRules.length > 3 && (
+                    <div className="text-sm text-blue-600 mt-2">
+                      +{result.customRules.length - 3} more rule{result.customRules.length - 3 !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* What's Next */}
           <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border border-green-200 mb-8">
