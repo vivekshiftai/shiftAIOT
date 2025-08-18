@@ -15,7 +15,7 @@ import {
   User,
   Plus
 } from 'lucide-react';
-import { pdfProcessingService, PDFDocument, PDFUploadResponse, QueryRequest, QueryResponse } from '../services/pdfProcessingService';
+import { pdfApiService, PDFDocument, PDFUploadResponse, PDFQueryRequest as QueryRequest, PDFQueryResponse as QueryResponse } from '../services/pdfApiService';
 
 // Updated interface to match PDF API response
 interface KnowledgeDocument {
@@ -58,7 +58,7 @@ export const KnowledgeSection: React.FC = () => {
   useEffect(() => {
     const loadDocuments = async () => {
       try {
-        const pdfListResponse = await pdfProcessingService.listPDFs();
+        const pdfListResponse = await pdfApiService.listPDFs();
         const convertedDocuments: KnowledgeDocument[] = pdfListResponse.pdfs.map((pdf: PDFDocument, index: number) => ({
           id: index.toString(),
           name: pdf.filename,
