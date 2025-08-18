@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Search, 
@@ -27,6 +27,13 @@ type ViewMode = 'grid' | 'list';
 type FilterType = 'all' | 'ONLINE' | 'OFFLINE' | 'WARNING' | 'ERROR';
 type DeviceType = 'all' | 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER';
 
+interface OnboardingDevice {
+  device: Device;
+  pdfProcessingStatus: 'pending' | 'processing' | 'completed' | 'error';
+  pdfFileName?: string;
+  startTime: number;
+}
+
 export const DeviceList: React.FC<DeviceListProps> = ({
   devices,
   onStatusChange,
@@ -42,6 +49,9 @@ export const DeviceList: React.FC<DeviceListProps> = ({
   const [statusFilter, setStatusFilter] = useState<FilterType>('all');
   const [typeFilter, setTypeFilter] = useState<DeviceType>('all');
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Onboarding state management
+  const [onboardingDevices, setOnboardingDevices] = useState<Map<string, OnboardingDevice>>(new Map());
 
   const filteredDevices = devices.filter(device => {
     const matchesSearch = device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -60,10 +70,75 @@ export const DeviceList: React.FC<DeviceListProps> = ({
     try {
       const fileMap: { manual?: File } = {};
       if (file && file.file) fileMap.manual = file.file;
+      
+      // Create a temporary device for onboarding display
+      const tempDevice: Device = {
+        id: `temp-${Date.now()}`,
+        name: deviceData.deviceName || 'New Device',
+        type: 'SENSOR',
+        status: 'OFFLINE',
+        location: deviceData.location || 'Unknown',
+        lastSeen: new Date().toISOString(),
+        protocol: deviceData.connectionProtocol || 'MQTT',
+        organizationId: 'temp',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        ...deviceData
+      };
+
+      // Add to onboarding devices with processing status
+      setOnboardingDevices(prev => new Map(prev).set(tempDevice.id, {
+        device: tempDevice,
+        pdfProcessingStatus: 'processing', // Start with processing since PDF upload was successful
+        pdfFileName: file?.file?.name,
+        startTime: Date.now()
+      }));
+
+      // Simulate PDF processing completion after 15-30 seconds
+      const processingTime = 15000 + Math.random() * 15000;
+      setTimeout(() => {
+        setOnboardingDevices(prev => {
+          const newMap = new Map(prev);
+          const onboardingDevice = newMap.get(tempDevice.id);
+          if (onboardingDevice) {
+            newMap.set(tempDevice.id, {
+              ...onboardingDevice,
+              pdfProcessingStatus: 'completed'
+            });
+          }
+          return newMap;
+        });
+
+        // Remove from onboarding after showing completion for 5 seconds
+        setTimeout(() => {
+          setOnboardingDevices(prev => {
+            const newMap = new Map(prev);
+            newMap.delete(tempDevice.id);
+            return newMap;
+          });
+        }, 5000);
+      }, processingTime);
+
       await onAddDevice(deviceData, fileMap, []);
       setShowOnboardingForm(false);
     } catch (error) {
       console.error('Failed to onboard device with AI:', error);
+      
+      // Handle error state
+      setOnboardingDevices(prev => {
+        const newMap = new Map(prev);
+        const tempId = Array.from(newMap.keys()).find(key => key.startsWith('temp-'));
+        if (tempId) {
+          const onboardingDevice = newMap.get(tempId);
+          if (onboardingDevice) {
+            newMap.set(tempId, {
+              ...onboardingDevice,
+              pdfProcessingStatus: 'error'
+            });
+          }
+        }
+        return newMap;
+      });
     }
   };
 
@@ -75,6 +150,12 @@ export const DeviceList: React.FC<DeviceListProps> = ({
     return devices.filter(device => type === 'all' || device.type === type).length;
   };
 
+  // Combine regular devices with onboarding devices
+  const allDevices = [
+    ...filteredDevices,
+    ...Array.from(onboardingDevices.values()).map(onboarding => onboarding.device)
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -82,7 +163,12 @@ export const DeviceList: React.FC<DeviceListProps> = ({
         <div>
           <h1 className="text-2xl font-bold text-slate-800">IoT Devices</h1>
           <p className="text-slate-600">
-            {filteredDevices.length} of {devices.length} devices
+            {allDevices.length} of {devices.length} devices
+            {onboardingDevices.size > 0 && (
+              <span className="text-blue-600 ml-2">
+                ({onboardingDevices.size} onboarding)
+              </span>
+            )}
           </p>
         </div>
         
@@ -98,11 +184,12 @@ export const DeviceList: React.FC<DeviceListProps> = ({
           <button
             onClick={() => setShowFilters(!showFilters)}
             className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+            title="Toggle Filters"
           >
             <Filter className="w-5 h-5" />
           </button>
           
-          <div className="flex items-center bg-slate-100 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
             <button
               onClick={() => setViewMode('grid')}
               className={`p-2 rounded-md transition-colors ${
@@ -110,6 +197,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
                   ? 'bg-white text-slate-800 shadow-sm' 
                   : 'text-slate-600 hover:text-slate-800'
               }`}
+              title="Grid View"
             >
               <Grid3X3 className="w-4 h-4" />
             </button>
@@ -120,41 +208,39 @@ export const DeviceList: React.FC<DeviceListProps> = ({
                   ? 'bg-white text-slate-800 shadow-sm' 
                   : 'text-slate-600 hover:text-slate-800'
               }`}
+              title="List View"
             >
               <List className="w-4 h-4" />
             </button>
           </div>
           
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowOnboardingForm(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Smart Onboarding
-            </button>
-          </div>
+          <button
+            onClick={() => setShowOnboardingForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Device
+          </button>
         </div>
       </div>
 
       {/* Search and Filters */}
       <div className="space-y-4">
-        {/* Search */}
+        {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
           <input
             type="text"
-            placeholder="Search devices by name, location, manufacturer, model, or tags..."
+            placeholder="Search devices by name, location, manufacturer..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
-        {/* Filters */}
+        {/* Advanced Filters */}
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg">
-            {/* Status Filter */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
               <select
@@ -169,8 +255,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
                 <option value="ERROR">Error ({getStatusCount('ERROR')})</option>
               </select>
             </div>
-
-            {/* Type Filter */}
+            
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Type</label>
               <select
@@ -195,7 +280,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
           <p className="text-slate-600 mt-4">Loading devices...</p>
         </div>
-      ) : filteredDevices.length === 0 ? (
+      ) : allDevices.length === 0 ? (
         <div className="text-center py-12">
           <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Search className="w-8 h-8 text-slate-400" />
@@ -223,42 +308,52 @@ export const DeviceList: React.FC<DeviceListProps> = ({
             ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
             : 'space-y-4'
         }>
-          {filteredDevices.map((device) => (
-            <div key={device.id} className="relative group">
-              <DeviceCard
-                device={device}
-                onStatusChange={onStatusChange}
-              />
-              
-              {/* Action Overlay */}
-              <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => setSelectedDevice(device)}
-                    className="p-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg hover:bg-white transition-colors"
-                    title="View Details"
-                  >
-                    <Eye className="w-4 h-4 text-slate-600" />
-                  </button>
-                  
-                  <button
-                    onClick={() => onDeleteDevice(device.id)}
-                    className="p-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg hover:bg-red-50 transition-colors"
-                    title="Delete Device"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-600" />
-                  </button>
-                </div>
+          {allDevices.map((device) => {
+            const onboardingDevice = onboardingDevices.get(device.id);
+            const isOnboarding = !!onboardingDevice;
+            
+            return (
+              <div key={device.id} className="relative group">
+                <DeviceCard
+                  device={device}
+                  onStatusChange={onStatusChange}
+                  isOnboarding={isOnboarding}
+                  pdfProcessingStatus={onboardingDevice?.pdfProcessingStatus}
+                  pdfFileName={onboardingDevice?.pdfFileName}
+                />
+                
+                {/* Action Overlay - Only show for non-onboarding devices */}
+                {!isOnboarding && (
+                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setSelectedDevice(device)}
+                        className="p-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg hover:bg-white transition-colors"
+                        title="View Details"
+                      >
+                        <Eye className="w-4 h-4 text-slate-600" />
+                      </button>
+                      
+                      <button
+                        onClick={() => onDeleteDevice(device.id)}
+                        className="p-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-lg hover:bg-red-50 transition-colors"
+                        title="Delete Device"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {/* Enhanced Onboarding Form */}
       {showOnboardingForm && (
         <EnhancedDeviceOnboardingForm
-          onSubmit={() => setShowOnboardingForm(false)}
+          onSubmit={handleOnboardingDevice}
           onCancel={() => setShowOnboardingForm(false)}
         />
       )}

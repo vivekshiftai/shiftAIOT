@@ -19,8 +19,8 @@ import {
 } from 'lucide-react';
 import { deviceAPI, ruleAPI, knowledgeAPI } from '../../services/api';
 import { EnhancedOnboardingLoader } from '../Loading/EnhancedOnboardingLoader';
-import { OnboardingSuccess } from './OnboardingSuccess';
-import { DeviceChatInterface } from './DeviceChatInterface';
+
+
 
 interface DeviceFormData {
   deviceId: string;
@@ -55,18 +55,10 @@ interface FileUpload {
   error?: string;
 }
 
-interface OnboardingResult {
-  deviceId: string;
-  deviceName: string;
-  rulesGenerated: number;
-  maintenanceItems: number;
-  safetyPrecautions: number;
-  processingTime: number;
-  pdfFileName: string;
-}
+
 
 interface EnhancedDeviceOnboardingFormProps {
-  onSubmit: (result: OnboardingResult) => void;
+  onSubmit: (deviceData: DeviceFormData, file: FileUpload | null) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -110,9 +102,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const [isStepLoading, setIsStepLoading] = useState(false);
   const [stepLoadingMessage, setStepLoadingMessage] = useState('');
   const [showOnboardingLoader, setShowOnboardingLoader] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [showChat, setShowChat] = useState(false);
-  const [onboardingResult, setOnboardingResult] = useState<OnboardingResult | null>(null);
+
   const [fieldValidation, setFieldValidation] = useState<Record<string, { isValid: boolean; message: string }>>({});
   
   // Progress tracking states
@@ -314,9 +304,8 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     
     try {
       let pdfFilename = '';
-      let rulesData: any = null;
       
-      // Step 1: Upload PDF (0-33%)
+      // Step 1: Upload PDF and wait for success
       if (uploadedFile?.file) {
         setCurrentSubStage('Uploading PDF...');
         setProgress(10);
@@ -326,12 +315,11 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           pdfFilename = (uploadResponse as any)?.data?.pdf_filename || uploadedFile.file.name;
           console.log('PDF uploaded successfully:', uploadResponse);
           
-          setCurrentSubStage('Processing PDF content...');
-          setProgress(20);
+          setCurrentSubStage('PDF upload successful!');
+          setProgress(100);
           
-          // Simulate PDF processing time
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          setProgress(33);
+          // Wait a moment to show success
+          await new Promise(resolve => setTimeout(resolve, 1000));
           
         } catch (error) {
           console.error('PDF upload failed:', error);
@@ -339,50 +327,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         }
       }
       
-      // Step 2: Generate Rules (33-66%)
-      if (pdfFilename) {
-        setCurrentProcess('rules');
-        setCurrentSubStage('Analyzing device specifications...');
-        setProgress(40);
-        
-        try {
-          const rulesResponse = await ruleAPI.generateRules({
-            pdf_filename: pdfFilename,
-            chunk_size: 1000,
-            rule_types: ['monitoring', 'maintenance', 'alert']
-          });
-          rulesData = rulesResponse.data;
-          console.log('Rules generated successfully:', rulesData);
-          
-          setCurrentSubStage('Generating monitoring rules...');
-          setProgress(50);
-          
-          // Simulate rules generation time
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          setProgress(66);
-          
-        } catch (error) {
-          console.error('Rules generation failed:', error);
-          // Continue with fallback data
-          console.log('Using fallback rules data');
-          setProgress(66);
-        }
-      }
-      
-      // Step 3: Knowledge Base Setup (66-100%)
-      setCurrentProcess('knowledgebase');
-      setCurrentSubStage('Setting up chat interface...');
-      setProgress(75);
-      
-      // Simulate knowledge base setup
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setProgress(90);
-      
-      setCurrentSubStage('Finalizing setup...');
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setProgress(100);
-      
-      // Step 4: Create Device
+      // Step 2: Create Device
       try {
         const deviceData = {
           id: formData.deviceId,
@@ -416,20 +361,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         throw new Error('Failed to create device');
       }
       
-      // Create result object
-      const result: OnboardingResult = {
-        deviceId: formData.deviceId,
-        deviceName: formData.deviceName,
-        rulesGenerated: rulesData?.iot_rules?.length || 5,
-        maintenanceItems: rulesData?.maintenance_data?.length || 3,
-        safetyPrecautions: rulesData?.safety_precautions?.length || 2,
-        processingTime: rulesData?.processing_time || 45.2,
-        pdfFileName: uploadedFile?.file.name || 'unknown.pdf'
-      };
-      
-      setOnboardingResult(result);
+      // Step 3: Call onSubmit to add device to list with onboarding state
       setShowOnboardingLoader(false);
-      setShowChat(true);
+      await onSubmit(formData, uploadedFile);
       
     } catch (error) {
       console.error('Error during onboarding process:', error);
@@ -438,7 +372,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     } finally {
       setIsSubmitting(false);
     }
-  }, [validateCurrentStep, formData, uploadedFile]);
+  }, [validateCurrentStep, formData, uploadedFile, onSubmit]);
 
   const getStepTitle = useCallback((step: Step): string => {
     switch (step) {
@@ -516,12 +450,6 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
                     <AlertCircle className="w-4 h-4" />
                     {fieldValidation.deviceName.message}
-                  </p>
-                )}
-                {fieldValidation.deviceName?.isValid === true && (
-                  <p className="text-green-500 text-sm mt-1 flex items-center gap-1">
-                    <CheckCircle className="w-4 h-4" />
-                    Valid device name
                   </p>
                 )}
               </div>
@@ -914,38 +842,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     );
   }
 
-  if (showChat && onboardingResult) {
-    return (
-      <DeviceChatInterface
-        deviceName={onboardingResult.deviceName}
-        pdfFileName={onboardingResult.pdfFileName}
-        onClose={() => {
-          setShowChat(false);
-          onCancel();
-        }}
-        onContinue={() => {
-          setShowChat(false);
-          setShowSuccess(true);
-        }}
-      />
-    );
-  }
 
-  if (showSuccess && onboardingResult) {
-    return (
-      <OnboardingSuccess
-        result={onboardingResult}
-        onContinue={() => {
-          setShowSuccess(false);
-          onSubmit(onboardingResult);
-        }}
-        onClose={() => {
-          setShowSuccess(false);
-          onCancel();
-        }}
-      />
-    );
-  }
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
