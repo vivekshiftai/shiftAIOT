@@ -17,8 +17,7 @@ import {
   MapPin,
   Tag
 } from 'lucide-react';
-import { deviceAPI, ruleAPI } from '../../services/api';
-import { pdfApiService } from '../../services/pdfApiService';
+import { deviceAPI, ruleAPI, knowledgeAPI } from '../../services/api';
 import { EnhancedOnboardingLoader } from '../Loading/EnhancedOnboardingLoader';
 import { OnboardingSuccess } from './OnboardingSuccess';
 import { DeviceChatInterface } from './DeviceChatInterface';
@@ -323,8 +322,8 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         setProgress(10);
         
         try {
-          const uploadResponse = await pdfApiService.uploadPDF(uploadedFile.file);
-          pdfFilename = uploadResponse.pdf_name;
+          const uploadResponse = await knowledgeAPI.uploadPDF(uploadedFile.file, formData.deviceId, formData.deviceName);
+          pdfFilename = (uploadResponse as any)?.data?.pdf_filename || uploadedFile.file.name;
           console.log('PDF uploaded successfully:', uploadResponse);
           
           setCurrentSubStage('Processing PDF content...');

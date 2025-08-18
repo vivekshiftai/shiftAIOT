@@ -238,19 +238,20 @@ export const KnowledgeSection: React.FC = () => {
     try {
       const deviceName = deviceId ? devices.find(d => d.id === deviceId)?.name : undefined;
       
-      // Upload to external PDF API
-      const uploadResponse = await pdfApiService.uploadPDF(file);
+      // Upload to backend Knowledge API
+      const uploadRes = await knowledgeAPI.uploadPDF(file, deviceId, deviceName);
+      const uploadData = (uploadRes as any)?.data || {};
       
       // Create a new document entry
       const newDocument: KnowledgeDocument = {
-        id: Date.now().toString(),
-        name: uploadResponse.pdf_name,
+        id: uploadData.document_id || Date.now().toString(),
+        name: uploadData.pdf_filename || file.name,
         type: 'pdf',
         uploadedAt: new Date().toISOString(),
         size: file.size,
-        status: 'completed',
-        vectorized: true,
-        chunk_count: uploadResponse.chunks_processed,
+        status: uploadData.processing_status || 'uploaded',
+        vectorized: false,
+        chunk_count: undefined,
         deviceId: deviceId,
         deviceName: deviceName
       };
@@ -262,7 +263,7 @@ export const KnowledgeSection: React.FC = () => {
       const successMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: `Successfully uploaded "${uploadResponse.pdf_name}"${deviceInfo}. The document is ready for querying.`,
+        content: `Successfully uploaded "${newDocument.name}"${deviceInfo}. The document is ready for querying.`,
         timestamp: new Date()
       };
       setChatMessages(prev => [...prev, successMessage]);

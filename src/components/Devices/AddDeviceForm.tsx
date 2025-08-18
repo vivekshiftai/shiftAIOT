@@ -19,6 +19,7 @@ import {
   FileSearch,
   Bot
 } from 'lucide-react';
+import { knowledgeAPI } from '../../services/api';
 import { pdfApiService } from '../../services/pdfApiService';
 
 interface DeviceFormData {
@@ -241,23 +242,24 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
       const firstFile = fileUploads[0].file;
       console.log('Uploading PDF:', firstFile.name);
       
-      // Upload PDF to the external API
-      const uploadResult = await pdfApiService.uploadPDF(firstFile);
-      console.log('PDF uploaded successfully:', uploadResult);
+      // Upload PDF via backend knowledge API
+      const uploadResult = await knowledgeAPI.uploadPDF(firstFile);
+      console.log('PDF uploaded successfully:', uploadResult?.data);
+      const pdfFilename = (uploadResult as any)?.data?.pdf_filename || firstFile.name;
 
       // Step 2: Generate IoT Rules from the uploaded PDF
       console.log('Generating IoT rules...');
-      const rulesResult = await pdfApiService.generateRules(uploadResult.pdf_name);
+      const rulesResult = await pdfApiService.generateRules(pdfFilename);
       console.log('IoT rules generated:', rulesResult);
 
       // Step 3: Generate Maintenance Schedule
       console.log('Generating maintenance schedule...');
-      const maintenanceResult = await pdfApiService.generateMaintenance(uploadResult.pdf_name);
+      const maintenanceResult = await pdfApiService.generateMaintenance(pdfFilename);
       console.log('Maintenance schedule generated:', maintenanceResult);
 
       // Step 4: Generate Safety Information
       console.log('Generating safety information...');
-      const safetyResult = await pdfApiService.generateSafety(uploadResult.pdf_name);
+      const safetyResult = await pdfApiService.generateSafety(pdfFilename);
       console.log('Safety information generated:', safetyResult);
       
       // Update progress to 100%
