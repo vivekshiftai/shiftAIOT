@@ -3,9 +3,11 @@ server:
   servlet:
     context-path: /api
     multipart:
-      max-file-size: -1
-      max-request-size: -1
+      max-file-size: 100MB
+      max-request-size: 100MB
       enabled: true
+      file-size-threshold: 2KB
+      location: ${java.io.tmpdir}
 
 
 spring:
@@ -87,6 +89,8 @@ openai:
 # File Upload Configuration
 file:
   upload-dir: ${FILE_UPLOAD_DIR:./uploads}
+  max-size: 100MB
+  allowed-types: pdf,PDF
 
 # PDF Processing Configuration
 pdf:
@@ -102,6 +106,8 @@ logging:
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.springframework.web: DEBUG
     org.springframework.data.jpa: DEBUG
+    org.springframework.web.multipart: DEBUG
+    org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%-5level] %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
