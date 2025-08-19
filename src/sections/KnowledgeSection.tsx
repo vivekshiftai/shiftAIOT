@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { knowledgeAPI } from '../services/api';
 import { deviceAPI } from '../services/api';
-import { pdfProcessingService, PDFListResponse } from '../services/pdfprocess';
+import { pdfProcessingService, PDFListResponse, PDFImage } from '../services/pdfprocess';
 
 // Updated interface to match PDF API response
 interface KnowledgeDocument {
@@ -47,6 +47,10 @@ interface ChatMessage {
   type: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  images?: PDFImage[];
+  tables?: string[];
+  chunks_used?: string[];
+  processing_time?: string;
 }
 
 export const KnowledgeSection: React.FC = () => {
@@ -139,7 +143,7 @@ export const KnowledgeSection: React.FC = () => {
       timestamp: new Date()
     };
 
-    setChatMessages(prev => [...prev, userMessage]);
+    setChatMessages((prev: ChatMessage[]) => [...prev, userMessage]);
     setNewMessage('');
     setIsTyping(true);
 
@@ -158,10 +162,14 @@ export const KnowledgeSection: React.FC = () => {
           const assistantMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
             type: 'assistant',
-            content: queryResponse.response || `I found relevant results in "${selectedDocument.name}". ${queryResponse.chunks_used.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 200) + '...' : 'Would you like me to search for more specific information?'}`,
-            timestamp: new Date()
+            content: queryResponse.response || `I found relevant results in "${selectedDocument.name}". ${queryResponse.chunks_used?.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 200) + '...' : 'Would you like me to search for more specific information?'}`,
+            timestamp: new Date(),
+            images: queryResponse.images || [],
+            tables: queryResponse.tables || [],
+            chunks_used: queryResponse.chunks_used || [],
+            processing_time: queryResponse.processing_time
           };
-          setChatMessages(prev => [...prev, assistantMessage]);
+          setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
         } catch (queryError) {
           console.error('Failed to query PDF:', queryError);
           const errorMessage: ChatMessage = {
@@ -170,7 +178,7 @@ export const KnowledgeSection: React.FC = () => {
             content: `I encountered an error while searching "${selectedDocument.name}". Please try again or ask a different question.`,
             timestamp: new Date()
           };
-          setChatMessages(prev => [...prev, errorMessage]);
+          setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
         }
       } else {
         // Generate a general response
@@ -181,7 +189,7 @@ export const KnowledgeSection: React.FC = () => {
           content: aiResponse,
           timestamp: new Date()
         };
-        setChatMessages(prev => [...prev, assistantMessage]);
+        setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
       }
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -191,10 +199,29 @@ export const KnowledgeSection: React.FC = () => {
         content: 'I apologize, but I encountered an error while processing your request. Please try again or select a specific document to query.',
         timestamp: new Date()
       };
-      setChatMessages(prev => [...prev, errorMessage]);
+      setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const formatResponseText = (text: string): string => {
+    // Convert line breaks to HTML
+    let formatted = text.replace(/\n/g, '<br>');
+    
+    // Handle bold text (**text**)
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // Handle italic text (*text*)
+    formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    
+    // Handle code blocks
+    formatted = formatted.replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>');
+    
+    // Handle inline code
+    formatted = formatted.replace(/`(.*?)`/g, '<code>$1</code>');
+    
+    return formatted;
   };
 
   const generateAIResponse = (userMessage: string): string => {
@@ -236,7 +263,7 @@ export const KnowledgeSection: React.FC = () => {
   const uploadPDFFile = async (file: File, deviceId?: string) => {
     setUploading(true);
     try {
-      const deviceName = deviceId ? devices.find(d => d.id === deviceId)?.name : undefined;
+      const deviceName = deviceId ? devices.find((d: Device) => d.id === deviceId)?.name : undefined;
       
       // Upload to backend Knowledge API
       const uploadRes = await knowledgeAPI.uploadPDF(file, deviceId, deviceName);
@@ -256,7 +283,7 @@ export const KnowledgeSection: React.FC = () => {
         deviceName: deviceName
       };
 
-      setDocuments(prev => [newDocument, ...prev]);
+      setDocuments((prev: KnowledgeDocument[]) => [newDocument, ...prev]);
       
       // Show success message
       const deviceInfo = deviceId ? ` for device "${deviceName}"` : '';
@@ -266,7 +293,7 @@ export const KnowledgeSection: React.FC = () => {
         content: `Successfully uploaded "${newDocument.name}"${deviceInfo}. The document is ready for querying.`,
         timestamp: new Date()
       };
-      setChatMessages(prev => [...prev, successMessage]);
+      setChatMessages((prev: ChatMessage[]) => [...prev, successMessage]);
 
       // Reset device selector
       setShowDeviceSelector(false);
@@ -283,12 +310,12 @@ export const KnowledgeSection: React.FC = () => {
     if (!confirm('Are you sure you want to delete this document?')) return;
 
     try {
-      const document = documents.find(doc => doc.id === documentId);
+      const document = documents.find((doc: KnowledgeDocument) => doc.id === documentId);
       if (document) {
         // Note: deletePDF method doesn't exist in pdfProcessingService
         // await pdfProcessingService.deletePDF(document.name);
         console.log('Delete functionality not implemented in pdfProcessingService');
-        setDocuments(prev => prev.filter(doc => doc.id !== documentId));
+        setDocuments((prev: KnowledgeDocument[]) => prev.filter((doc: KnowledgeDocument) => doc.id !== documentId));
         
         if (selectedDocument?.id === documentId) {
           setSelectedDocument(null);
@@ -360,7 +387,93 @@ export const KnowledgeSection: React.FC = () => {
                        : 'bg-card text-primary border border-light'
                    }`}
                  >
-                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  <div 
+                    className="text-sm leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: formatResponseText(message.content) }}
+                  />
+                  
+                  {/* Display Images */}
+                  {message.images && message.images.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs font-medium text-secondary">📷 Related Images:</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {message.images.map((image, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={`data:${image.mime_type};base64,${image.data}`}
+                              alt={image.filename}
+                              title={image.filename}
+                              className="w-full h-32 object-cover rounded-lg border border-light cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => {
+                                const newWindow = window.open();
+                                if (newWindow) {
+                                  newWindow.document.write(`
+                                    <html>
+                                      <head><title>${image.filename}</title></head>
+                                      <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f0f0f0;">
+                                        <img src="data:${image.mime_type};base64,${image.data}" 
+                                             alt="${image.filename}" 
+                                             style="max-width:90%;max-height:90%;object-fit:contain;box-shadow:0 4px 20px rgba(0,0,0,0.3);border-radius:8px;">
+                                      </body>
+                                    </html>
+                                  `);
+                                }
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
+                              <span className="text-white opacity-0 group-hover:opacity-100 text-xs font-medium">
+                                Click to enlarge
+                              </span>
+                            </div>
+                            <div className="absolute bottom-1 left-1 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                              {image.filename}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Display Tables */}
+                  {message.tables && message.tables.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <p className="text-xs font-medium text-secondary">📊 Related Tables:</p>
+                      <div className="space-y-3">
+                        {message.tables.map((table, index) => (
+                          <div key={index} className="overflow-x-auto">
+                            <div className="text-xs text-secondary mb-1">Table {index + 1}:</div>
+                            <div 
+                              className="bg-white p-3 rounded-lg border border-light shadow-sm"
+                              dangerouslySetInnerHTML={{ __html: table }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Display Chunks Used */}
+                  {message.chunks_used && message.chunks_used.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-medium text-secondary mb-2">📄 Sources Used:</p>
+                      <div className="space-y-2">
+                        {message.chunks_used.map((chunk, index) => (
+                          <div key={index} className="text-xs bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg">
+                            <span className="text-blue-600 font-medium">Source {index + 1}:</span>
+                            <span className="text-gray-700 ml-2">{chunk}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Display Processing Time */}
+                  {message.processing_time && (
+                    <p className="text-xs text-tertiary mt-2">
+                      ⏱️ Processed in {message.processing_time}
+                    </p>
+                  )}
+                  
                   <p className={`text-xs mt-2 ${
                     message.type === 'user' ? 'text-primary-100' : 'text-tertiary'
                   }`}>

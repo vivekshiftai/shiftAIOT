@@ -23,12 +23,19 @@ export interface PDFQueryRequest {
   top_k?: number;
 }
 
+export interface PDFImage {
+  filename: string;
+  data: string; // Base64 encoded image data
+  mime_type: string;
+  size: number;
+}
+
 export interface PDFQueryResponse {
   success: boolean;
   message: string;
   response: string;
   chunks_used: string[];
-  images: string[];
+  images: PDFImage[];
   tables: string[];
   processing_time: string;
 }

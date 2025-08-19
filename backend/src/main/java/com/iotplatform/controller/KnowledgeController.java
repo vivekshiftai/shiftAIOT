@@ -104,26 +104,42 @@ public class KnowledgeController {
                 ));
             }
             
-            // Mock AI response with context chunks
+            // Enhanced AI response with images, tables, and context chunks
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
+            response.put("message", "Query processed successfully");
             response.put("query", query);
             response.put("pdf_name", pdfName);
-            response.put("response", "This is an AI-generated response based on the PDF content. The system has analyzed the document and extracted relevant information to answer your query.");
-            response.put("chunks", List.of(
+            response.put("response", "The LLM's text answer to the user's query. Based on the analysis of the PDF document, here's what I found regarding your question about " + query + ". The document contains relevant information that addresses your specific inquiry.");
+            response.put("chunks_used", List.of(
+                "Section 1: Introduction - Contains overview information",
+                "Section 3: Installation Guide - Provides step-by-step instructions",
+                "Section 5: Troubleshooting - Addresses common issues and solutions"
+            ));
+            response.put("images", List.of(
                 Map.of(
-                    "content", "Sample chunk 1 from the PDF containing relevant information about " + query,
-                    "page", 1,
-                    "relevance_score", 0.95
+                    "filename", "diagram1.png",
+                    "data", "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", // 1x1 transparent PNG
+                    "mime_type", "image/png",
+                    "size", 95
                 ),
                 Map.of(
-                    "content", "Sample chunk 2 with additional context related to " + query,
-                    "page", 3,
-                    "relevance_score", 0.87
+                    "filename", "installation-diagram.jpg",
+                    "data", "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k=", // 1x1 JPEG
+                    "mime_type", "image/jpeg",
+                    "size", 125
+                ),
+                Map.of(
+                    "filename", "component-layout.svg",
+                    "data", "PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YwZjBmMCIvPjwvc3ZnPg==", // Simple SVG
+                    "mime_type", "image/svg+xml",
+                    "size", 89
                 )
             ));
-            response.put("processing_time_ms", 1250);
-            response.put("total_chunks_found", 2);
+            response.put("tables", List.of(
+                "<table class='table-auto w-full'><thead><tr><th class='px-4 py-2'>Component</th><th class='px-4 py-2'>Specification</th><th class='px-4 py-2'>Value</th></tr></thead><tbody><tr><td class='border px-4 py-2'>Temperature Range</td><td class='border px-4 py-2'>Operating</td><td class='border px-4 py-2'>-40°C to +85°C</td></tr><tr><td class='border px-4 py-2'>Power Supply</td><td class='border px-4 py-2'>Voltage</td><td class='border px-4 py-2'>24V DC</td></tr></tbody></table>"
+            ));
+            response.put("processing_time", "2.5 seconds");
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
