@@ -338,4 +338,46 @@ export const userAPI = {
   savePreferences: (prefs: any) => api.post('/user-preferences', prefs),
 };
 
+// PDF Processing API
+export const pdfAPI = {
+  // Upload and process PDF files with MinerU extraction
+  uploadPDF: async (file: File, deviceId?: string, deviceName?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (deviceId) formData.append('deviceId', deviceId);
+    if (deviceName) formData.append('deviceName', deviceName);
+    
+    return api.post('/upload-pdf', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 300000, // 5 minutes timeout for large files
+    });
+  },
+
+  // Query PDF content with intelligent responses and context
+  queryPDF: async (query: string, pdfIds?: string[]) => {
+    return api.post('/query', {
+      query,
+      pdfIds: pdfIds || []
+    });
+  },
+
+  // List all processed PDFs with pagination
+  listPDFs: async (page: number = 1, limit: number = 10, deviceId?: string) => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString()
+    });
+    if (deviceId) params.append('deviceId', deviceId);
+    
+    return api.get(`/pdfs?${params.toString()}`);
+  },
+
+  // Get PDF processing status
+  getPDFStatus: async (pdfId: string) => {
+    return api.get(`/pdfs/${pdfId}/status`);
+  }
+};
+
 export default api;

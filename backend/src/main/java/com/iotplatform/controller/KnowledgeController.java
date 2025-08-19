@@ -70,11 +70,11 @@ public class KnowledgeController {
                 ));
             }
             
-            // Validate file size (10MB limit)
-            if (file.getSize() > 10 * 1024 * 1024) {
+            // Validate file size (25MB limit)
+            if (file.getSize() > 25 * 1024 * 1024) {
                 return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "error", "File size must be less than 10MB"
+                    "error", "File size must be less than 25MB"
                 ));
             }
             

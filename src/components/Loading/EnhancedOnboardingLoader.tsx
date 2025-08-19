@@ -73,6 +73,11 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
+  // Debug progress updates
+  useEffect(() => {
+    console.log('EnhancedOnboardingLoader - Progress:', progress, 'SubStage:', currentSubStage);
+  }, [progress, currentSubStage]);
+
   const processStages: ProcessStage[] = [
     {
       id: 'pdf',
@@ -194,34 +199,37 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-6">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-4xl w-full overflow-hidden">
+    <div className="w-full">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         {/* Header with prominent progress bar */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-8">
-          <div className="flex items-center justify-between mb-6">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Equipment Intelligence Agent</h1>
-              <p className="text-blue-100 text-lg">
+              <h1 className="text-2xl font-bold mb-1">Equipment Intelligence Agent</h1>
+              <p className="text-blue-100 text-sm">
                 Processing your device documentation with AI
               </p>
             </div>
             <div className="text-right">
-              <div className="text-4xl font-bold">{Math.round(progress)}%</div>
-              <div className="text-blue-100 text-sm">Complete</div>
+              <div className="text-3xl font-bold">{Math.round(progress)}%</div>
+              <div className="text-blue-100 text-xs">Complete</div>
             </div>
           </div>
           
           {/* Prominent progress bar */}
-          <div className="bg-blue-700 rounded-full h-3 mb-4">
+          <div className="bg-blue-700 rounded-full h-2 mb-3 overflow-hidden">
             <div 
-              className="bg-white h-3 rounded-full transition-all duration-500 ease-out shadow-lg"
-              style={{ width: `${progress}%` }}
+              className="bg-white h-2 rounded-full transition-all duration-700 ease-out shadow-lg"
+              style={{ 
+                width: `${progress}%`,
+                transition: 'width 0.7s ease-out'
+              }}
             />
           </div>
           
           {/* Minimal status text */}
           <div className="text-center">
-            <p className="text-blue-100 text-sm">
+            <p className="text-blue-100 text-xs">
               {currentStage?.title} • {Math.round(progress)}% complete
             </p>
             {currentSubStage && (
@@ -232,9 +240,9 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
           </div>
         </div>
 
-        <div className="p-8">
+        <div className="p-6">
           {/* Process Stages as animated cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {processStages.map((stage, index) => {
               const status = getStageStatus(index);
               const isCurrent = index === currentStageIndex;
@@ -243,16 +251,16 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
               return (
                 <div 
                   key={stage.id}
-                  className={`relative p-6 rounded-2xl border-2 transition-all duration-500 transform ${
+                  className={`relative p-4 rounded-xl border-2 transition-all duration-500 transform ${
                     isCurrent 
-                      ? `${stage.bgColor} border-${stage.color.replace('text-', '')}-300 shadow-xl scale-105` 
+                      ? `${stage.bgColor} border-${stage.color.replace('text-', '')}-300 shadow-lg scale-105` 
                       : isCompleted 
-                        ? 'bg-green-50 border-green-300 shadow-lg' 
+                        ? 'bg-green-50 border-green-300 shadow-md' 
                         : 'bg-gray-50 border-gray-200'
                   }`}
                 >
-                  <div className="flex items-center mb-4">
-                    <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center mr-4 ${
+                  <div className="flex items-center mb-3">
+                    <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
                       isCurrent 
                         ? `${stage.bgColor.replace('bg-', 'bg-').replace('-50', '-100')}` 
                         : isCompleted 
@@ -260,20 +268,20 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
                           : 'bg-gray-100'
                     }`}>
                       {isCurrent ? (
-                        <Loader2 className={`w-6 h-6 ${stage.color} animate-spin`} />
+                        <Loader2 className={`w-5 h-5 ${stage.color} animate-spin`} />
                       ) : isCompleted ? (
-                        <CheckCircle className="w-6 h-6 text-green-600" />
+                        <CheckCircle className="w-5 h-5 text-green-600" />
                       ) : (
-                        stage.icon
+                        <div className="w-5 h-5">{stage.icon}</div>
                       )}
                     </div>
                     <div className="flex-1">
-                      <h3 className={`text-lg font-semibold ${
+                      <h3 className={`text-sm font-semibold ${
                         isCurrent ? stage.color : isCompleted ? 'text-green-700' : 'text-gray-600'
                       }`}>
                         {stage.title}
                       </h3>
-                      <p className="text-sm text-gray-500 mt-1">{stage.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">{stage.description}</p>
                     </div>
                   </div>
                   
@@ -283,18 +291,21 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
                         <span>Processing</span>
                         <span>{Math.round((progress - (index * 33.33)) / 33.33 * 100)}%</span>
                       </div>
-                      <div className="bg-gray-200 rounded-full h-2">
+                      <div className="bg-gray-200 rounded-full h-1.5">
                         <div 
-                          className={`${stage.color.replace('text-', 'bg-')} h-2 rounded-full transition-all duration-500`}
-                          style={{ width: `${Math.min(Math.max((progress - (index * 33.33)) / 33.33 * 100, 0), 100)}%` }}
+                          className={`${stage.color.replace('text-', 'bg-')} h-1.5 rounded-full transition-all duration-700 ease-out`}
+                          style={{ 
+                            width: `${Math.min(Math.max((progress - (index * 33.33)) / 33.33 * 100, 0), 100)}%`,
+                            transition: 'width 0.7s ease-out'
+                          }}
                         />
                       </div>
                     </div>
                   )}
                   
                   {isCompleted && (
-                    <div className="flex items-center text-green-600 text-sm">
-                      <CheckCircle className="w-4 h-4 mr-2" />
+                    <div className="flex items-center text-green-600 text-xs">
+                      <CheckCircle className="w-3 h-3 mr-1" />
                       Completed
                     </div>
                   )}
@@ -305,9 +316,9 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
 
           {/* File Information */}
           {pdfFileName && (
-            <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
               <div className="flex items-center">
-                <FileText className="w-6 h-6 text-blue-600 mr-3" />
+                <FileText className="w-5 h-5 text-blue-600 mr-2" />
                 <div>
                   <span className="text-sm font-medium text-blue-900">
                     Processing: {pdfFileName}

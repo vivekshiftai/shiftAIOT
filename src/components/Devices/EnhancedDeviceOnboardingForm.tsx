@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   Upload, 
   FileText, 
@@ -17,8 +17,9 @@ import {
   MapPin,
   Tag
 } from 'lucide-react';
-import { deviceAPI, ruleAPI, knowledgeAPI } from '../../services/api';
+import { deviceAPI, ruleAPI, knowledgeAPI, pdfAPI } from '../../services/api';
 import { EnhancedOnboardingLoader } from '../Loading/EnhancedOnboardingLoader';
+import { DeviceChatInterface } from './DeviceChatInterface';
 
 
 
@@ -102,6 +103,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const [isStepLoading, setIsStepLoading] = useState(false);
   const [stepLoadingMessage, setStepLoadingMessage] = useState('');
   const [showOnboardingLoader, setShowOnboardingLoader] = useState(false);
+  const [showChatInterface, setShowChatInterface] = useState(false);
 
   const [fieldValidation, setFieldValidation] = useState<Record<string, { isValid: boolean; message: string }>>({});
   
@@ -109,6 +111,13 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const [currentProcess, setCurrentProcess] = useState<'pdf' | 'rules' | 'knowledgebase'>('pdf');
   const [progress, setProgress] = useState(0);
   const [currentSubStage, setCurrentSubStage] = useState('');
+
+  // Debug progress updates
+  useEffect(() => {
+    if (showOnboardingLoader) {
+      console.log('Progress updated:', progress, 'SubStage:', currentSubStage);
+    }
+  }, [progress, currentSubStage, showOnboardingLoader]);
 
   // Real-time validation
   const validateField = useCallback((field: keyof DeviceFormData, value: any) => {
@@ -217,8 +226,8 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setErrors(prev => ({ ...prev, file: 'File size must be less than 10MB' }));
+    if (file.size > 25 * 1024 * 1024) {
+      setErrors(prev => ({ ...prev, file: 'File size must be less than 25MB' }));
       return;
     }
 
@@ -234,7 +243,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       // Simulate file upload
       await new Promise(resolve => setTimeout(resolve, 1000));
       setUploadedFile({ file, status: 'success' });
-    } catch (error) {
+    } catch (error: any) {
       setUploadedFile({ file, status: 'error', error: 'Upload failed' });
     }
   }, []);
@@ -303,31 +312,101 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     setCurrentSubStage('Initializing...');
     
     try {
+      let pdfId = '';
       let pdfFilename = '';
       
       // Step 1: Upload PDF and wait for success
       if (uploadedFile?.file) {
+        setCurrentSubStage('Preparing PDF upload...');
+        setProgress(5);
+        
+        // Small delay to show initial progress
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         setCurrentSubStage('Uploading PDF...');
         setProgress(10);
         
         try {
-          const uploadResponse = await knowledgeAPI.uploadPDF(uploadedFile.file, formData.deviceId, formData.deviceName);
+          console.log('Attempting to upload PDF:', {
+            fileName: uploadedFile.file.name,
+            fileSize: uploadedFile.file.size,
+            deviceId: formData.deviceId,
+            deviceName: formData.deviceName
+          });
+          
+          const uploadResponse = await pdfAPI.uploadPDF(uploadedFile.file, formData.deviceId, formData.deviceName);
+          pdfId = (uploadResponse as any)?.data?.pdfId || '';
           pdfFilename = (uploadResponse as any)?.data?.pdf_filename || uploadedFile.file.name;
           console.log('PDF uploaded successfully:', uploadResponse);
           
-          setCurrentSubStage('PDF upload successful!');
-          setProgress(100);
+          setCurrentSubStage('PDF uploaded, processing content...');
+          setProgress(30);
           
-          // Wait a moment to show success
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Step 2: Poll for PDF processing status until complete
+          if (pdfId) {
+            setCurrentSubStage('Extracting content with MinerU...');
+            setProgress(40);
+            
+            let processingComplete = false;
+            let attempts = 0;
+            const maxAttempts = 300; // 25 minutes max (5 second intervals)
+            
+            while (!processingComplete && attempts < maxAttempts) {
+              try {
+                const statusResponse = await pdfAPI.getPDFStatus(pdfId);
+                const status = (statusResponse as any)?.data?.status;
+                
+                if (status === 'completed') {
+                  processingComplete = true;
+                  setCurrentSubStage('PDF processing completed!');
+                  setProgress(70);
+                } else if (status === 'failed') {
+                  throw new Error('PDF processing failed');
+                } else {
+                  // Update progress more granularly
+                  const baseProgress = 40; // Starting from 40%
+                  const maxProgress = 65; // Max 65% for PDF processing
+                  const progressIncrement = (maxProgress - baseProgress) / maxAttempts;
+                  const progressPercent = Math.min(baseProgress + (attempts * progressIncrement), maxProgress);
+                  
+                  setProgress(progressPercent);
+                  setCurrentSubStage(`Processing PDF content... (${Math.round(progressPercent)}%)`);
+                  
+                  // Wait 5 seconds before next poll
+                  await new Promise(resolve => setTimeout(resolve, 5000));
+                  attempts++;
+                }
+              } catch (error) {
+                console.error('Error polling PDF status:', error);
+                attempts++;
+                await new Promise(resolve => setTimeout(resolve, 5000));
+              }
+            }
+            
+            if (!processingComplete) {
+              throw new Error('PDF processing timed out');
+            }
+          }
           
-        } catch (error) {
-          console.error('PDF upload failed:', error);
-          throw new Error('Failed to upload PDF document');
+        } catch (error: any) {
+          console.error('PDF upload/processing failed:', error);
+          
+          // Check if it's a network/connection error
+          if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('Connection')) {
+            console.log('Backend server not available');
+            throw new Error('Backend server is not available. Please ensure the backend server is running and try again.');
+          } else {
+            // Try to get specific error message from backend response
+            const errorMessage = error.response?.data?.error || error.message || 'Failed to upload/process PDF document';
+            throw new Error(errorMessage);
+          }
         }
       }
       
-      // Step 2: Create Device
+      // Step 3: Create Device
+      setCurrentSubStage('Creating device...');
+      setProgress(80);
+      
       try {
         const deviceData = {
           id: formData.deviceId,
@@ -356,23 +435,52 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         
         const deviceResponse = await deviceAPI.create(deviceData);
         console.log('Device created successfully:', deviceResponse.data);
-      } catch (error) {
+        
+        setCurrentSubStage('Device created successfully!');
+        setProgress(90);
+        
+      } catch (error: any) {
         console.error('Device creation failed:', error);
-        throw new Error('Failed to create device');
+        
+        // Check if it's a network/connection error
+        if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('Connection')) {
+          console.log('Backend server not available');
+          throw new Error('Backend server is not available. Please ensure the backend server is running and try again.');
+        } else {
+          // Try to get specific error message from backend response
+          const errorMessage = error.response?.data?.error || error.message || 'Failed to create device';
+          throw new Error(errorMessage);
+        }
       }
       
-      // Step 3: Call onSubmit to add device to list with onboarding state
-      setShowOnboardingLoader(false);
+      // Step 4: Complete onboarding
+      setCurrentSubStage('Completing onboarding...');
+      setProgress(100);
+      
+      // Call onSubmit to add device to list with onboarding state
       await onSubmit(formData, uploadedFile);
+      
+      // Show chat interface instead of closing the form
+      setShowChatInterface(true);
+      setShowOnboardingLoader(false);
       
     } catch (error) {
       console.error('Error during onboarding process:', error);
       setShowOnboardingLoader(false);
-      alert(`Failed to complete onboarding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Show a more user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (errorMessage.includes('Network Error') || errorMessage.includes('Connection')) {
+        alert('Backend server is not available. Please ensure the backend server is running and try again.');
+      } else {
+        console.error('Detailed error:', error);
+        alert(`Failed to complete onboarding: ${errorMessage}`);
+      }
     } finally {
       setIsSubmitting(false);
     }
-  }, [validateCurrentStep, formData, uploadedFile, onSubmit]);
+  }, [validateCurrentStep, formData, uploadedFile, onSubmit, onCancel]);
 
   const getStepTitle = useCallback((step: Step): string => {
     switch (step) {
@@ -755,7 +863,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   <Upload className="w-12 h-12 text-slate-400 mb-4" />
                   <span className="text-lg font-medium text-slate-700 mb-2">Click to upload PDF</span>
                   <span className="text-sm text-slate-500">Device manual, datasheet, or specifications</span>
-                  <span className="text-xs text-slate-400 mt-1">Maximum file size: 10MB</span>
+                                     <span className="text-xs text-slate-400 mt-1">Maximum file size: 25MB</span>
                 </label>
                 {errors.file && (
                   <p className="text-red-500 text-sm mt-2 text-center">{errors.file}</p>
@@ -829,21 +937,6 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     }
   }, [currentStep, formData, uploadedFile, handleInputChange, removeFile, handleFileUpload, errors, fieldValidation]);
 
-  if (showOnboardingLoader) {
-    return (
-      <EnhancedOnboardingLoader
-        isProcessing={true}
-        currentProcess={currentProcess}
-        progress={progress}
-        onComplete={() => setShowOnboardingLoader(false)}
-        pdfFileName={uploadedFile?.file.name}
-        currentSubStage={currentSubStage}
-      />
-    );
-  }
-
-
-
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -852,6 +945,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             <div>
               <h2 className="text-2xl font-bold text-slate-800">Device Onboarding</h2>
               <p className="text-slate-600 mt-1">{getStepDescription(currentStep)}</p>
+              {/* Removed demo mode indicator */}
             </div>
             <button
               onClick={onCancel}
@@ -889,25 +983,49 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         </div>
 
         <div className="p-6">
-          <div className="mb-6">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="text-blue-600">
-                {getStepIcon(currentStep)}
+          {/* Show chat interface after completion */}
+          {showChatInterface ? (
+            <DeviceChatInterface
+              deviceName={formData.deviceName}
+              pdfFileName={uploadedFile?.file.name || 'unknown.pdf'}
+              onClose={onCancel}
+              onContinue={onCancel}
+            />
+          ) : showOnboardingLoader ? (
+            <div className="min-h-[400px] flex items-center justify-center">
+              <EnhancedOnboardingLoader
+                key={`loader-${progress}-${currentSubStage}`}
+                isProcessing={true}
+                currentProcess={currentProcess}
+                progress={progress}
+                onComplete={() => setShowOnboardingLoader(false)}
+                pdfFileName={uploadedFile?.file.name}
+                currentSubStage={currentSubStage}
+              />
+            </div>
+          ) : (
+            <>
+              <div className="mb-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="text-blue-600">
+                    {getStepIcon(currentStep)}
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-800">{getStepTitle(currentStep)}</h3>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-slate-800">{getStepTitle(currentStep)}</h3>
-            </div>
-          </div>
 
-          {/* Loading Screen */}
-          {isStepLoading && (
-            <div className="flex flex-col items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-              <p className="text-slate-600 text-center">{stepLoadingMessage}</p>
-            </div>
+              {/* Loading Screen */}
+              {isStepLoading && (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+                  <p className="text-slate-600 text-center">{stepLoadingMessage}</p>
+                </div>
+              )}
+
+              {/* Main Content */}
+              {!isStepLoading && renderStepContent()}
+            </>
           )}
-
-          {/* Main Content */}
-          {!isStepLoading && renderStepContent()}
         </div>
 
         {/* Navigation */}

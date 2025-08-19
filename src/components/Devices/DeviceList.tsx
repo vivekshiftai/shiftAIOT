@@ -89,56 +89,72 @@ export const DeviceList: React.FC<DeviceListProps> = ({
       // Add to onboarding devices with processing status
       setOnboardingDevices(prev => new Map(prev).set(tempDevice.id, {
         device: tempDevice,
-        pdfProcessingStatus: 'processing', // Start with processing since PDF upload was successful
-        pdfFileName: file?.file?.name,
+        pdfProcessingStatus: 'processing',
+        pdfFileName: file?.file?.name || 'unknown.pdf',
         startTime: Date.now()
       }));
 
-      // Simulate PDF processing completion after 15-30 seconds
-      const processingTime = 15000 + Math.random() * 15000;
-      setTimeout(() => {
+      // Don't close the form immediately - let the form handle the loading screen
+      // The form will close itself when the process is complete
+
+      // Try to add device to backend
+      try {
+        await onAddDevice(deviceData, fileMap, []);
+        
+        // Update the onboarding device to completed status
         setOnboardingDevices(prev => {
           const newMap = new Map(prev);
-          const onboardingDevice = newMap.get(tempDevice.id);
-          if (onboardingDevice) {
+          const existing = newMap.get(tempDevice.id);
+          if (existing) {
             newMap.set(tempDevice.id, {
-              ...onboardingDevice,
+              ...existing,
               pdfProcessingStatus: 'completed'
             });
           }
           return newMap;
         });
-
-        // Remove from onboarding after showing completion for 5 seconds
+        
+        // Remove from onboarding devices after a delay to show completion
         setTimeout(() => {
           setOnboardingDevices(prev => {
             const newMap = new Map(prev);
             newMap.delete(tempDevice.id);
             return newMap;
           });
-        }, 5000);
-      }, processingTime);
-
-      await onAddDevice(deviceData, fileMap, []);
-      setShowOnboardingForm(false);
-    } catch (error) {
-      console.error('Failed to onboard device with AI:', error);
-      
-      // Handle error state
-      setOnboardingDevices(prev => {
-        const newMap = new Map(prev);
-        const tempId = Array.from(newMap.keys()).find(key => key.startsWith('temp-'));
-        if (tempId) {
-          const onboardingDevice = newMap.get(tempId);
-          if (onboardingDevice) {
-            newMap.set(tempId, {
-              ...onboardingDevice,
-              pdfProcessingStatus: 'error'
-            });
-          }
+        }, 5000); // Show completion for 5 seconds
+        
+      } catch (error: any) {
+        console.error('Failed to add device to backend:', error);
+        
+        // Check if it's a network/connection error
+        if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('Connection')) {
+          console.error('Backend server not available');
+          throw new Error('Backend server is not available. Please ensure the backend server is running and try again.');
+        } else {
+          // Update the onboarding device to error status
+          setOnboardingDevices(prev => {
+            const newMap = new Map(prev);
+            const existing = newMap.get(tempDevice.id);
+            if (existing) {
+              newMap.set(tempDevice.id, {
+                ...existing,
+                pdfProcessingStatus: 'error'
+              });
+            }
+            return newMap;
+          });
+          
+          // Re-throw other errors
+          throw error;
         }
-        return newMap;
-      });
+      }
+      
+    } catch (error) {
+      console.error('Error during device onboarding:', error);
+      
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to complete onboarding: ${errorMessage}`);
     }
   };
 
@@ -320,6 +336,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
                   isOnboarding={isOnboarding}
                   pdfProcessingStatus={onboardingDevice?.pdfProcessingStatus}
                   pdfFileName={onboardingDevice?.pdfFileName}
+                  startTime={onboardingDevice?.startTime}
                 />
                 
                 {/* Action Overlay - Only show for non-onboarding devices */}

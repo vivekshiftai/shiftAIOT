@@ -208,92 +208,92 @@ Could you please be more specific about what you'd like to know? I'm here to hel
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+    <div className="w-full h-full">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden h-full flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                <Bot className="w-6 h-6" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                <Bot className="w-5 h-5" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">AI Assistant</h1>
-                <p className="text-blue-100">
+                <h1 className="text-xl font-bold">AI Assistant</h1>
+                <p className="text-blue-100 text-sm">
                   Ask me anything about {deviceName}
                 </p>
               </div>
-          </div>
+            </div>
             <button
               onClick={onClose}
               className="p-2 hover:bg-white/20 rounded-lg transition-colors"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5" />
             </button>
+          </div>
         </div>
-      </div>
 
         {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-6 h-96">
-          <div className="space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                message.type === 'user'
-                  ? 'bg-blue-600 text-white'
+        <div className="flex-1 overflow-y-auto p-4 h-64">
+          <div className="space-y-3">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-xl px-3 py-2 ${
+                    message.type === 'user'
+                      ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-900'
-              }`}
-            >
-                  <div className="flex items-start gap-3">
-                {message.type === 'assistant' && (
-                  <div className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
-                    <Bot className="w-3 h-3 text-white" />
-                  </div>
-                )}
-                <div className="flex-1">
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    {message.type === 'assistant' && (
+                      <div className="flex-shrink-0 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
+                        <Bot className="w-2.5 h-2.5 text-white" />
+                      </div>
+                    )}
+                    <div className="flex-1">
                       {message.isLoading ? (
                         <div className="flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span className="text-sm">AI is thinking...</span>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span className="text-xs">AI is thinking...</span>
                         </div>
                       ) : (
                         <div className="whitespace-pre-wrap text-sm">
                           {message.content}
                         </div>
                       )}
-                        </div>
-                    {message.type === 'user' && (
-                      <div className="flex-shrink-0 w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                        <User className="w-3 h-3 text-white" />
-                        </div>
-                      )}
                     </div>
-                  <div className={`text-xs mt-2 ${
+                    {message.type === 'user' && (
+                      <div className="flex-shrink-0 w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                        <User className="w-2.5 h-2.5 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div className={`text-xs mt-1 ${
                     message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
                   }`}>
                     {message.timestamp.toLocaleTimeString()}
-              </div>
-            </div>
-          </div>
-        ))}
-            <div ref={messagesEndRef} />
+                  </div>
                 </div>
               </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
 
         {/* Input Area */}
-        <div className="border-t border-gray-200 p-6">
-          <div className="flex items-end gap-3">
+        <div className="border-t border-gray-200 p-4">
+          <div className="flex items-end gap-2">
             <div className="flex-1">
               <textarea
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Ask me about setup, maintenance, troubleshooting, or specifications..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm"
                 rows={2}
                 disabled={isLoading}
               />
@@ -301,68 +301,68 @@ Could you please be more specific about what you'd like to know? I'm here to hel
             <button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isLoading}
-              className="flex-shrink-0 w-12 h-12 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+              className="flex-shrink-0 w-10 h-10 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
             >
               {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <Send className="w-5 h-5" />
+                <Send className="w-4 h-4" />
               )}
             </button>
-      </div>
+          </div>
 
           {/* Quick Actions */}
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-1">
             <button
               onClick={() => setInputValue('How do I set up this device?')}
-              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+              className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs hover:bg-gray-200 transition-colors"
             >
               Setup Guide
             </button>
             <button
               onClick={() => setInputValue('What maintenance is required?')}
-              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+              className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs hover:bg-gray-200 transition-colors"
             >
               Maintenance
             </button>
             <button
               onClick={() => setInputValue('Help me troubleshoot issues')}
-              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+              className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs hover:bg-gray-200 transition-colors"
             >
               Troubleshooting
             </button>
-              <button
+            <button
               onClick={() => setInputValue('Show me technical specifications')}
-              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+              className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs hover:bg-gray-200 transition-colors"
             >
               Specifications
-              </button>
+            </button>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 p-6 bg-gray-50">
+        <div className="border-t border-gray-200 p-4 bg-gray-50">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <FileText className="w-4 h-4" />
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <FileText className="w-3 h-3" />
               <span>Analyzed: {pdfFileName}</span>
-          </div>
-            <div className="flex gap-3">
+            </div>
+            <div className="flex gap-2">
               <button
                 onClick={() => setMessages([messages[0]])}
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="flex items-center gap-1 px-3 py-1 text-gray-600 hover:text-gray-800 transition-colors text-xs"
               >
-                <RotateCcw className="w-4 h-4" />
-                Reset Chat
+                <RotateCcw className="w-3 h-3" />
+                Reset
               </button>
-          <button
+              <button
                 onClick={onContinue}
-                className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-          >
-                <Sparkles className="w-4 h-4" />
-                Continue to Dashboard
-          </button>
-        </div>
+                className="flex items-center gap-1 px-4 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-xs"
+              >
+                <Sparkles className="w-3 h-3" />
+                Continue
+              </button>
+            </div>
           </div>
         </div>
       </div>

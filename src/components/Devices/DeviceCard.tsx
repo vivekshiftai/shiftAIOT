@@ -13,6 +13,7 @@ interface DeviceCardProps {
   isOnboarding?: boolean;
   pdfProcessingStatus?: 'pending' | 'processing' | 'completed' | 'error';
   pdfFileName?: string;
+  startTime?: number;
 }
 
 const statusConfig = {
@@ -114,7 +115,8 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   onStatusChange, 
   isOnboarding = false,
   pdfProcessingStatus = 'pending',
-  pdfFileName 
+  pdfFileName,
+  startTime 
 }) => {
   const { hasPermission } = useAuth();
   const [currentProcessingStage, setCurrentProcessingStage] = useState(0);
@@ -152,27 +154,27 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   // Simulate PDF processing progress
   useEffect(() => {
     if (isOnboarding && pdfProcessingStatus === 'processing') {
-      const interval = setInterval(() => {
-        setProcessingProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            return 100;
-          }
-          return prev + Math.random() * 15;
-        });
-      }, 1000);
-
-      return () => clearInterval(interval);
+      // Don't simulate progress - let the actual process determine completion
+      // The progress will be controlled by the backend processing
     }
   }, [isOnboarding, pdfProcessingStatus]);
 
-  // Update current processing stage based on progress
+  // Real PDF processing progress based on status
   useEffect(() => {
-    if (isOnboarding && pdfProcessingStatus === 'processing') {
-      const stageProgress = (processingProgress / 100) * pdfProcessingStages.length;
+    if (isOnboarding && pdfProcessingStatus === 'processing' && startTime) {
+      // Calculate progress based on time elapsed
+      const elapsed = Date.now() - startTime;
+      const progressPercent = Math.min((elapsed / (25 * 60 * 1000)) * 100, 95); // 25 minutes max
+      setProcessingProgress(progressPercent);
+      
+      // Update current stage based on progress
+      const stageProgress = (progressPercent / 100) * pdfProcessingStages.length;
       setCurrentProcessingStage(Math.min(Math.floor(stageProgress), pdfProcessingStages.length - 1));
+    } else if (isOnboarding && pdfProcessingStatus === 'completed') {
+      setProcessingProgress(100);
+      setCurrentProcessingStage(pdfProcessingStages.length - 1);
     }
-  }, [isOnboarding, pdfProcessingStatus, processingProgress]);
+  }, [isOnboarding, pdfProcessingStatus, startTime]);
 
 
 
