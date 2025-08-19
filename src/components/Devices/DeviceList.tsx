@@ -13,7 +13,7 @@ import { Device } from '../../types';
 import { DeviceCard } from './DeviceCard';
 import { EnhancedDeviceOnboardingForm } from './EnhancedDeviceOnboardingForm';
 import { DeviceDetails } from './DeviceDetails';
-import { pdfApiService } from '../../services/pdfApiService';
+import { pdfProcessingService } from '../../services/pdfprocess';
 
 interface DeviceListProps {
   devices: Device[];

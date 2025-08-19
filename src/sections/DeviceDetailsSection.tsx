@@ -32,7 +32,7 @@ import { Device } from '../types';
 import { DeviceRules } from '../components/Devices/DeviceRules';
 import { DeviceConnectionManager } from '../components/Devices/DeviceConnectionManager';
 import { deviceAPI } from '../services/api';
-import { pdfApiService, PDFListResponse } from '../services/pdfApiService';
+import { pdfProcessingService, PDFListResponse } from '../services/pdfprocess';
 
 interface DocumentationInfo {
   deviceId: string;
@@ -120,7 +120,7 @@ export const DeviceDetailsSection: React.FC = () => {
     
     try {
       // Load all PDFs from external API
-      const pdfListResponse: PDFListResponse = await pdfApiService.listPDFs();
+      const pdfListResponse: PDFListResponse = await pdfProcessingService.listPDFs();
       
       // Filter PDFs that might be associated with this device
       // We'll look for PDFs that contain the device name or are likely related
@@ -317,7 +317,7 @@ export const DeviceDetailsSection: React.FC = () => {
             top_k: 5
           };
           
-          const queryResponse = await pdfApiService.queryPDF(queryRequest);
+          const queryResponse = await pdfProcessingService.queryPDF(queryRequest);
           
           const assistantMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),

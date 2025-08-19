@@ -20,7 +20,7 @@ import {
   Bot
 } from 'lucide-react';
 import { knowledgeAPI } from '../../services/api';
-import { pdfApiService } from '../../services/pdfApiService';
+import { pdfProcessingService } from '../../services/pdfprocess';
 
 interface DeviceFormData {
   name: string;
@@ -249,17 +249,17 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
 
       // Step 2: Generate IoT Rules from the uploaded PDF
       console.log('Generating IoT rules...');
-      const rulesResult = await pdfApiService.generateRules(pdfFilename);
+      const rulesResult = await pdfProcessingService.generateRules(pdfFilename);
       console.log('IoT rules generated:', rulesResult);
 
       // Step 3: Generate Maintenance Schedule
       console.log('Generating maintenance schedule...');
-      const maintenanceResult = await pdfApiService.generateMaintenance(pdfFilename);
+      const maintenanceResult = await pdfProcessingService.generateMaintenance(pdfFilename);
       console.log('Maintenance schedule generated:', maintenanceResult);
 
       // Step 4: Generate Safety Information
       console.log('Generating safety information...');
-      const safetyResult = await pdfApiService.generateSafety(pdfFilename);
+      const safetyResult = await pdfProcessingService.generateSafety(pdfFilename);
       console.log('Safety information generated:', safetyResult);
       
       // Update progress to 100%

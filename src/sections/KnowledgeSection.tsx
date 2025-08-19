@@ -285,9 +285,9 @@ export const KnowledgeSection: React.FC = () => {
     try {
       const document = documents.find(doc => doc.id === documentId);
       if (document) {
-        // Note: deletePDF method doesn't exist in pdfApiService
-        // await pdfApiService.deletePDF(document.name);
-        console.log('Delete functionality not implemented in pdfApiService');
+        // Note: deletePDF method doesn't exist in pdfProcessingService
+        // await pdfProcessingService.deletePDF(document.name);
+        console.log('Delete functionality not implemented in pdfProcessingService');
         setDocuments(prev => prev.filter(doc => doc.id !== documentId));
         
         if (selectedDocument?.id === documentId) {
