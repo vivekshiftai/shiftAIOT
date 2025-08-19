@@ -356,8 +356,8 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       
       console.log('IoTContext - Device created in backend:', newDevice.id);
       
-      // Add to local state
-      setDevices(prev => [newDevice, ...prev]);
+      // Refresh the entire device list to ensure consistency
+      await refreshDevices();
       
       // Note: Removed automatic device added notifications to prevent unwanted notifications
       

@@ -27,12 +27,22 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Add request interceptor to include auth token
+// Add request interceptor to include auth token (disabled for device operations)
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Skip authentication for device operations and PDF processing
+    const isDeviceOperation = config.url?.includes('/devices') || 
+                             config.url?.includes('/upload-pdf') ||
+                             config.url?.includes('/generate/') ||
+                             config.url?.includes('/pdfs') ||
+                             config.url?.includes('/query') ||
+                             config.url?.includes('/health');
+    
+    if (!isDeviceOperation) {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },

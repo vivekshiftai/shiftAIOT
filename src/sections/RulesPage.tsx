@@ -9,7 +9,6 @@ import {
   Trash2, 
   Search, 
   Filter, 
-  ArrowLeft, 
   Settings,
   Zap,
   Clock,
@@ -321,19 +320,9 @@ const RulesPage: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
-            onClick={() => navigate('/dashboard')}
-          >
-            Back to Dashboard
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-primary">Automation Rules</h1>
-            <p className="text-secondary">Create and manage IoT automation rules</p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-primary">Automation Rules</h1>
+          <p className="text-secondary">Create and manage IoT automation rules</p>
         </div>
         
         <Button

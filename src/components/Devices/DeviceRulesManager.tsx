@@ -75,7 +75,8 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
   const [newMaintenance, setNewMaintenance] = useState<Partial<MaintenanceTask>>({
     task: '',
     category: 'preventive',
-    frequency: 'Monthly'
+    frequency: 'Monthly',
+    description: ''
   });
 
   const getRuleIcon = (ruleType: string) => {

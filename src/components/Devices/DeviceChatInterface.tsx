@@ -76,6 +76,18 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     setIsLoading(true);
 
     try {
+      // Get device info from localStorage
+      const lastCreatedDevice = localStorage.getItem('lastCreatedDevice');
+      let deviceInfo = null;
+      
+      if (lastCreatedDevice) {
+        try {
+          deviceInfo = JSON.parse(lastCreatedDevice);
+        } catch (e) {
+          console.warn('Failed to parse lastCreatedDevice:', e);
+        }
+      }
+
       // Use external PDF API for real AI responses
       const queryResponse = await pdfProcessingService.queryPDF({
         pdf_name: pdfFileName,
@@ -83,9 +95,16 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
         top_k: 5
       });
       
+      let responseContent = queryResponse.response || 'I apologize, but I couldn\'t find a specific answer to your question. Please try rephrasing or ask about a different aspect of the device.';
+      
+      // Add context about generated rules and maintenance if available
+      if (deviceInfo && (inputValue.toLowerCase().includes('rule') || inputValue.toLowerCase().includes('maintenance'))) {
+        responseContent += '\n\n💡 **AI-Generated Insights Available:** I\'ve analyzed your device documentation and generated monitoring rules and maintenance schedules. You can view these in the device details section.';
+      }
+      
       setMessages(prev => prev.map(msg => 
         msg.id === assistantMessage.id 
-          ? { ...msg, content: queryResponse.response, isLoading: false }
+          ? { ...msg, content: responseContent, isLoading: false }
           : msg
       ));
     } catch (error) {

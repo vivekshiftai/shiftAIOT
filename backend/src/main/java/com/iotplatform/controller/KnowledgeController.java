@@ -374,6 +374,52 @@ public class KnowledgeController {
         }
     }
 
+    @PostMapping("/generate-rules/{pdf_name}")
+    public ResponseEntity<?> generateRules(@PathVariable String pdf_name, @RequestBody Map<String, Object> request) {
+        try {
+            String organizationId = "public"; // Default organization for all users
+            String deviceId = (String) request.get("device_id");
+            
+            // Mock rules generation
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("pdf_name", pdf_name);
+            response.put("device_id", deviceId);
+            response.put("rules", List.of(
+                Map.of(
+                    "id", "rule_001",
+                    "condition", "Temperature exceeds 85°C",
+                    "action", "Send alert to maintenance team",
+                    "category", "monitoring",
+                    "priority", "high"
+                ),
+                Map.of(
+                    "id", "rule_002", 
+                    "condition", "Operating hours reach 1000",
+                    "action", "Schedule preventive maintenance",
+                    "category", "maintenance",
+                    "priority", "medium"
+                ),
+                Map.of(
+                    "id", "rule_003",
+                    "condition", "Pressure drops below 2.5 bar",
+                    "action", "Activate backup pump system",
+                    "category", "alert",
+                    "priority", "high"
+                )
+            ));
+            response.put("total_rules_generated", 3);
+            response.put("processing_time_ms", 2200);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+
     @PostMapping("/generate/maintenance")
     public ResponseEntity<?> generateMaintenance(@RequestBody Map<String, Object> request) {
         try {

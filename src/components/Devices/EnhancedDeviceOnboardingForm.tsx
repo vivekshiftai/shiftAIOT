@@ -392,13 +392,12 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         generatedSafety = [];
       }
 
-      // Step 4: Create Device (local creation without backend)
-      setCurrentSubStage('Creating device...');
+      // Step 4: Create Device in Backend
+      setCurrentSubStage('Creating device in database...');
       setProgress(90);
 
       try {
         const deviceData = {
-          id: formData.deviceId,
           name: formData.deviceName,
           type: 'SENSOR',
           status: 'ONLINE',
@@ -408,8 +407,6 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           model: formData.model,
           productId: formData.productId,
           serialNumber: formData.serialNumber,
-          authenticationCredential: formData.authenticationCredential,
-          networkConfig: formData.networkConfig,
           description: `Device onboarded with PDF: ${pdfFilename}`,
           organizationId: 'public',
           // Add generated data to device
@@ -419,20 +416,41 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           pdfName: externalPdfName
         };
 
-        // Create device locally without backend
-        console.log('Device data prepared:', deviceData);
+        // Create device in backend
+        const response = await fetch('/api/devices', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(deviceData),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to create device: ${response.statusText}`);
+        }
+        
+        const createdDevice = await response.json();
+        console.log('Device created successfully:', createdDevice);
         console.log('Generated Rules:', generatedRules);
         console.log('Generated Maintenance:', generatedMaintenance);
         console.log('Generated Safety Info:', generatedSafety);
+        
         setCurrentSubStage('Device created successfully!');
         setProgress(95);
+        
+        // Store device info for chat interface
+        localStorage.setItem('lastCreatedDevice', JSON.stringify({
+          id: createdDevice.id,
+          name: createdDevice.name,
+          pdfName: externalPdfName
+        }));
 
       } catch (error: any) {
         console.error('Device creation failed:', error);
-        throw new Error('Failed to prepare device data');
+        throw new Error('Failed to create device in database');
       }
 
-      // Step 5: Complete onboarding
+      // Step 5: Complete onboarding and show chat
       setCurrentSubStage('Setting up AI assistant...');
       setProgress(100);
 
