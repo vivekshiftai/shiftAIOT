@@ -14,9 +14,17 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.iotplatform.model.KnowledgeDocument;
@@ -27,6 +35,9 @@ public class KnowledgeService {
 
     @Autowired
     private KnowledgeDocumentRepository knowledgeDocumentRepository;
+
+    @Value("${pdf.processing.url}")
+    private String pdfProcessingUrl;
 
     private final Path uploadPath = Paths.get("uploads/knowledge");
 
@@ -80,7 +91,11 @@ public class KnowledgeService {
         return knowledgeDocumentRepository.findByOrganizationIdOrderByUploadedAtDesc(organizationId);
     }
     
-    public List<KnowledgeDocument> getDocumentsByDevice(String organizationId, String deviceId) {
+    public List<KnowledgeDocument> getAllDocuments(String organizationId) {
+        return knowledgeDocumentRepository.findByOrganizationIdOrderByUploadedAtDesc(organizationId);
+    }
+    
+    public List<KnowledgeDocument> getDocumentsByDevice(String deviceId, String organizationId) {
         if (deviceId == null || deviceId.trim().isEmpty()) {
             return getDocuments(organizationId);
         }
@@ -202,18 +217,46 @@ public class KnowledgeService {
     }
 
     private void processDocumentAsync(KnowledgeDocument document) {
-        // Simulate async processing
+        // Process with external PDF API
         new Thread(() -> {
             try {
-                Thread.sleep(3000); // Simulate processing time
+                // Upload to external PDF processing API
+                RestTemplate restTemplate = new RestTemplate();
                 
-                document.setStatus("completed");
-                document.setVectorized(true);
-                document.setProcessedAt(LocalDateTime.now());
+                // Create multipart request
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.MULTIPART_FORM_DATA);
                 
-                knowledgeDocumentRepository.save(document);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+                
+                // Read the file and create a resource
+                Path filePath = Paths.get(document.getFilePath());
+                org.springframework.core.io.Resource fileResource = new UrlResource(filePath.toUri());
+                
+                body.add("file", fileResource);
+                
+                HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+                
+                // Upload to external API
+                String uploadUrl = pdfProcessingUrl + "/upload/pdf";
+                ResponseEntity<Map> response = restTemplate.postForEntity(uploadUrl, requestEntity, Map.class);
+                
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    Map<String, Object> result = response.getBody();
+                    System.out.println("PDF uploaded to external API successfully: " + result);
+                    
+                    // Update document status
+                    document.setStatus("completed");
+                    document.setVectorized(true);
+                    document.setProcessedAt(LocalDateTime.now());
+                    
+                    knowledgeDocumentRepository.save(document);
+                } else {
+                    throw new RuntimeException("External API upload failed: " + response.getStatusCode());
+                }
+                
+            } catch (Exception e) {
+                System.err.println("Error processing document with external API: " + e.getMessage());
                 document.setStatus("error");
                 knowledgeDocumentRepository.save(document);
             }

@@ -82,6 +82,11 @@ public class SecurityConfig {
                 sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/knowledge/**").permitAll()
+                .requestMatchers("/upload-pdf").permitAll()
+                .requestMatchers("/query").permitAll()
+                .requestMatchers("/pdfs/**").permitAll()
+                .requestMatchers("/generate/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/websocket/**").permitAll()
                 .requestMatchers("/devices/**").authenticated()

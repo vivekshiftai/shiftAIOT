@@ -347,36 +347,99 @@ export const pdfAPI = {
     if (deviceId) formData.append('deviceId', deviceId);
     if (deviceName) formData.append('deviceName', deviceName);
     
-    return api.post('/upload-pdf', formData, {
+    // Create a separate axios instance without authentication for PDF uploads
+    const pdfApi = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: 300000, // 5 minutes timeout for large files
+    });
+    
+    return pdfApi.post('/upload-pdf', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      timeout: 300000, // 5 minutes timeout for large files
     });
   },
 
   // Query PDF content with intelligent responses and context
-  queryPDF: async (query: string, pdfIds?: string[]) => {
-    return api.post('/query', {
+  queryPDF: async (query: string, pdfName?: string, topK: number = 5) => {
+    // Create a separate axios instance without authentication for PDF queries
+    const pdfApi = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: 30000,
+    });
+    
+    return pdfApi.post('/query', {
       query,
-      pdfIds: pdfIds || []
+      pdf_name: pdfName,
+      top_k: topK
     });
   },
 
   // List all processed PDFs with pagination
   listPDFs: async (page: number = 1, limit: number = 10, deviceId?: string) => {
+    // Create a separate axios instance without authentication for PDF listing
+    const pdfApi = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: 10000,
+    });
+    
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString()
     });
     if (deviceId) params.append('deviceId', deviceId);
     
-    return api.get(`/pdfs?${params.toString()}`);
+    return pdfApi.get(`/pdfs?${params.toString()}`);
   },
 
   // Get PDF processing status
   getPDFStatus: async (pdfId: string) => {
-    return api.get(`/pdfs/${pdfId}/status`);
+    // Create a separate axios instance without authentication for PDF status
+    const pdfApi = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: 10000,
+    });
+    
+    return pdfApi.get(`/knowledge/documents/${pdfId}/status`);
+  },
+
+  // Generate IoT monitoring rules from technical documentation
+  generateRules: async (pdfName: string, deviceId: string) => {
+    const pdfApi = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: 30000,
+    });
+    
+    return pdfApi.post('/generate/rules', {
+      pdf_name: pdfName,
+      device_id: deviceId
+    });
+  },
+
+  // Generate maintenance schedules and tasks
+  generateMaintenance: async (pdfName: string, deviceId: string) => {
+    const pdfApi = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: 30000,
+    });
+    
+    return pdfApi.post('/generate/maintenance', {
+      pdf_name: pdfName,
+      device_id: deviceId
+    });
+  },
+
+  // Extract safety information and procedures
+  generateSafety: async (pdfName: string, deviceId: string) => {
+    const pdfApi = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: 30000,
+    });
+    
+    return pdfApi.post('/generate/safety', {
+      pdf_name: pdfName,
+      device_id: deviceId
+    });
   }
 };
 

@@ -10,6 +10,7 @@ import {
   X,
   RotateCcw
 } from 'lucide-react';
+import { pdfApiService } from '../../services/pdfApiService';
 
 interface ChatMessage {
   id: string;
@@ -63,10 +64,10 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     };
 
     const assistantMessage: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            type: 'assistant',
+      id: (Date.now() + 1).toString(),
+      type: 'assistant',
       content: '',
-            timestamp: new Date(),
+      timestamp: new Date(),
       isLoading: true
     };
 
@@ -75,21 +76,27 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     setIsLoading(true);
 
     try {
-      // Simulate API call to /query endpoint
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock response based on user input
-      const response = generateMockResponse(inputValue.toLowerCase());
+      // Use external PDF API for real AI responses
+      const queryResponse = await pdfApiService.queryPDF({
+        pdf_name: pdfFileName,
+        query: inputValue.trim(),
+        top_k: 5
+      });
       
       setMessages(prev => prev.map(msg => 
         msg.id === assistantMessage.id 
-          ? { ...msg, content: response, isLoading: false }
+          ? { ...msg, content: queryResponse.response, isLoading: false }
           : msg
       ));
     } catch (error) {
+      console.error('PDF query failed:', error);
+      
+      // Fallback to mock response if external API fails
+      const fallbackResponse = generateMockResponse(inputValue.toLowerCase());
+      
       setMessages(prev => prev.map(msg => 
         msg.id === assistantMessage.id 
-          ? { ...msg, content: 'Sorry, I encountered an error. Please try again.', isLoading: false }
+          ? { ...msg, content: fallbackResponse, isLoading: false }
           : msg
       ));
     } finally {

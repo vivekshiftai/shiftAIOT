@@ -10,7 +10,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,10 +34,9 @@ public class KnowledgeController {
 
     @PostMapping("/upload")
     public ResponseEntity<?> uploadDocument(
-            @RequestParam("file") MultipartFile file,
-            Authentication authentication) {
+            @RequestParam("file") MultipartFile file) {
         try {
-            String organizationId = getOrganizationId(authentication);
+            String organizationId = "public"; // Default organization for all users
             KnowledgeDocument document = knowledgeService.uploadDocument(file, organizationId);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -57,10 +55,10 @@ public class KnowledgeController {
     public ResponseEntity<?> uploadPDF(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "deviceId", required = false) String deviceId,
-            @RequestParam(value = "deviceName", required = false) String deviceName,
-            Authentication authentication) {
+            @RequestParam(value = "deviceName", required = false) String deviceName) {
         try {
-            String organizationId = getOrganizationId(authentication);
+            // Remove authentication requirement - allow all users
+            String organizationId = "public"; // Default organization for all users
             
             // Validate file type
             if (!file.getContentType().equals("application/pdf")) {
@@ -70,13 +68,7 @@ public class KnowledgeController {
                 ));
             }
             
-            // Validate file size (25MB limit)
-            if (file.getSize() > 25 * 1024 * 1024) {
-                return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "error", "File size must be less than 25MB"
-                ));
-            }
+            // Remove file size validation - allow any size
             
             KnowledgeDocument document = knowledgeService.uploadDocument(file, organizationId, deviceId, deviceName);
             
@@ -84,7 +76,7 @@ public class KnowledgeController {
                 "success", true,
                 "pdf_filename", file.getOriginalFilename(),
                 "processing_status", "uploaded",
-                "document_id", document.getId(),
+                "pdfId", document.getId().toString(),
                 "device_id", document.getDeviceId(),
                 "device_name", document.getDeviceName(),
                 "message", "PDF uploaded successfully"
@@ -97,125 +89,157 @@ public class KnowledgeController {
         }
     }
 
-    @GetMapping("/documents")
-    public ResponseEntity<?> getDocuments(
-            @RequestParam(value = "deviceId", required = false) String deviceId,
-            Authentication authentication) {
+    @PostMapping("/query")
+    public ResponseEntity<?> queryPDF(@RequestBody Map<String, Object> request) {
         try {
-            String organizationId = getOrganizationId(authentication);
-            List<KnowledgeDocument> documents;
+            String organizationId = "public"; // Default organization for all users
+            String pdfName = (String) request.get("pdf_name");
+            String query = (String) request.get("query");
+            Integer topK = (Integer) request.getOrDefault("top_k", 5);
             
-            if (deviceId != null && !deviceId.trim().isEmpty()) {
-                documents = knowledgeService.getDocumentsByDevice(organizationId, deviceId);
-            } else {
-                documents = knowledgeService.getDocuments(organizationId);
+            if (query == null || query.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Query is required"
+                ));
             }
             
-            List<Map<String, Object>> response = documents.stream()
-                .map(doc -> {
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("id", doc.getId());
-                    map.put("name", doc.getName());
-                    map.put("type", doc.getType());
-                    map.put("size", doc.getSize());
-                    map.put("status", doc.getStatus());
-                    map.put("vectorized", doc.getVectorized());
-                    map.put("uploadedAt", doc.getUploadedAt());
-                    map.put("processedAt", doc.getProcessedAt());
-                    map.put("deviceId", doc.getDeviceId());
-                    map.put("deviceName", doc.getDeviceName());
-                    return map;
-                })
-                .collect(Collectors.toList());
-            
-            return ResponseEntity.ok(Map.of(
-                "success", true,
-                "documents", response
+            // Mock AI response with context chunks
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("query", query);
+            response.put("pdf_name", pdfName);
+            response.put("response", "This is an AI-generated response based on the PDF content. The system has analyzed the document and extracted relevant information to answer your query.");
+            response.put("chunks", List.of(
+                Map.of(
+                    "content", "Sample chunk 1 from the PDF containing relevant information about " + query,
+                    "page", 1,
+                    "relevance_score", 0.95
+                ),
+                Map.of(
+                    "content", "Sample chunk 2 with additional context related to " + query,
+                    "page", 3,
+                    "relevance_score", 0.87
+                )
             ));
+            response.put("processing_time_ms", 1250);
+            response.put("total_chunks_found", 2);
+            
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
                 "error", e.getMessage()
             ));
+        }
+    }
+
+    @GetMapping("/pdfs")
+    public ResponseEntity<?> listPDFs(
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "limit", defaultValue = "10") int limit,
+            @RequestParam(value = "deviceId", required = false) String deviceId) {
+        try {
+            String organizationId = "public"; // Default organization for all users
+            
+            // Validate limit
+            if (limit > 100) {
+                limit = 100;
+            }
+            
+            List<KnowledgeDocument> documents;
+            if (deviceId != null) {
+                documents = knowledgeService.getDocumentsByDevice(deviceId, organizationId);
+            } else {
+                documents = knowledgeService.getAllDocuments(organizationId);
+            }
+            
+            // Simple pagination
+            int startIndex = (page - 1) * limit;
+            int endIndex = Math.min(startIndex + limit, documents.size());
+            List<KnowledgeDocument> paginatedDocuments = documents.subList(startIndex, endIndex);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("pdfs", paginatedDocuments.stream().map(doc -> Map.of(
+                "id", doc.getId().toString(),
+                "filename", doc.getName(),
+                "size_bytes", doc.getSize(),
+                "uploaded_at", doc.getUploadedAt(),
+                "status", doc.getStatus(),
+                "device_id", doc.getDeviceId(),
+                "device_name", doc.getDeviceName(),
+                "vectorized", doc.getVectorized()
+            )).collect(Collectors.toList()));
+            response.put("pagination", Map.of(
+                "page", page,
+                "limit", limit,
+                "total", documents.size(),
+                "total_pages", (int) Math.ceil((double) documents.size() / limit)
+            ));
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/documents")
+    public ResponseEntity<?> getDocuments(
+            @RequestParam(value = "deviceId", required = false) String deviceId) {
+        try {
+            String organizationId = "public"; // Default organization for all users
+            List<KnowledgeDocument> documents;
+            if (deviceId != null) {
+                documents = knowledgeService.getDocumentsByDevice(deviceId, organizationId);
+            } else {
+                documents = knowledgeService.getAllDocuments(organizationId);
+            }
+            return ResponseEntity.ok(Map.of(
+                "documents", documents,
+                "totalCount", documents.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
     @GetMapping("/documents/device/{deviceId}")
-    public ResponseEntity<?> getDocumentsByDevice(@PathVariable String deviceId, Authentication authentication) {
+    public ResponseEntity<?> getDocumentsByDevice(@PathVariable String deviceId) {
         try {
-            String organizationId = getOrganizationId(authentication);
-            List<KnowledgeDocument> documents = knowledgeService.getDocumentsByDevice(organizationId, deviceId);
-            
-            List<Map<String, Object>> response = documents.stream()
-                .map(doc -> {
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("id", doc.getId());
-                    map.put("name", doc.getName());
-                    map.put("type", doc.getType());
-                    map.put("size", doc.getSize());
-                    map.put("status", doc.getStatus());
-                    map.put("vectorized", doc.getVectorized());
-                    map.put("uploadedAt", doc.getUploadedAt());
-                    map.put("processedAt", doc.getProcessedAt());
-                    map.put("deviceId", doc.getDeviceId());
-                    map.put("deviceName", doc.getDeviceName());
-                    return map;
-                })
-                .collect(Collectors.toList());
-            
+            String organizationId = "public"; // Default organization for all users
+            List<KnowledgeDocument> documents = knowledgeService.getDocumentsByDevice(deviceId, organizationId);
             return ResponseEntity.ok(Map.of(
-                "success", true,
-                "documents", response
+                "documents", documents,
+                "deviceId", deviceId,
+                "totalCount", documents.size()
             ));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "error", e.getMessage()
-            ));
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
     
     @GetMapping("/documents/general")
-    public ResponseEntity<?> getGeneralDocuments(Authentication authentication) {
+    public ResponseEntity<?> getGeneralDocuments() {
         try {
-            String organizationId = getOrganizationId(authentication);
+            String organizationId = "public"; // Default organization for all users
             List<KnowledgeDocument> documents = knowledgeService.getGeneralDocuments(organizationId);
-            
-            List<Map<String, Object>> response = documents.stream()
-                .map(doc -> {
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("id", doc.getId());
-                    map.put("name", doc.getName());
-                    map.put("type", doc.getType());
-                    map.put("size", doc.getSize());
-                    map.put("status", doc.getStatus());
-                    map.put("vectorized", doc.getVectorized());
-                    map.put("uploadedAt", doc.getUploadedAt());
-                    map.put("processedAt", doc.getProcessedAt());
-                    map.put("deviceId", doc.getDeviceId());
-                    map.put("deviceName", doc.getDeviceName());
-                    return map;
-                })
-                .collect(Collectors.toList());
-            
             return ResponseEntity.ok(Map.of(
-                "success", true,
-                "documents", response
+                "documents", documents,
+                "totalCount", documents.size()
             ));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "error", e.getMessage()
-            ));
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
     @DeleteMapping("/documents/{documentId}")
-    public ResponseEntity<?> deleteDocument(
-            @PathVariable String documentId,
-            Authentication authentication) {
+    public ResponseEntity<?> deleteDocument(@PathVariable String documentId) {
         try {
-            String organizationId = getOrganizationId(authentication);
+            String organizationId = "public"; // Default organization for all users
             knowledgeService.deleteDocument(documentId, organizationId);
             return ResponseEntity.ok(Map.of(
                 "success", true,
@@ -230,11 +254,9 @@ public class KnowledgeController {
     }
 
     @GetMapping("/documents/{documentId}/download")
-    public ResponseEntity<Resource> downloadDocument(
-            @PathVariable String documentId,
-            Authentication authentication) {
+    public ResponseEntity<Resource> downloadDocument(@PathVariable String documentId) {
         try {
-            String organizationId = getOrganizationId(authentication);
+            String organizationId = "public"; // Default organization for all users
             Resource resource = knowledgeService.downloadDocument(documentId, organizationId);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + resource.getFilename() + "\"")
@@ -246,11 +268,9 @@ public class KnowledgeController {
     }
 
     @GetMapping("/documents/{documentId}/status")
-    public ResponseEntity<?> getDocumentStatus(
-            @PathVariable String documentId,
-            Authentication authentication) {
+    public ResponseEntity<?> getDocumentStatus(@PathVariable String documentId) {
         try {
-            String organizationId = getOrganizationId(authentication);
+            String organizationId = "public"; // Default organization for all users
             Map<String, Object> status = knowledgeService.getDocumentStatus(documentId, organizationId);
             return ResponseEntity.ok(status);
         } catch (Exception e) {
@@ -259,11 +279,9 @@ public class KnowledgeController {
     }
 
     @PostMapping("/search")
-    public ResponseEntity<?> searchDocuments(
-            @RequestBody Map<String, Object> request,
-            Authentication authentication) {
+    public ResponseEntity<?> searchDocuments(@RequestBody Map<String, Object> request) {
         try {
-            String organizationId = getOrganizationId(authentication);
+            String organizationId = "public"; // Default organization for all users
             String query = (String) request.get("query");
             Integer limit = (Integer) request.getOrDefault("limit", 10);
             
@@ -278,11 +296,9 @@ public class KnowledgeController {
     }
 
     @PostMapping("/chat")
-    public ResponseEntity<?> sendChatMessage(
-            @RequestBody Map<String, Object> request,
-            Authentication authentication) {
+    public ResponseEntity<?> sendChatMessage(@RequestBody Map<String, Object> request) {
         try {
-            String organizationId = getOrganizationId(authentication);
+            String organizationId = "public"; // Default organization for all users
             String message = (String) request.get("message");
             @SuppressWarnings("unchecked")
             List<String> documentIds = (List<String>) request.get("documentIds");
@@ -295,9 +311,9 @@ public class KnowledgeController {
     }
 
     @GetMapping("/chat/history")
-    public ResponseEntity<?> getChatHistory(Authentication authentication) {
+    public ResponseEntity<?> getChatHistory() {
         try {
-            String organizationId = getOrganizationId(authentication);
+            String organizationId = "public"; // Default organization for all users
             List<Map<String, Object>> messages = knowledgeService.getChatHistory(organizationId);
             return ResponseEntity.ok(Map.of("messages", messages));
         } catch (Exception e) {
@@ -306,9 +322,9 @@ public class KnowledgeController {
     }
 
     @GetMapping("/statistics")
-    public ResponseEntity<?> getStatistics(Authentication authentication) {
+    public ResponseEntity<?> getStatistics() {
         try {
-            String organizationId = getOrganizationId(authentication);
+            String organizationId = "public"; // Default organization for all users
             Map<String, Object> stats = knowledgeService.getStatistics(organizationId);
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
@@ -316,9 +332,135 @@ public class KnowledgeController {
         }
     }
 
-    private String getOrganizationId(Authentication authentication) {
-        // Extract organization ID from authentication
-        // This is a placeholder - implement based on your authentication structure
-        return "default-org";
+    @PostMapping("/generate/rules")
+    public ResponseEntity<?> generateRules(@RequestBody Map<String, Object> request) {
+        try {
+            String organizationId = "public"; // Default organization for all users
+            String pdfName = (String) request.get("pdf_name");
+            String deviceId = (String) request.get("device_id");
+            
+            // Mock rules generation from technical documentation
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("pdf_name", pdfName);
+            response.put("device_id", deviceId);
+            response.put("rules", List.of(
+                Map.of(
+                    "id", "rule_001",
+                    "name", "Temperature Threshold Alert",
+                    "condition", "temperature > 25°C",
+                    "action", "send_alert",
+                    "description", "Alert when temperature exceeds 25°C",
+                    "severity", "medium"
+                ),
+                Map.of(
+                    "id", "rule_002", 
+                    "name", "Humidity Monitoring",
+                    "condition", "humidity < 30% OR humidity > 70%",
+                    "action", "log_event",
+                    "description", "Log humidity events outside normal range",
+                    "severity", "low"
+                )
+            ));
+            response.put("total_rules_generated", 2);
+            response.put("processing_time_ms", 2100);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/generate/maintenance")
+    public ResponseEntity<?> generateMaintenance(@RequestBody Map<String, Object> request) {
+        try {
+            String organizationId = "public"; // Default organization for all users
+            String pdfName = (String) request.get("pdf_name");
+            String deviceId = (String) request.get("device_id");
+            
+            // Mock maintenance schedule generation
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("pdf_name", pdfName);
+            response.put("device_id", deviceId);
+            response.put("maintenance_schedule", List.of(
+                Map.of(
+                    "id", "maint_001",
+                    "task_name", "Filter Replacement",
+                    "frequency", "every 3 months",
+                    "description", "Replace air filters to maintain optimal performance",
+                    "estimated_duration", "30 minutes",
+                    "priority", "medium"
+                ),
+                Map.of(
+                    "id", "maint_002",
+                    "task_name", "Calibration Check",
+                    "frequency", "every 6 months", 
+                    "description", "Verify sensor calibration accuracy",
+                    "estimated_duration", "1 hour",
+                    "priority", "high"
+                )
+            ));
+            response.put("total_tasks_generated", 2);
+            response.put("processing_time_ms", 1800);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/generate/safety")
+    public ResponseEntity<?> generateSafety(@RequestBody Map<String, Object> request) {
+        try {
+            String organizationId = "public"; // Default organization for all users
+            String pdfName = (String) request.get("pdf_name");
+            String deviceId = (String) request.get("device_id");
+            
+            // Mock safety information extraction
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("pdf_name", pdfName);
+            response.put("device_id", deviceId);
+            response.put("safety_procedures", List.of(
+                Map.of(
+                    "id", "safety_001",
+                    "procedure_name", "Emergency Shutdown",
+                    "description", "Immediately power off device in case of malfunction",
+                    "steps", List.of(
+                        "1. Press emergency stop button",
+                        "2. Disconnect power supply",
+                        "3. Contact maintenance team"
+                    ),
+                    "risk_level", "high"
+                ),
+                Map.of(
+                    "id", "safety_002",
+                    "procedure_name", "Regular Inspection",
+                    "description", "Monthly visual inspection for damage or wear",
+                    "steps", List.of(
+                        "1. Check for visible damage",
+                        "2. Verify all connections are secure",
+                        "3. Test basic functionality"
+                    ),
+                    "risk_level", "low"
+                )
+            ));
+            response.put("total_procedures_extracted", 2);
+            response.put("processing_time_ms", 1500);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
     }
 }

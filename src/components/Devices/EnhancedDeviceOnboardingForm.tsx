@@ -1,23 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { 
-  Upload, 
-  FileText, 
-  Settings, 
-  AlertCircle,
-  CheckCircle,
-  X,
-  ArrowRight,
-  ArrowLeft,
-  Brain,
-  Loader2,
-  FileSearch,
-  Rocket,
-  Key,
-  Network,
-  MapPin,
-  Tag
-} from 'lucide-react';
-import { deviceAPI, ruleAPI, knowledgeAPI, pdfAPI } from '../../services/api';
+import { X, ChevronLeft, ChevronRight, Upload, FileText, Settings, Wifi, Database, Bot, CheckCircle, AlertCircle, MessageSquare } from 'lucide-react';
+import { deviceAPI } from '../../services/api';
+import { pdfAPI } from '../../services/api';
+import { pdfApiService } from '../../services/pdfApiService';
 import { EnhancedOnboardingLoader } from '../Loading/EnhancedOnboardingLoader';
 import { DeviceChatInterface } from './DeviceChatInterface';
 
@@ -226,8 +211,8 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       return;
     }
 
-    if (file.size > 25 * 1024 * 1024) {
-      setErrors(prev => ({ ...prev, file: 'File size must be less than 25MB' }));
+    if (file.size > 100 * 1024 * 1024) { // 100MB limit for UI feedback only
+      setErrors(prev => ({ ...prev, file: 'File size must be less than 100MB' }));
       return;
     }
 
@@ -310,22 +295,23 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     setProgress(0);
     setCurrentProcess('pdf');
     setCurrentSubStage('Initializing...');
-    
+
     try {
       let pdfId = '';
       let pdfFilename = '';
-      
+      let externalPdfName = '';
+
       // Step 1: Upload PDF and wait for success
       if (uploadedFile?.file) {
         setCurrentSubStage('Preparing PDF upload...');
         setProgress(5);
-        
+
         // Small delay to show initial progress
         await new Promise(resolve => setTimeout(resolve, 500));
-        
-        setCurrentSubStage('Uploading PDF...');
+
+        setCurrentSubStage('Uploading PDF to backend...');
         setProgress(10);
-        
+
         try {
           console.log('Attempting to upload PDF:', {
             fileName: uploadedFile.file.name,
@@ -333,29 +319,38 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             deviceId: formData.deviceId,
             deviceName: formData.deviceName
           });
-          
+
+          // Upload to backend for storage and tracking
           const uploadResponse = await pdfAPI.uploadPDF(uploadedFile.file, formData.deviceId, formData.deviceName);
           pdfId = (uploadResponse as any)?.data?.pdfId || '';
           pdfFilename = (uploadResponse as any)?.data?.pdf_filename || uploadedFile.file.name;
-          console.log('PDF uploaded successfully:', uploadResponse);
-          
-          setCurrentSubStage('PDF uploaded, processing content...');
+          console.log('PDF uploaded to backend successfully:', uploadResponse);
+
+          setCurrentSubStage('Uploading PDF to external processing service...');
+          setProgress(20);
+
+          // Upload to external API for real processing
+          const externalUploadResponse = await pdfApiService.uploadPDF(uploadedFile.file);
+          externalPdfName = externalUploadResponse.pdf_name;
+          console.log('PDF uploaded to external API successfully:', externalUploadResponse);
+
+          setCurrentSubStage('PDF uploaded, processing content with AI...');
           setProgress(30);
-          
+
           // Step 2: Poll for PDF processing status until complete
           if (pdfId) {
             setCurrentSubStage('Extracting content with MinerU...');
             setProgress(40);
-            
+
             let processingComplete = false;
             let attempts = 0;
             const maxAttempts = 300; // 25 minutes max (5 second intervals)
-            
+
             while (!processingComplete && attempts < maxAttempts) {
               try {
                 const statusResponse = await pdfAPI.getPDFStatus(pdfId);
                 const status = (statusResponse as any)?.data?.status;
-                
+
                 if (status === 'completed') {
                   processingComplete = true;
                   setCurrentSubStage('PDF processing completed!');
@@ -368,10 +363,10 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   const maxProgress = 65; // Max 65% for PDF processing
                   const progressIncrement = (maxProgress - baseProgress) / maxAttempts;
                   const progressPercent = Math.min(baseProgress + (attempts * progressIncrement), maxProgress);
-                  
+
                   setProgress(progressPercent);
-                  setCurrentSubStage(`Processing PDF content... (${Math.round(progressPercent)}%)`);
-                  
+                  setCurrentSubStage(`Processing PDF content with AI... (${Math.round(progressPercent)}%)`);
+
                   // Wait 5 seconds before next poll
                   await new Promise(resolve => setTimeout(resolve, 5000));
                   attempts++;
@@ -382,15 +377,15 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 await new Promise(resolve => setTimeout(resolve, 5000));
               }
             }
-            
+
             if (!processingComplete) {
               throw new Error('PDF processing timed out');
             }
           }
-          
+
         } catch (error: any) {
           console.error('PDF upload/processing failed:', error);
-          
+
           // Check if it's a network/connection error
           if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('Connection')) {
             console.log('Backend server not available');
@@ -402,11 +397,11 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           }
         }
       }
-      
+
       // Step 3: Create Device
       setCurrentSubStage('Creating device...');
       setProgress(80);
-      
+
       try {
         const deviceData = {
           id: formData.deviceId,
@@ -417,66 +412,48 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           location: formData.location,
           manufacturer: formData.manufacturer,
           model: formData.model,
+          productId: formData.productId,
           serialNumber: formData.serialNumber,
-          ipAddress: formData.ipAddress,
-          port: formData.port,
-          firmware: formData.firmware,
-          description: formData.description,
-          powerSource: formData.powerSource,
-          powerConsumption: formData.powerConsumption,
-          operatingTemperatureMin: formData.operatingTemperatureMin,
-          operatingTemperatureMax: formData.operatingTemperatureMax,
-          operatingHumidityMin: formData.operatingHumidityMin,
-          operatingHumidityMax: formData.operatingHumidityMax,
-          wifiSsid: formData.wifiSsid,
-          mqttBroker: formData.mqttBroker,
-          mqttTopic: formData.mqttTopic
+          authenticationCredential: formData.authenticationCredential,
+          networkConfig: formData.networkConfig,
+          description: `Device onboarded with PDF: ${pdfFilename}`,
+          organizationId: 'public'
         };
-        
+
         const deviceResponse = await deviceAPI.create(deviceData);
         console.log('Device created successfully:', deviceResponse.data);
-        
+
         setCurrentSubStage('Device created successfully!');
         setProgress(90);
-        
+
       } catch (error: any) {
         console.error('Device creation failed:', error);
-        
-        // Check if it's a network/connection error
         if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('Connection')) {
           console.log('Backend server not available');
           throw new Error('Backend server is not available. Please ensure the backend server is running and try again.');
         } else {
-          // Try to get specific error message from backend response
           const errorMessage = error.response?.data?.error || error.message || 'Failed to create device';
           throw new Error(errorMessage);
         }
       }
-      
+
       // Step 4: Complete onboarding
       setCurrentSubStage('Completing onboarding...');
       setProgress(100);
-      
+
       // Call onSubmit to add device to list with onboarding state
       await onSubmit(formData, uploadedFile);
-      
+
       // Show chat interface instead of closing the form
       setShowChatInterface(true);
       setShowOnboardingLoader(false);
-      
+
     } catch (error) {
       console.error('Error during onboarding process:', error);
       setShowOnboardingLoader(false);
-      
-      // Show a more user-friendly error message
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      if (errorMessage.includes('Network Error') || errorMessage.includes('Connection')) {
-        alert('Backend server is not available. Please ensure the backend server is running and try again.');
-      } else {
-        console.error('Detailed error:', error);
-        alert(`Failed to complete onboarding: ${errorMessage}`);
-      }
+      console.error('Detailed error:', error);
+      alert(`Failed to complete onboarding: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -500,9 +477,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
   const getStepIcon = useCallback((step: Step) => {
     switch (step) {
-      case 1: return <Settings className="w-6 h-6" />;
-      case 2: return <Network className="w-6 h-6" />;
-      case 3: return <FileSearch className="w-6 h-6" />;
+      case 1: return <Bot className="w-6 h-6" />;
+      case 2: return <MessageSquare className="w-6 h-6" />;
+      case 3: return <FileText className="w-6 h-6" />;
     }
   }, []);
 
@@ -637,7 +614,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   Location
                 </label>
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <input
                     type="text"
                     value={formData.location}
@@ -653,7 +630,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   Tags
                 </label>
                 <div className="relative">
-                  <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <input
                     type="text"
                     value={formData.metadata}
@@ -689,7 +666,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   Authentication Credential *
                 </label>
                 <div className="relative">
-                  <Key className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <input
                     type="password"
                     value={formData.authenticationCredential}
@@ -720,7 +697,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   Connection Protocol *
                 </label>
                 <div className="relative">
-                  <Network className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <select
                     value={formData.connectionProtocol}
                     onChange={(e) => handleInputChange('connectionProtocol', e.target.value)}
@@ -841,7 +818,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           <div className="space-y-6">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FileSearch className="w-8 h-8 text-blue-600" />
+                <FileText className="w-8 h-8 text-blue-600" />
               </div>
               <h3 className="text-lg font-semibold text-slate-800 mb-2">Upload Device Documentation</h3>
               <p className="text-slate-600">Upload your device manual or specifications for AI-powered analysis and rule generation</p>
@@ -863,7 +840,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   <Upload className="w-12 h-12 text-slate-400 mb-4" />
                   <span className="text-lg font-medium text-slate-700 mb-2">Click to upload PDF</span>
                   <span className="text-sm text-slate-500">Device manual, datasheet, or specifications</span>
-                                     <span className="text-xs text-slate-400 mt-1">Maximum file size: 25MB</span>
+                  <span className="text-xs text-slate-400 mt-1">Maximum file size: 100MB</span>
                 </label>
                 {errors.file && (
                   <p className="text-red-500 text-sm mt-2 text-center">{errors.file}</p>
@@ -885,7 +862,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                       ) : uploadedFile.status === 'error' ? (
                         <AlertCircle className="w-5 h-5 text-red-600" />
                       ) : (
-                        <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                        <AlertCircle className="w-5 h-5 text-blue-600 animate-spin" />
                       )}
                       <div>
                         <p className="text-sm font-medium text-slate-800">{uploadedFile.file.name}</p>
@@ -912,7 +889,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <Brain className="w-4 h-4 text-blue-600" />
+                    <AlertCircle className="w-4 h-4 text-blue-600" />
                     <span className="text-sm font-medium text-blue-800">AI Analysis</span>
                   </div>
                   <p className="text-sm text-blue-700">
@@ -923,7 +900,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
                 <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <Rocket className="w-4 h-4 text-green-600" />
+                    <Bot className="w-4 h-4 text-green-600" />
                     <span className="text-sm font-medium text-green-800">Ready to Complete Onboarding</span>
                   </div>
                   <p className="text-sm text-green-700">
@@ -1036,7 +1013,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             disabled={currentStep === 1}
             className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <X className="w-4 h-4" />
             Previous
           </button>
 
@@ -1058,12 +1035,12 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <X className="w-4 h-4 animate-spin" />
                     Starting Onboarding...
                   </>
                 ) : (
                   <>
-                    <Rocket className="w-4 h-4" />
+                    <Bot className="w-4 h-4" />
                     Complete Onboarding
                   </>
                 )}
@@ -1077,13 +1054,13 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               >
                 {isStepLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <X className="w-4 h-4 animate-spin" />
                     {stepLoadingMessage}
                   </>
                 ) : (
                   <>
                     Next
-                    <ArrowRight className="w-4 h-4" />
+                    <X className="w-4 h-4" />
                   </>
                 )}
               </button>

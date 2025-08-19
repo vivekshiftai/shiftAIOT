@@ -3,8 +3,8 @@ server:
   servlet:
     context-path: /api
     multipart:
-      max-file-size: 50MB
-      max-request-size: 50MB
+      max-file-size: 1GB
+      max-request-size: 1GB
       enabled: true
 
 
@@ -87,6 +87,11 @@ openai:
 # File Upload Configuration
 file:
   upload-dir: ${FILE_UPLOAD_DIR:./uploads}
+
+# PDF Processing Configuration
+pdf:
+  processing:
+    url: ${PDF_PROCESSING_URL:http://20.57.36.66:8000}
 
 # Logging
 logging:
