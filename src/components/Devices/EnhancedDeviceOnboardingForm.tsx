@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Upload, FileText, Settings, Wifi, Database, Bot, CheckCircle, AlertCircle, MessageSquare } from 'lucide-react';
 import { deviceAPI } from '../../services/api';
 import { pdfAPI } from '../../services/api';
-import { pdfApiService } from '../../services/pdfApiService';
+import { pdfProcessingService } from '../../services/pdfprocess';
 import { EnhancedOnboardingLoader } from '../Loading/EnhancedOnboardingLoader';
 import { DeviceChatInterface } from './DeviceChatInterface';
 
@@ -294,7 +294,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     setShowOnboardingLoader(true);
     setProgress(0);
     setCurrentProcess('pdf');
-    setCurrentSubStage('Initializing...');
+    setCurrentSubStage('Initializing PDF processing...');
 
     try {
       let pdfId = '';
@@ -304,13 +304,13 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       // Step 1: Upload PDF and wait for success
       if (uploadedFile?.file) {
         setCurrentSubStage('Preparing PDF upload...');
-        setProgress(5);
+        setProgress(10);
 
         // Small delay to show initial progress
         await new Promise(resolve => setTimeout(resolve, 500));
 
         setCurrentSubStage('Uploading PDF to backend...');
-        setProgress(10);
+        setProgress(20);
 
         try {
           console.log('Attempting to upload PDF:', {
@@ -326,21 +326,21 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           pdfFilename = (uploadResponse as any)?.data?.pdf_filename || uploadedFile.file.name;
           console.log('PDF uploaded to backend successfully:', uploadResponse);
 
-          setCurrentSubStage('Uploading PDF to external processing service...');
-          setProgress(20);
+          setCurrentSubStage('Uploading PDF to MinerU processing service...');
+          setProgress(30);
 
           // Upload to external API for real processing
-          const externalUploadResponse = await pdfApiService.uploadPDF(uploadedFile.file);
+          const externalUploadResponse = await pdfProcessingService.uploadPDF(uploadedFile.file);
           externalPdfName = externalUploadResponse.pdf_name;
-          console.log('PDF uploaded to external API successfully:', externalUploadResponse);
+          console.log('PDF uploaded to MinerU successfully:', externalUploadResponse);
 
-          setCurrentSubStage('PDF uploaded, processing content with AI...');
-          setProgress(30);
+          setCurrentSubStage('Processing PDF content with MinerU...');
+          setProgress(50);
 
           // Step 2: Poll for PDF processing status until complete
           if (pdfId) {
             setCurrentSubStage('Extracting content with MinerU...');
-            setProgress(40);
+            setProgress(60);
 
             let processingComplete = false;
             let attempts = 0;
@@ -354,19 +354,12 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 if (status === 'completed') {
                   processingComplete = true;
                   setCurrentSubStage('PDF processing completed!');
-                  setProgress(70);
+                  setProgress(80);
                 } else if (status === 'failed') {
                   throw new Error('PDF processing failed');
                 } else {
-                  // Update progress more granularly
-                  const baseProgress = 40; // Starting from 40%
-                  const maxProgress = 65; // Max 65% for PDF processing
-                  const progressIncrement = (maxProgress - baseProgress) / maxAttempts;
-                  const progressPercent = Math.min(baseProgress + (attempts * progressIncrement), maxProgress);
-
-                  setProgress(progressPercent);
-                  setCurrentSubStage(`Processing PDF content with AI... (${Math.round(progressPercent)}%)`);
-
+                  setCurrentSubStage(`Processing PDF content with MinerU... (Attempt ${attempts + 1})`);
+                  
                   // Wait 5 seconds before next poll
                   await new Promise(resolve => setTimeout(resolve, 5000));
                   attempts++;
@@ -400,7 +393,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
       // Step 3: Create Device
       setCurrentSubStage('Creating device...');
-      setProgress(80);
+      setProgress(90);
 
       try {
         const deviceData = {
@@ -424,7 +417,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         console.log('Device created successfully:', deviceResponse.data);
 
         setCurrentSubStage('Device created successfully!');
-        setProgress(90);
+        setProgress(95);
 
       } catch (error: any) {
         console.error('Device creation failed:', error);
@@ -438,7 +431,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       }
 
       // Step 4: Complete onboarding
-      setCurrentSubStage('Completing onboarding...');
+      setCurrentSubStage('Setting up AI assistant...');
       setProgress(100);
 
       // Call onSubmit to add device to list with onboarding state

@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { knowledgeAPI } from '../services/api';
 import { deviceAPI } from '../services/api';
-import { pdfApiService, PDFListResponse } from '../services/pdfApiService';
+import { pdfProcessingService, PDFListResponse } from '../services/pdfprocess';
 
 // Updated interface to match PDF API response
 interface KnowledgeDocument {
@@ -74,7 +74,7 @@ export const KnowledgeSection: React.FC = () => {
     const loadData = async () => {
       try {
         // Load PDF documents from external PDF API
-        const pdfListResponse: PDFListResponse = await pdfApiService.listPDFs();
+        const pdfListResponse: PDFListResponse = await pdfProcessingService.listPDFs();
         const convertedDocuments: KnowledgeDocument[] = pdfListResponse.pdfs.map((pdf, index) => ({
           id: index.toString(), // Use index as ID since external API doesn't provide unique IDs
           name: pdf.pdf_name,
@@ -153,7 +153,7 @@ export const KnowledgeSection: React.FC = () => {
             top_k: 5
           };
           
-          const queryResponse = await pdfApiService.queryPDF(queryRequest);
+          const queryResponse = await pdfProcessingService.queryPDF(queryRequest);
           
           const assistantMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),

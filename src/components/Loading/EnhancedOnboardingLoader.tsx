@@ -1,62 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FileText, 
+  Upload, 
   Brain, 
-  Database, 
   CheckCircle, 
-  Loader2, 
-  Sparkles,
-  GitBranch,
-  Target,
-  Shield,
-  Activity,
-  Clock,
-  BarChart3,
-  Settings,
-  Wrench,
-  AlertTriangle,
-  RotateCcw,
-  Upload,
-  Zap,
-  MessageSquare,
+  Loader2,
+  Database,
   Bot,
-  GitCommit,
-  Search,
-  Code,
-  Layers,
-  Cpu,
-  Network,
-  FileCode,
-  GitPullRequest,
-  GitMerge,
-  GitCompare,
-  CheckCircle2,
-  XCircle,
-  Info,
-  FileCheck,
-  FolderGit2
+  Settings,
+  Wifi,
+  Shield
 } from 'lucide-react';
 
 interface EnhancedOnboardingLoaderProps {
   isProcessing: boolean;
-  currentProcess: 'pdf' | 'rules' | 'knowledgebase';
+  currentProcess: string;
   progress: number;
   onComplete: () => void;
   pdfFileName?: string;
-  onError?: (error: string) => void;
   currentSubStage?: string;
-  subStageProgress?: number;
 }
 
-interface ProcessStage {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  color: string;
-  bgColor: string;
-  status: 'pending' | 'processing' | 'completed' | 'error';
-}
+const pdfProcessingStages = [
+  { name: 'Uploading PDF', icon: Upload, color: 'text-blue-500' },
+  { name: 'Processing Content', icon: Brain, color: 'text-purple-500' },
+  { name: 'Creating Device', icon: Database, color: 'text-green-500' },
+  { name: 'Setting Up AI Assistant', icon: Bot, color: 'text-orange-500' }
+];
 
 export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
   isProcessing,
@@ -64,274 +34,144 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
   progress,
   onComplete,
   pdfFileName,
-  onError,
-  currentSubStage,
-  subStageProgress = 0
+  currentSubStage
 }) => {
-  const [currentStageIndex, setCurrentStageIndex] = useState(0);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-
-  // Debug progress updates
-  useEffect(() => {
-    console.log('EnhancedOnboardingLoader - Progress:', progress, 'SubStage:', currentSubStage);
-  }, [progress, currentSubStage]);
-
-  const processStages: ProcessStage[] = [
-    {
-      id: 'pdf',
-      title: 'PDF Uploading',
-      description: 'Securely uploading and processing your device documentation',
-      icon: <Upload className="w-8 h-8" />,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      status: 'pending'
-    },
-    {
-      id: 'rules',
-      title: 'Rules Generation',
-      description: 'AI-powered analysis and rule generation from documentation',
-      icon: <Brain className="w-8 h-8" />,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      status: 'pending'
-    },
-    {
-      id: 'knowledgebase',
-      title: 'Initializing Chat',
-      description: 'Setting up intelligent chat interface for your device',
-      icon: <MessageSquare className="w-8 h-8" />,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      status: 'pending'
-    }
-  ];
+  const [currentStage, setCurrentStage] = useState(0);
 
   useEffect(() => {
-    const stageIndex = processStages.findIndex(stage => stage.id === currentProcess);
-    if (stageIndex !== -1) {
-      setCurrentStageIndex(stageIndex);
-    }
-  }, [currentProcess]);
-
-  useEffect(() => {
-    if (progress >= 100 && isProcessing) {
+    if (progress >= 100) {
       setTimeout(() => {
-        setShowSuccess(true);
-        setTimeout(() => {
-          onComplete();
-        }, 2000);
+        onComplete();
       }, 1000);
     }
-  }, [progress, isProcessing, onComplete]);
+  }, [progress, onComplete]);
 
-  const handleRetry = () => {
-    setError(null);
-    setRetryCount(prev => prev + 1);
-  };
-
-  const getStageStatus = (index: number) => {
-    if (index < currentStageIndex) return 'completed';
-    if (index === currentStageIndex) return 'processing';
-    return 'pending';
-  };
-
-  const currentStage = processStages[currentStageIndex];
-
-  if (showSuccess) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-3xl p-8 shadow-2xl border border-green-200 max-w-2xl w-full text-center">
-          <div className="mb-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
-              <CheckCircle2 className="w-12 h-12 text-green-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Device Onboarding Complete!</h1>
-            <p className="text-lg text-gray-600">
-              Your device has been successfully onboarded and is ready for use.
-            </p>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={onComplete}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-            >
-              Continue to Device Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-rose-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-3xl p-8 shadow-2xl border border-red-200 max-w-2xl w-full text-center">
-          <div className="mb-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-4">
-              <XCircle className="w-12 h-12 text-red-600" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Processing Error</h1>
-            <p className="text-gray-600 mb-4">{error}</p>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={handleRetry}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              <RotateCcw className="w-4 h-4 inline mr-2" />
-              Retry Processing
-            </button>
-            <button
-              onClick={() => onError?.(error)}
-              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    // Update current stage based on progress
+    if (progress < 30) setCurrentStage(0);
+    else if (progress < 70) setCurrentStage(1);
+    else if (progress < 90) setCurrentStage(2);
+    else setCurrentStage(3);
+  }, [progress]);
 
   return (
-    <div className="w-full">
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        {/* Header with prominent progress bar */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold mb-1">Equipment Intelligence Agent</h1>
-              <p className="text-blue-100 text-sm">
-                Processing your device documentation with AI
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold">{Math.round(progress)}%</div>
-              <div className="text-blue-100 text-xs">Complete</div>
-            </div>
-          </div>
+    <div className="w-full max-w-md mx-auto text-center">
+      {/* Main Loading Animation */}
+      <div className="relative mb-8">
+        <div className="w-24 h-24 mx-auto relative">
+          {/* Outer ring */}
+          <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
           
-          {/* Prominent progress bar */}
-          <div className="bg-blue-700 rounded-full h-2 mb-3 overflow-hidden">
-            <div 
-              className="bg-white h-2 rounded-full transition-all duration-700 ease-out shadow-lg"
-              style={{ 
-                width: `${progress}%`,
-                transition: 'width 0.7s ease-out'
-              }}
-            />
-          </div>
+          {/* Animated ring */}
+          <div className="absolute inset-0 border-4 border-blue-500 rounded-full animate-spin border-t-transparent"></div>
           
-          {/* Minimal status text */}
-          <div className="text-center">
-            <p className="text-blue-100 text-xs">
-              {currentStage?.title} • {Math.round(progress)}% complete
-            </p>
-            {currentSubStage && (
-              <p className="text-blue-200 text-xs mt-1">
-                {currentSubStage}
-              </p>
-            )}
+          {/* Center icon */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <FileText className="w-8 h-8 text-blue-600" />
           </div>
-        </div>
-
-        <div className="p-6">
-          {/* Process Stages as animated cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {processStages.map((stage, index) => {
-              const status = getStageStatus(index);
-              const isCurrent = index === currentStageIndex;
-              const isCompleted = index < currentStageIndex;
-              
-              return (
-                <div 
-                  key={stage.id}
-                  className={`relative p-4 rounded-xl border-2 transition-all duration-500 transform ${
-                    isCurrent 
-                      ? `${stage.bgColor} border-${stage.color.replace('text-', '')}-300 shadow-lg scale-105` 
-                      : isCompleted 
-                        ? 'bg-green-50 border-green-300 shadow-md' 
-                        : 'bg-gray-50 border-gray-200'
-                  }`}
-                >
-                  <div className="flex items-center mb-3">
-                    <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
-                      isCurrent 
-                        ? `${stage.bgColor.replace('bg-', 'bg-').replace('-50', '-100')}` 
-                        : isCompleted 
-                          ? 'bg-green-100' 
-                          : 'bg-gray-100'
-                    }`}>
-                      {isCurrent ? (
-                        <Loader2 className={`w-5 h-5 ${stage.color} animate-spin`} />
-                      ) : isCompleted ? (
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                      ) : (
-                        <div className="w-5 h-5">{stage.icon}</div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className={`text-sm font-semibold ${
-                        isCurrent ? stage.color : isCompleted ? 'text-green-700' : 'text-gray-600'
-                      }`}>
-                        {stage.title}
-                      </h3>
-                      <p className="text-xs text-gray-500 mt-1">{stage.description}</p>
-                    </div>
-                  </div>
-                  
-                  {isCurrent && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-gray-600">
-                        <span>Processing</span>
-                        <span>{Math.round((progress - (index * 33.33)) / 33.33 * 100)}%</span>
-                      </div>
-                      <div className="bg-gray-200 rounded-full h-1.5">
-                        <div 
-                          className={`${stage.color.replace('text-', 'bg-')} h-1.5 rounded-full transition-all duration-700 ease-out`}
-                          style={{ 
-                            width: `${Math.min(Math.max((progress - (index * 33.33)) / 33.33 * 100, 0), 100)}%`,
-                            transition: 'width 0.7s ease-out'
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  
-                  {isCompleted && (
-                    <div className="flex items-center text-green-600 text-xs">
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      Completed
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* File Information */}
-          {pdfFileName && (
-            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-              <div className="flex items-center">
-                <FileText className="w-5 h-5 text-blue-600 mr-2" />
-                <div>
-                  <span className="text-sm font-medium text-blue-900">
-                    Processing: {pdfFileName}
-                  </span>
-                  <p className="text-xs text-blue-700 mt-1">
-                    {currentSubStage || 'AI analysis in progress...'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Process Title */}
+      <h2 className="text-xl font-bold text-slate-800 mb-2">
+        {currentProcess === 'pdf' ? 'PDF Processing' : 'Device Onboarding'}
+      </h2>
+
+      {/* Current Stage Display */}
+      <div className="mb-6">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          {pdfProcessingStages.map((stage, index) => {
+            const Icon = stage.icon;
+            const isActive = index === currentStage;
+            const isCompleted = index < currentStage;
+            
+            return (
+              <div key={index} className="flex items-center">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  isCompleted ? 'bg-green-100 text-green-600' :
+                  isActive ? 'bg-blue-100 text-blue-600' :
+                  'bg-gray-100 text-gray-400'
+                }`}>
+                  {isCompleted ? (
+                    <CheckCircle className="w-5 h-5" />
+                  ) : (
+                    <Icon className="w-5 h-5" />
+                  )}
+                </div>
+                {index < pdfProcessingStages.length - 1 && (
+                  <div className={`w-8 h-0.5 mx-2 ${
+                    isCompleted ? 'bg-green-300' : 'bg-gray-200'
+                  }`}></div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        
+        <p className="text-sm text-slate-600 font-medium">
+          {pdfProcessingStages[currentStage]?.name}
+        </p>
+      </div>
+
+      {/* Current Sub-Stage */}
+      {currentSubStage && (
+        <div className="mb-6">
+          <div className="flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+            <p className="text-sm text-slate-600">{currentSubStage}</p>
+          </div>
+        </div>
+      )}
+
+      {/* File Information */}
+      {pdfFileName && (
+        <div className="bg-blue-50 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <FileText className="w-4 h-4 text-blue-600" />
+            <span className="text-sm font-medium text-blue-800">Processing File</span>
+          </div>
+          <p className="text-xs text-blue-700 truncate">{pdfFileName}</p>
+        </div>
+      )}
+
+      {/* Status Indicators */}
+      <div className="grid grid-cols-2 gap-4 text-xs">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+          <span className="text-slate-600">PDF Upload</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${
+            progress >= 30 ? 'bg-green-500' : 'bg-gray-300'
+          }`}></div>
+          <span className="text-slate-600">Content Processing</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${
+            progress >= 70 ? 'bg-green-500' : 'bg-gray-300'
+          }`}></div>
+          <span className="text-slate-600">Device Creation</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${
+            progress >= 90 ? 'bg-green-500' : 'bg-gray-300'
+          }`}></div>
+          <span className="text-slate-600">AI Setup</span>
+        </div>
+      </div>
+
+      {/* Completion Message */}
+      {progress >= 100 && (
+        <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+            <span className="text-sm font-medium text-green-800">Processing Complete!</span>
+          </div>
+          <p className="text-xs text-green-700">
+            Your device has been successfully onboarded with AI assistance.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

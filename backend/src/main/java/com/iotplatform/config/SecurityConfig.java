@@ -71,7 +71,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        logger.info("Configuring Security Filter Chain");
+        logger.info("Configuring Security Filter Chain - NO AUTHENTICATION REQUIRED");
         
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -81,24 +81,24 @@ public class SecurityConfig {
             .sessionManagement(sessionManagement -> 
                 sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/knowledge/**").permitAll()
-                .requestMatchers("/upload-pdf").permitAll()
-                .requestMatchers("/query").permitAll()
-                .requestMatchers("/pdfs/**").permitAll()
-                .requestMatchers("/generate/**").permitAll()
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                .requestMatchers("/websocket/**").permitAll()
-                .requestMatchers("/devices/**").authenticated()
-                .requestMatchers("/notifications/**").authenticated()
-                .requestMatchers("/rules/**").authenticated()
-                .requestMatchers("/maintenance/**").authenticated()
-                .anyRequest().authenticated()
+                // .requestMatchers("/auth/**").permitAll()
+                // .requestMatchers("/knowledge/**").permitAll()
+                // .requestMatchers("/upload-pdf").permitAll()
+                // .requestMatchers("/query").permitAll()
+                // .requestMatchers("/pdfs/**").permitAll()
+                // .requestMatchers("/generate/**").permitAll()
+                // .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                // .requestMatchers("/websocket/**").permitAll()
+                // .requestMatchers("/devices/**").authenticated()
+                // .requestMatchers("/notifications/**").authenticated()
+                // .requestMatchers("/rules/**").authenticated()
+                // .requestMatchers("/maintenance/**").authenticated()
+                .anyRequest().permitAll()
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthenticationFilter(tokenProvider, userDetailsService), UsernamePasswordAuthenticationFilter.class);
 
-        logger.info("Security configuration completed successfully");
+        logger.info("Security configuration completed - NO AUTHENTICATION REQUIRED");
         return http.build();
     }
 

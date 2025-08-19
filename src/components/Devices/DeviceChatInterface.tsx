@@ -10,7 +10,7 @@ import {
   X,
   RotateCcw
 } from 'lucide-react';
-import { pdfApiService } from '../../services/pdfApiService';
+import { pdfProcessingService } from '../../services/pdfprocess';
 
 interface ChatMessage {
   id: string;
@@ -77,7 +77,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
 
     try {
       // Use external PDF API for real AI responses
-      const queryResponse = await pdfApiService.queryPDF({
+      const queryResponse = await pdfProcessingService.queryPDF({
         pdf_name: pdfFileName,
         query: inputValue.trim(),
         top_k: 5

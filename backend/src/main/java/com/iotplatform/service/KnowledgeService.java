@@ -237,13 +237,15 @@ public class KnowledgeService {
                 
                 HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
                 
-                // Upload to external API
-                String uploadUrl = pdfProcessingUrl + "/upload/pdf";
+                // Upload to external API using correct endpoint
+                String uploadUrl = pdfProcessingUrl + "/upload-pdf"; // Fixed endpoint
+                System.out.println("Uploading to MinerU service: " + uploadUrl);
+                
                 ResponseEntity<Map> response = restTemplate.postForEntity(uploadUrl, requestEntity, Map.class);
                 
                 if (response.getStatusCode().is2xxSuccessful()) {
                     Map<String, Object> result = response.getBody();
-                    System.out.println("PDF uploaded to external API successfully: " + result);
+                    System.out.println("PDF uploaded to MinerU successfully: " + result);
                     
                     // Update document status
                     document.setStatus("completed");
@@ -252,11 +254,12 @@ public class KnowledgeService {
                     
                     knowledgeDocumentRepository.save(document);
                 } else {
-                    throw new RuntimeException("External API upload failed: " + response.getStatusCode());
+                    throw new RuntimeException("MinerU API upload failed: " + response.getStatusCode());
                 }
                 
             } catch (Exception e) {
-                System.err.println("Error processing document with external API: " + e.getMessage());
+                System.err.println("Error processing document with MinerU API: " + e.getMessage());
+                e.printStackTrace();
                 document.setStatus("error");
                 knowledgeDocumentRepository.save(document);
             }
