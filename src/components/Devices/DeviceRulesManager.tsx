@@ -12,7 +12,7 @@ import {
   Zap,
   Settings
 } from 'lucide-react';
-import { IoTRule, MaintenanceData } from '../../services/pdfProcessingService';
+import { IoTRule, MaintenanceTask } from '../../services/pdfprocess';
 
 interface DeviceRulesManagerProps {
   deviceId: string;
@@ -23,49 +23,36 @@ interface DeviceRulesManagerProps {
 // Mock data - in real app, this would come from API
 const mockDeviceRules: IoTRule[] = [
   {
-    device_name: 'Temperature Sensor T1',
-    rule_type: 'monitoring',
     condition: 'Temperature exceeds 85°C',
     action: 'Send alert to maintenance team',
-    priority: 'high',
-    frequency: 'hourly',
-    description: 'Monitor equipment temperature to prevent overheating'
+    category: 'monitoring',
+    priority: 'high'
   },
   {
-    device_name: 'Conveyor Belt Motor',
-    rule_type: 'maintenance',
     condition: 'Operating hours reach 1000',
     action: 'Schedule preventive maintenance',
-    priority: 'medium',
-    frequency: 'weekly',
-    description: 'Regular maintenance schedule for motor components'
+    category: 'maintenance',
+    priority: 'medium'
   },
   {
-    device_name: 'Pressure Sensor P1',
-    rule_type: 'alert',
     condition: 'Pressure drops below 2.5 bar',
     action: 'Activate backup pump system',
-    priority: 'high',
-    frequency: 'real-time',
-    description: 'Critical pressure monitoring for system safety'
+    category: 'alert',
+    priority: 'high'
   }
 ];
 
-const mockMaintenanceData: MaintenanceData[] = [
+const mockMaintenanceData: MaintenanceTask[] = [
   {
-    component_name: 'Filter Assembly',
-    maintenance_type: 'preventive',
+    task: 'Filter Assembly',
     frequency: 'Every 3 months',
-    last_maintenance: '2024-01-15',
-    next_maintenance: '2024-04-15',
+    category: 'preventive',
     description: 'Replace air filters to maintain optimal performance'
   },
   {
-    component_name: 'Motor Bearings',
-    maintenance_type: 'preventive',
+    task: 'Motor Bearings',
     frequency: 'Every 6 months',
-    last_maintenance: '2023-12-01',
-    next_maintenance: '2024-06-01',
+    category: 'preventive',
     description: 'Lubricate and inspect motor bearings for wear'
   }
 ];
@@ -76,20 +63,18 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
   onClose
 }) => {
   const [rules, setRules] = useState<IoTRule[]>(mockDeviceRules);
-  const [maintenanceData, setMaintenanceData] = useState<MaintenanceData[]>(mockMaintenanceData);
+  const [maintenanceData, setMaintenanceData] = useState<MaintenanceTask[]>(mockMaintenanceData);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [editingMaintenanceId, setEditingMaintenanceId] = useState<string | null>(null);
   const [showAddRule, setShowAddRule] = useState(false);
   const [showAddMaintenance, setShowAddMaintenance] = useState(false);
   const [newRule, setNewRule] = useState<Partial<IoTRule>>({
-    device_name: deviceName,
-    rule_type: 'monitoring',
-    priority: 'medium',
-    frequency: 'daily'
+    category: 'monitoring',
+    priority: 'medium'
   });
-  const [newMaintenance, setNewMaintenance] = useState<Partial<MaintenanceData>>({
-    component_name: '',
-    maintenance_type: 'preventive',
+  const [newMaintenance, setNewMaintenance] = useState<Partial<MaintenanceTask>>({
+    task: '',
+    category: 'preventive',
     frequency: 'Monthly'
   });
 
@@ -120,41 +105,34 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
   };
 
   const handleAddRule = () => {
-    if (newRule.device_name && newRule.condition && newRule.action) {
+    if (newRule.condition && newRule.action) {
       const rule: IoTRule = {
-        device_name: newRule.device_name,
-        rule_type: newRule.rule_type || 'monitoring',
         condition: newRule.condition,
         action: newRule.action,
-        priority: newRule.priority || 'medium',
-        frequency: newRule.frequency || 'daily',
-        description: newRule.description || ''
+        category: newRule.category || 'monitoring',
+        priority: newRule.priority || 'medium'
       };
       setRules([...rules, rule]);
       setNewRule({
-        device_name: deviceName,
-        rule_type: 'monitoring',
-        priority: 'medium',
-        frequency: 'daily'
+        category: 'monitoring',
+        priority: 'medium'
       });
       setShowAddRule(false);
     }
   };
 
   const handleAddMaintenance = () => {
-    if (newMaintenance.component_name && newMaintenance.frequency) {
-      const maintenance: MaintenanceData = {
-        component_name: newMaintenance.component_name,
-        maintenance_type: newMaintenance.maintenance_type || 'preventive',
+    if (newMaintenance.task && newMaintenance.frequency) {
+      const maintenance: MaintenanceTask = {
+        task: newMaintenance.task,
         frequency: newMaintenance.frequency,
-        last_maintenance: newMaintenance.last_maintenance || new Date().toISOString().split('T')[0],
-        next_maintenance: newMaintenance.next_maintenance || new Date().toISOString().split('T')[0],
+        category: newMaintenance.category || 'preventive',
         description: newMaintenance.description || ''
       };
       setMaintenanceData([...maintenanceData, maintenance]);
       setNewMaintenance({
-        component_name: '',
-        maintenance_type: 'preventive',
+        task: '',
+        category: 'preventive',
         frequency: 'Monthly'
       });
       setShowAddMaintenance(false);
@@ -170,7 +148,7 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
   };
 
   const handleDeleteRule = (ruleId: string) => {
-    setRules(rules.filter(rule => rule.device_name !== ruleId));
+    setRules(rules.filter(rule => rule.condition !== ruleId));
   };
 
   const handleEditMaintenance = (maintenanceId: string) => {
@@ -182,7 +160,7 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
   };
 
   const handleDeleteMaintenance = (maintenanceId: string) => {
-    setMaintenanceData(maintenanceData.filter(maintenance => maintenance.component_name !== maintenanceId));
+    setMaintenanceData(maintenanceData.filter(maintenance => maintenance.task !== maintenanceId));
   };
 
   return (
@@ -241,18 +219,18 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                    <div>
-                      <label className="block text-sm font-medium text-blue-700 mb-1">Rule Type</label>
-                      <select
-                        value={newRule.rule_type}
-                        onChange={(e) => setNewRule({...newRule, rule_type: e.target.value as any})}
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="monitoring">Monitoring</option>
-                        <option value="maintenance">Maintenance</option>
-                        <option value="alert">Alert</option>
-                      </select>
-                    </div>
+                                         <div>
+                       <label className="block text-sm font-medium text-blue-700 mb-1">Category</label>
+                       <select
+                         value={newRule.category}
+                         onChange={(e) => setNewRule({...newRule, category: e.target.value as any})}
+                         className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                       >
+                         <option value="monitoring">Monitoring</option>
+                         <option value="maintenance">Maintenance</option>
+                         <option value="alert">Alert</option>
+                       </select>
+                     </div>
                     <div>
                       <label className="block text-sm font-medium text-blue-700 mb-1">Priority</label>
                       <select
@@ -288,16 +266,7 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
                         className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-blue-700 mb-1">Description</label>
-                      <textarea
-                        value={newRule.description || ''}
-                        onChange={(e) => setNewRule({...newRule, description: e.target.value})}
-                        placeholder="Optional description"
-                        rows={2}
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
+                    
                   </div>
                   
                   <div className="flex gap-2 mt-4">
@@ -317,59 +286,50 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
                 </div>
               )}
 
-              {/* Existing Rules */}
-              {rules.map((rule, index) => (
-                <div key={`${rule.device_name}-${index}`} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      {getRuleIcon(rule.rule_type)}
-                      <div>
-                        <h4 className="font-semibold text-slate-800">{rule.device_name}</h4>
-                        <p className="text-sm text-slate-600 capitalize">{rule.rule_type} Rule</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 text-xs rounded-full border ${getPriorityColor(rule.priority)}`}>
-                        {rule.priority}
-                      </span>
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => handleEditRule(rule.device_name)}
-                          className="p-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteRule(rule.device_name)}
-                          className="p-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-600">Frequency: {rule.frequency}</span>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-700 mb-1">
-                        <span className="font-medium">Condition:</span> {rule.condition}
-                      </p>
-                      <p className="text-sm text-slate-700 mb-1">
-                        <span className="font-medium">Action:</span> {rule.action}
-                      </p>
-                      {rule.description && (
-                        <p className="text-sm text-slate-600">
-                          {rule.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                             {/* Existing Rules */}
+               {rules.map((rule, index) => (
+                 <div key={`${rule.condition}-${index}`} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                   <div className="flex items-center justify-between mb-3">
+                     <div className="flex items-center gap-3">
+                       {getRuleIcon(rule.category)}
+                       <div>
+                         <h4 className="font-semibold text-slate-800">{deviceName}</h4>
+                         <p className="text-sm text-slate-600 capitalize">{rule.category} Rule</p>
+                       </div>
+                     </div>
+                     <div className="flex items-center gap-2">
+                       <span className={`px-2 py-1 text-xs rounded-full border ${getPriorityColor(rule.priority)}`}>
+                         {rule.priority}
+                       </span>
+                       <div className="flex gap-1">
+                         <button
+                           onClick={() => handleEditRule(rule.condition)}
+                           className="p-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                         >
+                           <Edit className="w-4 h-4" />
+                         </button>
+                         <button
+                           onClick={() => handleDeleteRule(rule.condition)}
+                           className="p-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                         >
+                           <Trash2 className="w-4 h-4" />
+                         </button>
+                       </div>
+                     </div>
+                   </div>
+                   
+                   <div className="space-y-2">
+                     <div>
+                       <p className="text-sm text-slate-700 mb-1">
+                         <span className="font-medium">Condition:</span> {rule.condition}
+                       </p>
+                       <p className="text-sm text-slate-700 mb-1">
+                         <span className="font-medium">Action:</span> {rule.action}
+                       </p>
+                     </div>
+                   </div>
+                 </div>
+               ))}
             </div>
           </div>
 
@@ -408,30 +368,30 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
                     </button>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                    <div>
-                      <label className="block text-sm font-medium text-purple-700 mb-1">Component Name</label>
-                      <input
-                        type="text"
-                        value={newMaintenance.component_name || ''}
-                        onChange={(e) => setNewMaintenance({...newMaintenance, component_name: e.target.value})}
-                        placeholder="e.g., Filter Assembly"
-                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-purple-700 mb-1">Maintenance Type</label>
-                      <select
-                        value={newMaintenance.maintenance_type}
-                        onChange={(e) => setNewMaintenance({...newMaintenance, maintenance_type: e.target.value})}
-                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                      >
-                        <option value="preventive">Preventive</option>
-                        <option value="corrective">Corrective</option>
-                        <option value="predictive">Predictive</option>
-                      </select>
-                    </div>
-                  </div>
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                     <div>
+                       <label className="block text-sm font-medium text-purple-700 mb-1">Task</label>
+                       <input
+                         type="text"
+                         value={newMaintenance.task || ''}
+                         onChange={(e) => setNewMaintenance({...newMaintenance, task: e.target.value})}
+                         placeholder="e.g., Filter Assembly"
+                         className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-purple-700 mb-1">Category</label>
+                       <select
+                         value={newMaintenance.category}
+                         onChange={(e) => setNewMaintenance({...newMaintenance, category: e.target.value})}
+                         className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                       >
+                         <option value="preventive">Preventive</option>
+                         <option value="corrective">Corrective</option>
+                         <option value="predictive">Predictive</option>
+                       </select>
+                     </div>
+                   </div>
                   
                   <div className="space-y-3">
                     <div>
@@ -473,56 +433,46 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
                 </div>
               )}
 
-              {/* Existing Maintenance Items */}
-              {maintenanceData.map((maintenance, index) => (
-                <div key={`${maintenance.component_name}-${index}`} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <Shield className="w-4 h-4 text-purple-600" />
-                      <div>
-                        <h4 className="font-semibold text-slate-800">{maintenance.component_name}</h4>
-                        <p className="text-sm text-slate-600 capitalize">{maintenance.maintenance_type} Maintenance</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handleEditMaintenance(maintenance.component_name)}
-                        className="p-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteMaintenance(maintenance.component_name)}
-                        className="p-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="w-4 h-4 text-slate-400" />
-                      <span className="text-slate-600">Frequency: {maintenance.frequency}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="font-medium text-slate-700">Last Maintenance:</span>
-                        <p className="text-slate-600">{maintenance.last_maintenance}</p>
-                      </div>
-                      <div>
-                        <span className="font-medium text-slate-700">Next Maintenance:</span>
-                        <p className="text-slate-600">{maintenance.next_maintenance}</p>
-                      </div>
-                    </div>
-                    {maintenance.description && (
-                      <p className="text-sm text-slate-600 mt-2">
-                        {maintenance.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+                             {/* Existing Maintenance Items */}
+               {maintenanceData.map((maintenance, index) => (
+                 <div key={`${maintenance.task}-${index}`} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                   <div className="flex items-center justify-between mb-3">
+                     <div className="flex items-center gap-3">
+                       <Shield className="w-4 h-4 text-purple-600" />
+                       <div>
+                         <h4 className="font-semibold text-slate-800">{maintenance.task}</h4>
+                         <p className="text-sm text-slate-600 capitalize">{maintenance.category} Maintenance</p>
+                       </div>
+                     </div>
+                     <div className="flex gap-1">
+                       <button
+                         onClick={() => handleEditMaintenance(maintenance.task)}
+                         className="p-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                       >
+                         <Edit className="w-4 h-4" />
+                       </button>
+                       <button
+                         onClick={() => handleDeleteMaintenance(maintenance.task)}
+                         className="p-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                       >
+                         <Trash2 className="w-4 h-4" />
+                       </button>
+                     </div>
+                   </div>
+                   
+                   <div className="space-y-2">
+                     <div className="flex items-center gap-2 text-sm">
+                       <Clock className="w-4 h-4 text-slate-400" />
+                       <span className="text-slate-600">Frequency: {maintenance.frequency}</span>
+                     </div>
+                     {maintenance.description && (
+                       <p className="text-sm text-slate-600 mt-2">
+                         {maintenance.description}
+                       </p>
+                     )}
+                   </div>
+                 </div>
+               ))}
             </div>
           </div>
         </div>

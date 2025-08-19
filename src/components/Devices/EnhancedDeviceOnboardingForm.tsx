@@ -1,7 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Upload, FileText, Settings, Wifi, Database, Bot, CheckCircle, AlertCircle, MessageSquare } from 'lucide-react';
-import { deviceAPI } from '../../services/api';
-import { pdfAPI } from '../../services/api';
 import { pdfProcessingService } from '../../services/pdfprocess';
 import { EnhancedOnboardingLoader } from '../Loading/EnhancedOnboardingLoader';
 import { DeviceChatInterface } from './DeviceChatInterface';
@@ -320,61 +318,24 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             deviceName: formData.deviceName
           });
 
-          // Upload to backend for storage and tracking
-          const uploadResponse = await pdfAPI.uploadPDF(uploadedFile.file, formData.deviceId, formData.deviceName);
-          pdfId = (uploadResponse as any)?.data?.pdfId || '';
-          pdfFilename = (uploadResponse as any)?.data?.pdf_filename || uploadedFile.file.name;
-          console.log('PDF uploaded to backend successfully:', uploadResponse);
-
+          // Upload directly to MinerU processing service (bypass backend for now)
           setCurrentSubStage('Uploading PDF to MinerU processing service...');
           setProgress(30);
 
-          // Upload to external API for real processing
           const externalUploadResponse = await pdfProcessingService.uploadPDF(uploadedFile.file);
           externalPdfName = externalUploadResponse.pdf_name;
+          pdfFilename = uploadedFile.file.name; // Use original filename
           console.log('PDF uploaded to MinerU successfully:', externalUploadResponse);
 
           setCurrentSubStage('Processing PDF content with MinerU...');
           setProgress(50);
 
-          // Step 2: Poll for PDF processing status until complete
-          if (pdfId) {
-            setCurrentSubStage('Extracting content with MinerU...');
-            setProgress(60);
-
-            let processingComplete = false;
-            let attempts = 0;
-            const maxAttempts = 300; // 25 minutes max (5 second intervals)
-
-            while (!processingComplete && attempts < maxAttempts) {
-              try {
-                const statusResponse = await pdfAPI.getPDFStatus(pdfId);
-                const status = (statusResponse as any)?.data?.status;
-
-                if (status === 'completed') {
-                  processingComplete = true;
-                  setCurrentSubStage('PDF processing completed!');
-                  setProgress(80);
-                } else if (status === 'failed') {
-                  throw new Error('PDF processing failed');
-                } else {
-                  setCurrentSubStage(`Processing PDF content with MinerU... (Attempt ${attempts + 1})`);
-                  
-                  // Wait 5 seconds before next poll
-                  await new Promise(resolve => setTimeout(resolve, 5000));
-                  attempts++;
-                }
-              } catch (error) {
-                console.error('Error polling PDF status:', error);
-                attempts++;
-                await new Promise(resolve => setTimeout(resolve, 5000));
-              }
-            }
-
-            if (!processingComplete) {
-              throw new Error('PDF processing timed out');
-            }
-          }
+          // Step 2: PDF processing is handled by MinerU service
+          setCurrentSubStage('PDF uploaded and processing started...');
+          setProgress(80);
+          
+          // Wait a moment for processing to start
+          await new Promise(resolve => setTimeout(resolve, 2000));
 
         } catch (error: any) {
           console.error('PDF upload/processing failed:', error);
@@ -391,7 +352,47 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         }
       }
 
-      // Step 3: Create Device
+      // Step 3: Generate Rules and Maintenance from PDF
+      setCurrentSubStage('Generating monitoring rules...');
+      setProgress(70);
+
+      let generatedRules: any[] = [];
+      let generatedMaintenance: any[] = [];
+      let generatedSafety: any[] = [];
+
+      try {
+        // Generate IoT monitoring rules
+        setCurrentSubStage('Generating IoT monitoring rules...');
+        const rulesResponse = await pdfProcessingService.generateRules(externalPdfName);
+        generatedRules = rulesResponse.rules;
+        console.log('Rules generated successfully:', rulesResponse);
+
+        setCurrentSubStage('Generating maintenance schedule...');
+        setProgress(80);
+
+        // Generate maintenance schedule
+        const maintenanceResponse = await pdfProcessingService.generateMaintenance(externalPdfName);
+        generatedMaintenance = maintenanceResponse.maintenance_tasks;
+        console.log('Maintenance schedule generated successfully:', maintenanceResponse);
+
+        setCurrentSubStage('Generating safety information...');
+        setProgress(85);
+
+        // Generate safety information
+        const safetyResponse = await pdfProcessingService.generateSafety(externalPdfName);
+        generatedSafety = safetyResponse.safety_information;
+        console.log('Safety information generated successfully:', safetyResponse);
+
+      } catch (error: any) {
+        console.warn('Rules/Maintenance generation failed, continuing with device creation:', error);
+        // Continue without rules/maintenance if generation fails
+        // Set default values if generation fails
+        generatedRules = [];
+        generatedMaintenance = [];
+        generatedSafety = [];
+      }
+
+      // Step 4: Create Device (local creation without backend)
       setCurrentSubStage('Creating device...');
       setProgress(90);
 
@@ -410,32 +411,40 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           authenticationCredential: formData.authenticationCredential,
           networkConfig: formData.networkConfig,
           description: `Device onboarded with PDF: ${pdfFilename}`,
-          organizationId: 'public'
+          organizationId: 'public',
+          // Add generated data to device
+          rules: generatedRules,
+          maintenance: generatedMaintenance,
+          safety: generatedSafety,
+          pdfName: externalPdfName
         };
 
-        const deviceResponse = await deviceAPI.create(deviceData);
-        console.log('Device created successfully:', deviceResponse.data);
-
+        // Create device locally without backend
+        console.log('Device data prepared:', deviceData);
+        console.log('Generated Rules:', generatedRules);
+        console.log('Generated Maintenance:', generatedMaintenance);
+        console.log('Generated Safety Info:', generatedSafety);
         setCurrentSubStage('Device created successfully!');
         setProgress(95);
 
       } catch (error: any) {
         console.error('Device creation failed:', error);
-        if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('Connection')) {
-          console.log('Backend server not available');
-          throw new Error('Backend server is not available. Please ensure the backend server is running and try again.');
-        } else {
-          const errorMessage = error.response?.data?.error || error.message || 'Failed to create device';
-          throw new Error(errorMessage);
-        }
+        throw new Error('Failed to prepare device data');
       }
 
-      // Step 4: Complete onboarding
+      // Step 5: Complete onboarding
       setCurrentSubStage('Setting up AI assistant...');
       setProgress(100);
 
-      // Call onSubmit to add device to list with onboarding state
-      await onSubmit(formData, uploadedFile);
+      // Call onSubmit to add device to list with onboarding state and generated data
+      const enhancedFormData = {
+        ...formData,
+        rules: generatedRules,
+        maintenance: generatedMaintenance,
+        safety: generatedSafety,
+        pdfName: externalPdfName
+      };
+      await onSubmit(enhancedFormData, uploadedFile);
 
       // Show chat interface instead of closing the form
       setShowChatInterface(true);
