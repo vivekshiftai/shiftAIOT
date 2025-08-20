@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Trash2, Upload, FileText, Settings, Bot, CheckCircle, AlertTriangle, MessageSquare, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
+import { X, Upload, FileText, Settings, Bot, CheckCircle, AlertTriangle, MessageSquare, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
 import { pdfProcessingService } from '../../services/pdfprocess';
 import { deviceAPI, ruleAPI, knowledgeAPI } from '../../services/api';
 import { EnhancedOnboardingLoader } from '../Loading/EnhancedOnboardingLoader';
@@ -513,9 +513,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-6 text-white">
+        <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-6 text-white flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold">Device Onboarding</h2>
@@ -525,21 +525,21 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               onClick={onCancel}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
             >
-              <Trash2 className="w-5 h-5" />
+              <X className="w-5 h-5" />
             </button>
           </div>
           {renderProgressBar()}
         </div>
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6 min-h-0">
           {currentStep === 1 && renderStep1()}
           {currentStep === 2 && renderStep2()}
           {currentStep === 3 && renderStep3()}
         </div>
 
-        {/* Footer */}
-        <div className="p-6 border-t border-slate-200 bg-slate-50">
+        {/* Footer - Always visible */}
+        <div className="p-6 border-t border-slate-200 bg-slate-50 flex-shrink-0">
           <div className="flex justify-between items-center">
             <button
               onClick={prevStep}
