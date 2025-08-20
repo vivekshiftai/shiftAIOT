@@ -79,17 +79,12 @@ import {
   Controller,
   Remote,
   Handheld,
-  Wearable,
   Watch,
-  Band,
-  Glasses,
   Headset,
   Earbuds,
-  Implant,
   Chip,
   Card,
   Token,
-  Coin,
   Medal,
   Trophy,
   Award,
@@ -97,69 +92,29 @@ import {
   Certificate,
   Diploma,
   License,
-  Permit,
-  Passport,
-  Id,
   CreditCard,
   Wallet,
   Safe,
   Vault,
-  Lockbox,
   Cabinet,
   Drawer,
   Shelf,
   Rack,
   Mount,
   Stand,
-  Base,
   Platform,
   Stage,
-  Pedestal,
-  Altar,
-  Shrine,
-  Temple,
-  Church,
-  Mosque,
-  Synagogue,
-  Monastery,
-  Abbey,
-  Cathedral,
-  Basilica,
-  Chapel,
-  Oratory,
-  Hermitage,
-  Retreat,
-  Sanctuary,
-  Haven,
-  Refuge,
-  Shelter,
   Home,
-  House,
   Building,
-  Structure,
   Tower,
-  Skyscraper,
   Castle,
   Palace,
-  Mansion,
   Villa,
   Cottage,
   Cabin,
-  Hut,
   Tent,
-  Yurt,
-  Igloo,
-  Teepee,
-  Wigwam,
-  Hogan,
-  Longhouse,
-  Roundhouse,
-  Earthship,
-  Treehouse,
   Houseboat,
-  Floating,
   Submarine,
-  Spaceship,
   Rocket,
   Satellite,
   Planet,
@@ -167,22 +122,14 @@ import {
   Moon,
   Sun,
   Galaxy,
-  Universe,
-  Cosmos,
   Space,
   Orbit,
-  Trajectory,
   Path,
   Route,
-  Way,
   Road,
   Street,
   Avenue,
-  Boulevard,
   Highway,
-  Freeway,
-  Expressway,
-  Parkway,
   Drive,
   Lane,
   Alley,
@@ -312,19 +259,16 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
       Router, Switch, Hub, Gateway, Bridge, Repeater, Amplifier, Filter, Sensor,
       Detector, Scanner, Camera, Microphone, Speaker, Headphones, Display, Screen,
       Tablet, Laptop, Desktop, Workstation, Terminal, Console, Keyboard, Mouse,
-      Touchpad, Joystick, Gamepad, Controller, Remote, Handheld, Wearable, Watch,
-      Band, Glasses, Headset, Earbuds, Implant, Chip, Card, Token, Coin, Medal,
-      Trophy, Award, Badge, Certificate, Diploma, License, Permit, Passport, Id,
-      CreditCard, Wallet, Safe, Vault, Lockbox, Cabinet, Drawer, Shelf, Rack,
-      Mount, Stand, Base, Platform, Stage, Pedestal, Altar, Shrine, Temple,
-      Church, Mosque, Synagogue, Monastery, Abbey, Cathedral, Basilica, Chapel,
-      Oratory, Hermitage, Retreat, Sanctuary, Haven, Refuge, Shelter, Home,
-      House, Building, Structure, Tower, Skyscraper, Castle, Palace, Mansion,
-      Villa, Cottage, Cabin, Hut, Tent, Yurt, Igloo, Teepee, Wigwam, Hogan,
-      Longhouse, Roundhouse, Earthship, Treehouse, Houseboat, Floating, Submarine,
-      Spaceship, Rocket, Satellite, Planet, Star, Moon, Sun, Galaxy, Universe,
-      Cosmos, Space, Orbit, Trajectory, Path, Route, Way, Road, Street, Avenue,
-      Boulevard, Highway, Freeway, Expressway, Parkway, Drive, Lane, Alley, Court,
+      Touchpad, Joystick, Gamepad, Controller, Remote, Handheld, Watch,
+      Headset, Earbuds, Chip, Card, Token, Medal,
+      Trophy, Award, Badge, Certificate, Diploma, License,
+      CreditCard, Wallet, Safe, Vault, Cabinet, Drawer, Shelf, Rack,
+      Mount, Stand, Platform, Stage, Home,
+      Building, Tower, Castle, Palace,
+      Villa, Cottage, Cabin, Tent, Houseboat, Submarine,
+      Rocket, Satellite, Planet, Star, Moon, Sun, Galaxy,
+      Space, Orbit, Path, Route, Road, Street, Avenue,
+      Highway, Drive, Lane, Alley, Court,
       Place, Square, Circle, Triangle, Rectangle, Pentagon, Hexagon, Octagon,
       Diamond, Heart, Cross, Plus, Minus, Divide, Multiply, Equal, NotEqual,
       GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, Infinity, Pi,
@@ -395,20 +339,20 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
         {/* Floating Particles */}
         <div className="absolute inset-0 overflow-hidden">
           {particles.map(particle => (
-            <div
+              <div
               key={particle.id}
               className="absolute rounded-full opacity-40 animate-pulse"
-              style={{
+                style={{
                 left: `${particle.x}%`,
                 top: `${particle.y}%`,
                 width: `${particle.size}px`,
                 height: `${particle.size}px`,
                 backgroundColor: particle.color,
                 animationDelay: `${particle.id * 0.1}s`,
-                animationDuration: `${2 + Math.random() * 2}s`
-              }}
-            />
-          ))}
+                  animationDuration: `${2 + Math.random() * 2}s`
+                }}
+              />
+            ))}
         </div>
 
         {/* Floating Device Icons */}
@@ -417,7 +361,7 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
             <div
               key={id}
               className="absolute text-white/10 transition-all duration-3000 animate-bounce"
-              style={{
+                style={{
                 left: `${x}%`,
                 top: `${y}%`,
                 animationDelay: `${delay}ms`,
@@ -427,8 +371,8 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
             >
               <Icon className="w-4 h-4" />
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
       </div>
 
       {/* Main Content */}
@@ -447,9 +391,9 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
               {currentStage < processingStages.length - 1 && (
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full animate-ping"></div>
               )}
+              </div>
             </div>
-          </div>
-          
+
           <h2 className="text-3xl font-bold text-white mb-2">
             {processingStages[currentStage]?.name || 'Processing...'}
           </h2>
@@ -471,7 +415,7 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
           <div className="flex items-center justify-between mb-2">
             <span className="text-white/80 text-sm">AI Integration Progress</span>
             <span className="text-blue-400 text-sm font-medium">{Math.round(progress)}%</span>
-          </div>
+              </div>
           <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
             <div 
               className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-1000 ease-out relative"
@@ -501,8 +445,8 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
                   {currentSubStage || processingStages[currentStage]?.subStages[0]}
                 </p>
               </div>
-            </div>
-            
+        </div>
+
             {/* Sub-stages */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {processingStages[currentStage]?.subStages.map((subStage, index) => (
@@ -543,13 +487,13 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
                   : 'bg-white/10 text-white/40'
               }`}>
                 {React.createElement(stage.icon, { className: 'w-4 h-4' })}
-              </div>
+                </div>
               <div className={`text-xs font-medium transition-all duration-500 ${
                 index <= currentStage ? 'text-blue-200' : 'text-white/40'
-              }`}>
-                {stage.name}
+                }`}>
+                  {stage.name}
+                </div>
               </div>
-            </div>
           ))}
         </div>
 
@@ -560,8 +504,8 @@ export const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> =
             <span className="text-blue-200 text-sm">
               {currentSubStage || 'Processing your device...'}
             </span>
-          </div>
-        </div>
+              </div>
+            </div>
       </div>
     </div>
   );
