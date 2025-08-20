@@ -120,7 +120,8 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     setProgress(0);
     setCurrentProcess('pdf');
 
-          // Step 0: Check backend connectivity
+    try {
+      // Step 0: Check backend connectivity
       setCurrentSubStage('Checking backend connectivity...');
       setProgress(5);
       
