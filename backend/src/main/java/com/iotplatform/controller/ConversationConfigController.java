@@ -20,13 +20,14 @@ import org.springframework.web.bind.annotation.RestController;
 import com.iotplatform.dto.ConversationConfigRequest;
 import com.iotplatform.model.ConversationConfig;
 import com.iotplatform.model.User;
+import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.service.ConversationConfigService;
 
 import jakarta.validation.Valid;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/conversation-configs")
+@RequestMapping("/api/conversation-configs")
 public class ConversationConfigController {
 
     @Autowired
@@ -34,21 +35,34 @@ public class ConversationConfigController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('CONVERSATION_CONFIG_READ')")
-    public ResponseEntity<List<ConversationConfig>> getAllConfigs(@AuthenticationPrincipal User user) {
+    public ResponseEntity<List<ConversationConfig>> getAllConfigs(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
         List<ConversationConfig> configs = conversationConfigService.getAllConfigs(user.getId());
         return ResponseEntity.ok(configs);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('CONVERSATION_CONFIG_READ')")
-    public ResponseEntity<ConversationConfig> getConfig(@PathVariable String id, @AuthenticationPrincipal User user) {
+    public ResponseEntity<ConversationConfig> getConfig(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
         Optional<ConversationConfig> config = conversationConfigService.getConfig(id, user.getId());
         return config.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('CONVERSATION_CONFIG_WRITE')")
-    public ResponseEntity<ConversationConfig> createConfig(@Valid @RequestBody ConversationConfigRequest request, @AuthenticationPrincipal User user) {
+    public ResponseEntity<ConversationConfig> createConfig(@Valid @RequestBody ConversationConfigRequest request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         ConversationConfig config = new ConversationConfig();
         config.setPlatformName(request.getPlatformName());
         config.setPlatformType(request.getPlatformType());
@@ -61,7 +75,12 @@ public class ConversationConfigController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('CONVERSATION_CONFIG_WRITE')")
-    public ResponseEntity<ConversationConfig> updateConfig(@PathVariable String id, @Valid @RequestBody ConversationConfigRequest request, @AuthenticationPrincipal User user) {
+    public ResponseEntity<ConversationConfig> updateConfig(@PathVariable String id, @Valid @RequestBody ConversationConfigRequest request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         try {
             ConversationConfig config = new ConversationConfig();
             config.setPlatformName(request.getPlatformName());
@@ -78,7 +97,12 @@ public class ConversationConfigController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('CONVERSATION_CONFIG_DELETE')")
-    public ResponseEntity<?> deleteConfig(@PathVariable String id, @AuthenticationPrincipal User user) {
+    public ResponseEntity<?> deleteConfig(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         try {
             conversationConfigService.deleteConfig(id, user.getId());
             return ResponseEntity.ok().build();
@@ -89,7 +113,11 @@ public class ConversationConfigController {
 
     @GetMapping("/active")
     @PreAuthorize("hasAuthority('CONVERSATION_CONFIG_READ')")
-    public ResponseEntity<List<ConversationConfig>> getActiveConfigs(@AuthenticationPrincipal User user) {
+    public ResponseEntity<List<ConversationConfig>> getActiveConfigs(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
         List<ConversationConfig> configs = conversationConfigService.getActiveConfigs(user.getId());
         return ResponseEntity.ok(configs);
     }
@@ -98,8 +126,12 @@ public class ConversationConfigController {
     @PreAuthorize("hasAuthority('CONVERSATION_CONFIG_READ')")
     public ResponseEntity<List<ConversationConfig>> getConfigsByPlatformType(
             @PathVariable String platformType, 
-            @AuthenticationPrincipal User user) {
-        List<ConversationConfig> configs = conversationConfigService.getConfigsByPlatformType(user.getId(), platformType);
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        List<ConversationConfig> configs = conversationConfigService.getConfigsByPlatformType(platformType, user.getId());
         return ResponseEntity.ok(configs);
     }
 }

@@ -21,11 +21,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.iotplatform.model.DeviceConnection;
 import com.iotplatform.model.User;
+import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.service.DeviceConnectionService;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/device-connections")
+@RequestMapping("/api/device-connections")
 public class DeviceConnectionController {
 
     private static final Logger logger = LoggerFactory.getLogger(DeviceConnectionController.class);
@@ -35,7 +36,12 @@ public class DeviceConnectionController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('DEVICE_READ')")
-    public ResponseEntity<List<DeviceConnection>> getAllConnections(@AuthenticationPrincipal User user) {
+    public ResponseEntity<List<DeviceConnection>> getAllConnections(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         logger.info("User {} requesting device connections", user.getEmail());
         
         List<DeviceConnection> connections = deviceConnectionService.getAllConnections(user.getOrganizationId());
@@ -46,7 +52,12 @@ public class DeviceConnectionController {
 
     @GetMapping("/{deviceId}")
     @PreAuthorize("hasAuthority('DEVICE_READ')")
-    public ResponseEntity<DeviceConnection> getConnection(@PathVariable String deviceId, @AuthenticationPrincipal User user) {
+    public ResponseEntity<DeviceConnection> getConnection(@PathVariable String deviceId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         logger.info("User {} requesting connection for device: {}", user.getEmail(), deviceId);
         
         Optional<DeviceConnection> connection = deviceConnectionService.getConnection(deviceId, user.getOrganizationId());
@@ -62,7 +73,12 @@ public class DeviceConnectionController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('DEVICE_WRITE')")
-    public ResponseEntity<DeviceConnection> createConnection(@RequestBody DeviceConnection connection, @AuthenticationPrincipal User user) {
+    public ResponseEntity<DeviceConnection> createConnection(@RequestBody DeviceConnection connection, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         logger.info("User {} creating connection for device: {}", user.getEmail(), connection.getDeviceId());
         
         try {
@@ -77,7 +93,12 @@ public class DeviceConnectionController {
 
     @PutMapping("/{deviceId}")
     @PreAuthorize("hasAuthority('DEVICE_WRITE')")
-    public ResponseEntity<DeviceConnection> updateConnection(@PathVariable String deviceId, @RequestBody DeviceConnection connectionDetails, @AuthenticationPrincipal User user) {
+    public ResponseEntity<DeviceConnection> updateConnection(@PathVariable String deviceId, @RequestBody DeviceConnection connectionDetails, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         logger.info("User {} updating connection for device: {}", user.getEmail(), deviceId);
         
         try {
@@ -92,7 +113,12 @@ public class DeviceConnectionController {
 
     @DeleteMapping("/{deviceId}")
     @PreAuthorize("hasAuthority('DEVICE_DELETE')")
-    public ResponseEntity<?> deleteConnection(@PathVariable String deviceId, @AuthenticationPrincipal User user) {
+    public ResponseEntity<?> deleteConnection(@PathVariable String deviceId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         logger.info("User {} deleting connection for device: {}", user.getEmail(), deviceId);
         
         try {
@@ -107,7 +133,12 @@ public class DeviceConnectionController {
 
     @PostMapping("/{deviceId}/connect")
     @PreAuthorize("hasAuthority('DEVICE_WRITE')")
-    public ResponseEntity<DeviceConnection> connectDevice(@PathVariable String deviceId, @AuthenticationPrincipal User user) {
+    public ResponseEntity<DeviceConnection> connectDevice(@PathVariable String deviceId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         logger.info("User {} connecting device: {}", user.getEmail(), deviceId);
         
         try {
@@ -122,7 +153,12 @@ public class DeviceConnectionController {
 
     @PostMapping("/{deviceId}/disconnect")
     @PreAuthorize("hasAuthority('DEVICE_WRITE')")
-    public ResponseEntity<DeviceConnection> disconnectDevice(@PathVariable String deviceId, @AuthenticationPrincipal User user) {
+    public ResponseEntity<DeviceConnection> disconnectDevice(@PathVariable String deviceId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         logger.info("User {} disconnecting device: {}", user.getEmail(), deviceId);
         
         try {
@@ -137,7 +173,12 @@ public class DeviceConnectionController {
 
     @GetMapping("/active")
     @PreAuthorize("hasAuthority('DEVICE_READ')")
-    public ResponseEntity<List<DeviceConnection>> getActiveConnections(@AuthenticationPrincipal User user) {
+    public ResponseEntity<List<DeviceConnection>> getActiveConnections(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         logger.info("User {} requesting active connections", user.getEmail());
         
         List<DeviceConnection> activeConnections = deviceConnectionService.getActiveConnections(user.getOrganizationId());
@@ -148,7 +189,12 @@ public class DeviceConnectionController {
 
     @GetMapping("/stats")
     @PreAuthorize("hasAuthority('DEVICE_READ')")
-    public ResponseEntity<ConnectionStats> getConnectionStats(@AuthenticationPrincipal User user) {
+    public ResponseEntity<ConnectionStats> getConnectionStats(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         logger.info("User {} requesting connection stats", user.getEmail());
         
         long activeCount = deviceConnectionService.getActiveConnectionCount(user.getOrganizationId());

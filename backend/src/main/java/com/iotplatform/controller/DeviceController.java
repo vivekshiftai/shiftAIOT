@@ -41,10 +41,11 @@ import com.iotplatform.service.PDFProcessingService;
 import com.iotplatform.security.CustomUserDetails;
 
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/devices")
+@RequestMapping("/api/devices")
 public class DeviceController {
 
     private static final Logger logger = LoggerFactory.getLogger(DeviceController.class);
@@ -66,6 +67,7 @@ public class DeviceController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('DEVICE_READ')")
     public ResponseEntity<List<Device>> getAllDevices(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
