@@ -3,6 +3,7 @@ import { X, ChevronLeft, ChevronRight, Upload, FileText, Settings, Wifi, Databas
 import { pdfProcessingService } from '../../services/pdfprocess';
 import { EnhancedOnboardingLoader } from '../Loading/EnhancedOnboardingLoader';
 import { DeviceChatInterface } from './DeviceChatInterface';
+import { OnboardingSuccess } from './OnboardingSuccess';
 import { getApiConfig } from '../../config/api';
 
 
@@ -87,6 +88,8 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const [stepLoadingMessage, setStepLoadingMessage] = useState('');
   const [showOnboardingLoader, setShowOnboardingLoader] = useState(false);
   const [showChatInterface, setShowChatInterface] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [onboardingResult, setOnboardingResult] = useState<any>(null);
 
   const [fieldValidation, setFieldValidation] = useState<Record<string, { isValid: boolean; message: string }>>({});
   
@@ -94,6 +97,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const [currentProcess, setCurrentProcess] = useState<'pdf' | 'rules' | 'knowledgebase'>('pdf');
   const [progress, setProgress] = useState(0);
   const [currentSubStage, setCurrentSubStage] = useState('');
+  const [onboardingStartTime, setOnboardingStartTime] = useState<number>(0);
 
   // Debug progress updates
   useEffect(() => {
@@ -452,8 +456,8 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   // Step validation
   const validateCurrentStep = useCallback(() => {
     const stepValidations: Record<Step, (keyof DeviceFormData)[]> = {
-      1: ['deviceId', 'deviceName', 'productId', 'serialNumber', 'authenticationCredential'],
-      2: ['connectionProtocol', 'networkConfig', 'location'],
+      1: ['deviceId', 'deviceName', 'productId', 'serialNumber'],
+      2: ['authenticationCredential', 'connectionProtocol', 'networkConfig', 'location'],
       3: [] // Step 3 is optional file upload
     };
     
@@ -481,6 +485,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     setProgress(0);
     setCurrentProcess('pdf');
     setCurrentSubStage('Initializing PDF processing...');
+    setOnboardingStartTime(Date.now());
 
     try {
       let pdfId = '';
@@ -584,6 +589,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       setCurrentSubStage('Creating device in database...');
       setProgress(90);
 
+      let createdDevice;
       try {
         const deviceData = {
           name: formData.deviceName,
@@ -604,7 +610,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           pdfName: externalPdfName
         };
 
-        // Create device in backend
+        // Create device in backend using the API service
         const response = await fetch(`${getApiConfig().BACKEND_BASE_URL}/api/devices`, {
           method: 'POST',
           headers: {
@@ -615,10 +621,12 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         });
         
         if (!response.ok) {
-          throw new Error(`Failed to create device: ${response.statusText}`);
+          const errorText = await response.text();
+          console.error('Device creation failed:', response.status, errorText);
+          throw new Error(`Failed to create device: ${response.status} - ${errorText}`);
         }
         
-        const createdDevice = await response.json();
+        createdDevice = await response.json();
         console.log('Device created successfully:', createdDevice);
         console.log('Generated Rules:', generatedRules);
         console.log('Generated Maintenance:', generatedMaintenance);
@@ -639,7 +647,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         throw new Error('Failed to create device in database');
       }
 
-      // Step 5: Complete onboarding and show chat
+      // Step 5: Complete onboarding and show success
       setCurrentSubStage('Setting up AI assistant...');
       setProgress(100);
 
@@ -653,9 +661,20 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       };
       await onSubmit(enhancedFormData, uploadedFile);
 
-      // Show chat interface instead of closing the form
-      setShowChatInterface(true);
+      // Set onboarding result for success screen
+      setOnboardingResult({
+        deviceId: createdDevice.id,
+        deviceName: formData.deviceName,
+        rulesGenerated: generatedRules.length,
+        maintenanceItems: generatedMaintenance.length,
+        safetyPrecautions: generatedSafety.length,
+        processingTime: Math.round((Date.now() - onboardingStartTime) / 1000), // Calculate actual time
+        pdfFileName: externalPdfName || uploadedFile?.file.name || 'device_documentation.pdf'
+      });
+
+      // Hide loader and show success message
       setShowOnboardingLoader(false);
+      setShowSuccessMessage(true);
 
     } catch (error) {
       console.error('Error during onboarding process:', error);
@@ -692,21 +711,26 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   }, [isSubmitting, validateForm, errors, startOnboardingProcess]);
 
   const nextStep = useCallback(async () => {
-    if (isStepLoading) return;
+    console.log('nextStep called, currentStep:', currentStep);
     
     // Validate current step before proceeding
-    if (!validateCurrentStep()) {
+    const isValid = validateCurrentStep();
+    console.log('Step validation result:', isValid, 'errors:', errors);
+    
+    if (!isValid) {
       console.error('Step validation failed:', errors);
       return;
     }
     
     if (currentStep < 3) {
+      console.log('Moving to next step:', currentStep + 1);
       setCurrentStep((prev) => (prev + 1) as Step);
     } else {
+      console.log('Final step reached, submitting form');
       // Final step - submit the form
       await handleSubmit();
     }
-  }, [currentStep, isStepLoading, validateCurrentStep, errors, handleSubmit]);
+  }, [currentStep, validateCurrentStep, errors, handleSubmit]);
 
   const prevStep = useCallback(() => {
     setCurrentStep((prev) => (prev - 1) as Step);
@@ -1125,11 +1149,32 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     return null;
   }, [fieldValidation]);
 
+  const handleSuccessContinue = useCallback(() => {
+    setShowSuccessMessage(false);
+    setShowChatInterface(true);
+  }, []);
+
+  const handleSuccessClose = useCallback(() => {
+    setShowSuccessMessage(false);
+    onCancel();
+  }, [onCancel]);
+
+  const handleChatClose = useCallback(() => {
+    setShowChatInterface(false);
+    onCancel();
+  }, [onCancel]);
+
+  const handleChatContinue = useCallback(() => {
+    setShowChatInterface(false);
+    onCancel();
+  }, [onCancel]);
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center justify-between mb-6">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+          <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-slate-800">Device Onboarding</h2>
               <p className="text-slate-600 mt-1">{getStepDescription(currentStep)}</p>
@@ -1171,26 +1216,29 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         </div>
 
         <div className="p-6">
-          {/* Show chat interface after completion */}
-          {showChatInterface ? (
+          {/* Show onboarding loader */}
+          {showOnboardingLoader ? (
+            <EnhancedOnboardingLoader
+              isProcessing={true}
+              currentProcess={currentProcess}
+              progress={progress}
+              onComplete={() => {}}
+              pdfFileName={uploadedFile?.file.name}
+              currentSubStage={currentSubStage}
+            />
+          ) : showSuccessMessage ? (
+            <OnboardingSuccess
+              result={onboardingResult}
+              onContinue={handleSuccessContinue}
+              onClose={handleSuccessClose}
+            />
+          ) : showChatInterface ? (
             <DeviceChatInterface
               deviceName={formData.deviceName}
-              pdfFileName={uploadedFile?.file.name || 'unknown.pdf'}
-              onClose={onCancel}
-              onContinue={onCancel}
+              pdfFileName={onboardingResult?.pdfFileName || uploadedFile?.file.name || 'device_documentation.pdf'}
+              onClose={handleChatClose}
+              onContinue={handleChatContinue}
             />
-          ) : showOnboardingLoader ? (
-            <div className="min-h-[400px] flex items-center justify-center">
-              <EnhancedOnboardingLoader
-                key={`loader-${progress}-${currentSubStage}`}
-                isProcessing={true}
-                currentProcess={currentProcess}
-                progress={progress}
-                onComplete={() => setShowOnboardingLoader(false)}
-                pdfFileName={uploadedFile?.file.name}
-                currentSubStage={currentSubStage}
-              />
-            </div>
           ) : (
             <>
               <div className="mb-6">
@@ -1216,99 +1264,61 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           )}
         </div>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between p-6 border-t border-slate-200">
-          <button
-            type="button"
-            onClick={prevStep}
-            disabled={currentStep === 1}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <X className="w-4 h-4" />
-            Previous
-          </button>
-
-          <div className="flex gap-3">
+        {/* Navigation - Only show when not in success or chat mode */}
+        {!showSuccessMessage && !showChatInterface && !showOnboardingLoader && (
+          <div className="flex items-center justify-between p-6 border-t border-slate-200">
             <button
               type="button"
-              onClick={onCancel}
-              className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              onClick={prevStep}
+              disabled={currentStep === 1}
+              className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Cancel
+              <X className="w-4 h-4" />
+              Previous
             </button>
 
-            {currentStep === 3 ? (
-              <button
-                type="submit"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isSubmitting ? (
-                  <>
-                    <X className="w-4 h-4 animate-spin" />
-                    Starting Onboarding...
-                  </>
-                ) : (
-                  <>
-                    <Bot className="w-4 h-4" />
-                    Complete Onboarding
-                  </>
-                )}
-              </button>
-            ) : (
+            <div className="flex gap-3">
               <button
                 type="button"
-                onClick={nextStep}
-                disabled={isStepLoading}
-                className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                onClick={onCancel}
+                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
               >
-                {isStepLoading ? (
-                  <>
-                    <X className="w-4 h-4 animate-spin" />
-                    {stepLoadingMessage}
-                  </>
-                ) : (
-                  <>
-                    Next
-                    <X className="w-4 h-4" />
-                  </>
-                )}
+                Cancel
               </button>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* Chat Interface Modal */}
-      {showChatInterface && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200">
-              <div className="flex items-center gap-3">
-                <Bot className="w-6 h-6 text-blue-600" />
-                <h3 className="text-lg font-semibold text-slate-800">
-                  AI Assistant for {formData.deviceName}
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowChatInterface(false)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-500" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <DeviceChatInterface 
-                deviceName={formData.deviceName}
-                pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
-                onClose={() => setShowChatInterface(false)}
-                onContinue={() => setShowChatInterface(false)}
-              />
+              {currentStep === 3 ? (
+                <button
+                  type="submit"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <X className="w-4 h-4 animate-spin" />
+                      Starting Onboarding...
+                    </>
+                  ) : (
+                    <>
+                      <Bot className="w-4 h-4" />
+                      Complete Onboarding
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
