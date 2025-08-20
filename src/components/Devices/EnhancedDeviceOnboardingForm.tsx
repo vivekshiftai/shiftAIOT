@@ -476,27 +476,6 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     return Object.keys(stepErrors).length === 0;
   }, [currentStep, formData, fieldValidation]);
 
-  const nextStep = useCallback(async () => {
-    if (isStepLoading) return;
-    
-    // Validate current step before proceeding
-    if (!validateCurrentStep()) {
-      console.error('Step validation failed:', errors);
-      return;
-    }
-    
-    if (currentStep < 3) {
-      setCurrentStep((prev) => (prev + 1) as Step);
-    } else {
-      // Final step - submit the form
-      await handleSubmit();
-    }
-  }, [currentStep, isStepLoading, validateCurrentStep, errors, handleSubmit]);
-
-  const prevStep = useCallback(() => {
-    setCurrentStep((prev) => (prev - 1) as Step);
-  }, []);
-
   const handleSubmit = useCallback(async () => {
     if (isSubmitting) return;
     
@@ -522,7 +501,28 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     } finally {
       setIsSubmitting(false);
     }
-  }, [isSubmitting, validateForm, errors]);
+  }, [isSubmitting, validateForm, errors, startOnboardingProcess]);
+
+  const nextStep = useCallback(async () => {
+    if (isStepLoading) return;
+    
+    // Validate current step before proceeding
+    if (!validateCurrentStep()) {
+      console.error('Step validation failed:', errors);
+      return;
+    }
+    
+    if (currentStep < 3) {
+      setCurrentStep((prev) => (prev + 1) as Step);
+    } else {
+      // Final step - submit the form
+      await handleSubmit();
+    }
+  }, [currentStep, isStepLoading, validateCurrentStep, errors, handleSubmit]);
+
+  const prevStep = useCallback(() => {
+    setCurrentStep((prev) => (prev - 1) as Step);
+  }, []);
 
   const getStepTitle = useCallback((step: Step): string => {
     switch (step) {
