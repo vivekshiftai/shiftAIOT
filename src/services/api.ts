@@ -28,18 +28,17 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Add request interceptor to include auth token (disabled for device operations)
+// Add request interceptor to include auth token
 api.interceptors.request.use(
   (config) => {
-    // Skip authentication for device operations and PDF processing
-    const isDeviceOperation = config.url?.includes('/devices') || 
-                             config.url?.includes('/upload-pdf') ||
-                             config.url?.includes('/generate/') ||
-                             config.url?.includes('/pdfs') ||
-                             config.url?.includes('/query') ||
-                             config.url?.includes('/health');
+    // Include authentication for all operations except PDF processing
+    const isPDFProcessing = config.url?.includes('/upload-pdf') ||
+                           config.url?.includes('/generate/') ||
+                           config.url?.includes('/pdfs') ||
+                           config.url?.includes('/query') ||
+                           config.url?.includes('/health');
     
-    if (!isDeviceOperation) {
+    if (!isPDFProcessing) {
       const token = localStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -164,6 +163,9 @@ export const authAPI = {
 // Device API
 export const deviceAPI = {
   getAll: (params?: { status?: string; type?: string; search?: string }) => {
+    console.log('deviceAPI.getAll called with params:', params);
+    console.log('API_BASE_URL:', API_BASE_URL);
+    console.log('Full URL will be:', `${API_BASE_URL}/api/devices`);
     return api.get('/api/devices', { params });
   },
   

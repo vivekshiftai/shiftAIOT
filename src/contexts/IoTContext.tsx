@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { deviceAPI, ruleAPI, notificationAPI, userAPI, authAPI } from '../services/api';
-import { Device, TelemetryData, Rule, Notification, Status } from '../types';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { deviceAPI, ruleAPI, notificationAPI } from '../services/api';
 import { useAuth } from './AuthContext';
-import NotificationService from '../services/notificationService';
+import { NotificationService } from '../services/notificationService';
+import { Device, Rule, Notification, TelemetryData, Status } from '../types';
+import { getApiConfig } from '../config/api';
 import api from '../services/api';
 import { ensureValidToken } from '../utils/authUtils';
 
@@ -157,6 +158,10 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       
       // Load devices first (most important)
       try {
+        console.log('IoTContext - About to call deviceAPI.getAll()');
+        console.log('IoTContext - Current API base URL:', getApiConfig().BACKEND_BASE_URL);
+        console.log('IoTContext - Current token:', localStorage.getItem('token') ? 'exists' : 'not found');
+        
         const devicesRes = await deviceAPI.getAll();
         console.log('IoTContext - Raw device response:', devicesRes);
         
@@ -168,7 +173,9 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
           setDevices([]);
         }
       } catch (error: unknown) {
-        console.error('Failed to load devices:', error instanceof Error ? error.message : 'Unknown error');
+        console.error('IoTContext - Failed to load devices:', error);
+        console.error('IoTContext - Error details:', error instanceof Error ? error.message : 'Unknown error');
+        console.error('IoTContext - Error stack:', error instanceof Error ? error.stack : 'No stack');
         setDevices([]);
       }
 
