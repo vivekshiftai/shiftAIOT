@@ -1,37 +1,21 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Trash2, Upload, FileText, Settings, Bot, CheckCircle, AlertTriangle, MessageSquare, Clock } from 'lucide-react';
+import { Trash2, Upload, FileText, Settings, Bot, CheckCircle, AlertTriangle, MessageSquare, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
 import { pdfProcessingService } from '../../services/pdfprocess';
+import { deviceAPI, ruleAPI, knowledgeAPI } from '../../services/api';
 import { EnhancedOnboardingLoader } from '../Loading/EnhancedOnboardingLoader';
 import { DeviceChatInterface } from './DeviceChatInterface';
 import { OnboardingSuccess } from './OnboardingSuccess';
 import { getApiConfig } from '../../config/api';
 
-
 interface DeviceFormData {
-  deviceId: string;
   deviceName: string;
-  productId: string;
-  serialNumber: string;
-  authenticationCredential: string;
-  connectionProtocol: 'MQTT' | 'HTTP' | 'COAP' | 'TCP' | 'UDP';
-  networkConfig: string;
   location: string;
-  metadata: string;
-  manufacturer?: string;
-  model?: string;
-  description?: string;
-  ipAddress?: string;
-  port?: number;
-  firmware?: string;
-  powerSource?: string;
-  powerConsumption?: number;
-  operatingTemperatureMin?: number;
-  operatingTemperatureMax?: number;
-  operatingHumidityMin?: number;
-  operatingHumidityMax?: number;
-  wifiSsid?: string;
-  mqttBroker?: string;
-  mqttTopic?: string;
+  manufacturer: string;
+  connectionType: 'MQTT' | 'HTTP' | 'COAP';
+  brokerUrl?: string;
+  topic?: string;
+  username?: string;
+  password?: string;
 }
 
 interface FileUpload {
@@ -39,8 +23,6 @@ interface FileUpload {
   status: 'uploading' | 'success' | 'error';
   error?: string;
 }
-
-
 
 interface EnhancedDeviceOnboardingFormProps {
   onSubmit: (deviceData: DeviceFormData, file: FileUpload | null) => Promise<void>;
@@ -55,1268 +37,529 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 }) => {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [formData, setFormData] = useState<DeviceFormData>({
-    deviceId: '',
     deviceName: '',
-    productId: '',
-    serialNumber: '',
-    authenticationCredential: '',
-    connectionProtocol: 'MQTT',
-    networkConfig: '',
     location: '',
-    metadata: '',
     manufacturer: '',
-    model: '',
-    description: '',
-    ipAddress: '',
-    port: 8100,
-    firmware: '',
-    powerSource: '',
-    powerConsumption: 0,
-    operatingTemperatureMin: 0,
-    operatingTemperatureMax: 50,
-    operatingHumidityMin: 0,
-    operatingHumidityMax: 100,
-    wifiSsid: '',
-    mqttBroker: '',
-    mqttTopic: ''
+    connectionType: 'MQTT',
+    brokerUrl: '',
+    topic: '',
+    username: '',
+    password: ''
   });
 
   const [uploadedFile, setUploadedFile] = useState<FileUpload | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isStepLoading, setIsStepLoading] = useState(false);
-  const [stepLoadingMessage, setStepLoadingMessage] = useState('');
   const [showOnboardingLoader, setShowOnboardingLoader] = useState(false);
   const [showChatInterface, setShowChatInterface] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [onboardingResult, setOnboardingResult] = useState<any>(null);
 
-  const [fieldValidation, setFieldValidation] = useState<Record<string, { isValid: boolean; message: string }>>({});
-  
   // Progress tracking states
   const [currentProcess, setCurrentProcess] = useState<'pdf' | 'rules' | 'knowledgebase'>('pdf');
   const [progress, setProgress] = useState(0);
   const [currentSubStage, setCurrentSubStage] = useState('');
   const [onboardingStartTime, setOnboardingStartTime] = useState<number>(0);
 
-  // Debug progress updates
-  useEffect(() => {
-    if (showOnboardingLoader) {
-      console.log('Progress updated:', progress, 'SubStage:', currentSubStage);
-    }
-  }, [progress, currentSubStage, showOnboardingLoader]);
-
-  // Real-time validation
-  const validateField = useCallback((field: keyof DeviceFormData, value: any) => {
-    const validations: Record<string, { isValid: boolean; message: string }> = {};
-    
-    switch (field) {
-      case 'deviceId':
-        if (!value.trim()) {
-          validations[field] = { isValid: false, message: 'Device ID is required' };
-        } else if (value.length < 3) {
-          validations[field] = { isValid: false, message: 'Device ID must be at least 3 characters' };
-        } else if (value.length > 50) {
-          validations[field] = { isValid: false, message: 'Device ID must be less than 50 characters' };
-        } else if (!/^[A-Za-z0-9-_]+$/.test(value)) {
-          validations[field] = { isValid: false, message: 'Device ID can only contain letters, numbers, hyphens, and underscores' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'deviceName':
-        if (!value.trim()) {
-          validations[field] = { isValid: false, message: 'Device name is required' };
-        } else if (value.length < 2) {
-          validations[field] = { isValid: false, message: 'Device name must be at least 2 characters' };
-        } else if (value.length > 100) {
-          validations[field] = { isValid: false, message: 'Device name must be less than 100 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'productId':
-        if (!value.trim()) {
-          validations[field] = { isValid: false, message: 'Product ID is required' };
-        } else if (value.length > 100) {
-          validations[field] = { isValid: false, message: 'Product ID must be less than 100 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'serialNumber':
-        if (!value.trim()) {
-          validations[field] = { isValid: false, message: 'Serial number is required' };
-        } else if (value.length > 100) {
-          validations[field] = { isValid: false, message: 'Serial number must be less than 100 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'authenticationCredential':
-        if (!value.trim()) {
-          validations[field] = { isValid: false, message: 'Authentication credential is required' };
-        } else if (value.length < 6) {
-          validations[field] = { isValid: false, message: 'Credential must be at least 6 characters' };
-        } else if (value.length > 200) {
-          validations[field] = { isValid: false, message: 'Credential must be less than 200 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'connectionProtocol':
-        if (!value) {
-          validations[field] = { isValid: false, message: 'Connection protocol is required' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'networkConfig':
-        if (!value.trim()) {
-          validations[field] = { isValid: false, message: 'Network configuration is required' };
-        } else if (value.length > 500) {
-          validations[field] = { isValid: false, message: 'Network configuration must be less than 500 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'location':
-        if (!value.trim()) {
-          validations[field] = { isValid: false, message: 'Location is required' };
-        } else if (value.length > 200) {
-          validations[field] = { isValid: false, message: 'Location must be less than 200 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'manufacturer':
-        if (value && value.length > 100) {
-          validations[field] = { isValid: false, message: 'Manufacturer must be less than 100 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'model':
-        if (value && value.length > 100) {
-          validations[field] = { isValid: false, message: 'Model must be less than 100 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'description':
-        if (value && value.length > 1000) {
-          validations[field] = { isValid: false, message: 'Description must be less than 1000 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'ipAddress':
-        if (value && !/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(value)) {
-          validations[field] = { isValid: false, message: 'Please enter a valid IP address' };
-        } else if (value && value.length > 45) {
-          validations[field] = { isValid: false, message: 'IP address must be less than 45 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'port':
-        if (value && (value < 1 || value > 65535)) {
-          validations[field] = { isValid: false, message: 'Port must be between 1 and 65535' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'firmware':
-        if (value && value.length > 50) {
-          validations[field] = { isValid: false, message: 'Firmware version must be less than 50 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'powerSource':
-        if (value && value.length > 50) {
-          validations[field] = { isValid: false, message: 'Power source must be less than 50 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'powerConsumption':
-        if (value && value < 0) {
-          validations[field] = { isValid: false, message: 'Power consumption cannot be negative' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'operatingTemperatureMin':
-        if (value !== undefined && value !== null) {
-          if (typeof value !== 'number' || isNaN(value)) {
-            validations[field] = { isValid: false, message: 'Temperature must be a valid number' };
-          } else if (value < -273.15) {
-            validations[field] = { isValid: false, message: 'Temperature cannot be below absolute zero' };
-          } else if (value > 1000) {
-            validations[field] = { isValid: false, message: 'Temperature cannot exceed 1000°C' };
-          } else {
-            validations[field] = { isValid: true, message: '' };
-          }
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'operatingTemperatureMax':
-        if (value !== undefined && value !== null) {
-          if (typeof value !== 'number' || isNaN(value)) {
-            validations[field] = { isValid: false, message: 'Temperature must be a valid number' };
-          } else if (value < -273.15) {
-            validations[field] = { isValid: false, message: 'Temperature cannot be below absolute zero' };
-          } else if (value > 1000) {
-            validations[field] = { isValid: false, message: 'Temperature cannot exceed 1000°C' };
-          } else if (formData.operatingTemperatureMin !== undefined && value <= formData.operatingTemperatureMin) {
-            validations[field] = { isValid: false, message: 'Maximum temperature must be greater than minimum temperature' };
-          } else {
-            validations[field] = { isValid: true, message: '' };
-          }
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'operatingHumidityMin':
-        if (value !== undefined && value !== null) {
-          if (typeof value !== 'number' || isNaN(value)) {
-            validations[field] = { isValid: false, message: 'Humidity must be a valid number' };
-          } else if (value < 0) {
-            validations[field] = { isValid: false, message: 'Humidity cannot be negative' };
-          } else if (value > 100) {
-            validations[field] = { isValid: false, message: 'Humidity cannot exceed 100%' };
-          } else {
-            validations[field] = { isValid: true, message: '' };
-          }
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'operatingHumidityMax':
-        if (value !== undefined && value !== null) {
-          if (typeof value !== 'number' || isNaN(value)) {
-            validations[field] = { isValid: false, message: 'Humidity must be a valid number' };
-          } else if (value < 0) {
-            validations[field] = { isValid: false, message: 'Humidity cannot be negative' };
-          } else if (value > 100) {
-            validations[field] = { isValid: false, message: 'Humidity cannot exceed 100%' };
-          } else if (formData.operatingHumidityMin !== undefined && value <= formData.operatingHumidityMin) {
-            validations[field] = { isValid: false, message: 'Maximum humidity must be greater than minimum humidity' };
-          } else {
-            validations[field] = { isValid: true, message: '' };
-          }
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'wifiSsid':
-        if (value && value.length > 100) {
-          validations[field] = { isValid: false, message: 'WiFi SSID must be less than 100 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'mqttBroker':
-        if (value && value.length > 100) {
-          validations[field] = { isValid: false, message: 'MQTT broker must be less than 100 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      case 'mqttTopic':
-        if (value && value.length > 100) {
-          validations[field] = { isValid: false, message: 'MQTT topic must be less than 100 characters' };
-        } else {
-          validations[field] = { isValid: true, message: '' };
-        }
-        break;
-        
-      default:
-        validations[field] = { isValid: true, message: '' };
-    }
-    
-    return validations[field];
-  }, [formData.operatingTemperatureMin, formData.operatingHumidityMin]);
-
-  const handleInputChange = useCallback((field: keyof DeviceFormData, value: any) => {
+  const handleInputChange = (field: keyof DeviceFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Real-time validation
-    const validation = validateField(field, value);
-    setFieldValidation(prev => ({ ...prev, [field]: validation }));
-    
-    // Clear error if field becomes valid
-    if (validation.isValid && errors[field]) {
+    if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
-  }, [errors, validateField]);
+  };
 
-  const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const allowedTypes = ['application/pdf'];
-    if (!allowedTypes.includes(file.type)) {
-      setErrors(prev => ({ ...prev, file: 'Only PDF files are allowed' }));
-      return;
-    }
-
-    if (file.size > 100 * 1024 * 1024) { // 100MB limit for UI feedback only
-      setErrors(prev => ({ ...prev, file: 'File size must be less than 100MB' }));
-      return;
-    }
-
-    const newFileUpload: FileUpload = {
-      file,
-      status: 'uploading'
-    };
-
-    setUploadedFile(newFileUpload);
-    setErrors(prev => ({ ...prev, file: '' }));
-
-    try {
-      // Simulate file upload
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setUploadedFile({ file, status: 'success' });
-    } catch (error: any) {
-      setUploadedFile({ file, status: 'error', error: 'Upload failed' });
-    }
-  }, []);
-
-  const removeFile = useCallback(() => {
-    setUploadedFile(null);
-  }, []);
-
-  // Comprehensive form validation
-  const validateForm = useCallback(() => {
+  const validateStep = (step: Step): boolean => {
     const newErrors: Record<string, string> = {};
-    
-    // Required fields validation
-    const requiredFields: (keyof DeviceFormData)[] = [
-      'deviceId', 'deviceName', 'productId', 'serialNumber', 
-      'authenticationCredential', 'connectionProtocol', 'networkConfig', 'location'
-    ];
-    
-    requiredFields.forEach(field => {
-      const value = formData[field];
-      if (!value || (typeof value === 'string' && !value.trim())) {
-        newErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} is required`;
-      }
-    });
-    
-    // Cross-field validations
-    if (formData.operatingTemperatureMin !== undefined && formData.operatingTemperatureMax !== undefined) {
-      if (formData.operatingTemperatureMax <= formData.operatingTemperatureMin) {
-        newErrors.operatingTemperatureMax = 'Maximum temperature must be greater than minimum temperature';
+
+    if (step === 1) {
+      if (!formData.deviceName.trim()) newErrors.deviceName = 'Device name is required';
+      if (!formData.location.trim()) newErrors.location = 'Location is required';
+      if (!formData.manufacturer.trim()) newErrors.manufacturer = 'Manufacturer is required';
+    }
+
+    if (step === 2) {
+      if (formData.connectionType === 'MQTT') {
+        if (!formData.brokerUrl?.trim()) newErrors.brokerUrl = 'Broker URL is required';
+        if (!formData.topic?.trim()) newErrors.topic = 'Topic is required';
       }
     }
-    
-    if (formData.operatingHumidityMin !== undefined && formData.operatingHumidityMax !== undefined) {
-      if (formData.operatingHumidityMax <= formData.operatingHumidityMin) {
-        newErrors.operatingHumidityMax = 'Maximum humidity must be greater than minimum humidity';
-      }
-    }
-    
-    // Check field validation state
-    Object.keys(fieldValidation).forEach(field => {
-      const validation = fieldValidation[field];
-      if (!validation.isValid && validation.message) {
-        newErrors[field] = validation.message;
-      }
-    });
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData, fieldValidation]);
+  };
 
-  // Step validation
-  const validateCurrentStep = useCallback(() => {
-    const stepValidations: Record<Step, (keyof DeviceFormData)[]> = {
-      1: ['deviceId', 'deviceName', 'productId', 'serialNumber'],
-      2: ['authenticationCredential', 'connectionProtocol', 'networkConfig', 'location'],
-      3: [] // Step 3 is optional file upload
-    };
-    
-    const currentStepFields = stepValidations[currentStep];
-    const stepErrors: Record<string, string> = {};
-    
-    currentStepFields.forEach(field => {
-      const value = formData[field];
-      if (!value || (typeof value === 'string' && !value.trim())) {
-        stepErrors[field] = `${field.charAt(0).toUpperCase() + field.slice(1)} is required`;
-      } else {
-        const validation = fieldValidation[field];
-        if (validation && !validation.isValid) {
-          stepErrors[field] = validation.message;
-        }
+  const nextStep = () => {
+    if (validateStep(currentStep)) {
+      if (currentStep < 3) {
+        setCurrentStep(prev => (prev + 1) as Step);
       }
-    });
-    
-    setErrors(stepErrors);
-    return Object.keys(stepErrors).length === 0;
-  }, [currentStep, formData, fieldValidation]);
+    }
+  };
 
-  // Start the onboarding process
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(prev => (prev - 1) as Step);
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setUploadedFile({
+        file,
+        status: 'uploading'
+      });
+    }
+  };
+
   const startOnboardingProcess = useCallback(async () => {
+    if (!uploadedFile?.file) return;
+
+    setShowOnboardingLoader(true);
+    setOnboardingStartTime(Date.now());
     setProgress(0);
     setCurrentProcess('pdf');
-    setCurrentSubStage('Initializing PDF processing...');
-    setOnboardingStartTime(Date.now());
 
     try {
-      let pdfId = '';
-      let pdfFilename = '';
-      let externalPdfName = '';
-
-      // Step 1: Upload PDF and wait for success
-      if (uploadedFile?.file) {
-        setCurrentSubStage('Preparing PDF upload...');
-        setProgress(10);
-
-        // Small delay to show initial progress
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        setCurrentSubStage('Uploading PDF to backend...');
-        setProgress(20);
-
-        try {
-          console.log('Attempting to upload PDF:', {
-            fileName: uploadedFile.file.name,
-            fileSize: uploadedFile.file.size,
-            deviceId: formData.deviceId,
-            deviceName: formData.deviceName
-          });
-
-          // Upload directly to MinerU processing service (bypass backend for now)
-          setCurrentSubStage('Uploading PDF to MinerU processing service...');
-          setProgress(30);
-
-          const externalUploadResponse = await pdfProcessingService.uploadPDF(uploadedFile.file);
-          externalPdfName = externalUploadResponse.pdf_name;
-          pdfFilename = uploadedFile.file.name; // Use original filename
-          console.log('PDF uploaded to MinerU successfully:', externalUploadResponse);
-
-          setCurrentSubStage('Processing PDF content with MinerU...');
-          setProgress(50);
-
-          // Step 2: PDF processing is handled by MinerU service
-          setCurrentSubStage('PDF uploaded and processing started...');
-          setProgress(80);
-          
-          // Wait a moment for processing to start
-          await new Promise(resolve => setTimeout(resolve, 2000));
-
-        } catch (error: any) {
-          console.error('PDF upload/processing failed:', error);
-
-          // Check if it's a network/connection error
-          if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('Connection')) {
-            console.log('Backend server not available');
-            throw new Error('Backend server is not available. Please ensure the backend server is running and try again.');
-          } else {
-            // Try to get specific error message from backend response
-            const errorMessage = error.response?.data?.error || error.message || 'Failed to upload/process PDF document';
-            throw new Error(errorMessage);
-          }
-        }
+      // Step 1: Upload PDF to knowledge base
+      setCurrentSubStage('Uploading PDF to knowledge base...');
+      setProgress(10);
+      
+      const pdfUploadResponse = await knowledgeAPI.uploadPDF(
+        uploadedFile.file, 
+        undefined, 
+        formData.deviceName
+      );
+      
+      if (!pdfUploadResponse.data.success) {
+        throw new Error('PDF upload failed');
       }
 
-      // Step 3: Generate Rules and Maintenance from PDF
-      setCurrentSubStage('Generating monitoring rules...');
+      setProgress(30);
+      setCurrentSubStage('PDF uploaded successfully');
+
+      // Step 2: Create device in database
+      setCurrentProcess('rules');
+      setCurrentSubStage('Creating device in database...');
+      setProgress(40);
+
+      const deviceData = {
+        name: formData.deviceName,
+        location: formData.location,
+        manufacturer: formData.manufacturer,
+        model: formData.manufacturer, // Using manufacturer as model for now
+        protocol: formData.connectionType,
+        status: 'OFFLINE',
+        deviceType: 'SENSOR', // Default type
+        description: `Device onboarded via PDF: ${uploadedFile.file.name}`,
+        // Connection details
+        connectionDetails: {
+          type: formData.connectionType,
+          brokerUrl: formData.brokerUrl,
+          topic: formData.topic,
+          username: formData.username,
+          password: formData.password
+        }
+      };
+
+      const deviceResponse = await deviceAPI.create(deviceData);
+      const createdDevice = deviceResponse.data;
+      
+      setProgress(60);
+      setCurrentSubStage('Device created successfully');
+
+      // Step 3: Generate rules from PDF
+      setCurrentSubStage('Generating rules from PDF...');
       setProgress(70);
 
-      let generatedRules: any[] = [];
-      let generatedMaintenance: any[] = [];
-      let generatedSafety: any[] = [];
-
-      try {
-        // Generate IoT monitoring rules
-        setCurrentSubStage('Generating IoT monitoring rules...');
-        const rulesResponse = await pdfProcessingService.generateRules(externalPdfName);
-        generatedRules = rulesResponse.rules;
-        console.log('Rules generated successfully:', rulesResponse);
-
-        setCurrentSubStage('Generating maintenance schedule...');
-        setProgress(80);
-
-        // Generate maintenance schedule
-        const maintenanceResponse = await pdfProcessingService.generateMaintenance(externalPdfName);
-        generatedMaintenance = maintenanceResponse.maintenance_tasks;
-        console.log('Maintenance schedule generated successfully:', maintenanceResponse);
-
-        setCurrentSubStage('Generating safety information...');
-        setProgress(85);
-
-        // Generate safety information
-        const safetyResponse = await pdfProcessingService.generateSafety(externalPdfName);
-        generatedSafety = safetyResponse.safety_information;
-        console.log('Safety information generated successfully:', safetyResponse);
-
-      } catch (error: any) {
-        console.warn('Rules/Maintenance generation failed, continuing with device creation:', error);
-        // Continue without rules/maintenance if generation fails
-        // Set default values if generation fails
-        generatedRules = [];
-        generatedMaintenance = [];
-        generatedSafety = [];
-      }
-
-      // Step 4: Create Device in Backend
-      setCurrentSubStage('Creating device in database...');
-      setProgress(90);
-
-      let createdDevice;
-      try {
-        const deviceData = {
-          name: formData.deviceName,
-          type: 'SENSOR',
-          status: 'ONLINE',
-          protocol: formData.connectionProtocol,
-          location: formData.location,
-          manufacturer: formData.manufacturer,
-          model: formData.model,
-          productId: formData.productId,
-          serialNumber: formData.serialNumber,
-          description: `Device onboarded with PDF: ${pdfFilename}`,
-          organizationId: 'public',
-          // Add generated data to device
-          rules: generatedRules,
-          maintenance: generatedMaintenance,
-          safety: generatedSafety,
-          pdfName: externalPdfName
-        };
-
-        // Create device in backend using the API service
-        const response = await fetch(`${getApiConfig().BACKEND_BASE_URL}/api/devices`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-          body: JSON.stringify(deviceData),
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Device creation failed:', response.status, errorText);
-          throw new Error(`Failed to create device: ${response.status} - ${errorText}`);
-        }
-        
-        createdDevice = await response.json();
-        console.log('Device created successfully:', createdDevice);
-        console.log('Generated Rules:', generatedRules);
-        console.log('Generated Maintenance:', generatedMaintenance);
-        console.log('Generated Safety Info:', generatedSafety);
-        
-        setCurrentSubStage('Device created successfully!');
-        setProgress(95);
-        
-        // Store device info for chat interface
-        localStorage.setItem('lastCreatedDevice', JSON.stringify({
-          id: createdDevice.id,
-          name: createdDevice.name,
-          pdfName: externalPdfName || 'device_documentation.pdf'
-        }));
-
-      } catch (error: any) {
-        console.error('Device creation failed:', error);
-        throw new Error('Failed to create device in database');
-      }
-
-      // Step 5: Complete onboarding and show success
-      setCurrentSubStage('Setting up AI assistant...');
-      setProgress(100);
-
-      // Call onSubmit to add device to list with onboarding state and generated data
-      const enhancedFormData = {
-        ...formData,
-        rules: generatedRules,
-        maintenance: generatedMaintenance,
-        safety: generatedSafety,
-        pdfName: externalPdfName || 'device_documentation.pdf'
-      };
-      await onSubmit(enhancedFormData, uploadedFile);
-
-      // Set onboarding result for success screen
-      setOnboardingResult({
-        deviceId: createdDevice.id,
-        deviceName: formData.deviceName,
-        rulesGenerated: generatedRules.length,
-        maintenanceItems: generatedMaintenance.length,
-        safetyPrecautions: generatedSafety.length,
-        processingTime: Math.round((Date.now() - onboardingStartTime) / 1000), // Calculate actual time
-        pdfFileName: externalPdfName || uploadedFile?.file.name || 'device_documentation.pdf'
+      const rulesResponse = await ruleAPI.generateRules({
+        pdf_filename: uploadedFile.file.name,
+        chunk_size: 1000,
+        rule_types: ['monitoring', 'alerting', 'maintenance']
       });
 
-      // Hide loader and show success message
-      setShowOnboardingLoader(false);
-      setShowSuccessMessage(true);
+      if (!rulesResponse.data.success) {
+        throw new Error('Rules generation failed');
+      }
+
+      setProgress(85);
+      setCurrentSubStage('Rules generated successfully');
+
+      // Step 4: Finalize setup
+      setCurrentProcess('knowledgebase');
+      setCurrentSubStage('Finalizing device setup...');
+      setProgress(95);
+
+      // Wait a bit for final processing
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      setProgress(100);
+      setCurrentSubStage('Onboarding complete!');
+      
+      // Set success result with actual data
+      setOnboardingResult({
+        deviceId: createdDevice.id || createdDevice.deviceId,
+        rulesGenerated: rulesResponse.data.rules?.length || 0,
+        maintenanceItems: rulesResponse.data.maintenance_tasks?.length || 0,
+        safetyPrecautions: rulesResponse.data.safety_information?.length || 0,
+        deviceData: createdDevice,
+        pdfData: pdfUploadResponse.data
+      });
+
+      setTimeout(() => {
+        setShowOnboardingLoader(false);
+        setShowSuccessMessage(true);
+      }, 1000);
 
     } catch (error) {
-      console.error('Error during onboarding process:', error);
+      console.error('Onboarding process failed:', error);
       setShowOnboardingLoader(false);
-      throw error;
+      
+      // Show error message to user
+      alert(`Onboarding failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }, [formData, uploadedFile, onSubmit]);
+  }, [uploadedFile, formData]);
 
-  const handleSubmit = useCallback(async () => {
-    if (isSubmitting) return;
-    
-    // Validate entire form before submission
-    if (!validateForm()) {
-      console.error('Form validation failed:', errors);
-      alert('Please fix all validation errors before submitting.');
-      return;
-    }
-    
-    setIsSubmitting(true);
-    setShowOnboardingLoader(true);
-    
-    try {
-      // Start the onboarding process
+  const handleSubmit = async () => {
+    if (!validateStep(currentStep)) return;
+
+    if (currentStep === 3 && uploadedFile) {
       await startOnboardingProcess();
-    } catch (error) {
-      console.error('Error during onboarding process:', error);
-      setShowOnboardingLoader(false);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Detailed error:', error);
-      alert(`Failed to complete onboarding: ${errorMessage}`);
-    } finally {
-      setIsSubmitting(false);
+    } else if (currentStep < 3) {
+      nextStep();
     }
-  }, [isSubmitting, validateForm, errors, startOnboardingProcess]);
+  };
 
-  const nextStep = useCallback(async () => {
-    console.log('nextStep called, currentStep:', currentStep);
-    
-    // Validate current step before proceeding
-    const isValid = validateCurrentStep();
-    console.log('Step validation result:', isValid, 'errors:', errors);
-    
-    if (!isValid) {
-      console.error('Step validation failed:', errors);
-      return;
-    }
-    
-    if (currentStep < 3) {
-      console.log('Moving to next step:', currentStep + 1);
-      setCurrentStep((prev) => (prev + 1) as Step);
-    } else {
-      console.log('Final step reached, submitting form');
-      // Final step - submit the form
-      await handleSubmit();
-    }
-  }, [currentStep, validateCurrentStep, errors, handleSubmit]);
-
-  const prevStep = useCallback(() => {
-    setCurrentStep((prev) => (prev - 1) as Step);
-  }, []);
-
-  const getStepTitle = useCallback((step: Step): string => {
-    switch (step) {
-      case 1: return 'Device Information';
-      case 2: return 'Connection Settings';
-      case 3: return 'Documentation Upload';
-    }
-  }, []);
-
-  const getStepDescription = useCallback((step: Step): string => {
-    switch (step) {
-      case 1: return 'Enter basic device information and specifications';
-      case 2: return 'Configure network connection and authentication';
-      case 3: return 'Upload device documentation for AI analysis';
-    }
-  }, []);
-
-  const getStepIcon = useCallback((step: Step) => {
-    switch (step) {
-      case 1: return <Bot className="w-6 h-6" />;
-      case 2: return <MessageSquare className="w-6 h-6" />;
-      case 3: return <FileText className="w-6 h-6" />;
-    }
-  }, []);
-
-  const renderStepContent = useCallback(() => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Device ID *
-                </label>
-                <input
-                  type="text"
-                  value={formData.deviceId}
-                  onChange={(e) => handleInputChange('deviceId', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${getValidationStyles('deviceId')}`}
-                  placeholder="e.g., DEV-001"
-                />
-                {getValidationMessage('deviceId')}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Device Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.deviceName}
-                  onChange={(e) => handleInputChange('deviceName', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${getValidationStyles('deviceName')}`}
-                  placeholder="e.g., Temperature Sensor 001"
-                />
-                {getValidationMessage('deviceName')}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Product ID / Model *
-                </label>
-                <input
-                  type="text"
-                  value={formData.productId}
-                  onChange={(e) => handleInputChange('productId', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${getValidationStyles('productId')}`}
-                  placeholder="e.g., ST-2000"
-                />
-                {getValidationMessage('productId')}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Serial Number *
-                </label>
-                <input
-                  type="text"
-                  value={formData.serialNumber}
-                  onChange={(e) => handleInputChange('serialNumber', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${getValidationStyles('serialNumber')}`}
-                  placeholder="e.g., SN123456789"
-                />
-                {getValidationMessage('serialNumber')}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Manufacturer
-                </label>
-                <input
-                  type="text"
-                  value={formData.manufacturer || ''}
-                  onChange={(e) => handleInputChange('manufacturer', e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="e.g., Siemens, Schneider Electric"
-                />
-                {getValidationMessage('manufacturer')}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Model
-                </label>
-                <input
-                  type="text"
-                  value={formData.model || ''}
-                  onChange={(e) => handleInputChange('model', e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="e.g., SIMATIC S7-1200"
-                />
-                {getValidationMessage('model')}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Location
-                </label>
-                <div className="relative">
-                  <AlertTriangle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) => handleInputChange('location', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="e.g., Building A, Floor 2, Room 205"
-                  />
-                </div>
-                {getValidationMessage('location')}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Tags
-                </label>
-                <div className="relative">
-                  <AlertTriangle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    value={formData.metadata}
-                    onChange={(e) => handleInputChange('metadata', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="e.g., temperature, sensor, industrial"
-                  />
-                </div>
-                {getValidationMessage('metadata')}
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description || ''}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  rows={3}
-                  placeholder="Brief description of the device and its purpose..."
-                />
-                {getValidationMessage('description')}
-              </div>
-            </div>
-          </div>
-        );
-
-      case 2:
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Authentication Credential *
-                </label>
-                <div className="relative">
-                  <AlertTriangle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <input
-                    type="password"
-                    value={formData.authenticationCredential}
-                    onChange={(e) => handleInputChange('authenticationCredential', e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 transition-colors ${getValidationStyles('authenticationCredential')}`}
-                    placeholder="Enter authentication key or token"
-                  />
-                </div>
-                {getValidationMessage('authenticationCredential')}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Connection Protocol *
-                </label>
-                <div className="relative">
-                  <AlertTriangle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                  <select
-                    value={formData.connectionProtocol}
-                    onChange={(e) => handleInputChange('connectionProtocol', e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  >
-                    <option value="MQTT">MQTT</option>
-                    <option value="HTTP">HTTP</option>
-                    <option value="COAP">COAP</option>
-                    <option value="TCP">TCP</option>
-                    <option value="UDP">UDP</option>
-                  </select>
-                </div>
-                {getValidationMessage('connectionProtocol')}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  IP Address
-                </label>
-                <input
-                  type="text"
-                  value={formData.ipAddress || ''}
-                  onChange={(e) => handleInputChange('ipAddress', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${getValidationStyles('ipAddress')}`}
-                  placeholder="e.g., 192.168.1.100"
-                />
-                {getValidationMessage('ipAddress')}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Port
-                </label>
-                <input
-                  type="number"
-                  value={formData.port || ''}
-                  onChange={(e) => handleInputChange('port', parseInt(e.target.value) || 8100)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${getValidationStyles('port')}`}
-                  placeholder="e.g., 8100"
-                />
-                {getValidationMessage('port')}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  MQTT Broker
-                </label>
-                <input
-                  type="text"
-                  value={formData.mqttBroker || ''}
-                  onChange={(e) => handleInputChange('mqttBroker', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${getValidationStyles('mqttBroker')}`}
-                  placeholder="e.g., mqtt.broker.com"
-                />
-                {getValidationMessage('mqttBroker')}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  MQTT Topic
-                </label>
-                <input
-                  type="text"
-                  value={formData.mqttTopic || ''}
-                  onChange={(e) => handleInputChange('mqttTopic', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${getValidationStyles('mqttTopic')}`}
-                  placeholder="e.g., devices/temperature/001"
-                />
-                {getValidationMessage('mqttTopic')}
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Network Configuration *
-                </label>
-                <textarea
-                  value={formData.networkConfig}
-                  onChange={(e) => handleInputChange('networkConfig', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${getValidationStyles('networkConfig')}`}
-                  rows={4}
-                  placeholder="Enter detailed network configuration (broker URL, credentials, SSL settings, etc.)"
-                />
-                {getValidationMessage('networkConfig')}
-              </div>
-            </div>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-6">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FileText className="w-8 h-8 text-blue-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">Upload Device Documentation</h3>
-              <p className="text-slate-600">Upload your device manual or specifications for AI-powered analysis and rule generation</p>
-            </div>
-
-            {!uploadedFile ? (
-              <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 hover:border-blue-400 transition-colors">
-                <input
-                  type="file"
-                  onChange={handleFileUpload}
-                  accept=".pdf"
-                  className="hidden"
-                  id="device-documentation"
-                />
-                <label
-                  htmlFor="device-documentation"
-                  className="flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 rounded-lg transition-colors p-6"
-                >
-                  <Upload className="w-12 h-12 text-slate-400 mb-4" />
-                  <span className="text-lg font-medium text-slate-700 mb-2">Click to upload PDF</span>
-                  <span className="text-sm text-slate-500">Device manual, datasheet, or specifications</span>
-                  <span className="text-xs text-slate-400 mt-1">Maximum file size: 100MB</span>
-                </label>
-                {errors.file && (
-                  <p className="text-red-500 text-sm mt-2 text-center">{errors.file}</p>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className={`border rounded-lg p-4 ${
-                  uploadedFile.status === 'success' 
-                    ? 'bg-green-50 border-green-200' 
-                    : uploadedFile.status === 'error'
-                    ? 'bg-red-50 border-red-200'
-                    : 'bg-blue-50 border-blue-200'
-                }`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {uploadedFile.status === 'success' ? (
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                      ) : uploadedFile.status === 'error' ? (
-                        <AlertTriangle className="w-5 h-5 text-red-600" />
-                      ) : (
-                        <Clock className="w-5 h-5 text-blue-600 animate-spin" />
-                      )}
-                      <div>
-                        <p className="text-sm font-medium text-slate-800">{uploadedFile.file.name}</p>
-                        <p className="text-xs text-slate-600">
-                          {(uploadedFile.file.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                        {uploadedFile.status === 'success' && (
-                          <p className="text-xs text-green-600 mt-1">✓ Successfully uploaded</p>
-                        )}
-                        {uploadedFile.status === 'error' && (
-                          <p className="text-xs text-red-600 mt-1">✗ {uploadedFile.error}</p>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={removeFile}
-                      className="p-1 hover:bg-slate-100 rounded transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4 text-slate-600" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-800">AI Analysis</span>
-                  </div>
-                  <p className="text-sm text-blue-700">
-                    Our AI will analyze your documentation to automatically generate monitoring rules, 
-                    maintenance schedules, and performance recommendations for your device.
-                  </p>
-                </div>
-
-                <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Bot className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-medium text-green-800">Ready to Complete Onboarding</span>
-                  </div>
-                  <p className="text-sm text-green-700">
-                    Your device is ready to be added to the system. Click "Complete Onboarding" to create your device with AI-generated rules and maintenance schedules.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-    }
-  }, [currentStep, formData, uploadedFile, handleInputChange, removeFile, handleFileUpload, errors, fieldValidation]);
-
-  // Helper function for validation styling
-  const getValidationStyles = useCallback((field: keyof DeviceFormData) => {
-    const validation = fieldValidation[field];
-    if (validation?.isValid === false) {
-      return 'border-red-500 focus:ring-red-500 focus:border-red-500';
-    } else if (validation?.isValid === true) {
-      return 'border-green-500 focus:ring-green-500 focus:border-green-500';
-    }
-    return 'border-slate-300 focus:ring-blue-500 focus:border-blue-500';
-  }, [fieldValidation]);
-
-  // Helper function for validation messages
-  const getValidationMessage = useCallback((field: keyof DeviceFormData) => {
-    const validation = fieldValidation[field];
-    if (validation?.isValid === false) {
-      return (
-        <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-          <AlertTriangle className="w-4 h-4" />
-          {validation.message}
-        </p>
-      );
-    } else if (validation?.isValid === true) {
-      return (
-        <p className="text-green-500 text-sm mt-1 flex items-center gap-1">
-          <CheckCircle className="w-4 h-4" />
-          Valid {field.replace(/([A-Z])/g, ' $1').toLowerCase()}
-        </p>
-      );
-    }
-    return null;
-  }, [fieldValidation]);
-
-  const handleSuccessContinue = useCallback(() => {
+  const handleSuccessContinue = () => {
     setShowSuccessMessage(false);
     setShowChatInterface(true);
-  }, []);
+  };
 
-  const handleSuccessClose = useCallback(() => {
-    setShowSuccessMessage(false);
-    onCancel();
-  }, [onCancel]);
-
-  const handleChatClose = useCallback(() => {
+  const handleChatClose = () => {
     setShowChatInterface(false);
     onCancel();
-  }, [onCancel]);
+  };
 
-  const handleChatContinue = useCallback(() => {
-    setShowChatInterface(false);
-    onCancel();
-  }, [onCancel]);
-
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-800">Device Onboarding</h2>
-              <p className="text-slate-600 mt-1">{getStepDescription(currentStep)}</p>
-              {/* Removed demo mode indicator */}
-            </div>
-            <button
-              onClick={onCancel}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <Trash2 className="w-5 h-5 text-slate-600" />
-            </button>
-          </div>
-
-          {/* Progress Steps */}
-          <div className="flex items-center justify-center">
-            {[1, 2, 3].map((step) => (
-              <div key={step} className="flex items-center">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all ${
-                  step === currentStep
-                    ? 'border-blue-500 bg-blue-500 text-white'
-                    : step < currentStep
-                    ? 'border-green-500 bg-green-500 text-white'
-                    : 'border-slate-300 text-slate-400'
-                }`}>
-                  {step < currentStep ? (
-                    <CheckCircle className="w-6 h-6" />
-                  ) : (
-                    <span className="text-sm font-medium">{step}</span>
-                  )}
-                </div>
-                {step < 3 && (
-                  <div className={`w-16 h-0.5 mx-2 transition-colors ${
-                    step < currentStep ? 'bg-green-500' : 'bg-slate-300'
-                  }`} />
-                )}
-              </div>
-            ))}
-          </div>
+  const renderStep1 = () => (
+    <div className="space-y-6 animate-fadeIn">
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Settings className="w-8 h-8 text-white" />
         </div>
+        <h3 className="text-xl font-semibold text-slate-800 mb-2">Basic Device Information</h3>
+        <p className="text-slate-600">Enter the essential details about your device</p>
+      </div>
 
-        <div className="p-6">
-          {/* Show onboarding loader */}
-          {showOnboardingLoader ? (
-            <EnhancedOnboardingLoader
-              isProcessing={true}
-              currentProcess={currentProcess}
-              progress={progress}
-              onComplete={() => {}}
-              pdfFileName={uploadedFile?.file.name}
-              currentSubStage={currentSubStage}
-            />
-          ) : showSuccessMessage ? (
-            <OnboardingSuccess
-              result={onboardingResult}
-              onContinue={handleSuccessContinue}
-              onClose={handleSuccessClose}
-            />
-          ) : showChatInterface ? (
-            <DeviceChatInterface
-              deviceName={formData.deviceName}
-              pdfFileName={onboardingResult?.pdfFileName || uploadedFile?.file.name || 'device_documentation.pdf'}
-              onClose={handleChatClose}
-              onContinue={handleChatContinue}
-            />
-          ) : (
-            <>
-              <div className="mb-6">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="text-blue-600">
-                    {getStepIcon(currentStep)}
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-800">{getStepTitle(currentStep)}</h3>
-                </div>
-              </div>
-
-              {/* Loading Screen */}
-              {isStepLoading && (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-                  <p className="text-slate-600 text-center">{stepLoadingMessage}</p>
-                </div>
-              )}
-
-              {/* Main Content */}
-              {!isStepLoading && renderStepContent()}
-            </>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Device Name *
+          </label>
+          <input
+            type="text"
+            value={formData.deviceName}
+            onChange={(e) => handleInputChange('deviceName', e.target.value)}
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+              errors.deviceName ? 'border-red-300' : 'border-slate-300'
+            }`}
+            placeholder="e.g., Temperature Sensor 001"
+          />
+          {errors.deviceName && (
+            <p className="text-red-500 text-sm mt-1">{errors.deviceName}</p>
           )}
         </div>
 
-        {/* Navigation - Only show when not in success or chat mode */}
-        {!showSuccessMessage && !showChatInterface && !showOnboardingLoader && (
-          <div className="flex items-center justify-between p-6 border-t border-slate-200">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Location *
+          </label>
+          <input
+            type="text"
+            value={formData.location}
+            onChange={(e) => handleInputChange('location', e.target.value)}
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+              errors.location ? 'border-red-300' : 'border-slate-300'
+            }`}
+            placeholder="e.g., Building A, Floor 2, Room 205"
+          />
+          {errors.location && (
+            <p className="text-red-500 text-sm mt-1">{errors.location}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Manufacturer *
+          </label>
+          <input
+            type="text"
+            value={formData.manufacturer}
+            onChange={(e) => handleInputChange('manufacturer', e.target.value)}
+            className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+              errors.manufacturer ? 'border-red-300' : 'border-slate-300'
+            }`}
+            placeholder="e.g., Siemens, Schneider Electric"
+          />
+          {errors.manufacturer && (
+            <p className="text-red-500 text-sm mt-1">{errors.manufacturer}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-6 animate-fadeIn">
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Bot className="w-8 h-8 text-white" />
+        </div>
+        <h3 className="text-xl font-semibold text-slate-800 mb-2">Connection Settings</h3>
+        <p className="text-slate-600">Configure how your device will communicate</p>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Connection Type
+          </label>
+          <select
+            value={formData.connectionType}
+            onChange={(e) => handleInputChange('connectionType', e.target.value)}
+            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+          >
+            <option value="MQTT">MQTT</option>
+            <option value="HTTP">HTTP</option>
+            <option value="COAP">COAP</option>
+          </select>
+        </div>
+
+        {formData.connectionType === 'MQTT' && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Broker URL *
+              </label>
+              <input
+                type="text"
+                value={formData.brokerUrl}
+                onChange={(e) => handleInputChange('brokerUrl', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+                  errors.brokerUrl ? 'border-red-300' : 'border-slate-300'
+                }`}
+                placeholder="e.g., mqtt.broker.com"
+              />
+              {errors.brokerUrl && (
+                <p className="text-red-500 text-sm mt-1">{errors.brokerUrl}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Topic *
+              </label>
+              <input
+                type="text"
+                value={formData.topic}
+                onChange={(e) => handleInputChange('topic', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+                  errors.topic ? 'border-red-300' : 'border-slate-300'
+                }`}
+                placeholder="e.g., sensors/temperature"
+              />
+              {errors.topic && (
+                <p className="text-red-500 text-sm mt-1">{errors.topic}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => handleInputChange('username', e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  placeholder="mqtt_user"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  placeholder="mqtt_password"
+                />
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div className="space-y-6 animate-fadeIn">
+      <div className="text-center mb-8">
+        <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <FileText className="w-8 h-8 text-white" />
+        </div>
+        <h3 className="text-xl font-semibold text-slate-800 mb-2">Upload Device Documentation</h3>
+        <p className="text-slate-600">Upload a PDF to automatically configure your device</p>
+      </div>
+
+      <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+        <input
+          type="file"
+          accept=".pdf"
+          onChange={handleFileUpload}
+          className="hidden"
+          id="file-upload"
+        />
+        <label htmlFor="file-upload" className="cursor-pointer">
+          <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+          <p className="text-lg font-medium text-slate-700 mb-2">
+            {uploadedFile ? uploadedFile.file.name : 'Click to upload PDF'}
+          </p>
+          <p className="text-sm text-slate-500">
+            {uploadedFile ? 'File uploaded successfully' : 'Upload device manual, datasheet, or documentation'}
+          </p>
+        </label>
+      </div>
+
+      {uploadedFile && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+            <span className="text-green-800 font-medium">File uploaded successfully</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderProgressBar = () => (
+    <div className="flex items-center justify-center mb-8">
+      {[1, 2, 3].map((step) => (
+        <React.Fragment key={step}>
+          <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
+            currentStep >= step 
+              ? 'bg-blue-500 border-blue-500 text-white' 
+              : 'bg-white border-slate-300 text-slate-400'
+          }`}>
+            {currentStep > step ? (
+              <CheckCircle className="w-5 h-5" />
+            ) : (
+              <span className="text-sm font-medium">{step}</span>
+            )}
+          </div>
+          {step < 3 && (
+            <div className={`w-16 h-1 transition-all duration-300 ${
+              currentStep > step ? 'bg-blue-500' : 'bg-slate-300'
+            }`} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+
+  if (showOnboardingLoader) {
+    return (
+      <EnhancedOnboardingLoader
+        isProcessing={true}
+        currentProcess={currentProcess}
+        progress={progress}
+        onComplete={() => {}}
+        pdfFileName={uploadedFile?.file.name}
+        currentSubStage={currentSubStage}
+      />
+    );
+  }
+
+  if (showSuccessMessage) {
+    return (
+      <OnboardingSuccess
+        result={{
+          deviceId: onboardingResult?.deviceId || 'DEV-001',
+          deviceName: formData.deviceName,
+          rulesGenerated: onboardingResult?.rulesGenerated || 5,
+          maintenanceItems: onboardingResult?.maintenanceItems || 3,
+          safetyPrecautions: onboardingResult?.safetyPrecautions || 2,
+          processingTime: onboardingStartTime ? Math.round((Date.now() - onboardingStartTime) / 1000) : 0,
+          pdfFileName: uploadedFile?.file.name || 'device_documentation.pdf'
+        }}
+        onContinue={handleSuccessContinue}
+        onClose={onCancel}
+      />
+    );
+  }
+
+  if (showChatInterface) {
+    return (
+      <DeviceChatInterface
+        deviceName={formData.deviceName}
+        pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
+        onClose={handleChatClose}
+        onContinue={handleChatClose}
+      />
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">Device Onboarding</h2>
+              <p className="text-purple-100 mt-1">Enter basic device information and specifications</p>
+            </div>
             <button
-              type="button"
+              onClick={onCancel}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          </div>
+          {renderProgressBar()}
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto max-h-[60vh]">
+          {currentStep === 1 && renderStep1()}
+          {currentStep === 2 && renderStep2()}
+          {currentStep === 3 && renderStep3()}
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-slate-200 bg-slate-50">
+          <div className="flex justify-between items-center">
+            <button
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <Trash2 className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4" />
               Previous
             </button>
 
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-              >
-                Cancel
-              </button>
-
-              {currentStep === 3 ? (
-                <button
-                  type="submit"
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Clock className="w-4 h-4 animate-spin" />
-                      Starting Onboarding...
-                    </>
-                  ) : (
-                    <>
-                      <Bot className="w-4 h-4" />
-                      Complete Onboarding
-                    </>
-                  )}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={nextStep}
-                  className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                  Next
-                </button>
-              )}
-            </div>
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting || (currentStep === 3 && !uploadedFile)}
+              className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {currentStep === 3 ? 'Start Onboarding' : 'Next'}
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
