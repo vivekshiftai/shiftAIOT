@@ -51,9 +51,18 @@ declare module 'lucide-react' {
   export const Plus: ComponentType<IconProps>;
   export const Settings: ComponentType<IconProps>;
   export const Eye: ComponentType<IconProps>;
-  export const EyeOff: ComponentType<IconProps>;
-  export const ArrowRight: ComponentType<IconProps>;
-  export const ArrowLeft: ComponentType<IconProps>;
+export const EyeOff: ComponentType<IconProps>;
+export const ArrowRight: ComponentType<IconProps>;
+export const ArrowLeft: ComponentType<IconProps>;
+export const AlertTriangle: ComponentType<IconProps>;
+export const Shield: ComponentType<IconProps>;
+export const AlertCircle: ComponentType<IconProps>;
+export const Info: ComponentType<IconProps>;
+export const Plus: ComponentType<IconProps>;
+export const Edit: ComponentType<IconProps>;
+export const Trash2: ComponentType<IconProps>;
+export const Filter: ComponentType<IconProps>;
+export const Search: ComponentType<IconProps>;
 }
 
 declare namespace JSX {

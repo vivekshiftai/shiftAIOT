@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { X, Upload, FileText, Settings, Bot, CheckCircle, AlertTriangle, MessageSquare, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
-import { pdfProcessingService } from '../../services/pdfprocess';
+import { onboardingService, OnboardingProgress } from '../../services/onboardingService';
 import { deviceAPI, ruleAPI, knowledgeAPI } from '../../services/api';
 import EnhancedOnboardingLoader from '../Loading/EnhancedOnboardingLoader';
 import { DeviceChatInterface } from './DeviceChatInterface';
@@ -121,154 +121,46 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     setCurrentProcess('pdf');
 
     try {
-      // Step 0: Check backend connectivity
-      setCurrentSubStage('Checking backend connectivity...');
-      setProgress(5);
-      
-      try {
-        // Test backend connectivity by trying to get devices list
-        await deviceAPI.getAll();
-        console.log('Backend connectivity confirmed');
-      } catch (error) {
-        console.error('Backend connectivity check failed:', error);
-        throw new Error('Cannot connect to backend server. Please check if the backend is running.');
-      }
-
-      // Step 1: Upload PDF to MinerU processing service
-      // Step 1: Upload PDF to MinerU processing service
-      setCurrentSubStage('Uploading PDF to processing service...');
-      setProgress(10);
-      
-      const pdfUploadResponse = await pdfProcessingService.uploadPDF(uploadedFile.file);
-      
-      if (!pdfUploadResponse.success) {
-        throw new Error('PDF upload to processing service failed');
-      }
-
-      setProgress(30);
-      setCurrentSubStage('PDF uploaded and processed successfully');
-
-      // Step 2: Create device in database
-      setCurrentProcess('rules');
-      setCurrentSubStage('Creating device in database...');
-      setProgress(40);
-
-      const deviceData = {
-        name: formData.deviceName,
-        location: formData.location,
-        manufacturer: formData.manufacturer,
-        model: formData.manufacturer, // Using manufacturer as model for now
-        protocol: formData.connectionType,
-        status: 'OFFLINE',
-        deviceType: 'SENSOR', // Default type
-        description: `Device onboarded via PDF: ${uploadedFile.file.name}`,
-        // Connection details
-        connectionDetails: {
-          type: formData.connectionType,
-          brokerUrl: formData.brokerUrl,
-          topic: formData.topic,
-          username: formData.username,
-          password: formData.password
+      // Use the new onboarding service
+      const result = await onboardingService.completeOnboarding(
+        formData,
+        uploadedFile.file,
+        (progress: OnboardingProgress) => {
+          setProgress(progress.progress);
+          setCurrentSubStage(progress.message);
+          if (progress.subMessage) {
+            console.log(progress.subMessage);
+          }
+          
+          // Update current process based on stage
+          switch (progress.stage) {
+            case 'upload':
+              setCurrentProcess('pdf');
+              break;
+            case 'device':
+              setCurrentProcess('rules');
+              break;
+            case 'rules':
+              setCurrentProcess('rules');
+              break;
+            case 'maintenance':
+              setCurrentProcess('rules');
+              break;
+            case 'safety':
+              setCurrentProcess('rules');
+              break;
+            case 'knowledge':
+              setCurrentProcess('knowledgebase');
+              break;
+            case 'complete':
+              setCurrentProcess('knowledgebase');
+              break;
+          }
         }
-      };
+      );
 
-      console.log('Creating device in backend with data:', deviceData);
-      
-      let createdDevice;
-      try {
-        const deviceResponse = await deviceAPI.create(deviceData);
-        createdDevice = deviceResponse.data;
-        
-        console.log('Device created successfully in backend:', createdDevice);
-        
-        if (!createdDevice || !createdDevice.id) {
-          throw new Error('Device creation failed: No device ID returned from backend');
-        }
-        
-      } catch (error) {
-        console.error('Device creation failed:', error);
-        throw new Error(`Failed to create device in backend: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      }
-      
-      setProgress(50);
-      setCurrentSubStage('Device created successfully');
-
-      // Step 3: Generate IoT Rules from PDF using MinerU
-      setCurrentSubStage('Generating IoT rules from PDF...');
-      setProgress(60);
-
-      const rulesResponse = await pdfProcessingService.generateRules(pdfUploadResponse.pdf_name);
-
-      if (!rulesResponse.success) {
-        throw new Error('IoT rules generation failed');
-      }
-
-      setProgress(70);
-      setCurrentSubStage('IoT rules generated successfully');
-
-      // Step 4: Generate Maintenance Schedule from PDF using MinerU
-      setCurrentSubStage('Generating maintenance schedule...');
-      setProgress(75);
-
-      const maintenanceResponse = await pdfProcessingService.generateMaintenance(pdfUploadResponse.pdf_name);
-
-      if (!maintenanceResponse.success) {
-        throw new Error('Maintenance schedule generation failed');
-      }
-
-      setProgress(80);
-      setCurrentSubStage('Maintenance schedule generated');
-
-      // Step 5: Generate Safety Information from PDF using MinerU
-      setCurrentSubStage('Generating safety information...');
-      setProgress(85);
-
-      const safetyResponse = await pdfProcessingService.generateSafety(pdfUploadResponse.pdf_name);
-
-      if (!safetyResponse.success) {
-        throw new Error('Safety information generation failed');
-      }
-
-      setProgress(90);
-      setCurrentSubStage('Safety information generated');
-
-      // Step 6: Upload processed data to knowledge base
-      setCurrentProcess('knowledgebase');
-      setCurrentSubStage('Uploading processed data to knowledge base...');
-      setProgress(95);
-
-      // Upload the processed PDF data to our knowledge base
-      console.log('Uploading PDF to knowledge base with device ID:', createdDevice.id || createdDevice.deviceId);
-      
-      let knowledgeUploadResponse;
-      try {
-        knowledgeUploadResponse = await knowledgeAPI.uploadPDF(
-          uploadedFile.file, 
-          createdDevice.id || createdDevice.deviceId, 
-          formData.deviceName
-        );
-        console.log('Knowledge base upload response:', knowledgeUploadResponse.data);
-      } catch (error) {
-        console.error('Knowledge base upload failed:', error);
-        // Don't throw error here, just log it as the device was already created
-        console.warn('Knowledge base upload failed, but device was created successfully');
-      }
-
-      setProgress(100);
-      setCurrentSubStage('Onboarding complete!');
-      
-      // Set success result with actual data from MinerU
-      setOnboardingResult({
-        deviceId: createdDevice.id || createdDevice.deviceId,
-        rulesGenerated: rulesResponse.rules?.length || 0,
-        maintenanceItems: maintenanceResponse.maintenance_tasks?.length || 0,
-        safetyPrecautions: safetyResponse.safety_information?.length || 0,
-        deviceData: createdDevice,
-        pdfData: {
-          ...pdfUploadResponse,
-          knowledgeUpload: knowledgeUploadResponse?.data || null
-        }
-      });
+      // Set success result
+      setOnboardingResult(result);
 
       setTimeout(() => {
         setShowOnboardingLoader(false);

@@ -206,12 +206,11 @@ export class PDFProcessingService {
     try {
       console.log('Generating IoT rules with MinerU for:', pdfName);
 
-      const response = await fetch(`${this.baseUrl}/generate/rules`, {
+      const response = await fetch(`${this.baseUrl}/generate-rules/${pdfName}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ pdf_name: pdfName }),
       });
 
       if (!response.ok) {
@@ -240,12 +239,11 @@ export class PDFProcessingService {
     try {
       console.log('Generating maintenance schedule with MinerU for:', pdfName);
 
-      const response = await fetch(`${this.baseUrl}/generate/maintenance`, {
+      const response = await fetch(`${this.baseUrl}/generate-maintenance/${pdfName}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ pdf_name: pdfName }),
       });
 
       if (!response.ok) {
@@ -268,12 +266,11 @@ export class PDFProcessingService {
     try {
       console.log('Generating safety information with MinerU for:', pdfName);
 
-      const response = await fetch(`${this.baseUrl}/generate/safety`, {
+      const response = await fetch(`${this.baseUrl}/generate-safety/${pdfName}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ pdf_name: pdfName }),
       });
 
       if (!response.ok) {

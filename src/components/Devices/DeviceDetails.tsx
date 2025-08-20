@@ -21,11 +21,17 @@ import {
   HardDrive,
   AlertTriangle,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  BarChart3,
+  Activity,
+  Thermometer
 } from 'lucide-react';
 import { Device } from '../../types';
 import { deviceAPI } from '../../services/api';
 import { DeviceRulesManager } from './DeviceRulesManager';
+import DeviceRulesDisplay from './DeviceRulesDisplay';
+import DeviceAnalyticsDisplay from './DeviceAnalyticsDisplay';
+import DeviceLogsDisplay from './DeviceLogsDisplay';
 
 interface DeviceDetailsProps {
   device: Device;
@@ -82,9 +88,11 @@ const deviceTypeConfig = {
 
 const tabs = [
   { id: 'profile', label: 'Profile', icon: Info },
-  { id: 'maintenance', label: 'Maintenance Details', icon: Wrench },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'rules', label: 'Rules', icon: Zap },
+  { id: 'logs', label: 'Logs', icon: FileText },
   { id: 'connection', label: 'Connection Details', icon: Wifi },
+  { id: 'maintenance', label: 'Maintenance Details', icon: Wrench },
   { id: 'chat', label: 'Chat History', icon: MessageSquare },
   { id: 'specifications', label: 'Specifications', icon: Database }
 ];
@@ -304,25 +312,14 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
           </div>
         );
 
+      case 'analytics':
+        return <DeviceAnalyticsDisplay deviceId={device.id} />;
+
       case 'rules':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-800">Device Rules</h3>
-              <button
-                onClick={() => setShowRules(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all"
-              >
-                <Zap className="w-4 h-4" />
-                Manage Rules
-              </button>
-            </div>
-            <div className="text-center py-8 text-slate-600">
-              <Zap className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-              <p>Click "Manage Rules" to configure automation rules for this device.</p>
-            </div>
-          </div>
-        );
+        return <DeviceRulesDisplay deviceId={device.id} />;
+
+      case 'logs':
+        return <DeviceLogsDisplay deviceId={device.id} />;
 
       case 'connection':
         return (

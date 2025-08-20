@@ -211,6 +211,7 @@ export const ruleAPI = {
   update: (id: string, rule: any) => api.put(`/api/rules/${id}`, rule),
   delete: (id: string) => api.delete(`/api/rules/${id}`),
   toggle: (id: string) => api.patch(`/api/rules/${id}/toggle`),
+  getByDevice: (deviceId: string) => api.get(`/api/rules/device/${deviceId}`),
   // Added new endpoint for rules generation
   generateRules: (request: {
     pdf_filename: string;
@@ -220,6 +221,31 @@ export const ruleAPI = {
   getStats: () => api.get('/api/rules/stats'),
 };
 
+// Analytics API
+export const analyticsAPI = {
+  getAll: () => api.get('/api/analytics'),
+  getById: (id: string) => api.get(`/api/analytics/${id}`),
+  getByDevice: (deviceId: string, timeRange: string = '24h') => 
+    api.get(`/api/analytics/device/${deviceId}`, { params: { timeRange } }),
+  create: (analytics: any) => api.post('/api/analytics', analytics),
+  update: (id: string, analytics: any) => api.put(`/api/analytics/${id}`, analytics),
+  delete: (id: string) => api.delete(`/api/analytics/${id}`),
+  getStats: () => api.get('/api/analytics/stats'),
+};
+
+// Logs API
+export const logAPI = {
+  getAll: (params?: { level?: string; category?: string; page?: number; size?: number }) => 
+    api.get('/api/logs', { params }),
+  getById: (id: string) => api.get(`/api/logs/${id}`),
+  getByDevice: (deviceId: string, params?: { level?: string; category?: string; page?: number; size?: number }) => 
+    api.get(`/api/logs/device/${deviceId}`, { params }),
+  create: (log: any) => api.post('/api/logs', log),
+  update: (id: string, log: any) => api.put(`/api/logs/${id}`, log),
+  delete: (id: string) => api.delete(`/api/logs/${id}`),
+  getStats: () => api.get('/api/logs/stats'),
+};
+
 // Maintenance API
 export const maintenanceAPI = {
   getAll: () => api.get('/api/maintenance'),
@@ -227,6 +253,22 @@ export const maintenanceAPI = {
   create: (item: any) => api.post('/api/maintenance', item),
   update: (id: string, item: any) => api.put(`/api/maintenance/${id}`, item),
   delete: (id: string) => api.delete(`/api/maintenance/${id}`),
+};
+
+// Device Safety Precautions API
+export const deviceSafetyPrecautionsAPI = {
+  getAllByDevice: (deviceId: string) => api.get(`/api/device-safety-precautions/device/${deviceId}`),
+  getActiveByDevice: (deviceId: string) => api.get(`/api/device-safety-precautions/device/${deviceId}/active`),
+  getById: (id: string) => api.get(`/api/device-safety-precautions/${id}`),
+  create: (safetyPrecaution: any) => api.post('/api/device-safety-precautions', safetyPrecaution),
+  createBulk: (safetyPrecautions: any[]) => api.post('/api/device-safety-precautions/bulk', safetyPrecautions),
+  update: (id: string, safetyPrecaution: any) => api.put(`/api/device-safety-precautions/${id}`, safetyPrecaution),
+  delete: (id: string) => api.delete(`/api/device-safety-precautions/${id}`),
+  deleteByDevice: (deviceId: string) => api.delete(`/api/device-safety-precautions/device/${deviceId}`),
+  getByType: (deviceId: string, type: string) => api.get(`/api/device-safety-precautions/device/${deviceId}/type/${type}`),
+  getByCategory: (deviceId: string, category: string) => api.get(`/api/device-safety-precautions/device/${deviceId}/category/${category}`),
+  getBySeverity: (deviceId: string, severity: string) => api.get(`/api/device-safety-precautions/device/${deviceId}/severity/${severity}`),
+  getCount: (deviceId: string) => api.get(`/api/device-safety-precautions/device/${deviceId}/count`),
 };
 
 // Knowledge API

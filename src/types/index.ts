@@ -179,3 +179,18 @@ export interface DeviceConnection {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface DeviceSafetyPrecaution {
+  id: string;
+  deviceId: string;
+  title: string;
+  description: string;
+  type: 'warning' | 'procedure' | 'caution' | 'note';
+  category: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  recommendedAction?: string;
+  isActive: boolean;
+  organizationId: string;
+  createdAt: string;
+  updatedAt: string;
+}

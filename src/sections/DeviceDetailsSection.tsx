@@ -24,13 +24,15 @@ import {
   Download,
   Send,
   Bot,
-  User
+  User,
+  Shield
 } from 'lucide-react';
 import { useIoT } from '../contexts/IoTContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device } from '../types';
 import { DeviceRules } from '../components/Devices/DeviceRules';
 import { DeviceConnectionManager } from '../components/Devices/DeviceConnectionManager';
+import DeviceSafetyInfo from '../components/Devices/DeviceSafetyInfo';
 import { deviceAPI } from '../services/api';
 import { pdfProcessingService, PDFListResponse } from '../services/pdfprocess';
 
@@ -70,6 +72,7 @@ const tabs = [
   { id: 'maintenance', label: 'Maintenance Details', icon: Wrench },
   { id: 'rules', label: 'Rules', icon: Zap },
   { id: 'connection', label: 'Connection Details', icon: Wifi },
+  { id: 'safety', label: 'Safety Info', icon: Shield },
   { id: 'chat', label: 'Chat History', icon: MessageSquare },
   { id: 'specifications', label: 'Specifications', icon: Database }
 ];
@@ -524,6 +527,13 @@ export const DeviceDetailsSection: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+        );
+
+      case 'safety':
+        return (
+          <div className="space-y-6">
+            <DeviceSafetyInfo deviceId={device.id} />
           </div>
         );
 

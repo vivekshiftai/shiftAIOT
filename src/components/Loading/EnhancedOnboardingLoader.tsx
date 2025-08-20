@@ -17,26 +17,7 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
   pdfFileName,
   currentSubStage
 }) => {
-  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
-  const [isHovering, setIsHovering] = useState(false);
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setCursorPosition({ x: e.clientX, y: e.clientY });
-    };
-
-    if (isProcessing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.body.style.cursor = 'none';
-    } else {
-      document.body.style.cursor = 'default';
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.body.style.cursor = 'default';
-    };
-  }, [isProcessing]);
 
   const getStepInfo = () => {
     switch (currentProcess) {
@@ -73,27 +54,7 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center bg-white overflow-hidden">
-      {/* Custom Cursor */}
-      {isProcessing && (
-        <div
-          className="fixed pointer-events-none z-50"
-          style={{
-            left: cursorPosition.x - 20,
-            top: cursorPosition.y - 20,
-          }}
-        >
-          <div className="relative">
-            {/* Outer ring - white */}
-            <div className="absolute w-10 h-10 border-2 border-white rounded-full animate-pulse opacity-80 shadow-lg"></div>
-            {/* Middle ring - green */}
-            <div className="absolute w-8 h-8 border-2 border-[#20C997] rounded-full animate-ping opacity-60" style={{ left: '4px', top: '4px' }}></div>
-            {/* Inner ring - white */}
-            <div className="absolute w-6 h-6 border-2 border-white rounded-full animate-pulse opacity-90" style={{ left: '8px', top: '8px' }}></div>
-            {/* Center dot - green glow */}
-            <div className={`absolute w-2 h-2 bg-[#20C997] rounded-full transition-all duration-300 ${isHovering ? 'shadow-lg shadow-[#20C997]/50' : ''}`} style={{ left: '18px', top: '18px' }}></div>
-          </div>
-        </div>
-      )}
+
 
       {/* Main Content Container */}
       <div className="flex flex-col items-center justify-center space-y-8 px-6 max-w-md w-full">
@@ -117,8 +78,7 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
                     ? 'border-[#20C997] bg-[#D0F5E3]'
                     : 'border-gray-200 bg-[#F6FFF7]'
                 }`}
-                onMouseEnter={() => setIsHovering(true)}
-                onMouseLeave={() => setIsHovering(false)}
+                
               >
                 {currentStepIndex === index ? (
                   <div className="relative">

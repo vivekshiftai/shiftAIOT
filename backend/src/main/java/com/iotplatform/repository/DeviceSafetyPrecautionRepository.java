@@ -1,28 +1,39 @@
 package com.iotplatform.repository;
 
-import java.util.List;
-
+import com.iotplatform.model.DeviceSafetyPrecaution;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.iotplatform.model.DeviceSafetyPrecaution;
+import java.util.List;
 
 @Repository
 public interface DeviceSafetyPrecautionRepository extends JpaRepository<DeviceSafetyPrecaution, String> {
     
-    List<DeviceSafetyPrecaution> findByDeviceId(String deviceId);
+    List<DeviceSafetyPrecaution> findByDeviceIdAndOrganizationId(String deviceId, String organizationId);
     
-    List<DeviceSafetyPrecaution> findByDeviceIdAndIsActiveTrue(String deviceId);
+    List<DeviceSafetyPrecaution> findByDeviceIdAndIsActiveTrueAndOrganizationId(String deviceId, String organizationId);
     
-    List<DeviceSafetyPrecaution> findBySeverity(DeviceSafetyPrecaution.Severity severity);
+    List<DeviceSafetyPrecaution> findByOrganizationId(String organizationId);
     
-    List<DeviceSafetyPrecaution> findByCategory(String category);
+    @Query("SELECT dsp FROM DeviceSafetyPrecaution dsp WHERE dsp.deviceId = :deviceId AND dsp.organizationId = :organizationId AND dsp.type = :type")
+    List<DeviceSafetyPrecaution> findByDeviceIdAndTypeAndOrganizationId(@Param("deviceId") String deviceId, 
+                                                                       @Param("type") String type, 
+                                                                       @Param("organizationId") String organizationId);
     
-    List<DeviceSafetyPrecaution> findByDeviceIdAndSeverity(String deviceId, DeviceSafetyPrecaution.Severity severity);
+    @Query("SELECT dsp FROM DeviceSafetyPrecaution dsp WHERE dsp.deviceId = :deviceId AND dsp.organizationId = :organizationId AND dsp.category = :category")
+    List<DeviceSafetyPrecaution> findByDeviceIdAndCategoryAndOrganizationId(@Param("deviceId") String deviceId, 
+                                                                           @Param("category") String category, 
+                                                                           @Param("organizationId") String organizationId);
     
-    List<DeviceSafetyPrecaution> findByDeviceIdAndCategory(String deviceId, String category);
+    @Query("SELECT dsp FROM DeviceSafetyPrecaution dsp WHERE dsp.deviceId = :deviceId AND dsp.organizationId = :organizationId AND dsp.severity = :severity")
+    List<DeviceSafetyPrecaution> findByDeviceIdAndSeverityAndOrganizationId(@Param("deviceId") String deviceId, 
+                                                                           @Param("severity") String severity, 
+                                                                           @Param("organizationId") String organizationId);
     
-    long countByDeviceIdAndIsActiveTrue(String deviceId);
+    void deleteByDeviceIdAndOrganizationId(String deviceId, String organizationId);
     
-    long countByDeviceIdAndSeverity(String deviceId, DeviceSafetyPrecaution.Severity severity);
+    @Query("SELECT COUNT(dsp) FROM DeviceSafetyPrecaution dsp WHERE dsp.deviceId = :deviceId AND dsp.organizationId = :organizationId AND dsp.isActive = true")
+    long countActiveByDeviceIdAndOrganizationId(@Param("deviceId") String deviceId, @Param("organizationId") String organizationId);
 }

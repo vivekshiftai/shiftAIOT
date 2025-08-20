@@ -117,10 +117,12 @@ CREATE TABLE IF NOT EXISTS device_safety_precautions (
     device_id VARCHAR(255) NOT NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
-    severity VARCHAR(20) NOT NULL, -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
-    category VARCHAR(100) NOT NULL,
+    type VARCHAR(50) NOT NULL, -- 'warning', 'procedure', 'caution', 'note'
+    category VARCHAR(100) NOT NULL, -- 'thermal_hazard', 'electrical_hazard', 'mechanical_hazard', 'emergency_procedures', 'ppe_requirements'
+    severity VARCHAR(20) DEFAULT 'MEDIUM', -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
     recommended_action TEXT,
     is_active BOOLEAN DEFAULT true,
+    organization_id VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
