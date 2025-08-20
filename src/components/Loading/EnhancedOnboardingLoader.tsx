@@ -18,6 +18,7 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
   currentSubStage
 }) => {
   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
+  const [isHovering, setIsHovering] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -67,6 +68,8 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
   };
 
   const stepInfo = getStepInfo();
+  const steps = ['pdf', 'rules', 'knowledgebase'];
+  const currentStepIndex = steps.indexOf(currentProcess);
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center bg-white overflow-hidden">
@@ -80,91 +83,101 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
           }}
         >
           <div className="relative">
-            {/* Outer ring */}
-            <div className="absolute w-10 h-10 border-2 border-green-500 rounded-full animate-pulse opacity-60"></div>
-            {/* Inner ring */}
-            <div className="absolute w-6 h-6 border-2 border-green-400 rounded-full animate-ping opacity-80" style={{ left: '8px', top: '8px' }}></div>
-            {/* Center dot */}
-            <div className="absolute w-2 h-2 bg-green-600 rounded-full" style={{ left: '18px', top: '18px' }}></div>
+            {/* Outer ring - white */}
+            <div className="absolute w-10 h-10 border-2 border-white rounded-full animate-pulse opacity-80 shadow-lg"></div>
+            {/* Middle ring - green */}
+            <div className="absolute w-8 h-8 border-2 border-[#20C997] rounded-full animate-ping opacity-60" style={{ left: '4px', top: '4px' }}></div>
+            {/* Inner ring - white */}
+            <div className="absolute w-6 h-6 border-2 border-white rounded-full animate-pulse opacity-90" style={{ left: '8px', top: '8px' }}></div>
+            {/* Center dot - green glow */}
+            <div className={`absolute w-2 h-2 bg-[#20C997] rounded-full transition-all duration-300 ${isHovering ? 'shadow-lg shadow-[#20C997]/50' : ''}`} style={{ left: '18px', top: '18px' }}></div>
           </div>
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="flex flex-col items-center space-y-8 px-6">
+      {/* Main Content Container */}
+      <div className="flex flex-col items-center justify-center space-y-8 px-6 max-w-md w-full">
         
-        {/* Animated Step Indicator */}
-        <div className="relative">
-          {/* Background circles */}
-          <div className="flex items-center space-x-4">
-            {['pdf', 'rules', 'knowledgebase'].map((step, index) => (
-              <div key={step} className="relative">
-                <div className={`w-16 h-16 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
-                  currentProcess === step 
-                    ? 'border-green-500 bg-green-50 shadow-lg shadow-green-200' 
-                    : index < ['pdf', 'rules', 'knowledgebase'].indexOf(currentProcess)
-                    ? 'border-green-400 bg-green-100'
-                    : 'border-gray-200 bg-gray-50'
-                }`}>
-                  {currentProcess === step ? (
-                    <div className="relative">
-                      {/* Pulsing animation for current step */}
-                      <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-30"></div>
-                      <div className="relative z-10 text-2xl">{stepInfo.icon}</div>
-                    </div>
-                  ) : index < ['pdf', 'rules', 'knowledgebase'].indexOf(currentProcess) ? (
-                    <div className="text-green-600 text-xl">✓</div>
-                  ) : (
-                    <div className="text-gray-400 text-xl">
-                      {step === 'pdf' ? '📄' : step === 'rules' ? '⚡' : '🧠'}
-                    </div>
-                  )}
-                </div>
-                
-                {/* Connecting lines */}
-                {index < 2 && (
-                  <div className={`absolute top-8 left-16 w-4 h-0.5 transition-all duration-500 ${
-                    index < ['pdf', 'rules', 'knowledgebase'].indexOf(currentProcess)
-                      ? 'bg-green-400'
-                      : 'bg-gray-200'
-                  }`}></div>
-                )}
-              </div>
-            ))}
-          </div>
+        {/* Morphing Green Streak Animation */}
+        <div className="relative w-full h-1 mb-4">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#20C997] to-transparent rounded-full animate-pulse opacity-30"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#20C997] to-transparent rounded-full animate-ping opacity-20" style={{ animationDelay: '0.5s' }}></div>
         </div>
 
-        {/* Current Step Info */}
-        <div className="text-center space-y-4">
-          <h3 className="text-2xl font-semibold text-gray-800">{stepInfo.title}</h3>
-          <p className="text-gray-600 max-w-md leading-relaxed">{stepInfo.description}</p>
+        {/* Step Indicators */}
+        <div className="flex items-center justify-center space-x-6">
+          {steps.map((step, index) => (
+            <div key={step} className="relative flex flex-col items-center">
+              {/* Step Circle */}
+              <div 
+                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
+                  currentStepIndex === index 
+                    ? 'border-[#20C997] bg-[#D0F5E3] shadow-lg shadow-[#20C997]/20 scale-110' 
+                    : index < currentStepIndex
+                    ? 'border-[#20C997] bg-[#D0F5E3]'
+                    : 'border-gray-200 bg-[#F6FFF7]'
+                }`}
+                onMouseEnter={() => setIsHovering(true)}
+                onMouseLeave={() => setIsHovering(false)}
+              >
+                {currentStepIndex === index ? (
+                  <div className="relative">
+                    {/* Pulsing animation for current step */}
+                    <div className="absolute inset-0 rounded-full bg-[#20C997] animate-ping opacity-30"></div>
+                    <div className="relative z-10 text-lg">{stepInfo.icon}</div>
+                  </div>
+                ) : index < currentStepIndex ? (
+                  <div className="text-[#20C997] text-lg">✓</div>
+                ) : (
+                  <div className="text-gray-400 text-lg">
+                    {step === 'pdf' ? '📄' : step === 'rules' ? '⚡' : '🧠'}
+                  </div>
+                )}
+              </div>
+              
+              {/* Connecting Lines */}
+              {index < steps.length - 1 && (
+                <div className={`absolute top-6 left-12 w-6 h-0.5 transition-all duration-500 ${
+                  index < currentStepIndex
+                    ? 'bg-[#20C997]'
+                    : 'bg-gray-200'
+                }`}></div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Current Step Description */}
+        <div className="text-center space-y-3">
+          <h3 className="text-xl font-semibold text-gray-800">{stepInfo.title}</h3>
+          <p className="text-gray-600 text-sm leading-relaxed max-w-xs">{stepInfo.description}</p>
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full max-w-md space-y-3">
-          <div className="flex justify-between text-sm text-gray-600">
+        <div className="w-full space-y-2">
+          <div className="flex justify-between text-xs text-gray-500">
             <span>Progress</span>
             <span>{Math.round(progress)}%</span>
           </div>
-          <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div className="relative h-1.5 bg-[#F6FFF7] rounded-full overflow-hidden">
             <div 
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all duration-300 ease-out"
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#20C997] to-[#20C997]/80 rounded-full transition-all duration-300 ease-out"
               style={{ width: `${progress}%` }}
             >
-              {/* Animated shimmer effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-pulse"></div>
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40 animate-pulse"></div>
             </div>
           </div>
         </div>
 
         {/* File Info */}
         {pdfFileName && (
-          <div className="flex items-center space-x-3 px-4 py-3 bg-green-50 rounded-lg border border-green-200">
-            <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
-              <span className="text-white text-sm">📄</span>
+          <div className="flex items-center space-x-3 px-4 py-2 bg-[#D0F5E3] rounded-lg border border-[#20C997]/20">
+            <div className="w-6 h-6 bg-[#20C997] rounded-lg flex items-center justify-center">
+              <span className="text-white text-xs">📄</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800 truncate">{pdfFileName}</p>
+              <p className="text-xs font-medium text-gray-800 truncate">{pdfFileName}</p>
               <p className="text-xs text-gray-500">Processing...</p>
             </div>
           </div>
@@ -173,9 +186,9 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
         {/* Current Sub-stage */}
         {currentSubStage && (
           <div className="text-center">
-            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-green-100 rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-sm text-green-700 font-medium">{currentSubStage}</span>
+            <div className="inline-flex items-center space-x-2 px-3 py-1.5 bg-[#D0F5E3] rounded-full">
+              <div className="w-1.5 h-1.5 bg-[#20C997] rounded-full animate-pulse"></div>
+              <span className="text-xs text-[#20C997] font-medium">{currentSubStage}</span>
             </div>
           </div>
         )}
@@ -183,21 +196,18 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
         {/* Floating Animation Elements */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           {/* Floating circles */}
-          {[...Array(6)].map((_, i) => (
+          {[...Array(4)].map((_, i) => (
             <div
               key={i}
-              className="absolute w-2 h-2 bg-green-300 rounded-full opacity-30 animate-bounce"
+              className="absolute w-1.5 h-1.5 bg-[#20C997] rounded-full opacity-20 animate-bounce"
               style={{
-                left: `${20 + i * 15}%`,
-                top: `${30 + (i % 2) * 40}%`,
-                animationDelay: `${i * 0.5}s`,
-                animationDuration: `${2 + i * 0.5}s`
+                left: `${25 + i * 20}%`,
+                top: `${20 + (i % 2) * 60}%`,
+                animationDelay: `${i * 0.3}s`,
+                animationDuration: `${2 + i * 0.3}s`
               }}
             ></div>
           ))}
-          
-          {/* Morphing streak */}
-          <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-green-400 to-transparent rounded-full animate-pulse opacity-20"></div>
         </div>
       </div>
 
@@ -206,11 +216,11 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
         __html: `
           @keyframes morph {
             0%, 100% { transform: scaleX(1) rotate(0deg); }
-            50% { transform: scaleX(1.2) rotate(180deg); }
+            50% { transform: scaleX(1.1) rotate(180deg); }
           }
           
           .animate-morph {
-            animation: morph 3s ease-in-out infinite;
+            animation: morph 4s ease-in-out infinite;
           }
         `
       }} />

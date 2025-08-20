@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { X, Upload, FileText, Settings, Bot, CheckCircle, AlertTriangle, MessageSquare, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
 import { pdfProcessingService } from '../../services/pdfprocess';
 import { deviceAPI, ruleAPI, knowledgeAPI } from '../../services/api';
-import { EnhancedOnboardingLoader } from '../Loading/EnhancedOnboardingLoader';
+import EnhancedOnboardingLoader from '../Loading/EnhancedOnboardingLoader';
 import { DeviceChatInterface } from './DeviceChatInterface';
 import { OnboardingSuccess } from './OnboardingSuccess';
 import { getApiConfig } from '../../config/api';
