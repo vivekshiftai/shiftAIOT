@@ -18,12 +18,9 @@ export const LoginForm: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    if (!/\S+@\S+\.\S+/.test(credentials.email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
-    if (!credentials.password || credentials.password.length < 6) {
-      setError('Password must be at least 6 characters');
+    // No frontend validation - just check if fields are not empty
+    if (!credentials.email.trim() || !credentials.password.trim()) {
+      setError('Please enter both email and password');
       return;
     }
 
