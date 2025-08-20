@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = '';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -144,7 +144,7 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   login: (credentials: { email: string; password: string }) => {
-    return api.post('/auth/signin', credentials);
+    return api.post('/api/auth/signin', credentials);
   },
   
   register: (userData: {
@@ -154,19 +154,19 @@ export const authAPI = {
     password: string;
     role: 'ADMIN' | 'USER';
   }) => {
-    return api.post('/auth/signup', userData);
+    return api.post('/api/auth/signup', userData);
   },
 
-  refresh: (token: string) => api.post('/auth/refresh', { token }),
+  refresh: (token: string) => api.post('/api/auth/refresh', { token }),
 };
 
 // Device API
 export const deviceAPI = {
   getAll: (params?: { status?: string; type?: string; search?: string }) => {
-    return api.get('/devices', { params });
+    return api.get('/api/devices', { params });
   },
   
-  getById: (id: string) => api.get(`/devices/${id}`),
+  getById: (id: string) => api.get(`/api/devices/${id}`),
   
   create: (device: any) => {
     // Ensure device has proper enum values and handle null/undefined values
@@ -181,49 +181,49 @@ export const deviceAPI = {
       manufacturer: device.manufacturer || '',
       model: device.model || '',
     };
-    return api.post('/devices', processedDevice);
+    return api.post('/api/devices', processedDevice);
   },
   
-  update: (id: string, device: any) => api.put(`/devices/${id}`, device),
+  update: (id: string, device: any) => api.put(`/api/devices/${id}`, device),
   
-  delete: (id: string) => api.delete(`/devices/${id}`),
+  delete: (id: string) => api.delete(`/api/devices/${id}`),
   
-  updateStatus: (id: string, status: string) => api.patch(`/devices/${id}/status`, { status }),
+  updateStatus: (id: string, status: string) => api.patch(`/api/devices/${id}/status`, { status }),
   
-  postTelemetry: (deviceId: string, data: any) => api.post(`/devices/${deviceId}/telemetry`, data),
+  postTelemetry: (deviceId: string, data: any) => api.post(`/api/devices/${deviceId}/telemetry`, data),
   
-  getDocumentation: (deviceId: string) => api.get(`/devices/${deviceId}/documentation`),
+  getDocumentation: (deviceId: string) => api.get(`/api/devices/${deviceId}/documentation`),
   
   downloadDocumentation: (deviceId: string, type: string) => 
-    api.get(`/devices/${deviceId}/documentation/${type}`, {
+    api.get(`/api/devices/${deviceId}/documentation/${type}`, {
       responseType: 'blob'
     }),
 };
 
 // Rule API
 export const ruleAPI = {
-  getAll: () => api.get('/rules'),
-  getById: (id: string) => api.get(`/rules/${id}`),
-  create: (rule: any) => api.post('/rules', rule),
-  update: (id: string, rule: any) => api.put(`/rules/${id}`, rule),
-  delete: (id: string) => api.delete(`/rules/${id}`),
-  toggle: (id: string) => api.patch(`/rules/${id}/toggle`),
+  getAll: () => api.get('/api/rules'),
+  getById: (id: string) => api.get(`/api/rules/${id}`),
+  create: (rule: any) => api.post('/api/rules', rule),
+  update: (id: string, rule: any) => api.put(`/api/rules/${id}`, rule),
+  delete: (id: string) => api.delete(`/api/rules/${id}`),
+  toggle: (id: string) => api.patch(`/api/rules/${id}/toggle`),
   // Added new endpoint for rules generation
   generateRules: (request: {
     pdf_filename: string;
     chunk_size?: number;
     rule_types?: string[];
-  }) => api.post('/rules/generate-rules', request),
-  getStats: () => api.get('/rules/stats'),
+  }) => api.post('/api/rules/generate-rules', request),
+  getStats: () => api.get('/api/rules/stats'),
 };
 
 // Maintenance API
 export const maintenanceAPI = {
-  getAll: () => api.get('/maintenance'),
-  getById: (id: string) => api.get(`/maintenance/${id}`),
-  create: (item: any) => api.post('/maintenance', item),
-  update: (id: string, item: any) => api.put(`/maintenance/${id}`, item),
-  delete: (id: string) => api.delete(`/maintenance/${id}`),
+  getAll: () => api.get('/api/maintenance'),
+  getById: (id: string) => api.get(`/api/maintenance/${id}`),
+  create: (item: any) => api.post('/api/maintenance', item),
+  update: (id: string, item: any) => api.put(`/api/maintenance/${id}`, item),
+  delete: (id: string) => api.delete(`/api/maintenance/${id}`),
 };
 
 // Knowledge API
@@ -231,7 +231,7 @@ export const knowledgeAPI = {
   uploadDocument: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post('/knowledge/upload', formData, {
+    return api.post('/api/knowledge/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -247,7 +247,7 @@ export const knowledgeAPI = {
     if (deviceName) {
       formData.append('deviceName', deviceName);
     }
-    return api.post('/knowledge/upload-pdf', formData, {
+    return api.post('/api/knowledge/upload-pdf', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -256,44 +256,44 @@ export const knowledgeAPI = {
   
   getDocuments: (deviceId?: string) => {
     const params = deviceId ? { deviceId } : {};
-    return api.get('/knowledge/documents', { params });
+    return api.get('/api/knowledge/documents', { params });
   },
   
-  getDocumentsByDevice: (deviceId: string) => api.get(`/knowledge/documents/device/${deviceId}`),
+  getDocumentsByDevice: (deviceId: string) => api.get(`/api/knowledge/documents/device/${deviceId}`),
   
-  getGeneralDocuments: () => api.get('/knowledge/documents/general'),
+  getGeneralDocuments: () => api.get('/api/knowledge/documents/general'),
   
-  deleteDocument: (documentId: string) => api.delete(`/knowledge/documents/${documentId}`),
+  deleteDocument: (documentId: string) => api.delete(`/api/knowledge/documents/${documentId}`),
   
   downloadDocument: (documentId: string) => 
-    api.get(`/knowledge/documents/${documentId}/download`, {
+    api.get(`/api/knowledge/documents/${documentId}/download`, {
       responseType: 'blob'
     }),
   
-  getDocumentStatus: (documentId: string) => api.get(`/knowledge/documents/${documentId}/status`),
+  getDocumentStatus: (documentId: string) => api.get(`/api/knowledge/documents/${documentId}/status`),
   
   searchDocuments: (query: string, limit: number = 10) => 
-    api.post('/knowledge/search', { query, limit }),
+    api.post('/api/knowledge/search', { query, limit }),
   
   sendChatMessage: (message: string, documentIds: string[]) => 
-    api.post('/knowledge/chat', { message, documentIds }),
+    api.post('/api/knowledge/chat', { message, documentIds }),
   
-  getChatHistory: () => api.get('/knowledge/chat/history'),
+  getChatHistory: () => api.get('/api/knowledge/chat/history'),
   
-  getStatistics: () => api.get('/knowledge/statistics'),
+  getStatistics: () => api.get('/api/knowledge/statistics'),
 };
 
 // Notification API
 export const notificationAPI = {
-  getAll: () => api.get('/notifications'),
+  getAll: () => api.get('/api/notifications'),
   
-  create: (notification: any) => api.post('/notifications', notification),
+  create: (notification: any) => api.post('/api/notifications', notification),
   
-  markAsRead: (id: string) => api.patch(`/notifications/${id}/read`),
+  markAsRead: (id: string) => api.patch(`/api/notifications/${id}/read`),
   
-  markAllAsRead: () => api.patch('/notifications/read-all'),
+  markAllAsRead: () => api.patch('/api/notifications/read-all'),
   
-  getUnreadCount: () => api.get('/notifications/unread-count'),
+  getUnreadCount: () => api.get('/api/notifications/unread-count'),
 };
 
 // Conversation Config API
