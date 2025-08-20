@@ -10,7 +10,7 @@ interface DeviceRulesProps {
 }
 
 export const DeviceRules: React.FC<DeviceRulesProps> = ({ device, onClose }) => {
-  const { rules, createRule, updateRule, deleteRule, toggleRule, loading } = useIoT();
+  const { rules, createRule, updateRule, deleteRule, toggleRule, refreshRules, loading } = useIoT();
   const [showRuleBuilder, setShowRuleBuilder] = useState(false);
   const [editingRule, setEditingRule] = useState<Rule | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,6 +25,11 @@ export const DeviceRules: React.FC<DeviceRulesProps> = ({ device, onClose }) => 
   const activeRulesCount = deviceRules.filter(r => r.active).length;
   const totalRulesCount = deviceRules.length;
 
+  // Refresh rules when component mounts or device changes
+  useEffect(() => {
+    refreshRules();
+  }, [device.id, refreshRules]);
+
   const handleEditRule = (rule: Rule) => {
     setEditingRule(rule);
     setShowRuleBuilder(true);
@@ -33,6 +38,8 @@ export const DeviceRules: React.FC<DeviceRulesProps> = ({ device, onClose }) => 
   const handleToggleRule = async (ruleId: string) => {
     try {
       await toggleRule(ruleId);
+      // Refresh rules after toggle
+      await refreshRules();
     } catch (error) {
       console.error('Failed to toggle rule:', error);
     }
@@ -42,6 +49,8 @@ export const DeviceRules: React.FC<DeviceRulesProps> = ({ device, onClose }) => 
     if (window.confirm('Are you sure you want to delete this rule? This action cannot be undone.')) {
       try {
         await deleteRule(ruleId);
+        // Refresh rules after deletion
+        await refreshRules();
       } catch (error) {
         console.error('Failed to delete rule:', error);
       }
@@ -88,6 +97,8 @@ export const DeviceRules: React.FC<DeviceRulesProps> = ({ device, onClose }) => 
       };
       await createRule(deviceSpecificRule);
       setShowRuleBuilder(false);
+      // Refresh rules after creation
+      await refreshRules();
     } catch (error) {
       console.error('Failed to create rule:', error);
     } finally {
@@ -104,7 +115,7 @@ export const DeviceRules: React.FC<DeviceRulesProps> = ({ device, onClose }) => 
             <div>
               <h2 className="text-2xl font-bold text-slate-800">Device Rules</h2>
               <p className="text-slate-600 mt-1">
-                Manage automation rules for {device.name}
+                Manage automation rules for <span className="font-medium">{device.name}</span>
               </p>
             </div>
             <button
@@ -127,6 +138,10 @@ export const DeviceRules: React.FC<DeviceRulesProps> = ({ device, onClose }) => 
               <Settings className="w-4 h-4 text-slate-500" />
               <span className="text-slate-600">{totalRulesCount} total rules</span>
             </div>
+            <div className="flex items-center gap-2">
+              <Info className="w-4 h-4 text-blue-500" />
+              <span className="text-slate-600">Device: {device.name}</span>
+            </div>
           </div>
         </div>
 
@@ -145,12 +160,17 @@ export const DeviceRules: React.FC<DeviceRulesProps> = ({ device, onClose }) => 
 
           {/* Rules List */}
           <div className="space-y-4">
-            {deviceRules.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-slate-600 mt-2">Loading rules...</p>
+              </div>
+            ) : deviceRules.length === 0 ? (
               <div className="text-center py-12 bg-slate-50 rounded-xl border border-slate-200">
                 <Zap className="w-16 h-16 text-slate-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-slate-800 mb-2">No rules for this device</h3>
                 <p className="text-slate-600 mb-6">
-                  Create automation rules to monitor and control this device automatically.
+                  Create automation rules to monitor and control <span className="font-medium">{device.name}</span> automatically.
                 </p>
                 <button 
                   onClick={() => setShowRuleBuilder(true)}

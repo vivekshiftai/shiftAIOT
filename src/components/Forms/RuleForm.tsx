@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, X, Save } from 'lucide-react';
-import { Rule, RuleCondition, RuleAction } from '../../types';
+import { Plus, Trash2, X, Save, AlertCircle, CheckCircle } from 'lucide-react';
+import { Rule, RuleCondition, RuleAction, Device } from '../../types';
 import { useIoT } from '../../contexts/IoTContext';
 import Button from '../UI/Button';
 import { LoadingSpinner } from '../Loading/LoadingComponents';
@@ -9,7 +9,7 @@ interface RuleFormProps {
   isOpen: boolean;
   onClose: () => void;
   rule?: Rule;
-  deviceId?: string;
+  deviceId?: string; // Pre-assigned device when opened from device details
   onSubmit?: (ruleData: Omit<Rule, 'id' | 'createdAt'>) => Promise<void>;
 }
 
@@ -20,8 +20,15 @@ export const RuleForm: React.FC<RuleFormProps> = ({
   deviceId,
   onSubmit
 }) => {
-  const { devices, createRule, updateRule } = useIoT();
+  const { devices, createRule, updateRule, refreshRules } = useIoT();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string;
+    conditions?: string;
+    actions?: string;
+  }>({});
   const [formData, setFormData] = useState<{
     name: string;
     description: string;
@@ -52,7 +59,7 @@ export const RuleForm: React.FC<RuleFormProps> = ({
     ]
   });
 
-  // Reset form when rule changes
+  // Reset form when rule changes or deviceId changes
   useEffect(() => {
     if (rule) {
       setFormData({
@@ -87,7 +94,61 @@ export const RuleForm: React.FC<RuleFormProps> = ({
         ]
       });
     }
+    setError('');
+    setSuccess('');
+    setFieldErrors({});
   }, [rule, deviceId]);
+
+  // Real-time validation
+  const validateField = (field: string, value: any) => {
+    const newErrors = { ...fieldErrors };
+    
+    switch (field) {
+      case 'name':
+        if (!value.trim()) {
+          newErrors.name = 'Rule name is required';
+        } else if (value.trim().length < 3) {
+          newErrors.name = 'Rule name must be at least 3 characters';
+        } else {
+          delete newErrors.name;
+        }
+        break;
+      case 'conditions':
+        if (!value || value.length === 0) {
+          newErrors.conditions = 'At least one condition is required';
+        } else {
+          const hasUnassignedDevice = value.some((condition: RuleCondition) => !condition.deviceId);
+          if (hasUnassignedDevice) {
+            newErrors.conditions = 'All conditions must have a device assigned';
+          } else {
+            delete newErrors.conditions;
+          }
+        }
+        break;
+      case 'actions':
+        if (!value || value.length === 0) {
+          newErrors.actions = 'At least one action is required';
+        } else {
+          delete newErrors.actions;
+        }
+        break;
+    }
+    
+    setFieldErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle form data changes with real-time validation
+  const handleFormDataChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    validateField(field, value);
+  };
+
+  // Get device name for display
+  const getDeviceName = (deviceId: string) => {
+    const device = devices.find(d => d.id === deviceId);
+    return device ? device.name : 'Unknown Device';
+  };
 
   const addCondition = () => {
     const newCondition: RuleCondition = {
@@ -118,39 +179,109 @@ export const RuleForm: React.FC<RuleFormProps> = ({
   };
 
   const updateCondition = (index: number, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      conditions: prev.conditions.map((condition, i) => 
+    setFormData(prev => {
+      const newConditions = prev.conditions.map((condition, i) => 
         i === index ? { ...condition, [field]: value } : condition
-      )
-    }));
+      );
+      const newFormData = { ...prev, conditions: newConditions };
+      
+      // Validate conditions after update
+      validateField('conditions', newConditions);
+      
+      return newFormData;
+    });
   };
 
   const removeCondition = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      conditions: prev.conditions.filter((_, i) => i !== index)
-    }));
+    if (formData.conditions.length > 1) {
+      setFormData(prev => {
+        const newConditions = prev.conditions.filter((_, i) => i !== index);
+        const newFormData = { ...prev, conditions: newConditions };
+        
+        // Validate conditions after removal
+        validateField('conditions', newConditions);
+        
+        return newFormData;
+      });
+    }
   };
 
   const updateAction = (index: number, field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      actions: prev.actions.map((action, i) => 
+    setFormData(prev => {
+      const newActions = prev.actions.map((action, i) => 
         i === index ? { ...action, [field]: value } : action
-      )
-    }));
+      );
+      const newFormData = { ...prev, actions: newActions };
+      
+      // Validate actions after update
+      validateField('actions', newActions);
+      
+      return newFormData;
+    });
   };
 
   const removeAction = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      actions: prev.actions.filter((_, i) => i !== index)
-    }));
+    if (formData.actions.length > 1) {
+      setFormData(prev => {
+        const newActions = prev.actions.filter((_, i) => i !== index);
+        const newFormData = { ...prev, actions: newActions };
+        
+        // Validate actions after removal
+        validateField('actions', newActions);
+        
+        return newFormData;
+      });
+    }
+  };
+
+  const validateForm = () => {
+    const errors: string[] = [];
+    
+    if (!formData.name.trim()) {
+      errors.push('Rule name is required');
+    } else if (formData.name.trim().length < 3) {
+      errors.push('Rule name must be at least 3 characters');
+    }
+    
+    if (formData.conditions.length === 0) {
+      errors.push('At least one condition is required');
+    } else {
+      const hasUnassignedDevice = formData.conditions.some(condition => !condition.deviceId);
+      if (hasUnassignedDevice) {
+        errors.push('All conditions must have a device assigned');
+      }
+    }
+    
+    if (formData.actions.length === 0) {
+      errors.push('At least one action is required');
+    }
+    
+    if (errors.length > 0) {
+      setError(errors.join(', '));
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Check if form is valid for submit button
+  const isFormValid = () => {
+    return formData.name.trim().length >= 3 && 
+           formData.conditions.length > 0 && 
+           formData.actions.length > 0 &&
+           !formData.conditions.some(condition => !condition.deviceId) &&
+           Object.keys(fieldErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!validateForm()) {
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
@@ -182,9 +313,19 @@ export const RuleForm: React.FC<RuleFormProps> = ({
           actions: formData.actions
         });
       }
-      onClose();
+      
+      setSuccess(rule ? 'Rule updated successfully!' : 'Rule created successfully!');
+      
+      // Refresh rules data
+      await refreshRules();
+      
+      // Close modal after a short delay to show success message
+      setTimeout(() => {
+        onClose();
+      }, 1500);
     } catch (error) {
       console.error('Failed to save rule:', error);
+      setError(error instanceof Error ? error.message : 'Failed to save rule');
     } finally {
       setIsSubmitting(false);
     }
@@ -198,9 +339,16 @@ export const RuleForm: React.FC<RuleFormProps> = ({
         {/* Header */}
         <div className="p-6 border-b border-slate-200">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-slate-800">
-              {rule ? 'Edit Rule' : 'Create New Rule'}
-            </h2>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800">
+                {rule ? 'Edit Rule' : 'Create New Rule'}
+              </h2>
+              {deviceId && (
+                <p className="text-sm text-slate-600 mt-1">
+                  Device: <span className="font-medium">{getDeviceName(deviceId)}</span>
+                </p>
+              )}
+            </div>
             <button
               onClick={onClose}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
@@ -209,6 +357,31 @@ export const RuleForm: React.FC<RuleFormProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Error/Success Messages */}
+        {error && (
+          <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-300 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+              <div>
+                <h4 className="font-semibold text-red-800">Error</h4>
+                <p className="text-red-700 leading-relaxed">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {success && (
+          <div className="mx-6 mt-4 p-4 bg-green-50 border border-green-300 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              <div>
+                <h4 className="font-semibold text-green-800">Success</h4>
+                <p className="text-green-700 leading-relaxed">{success}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -221,11 +394,14 @@ export const RuleForm: React.FC<RuleFormProps> = ({
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => handleFormDataChange('name', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900"
                 placeholder="Enter rule name"
                 required
               />
+              {fieldErrors.name && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.name}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -274,13 +450,15 @@ export const RuleForm: React.FC<RuleFormProps> = ({
                 <div key={condition.id} className="p-4 border border-slate-200 rounded-lg bg-slate-50">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-medium text-slate-900">Condition {index + 1}</h4>
-                    <button
-                      type="button"
-                      onClick={() => removeCondition(index)}
-                      className="p-1 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {formData.conditions.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeCondition(index)}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -299,11 +477,12 @@ export const RuleForm: React.FC<RuleFormProps> = ({
                     )}
                     
                     <div className={index === 0 ? 'col-span-1' : ''}>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Device</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Device *</label>
                       <select
                         value={condition.deviceId || ''}
                         onChange={(e) => updateCondition(index, 'deviceId', e.target.value)}
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm"
+                        required
                       >
                         <option value="">Select device</option>
                         {devices.map(device => (
@@ -324,6 +503,7 @@ export const RuleForm: React.FC<RuleFormProps> = ({
                         <option value="pressure">Pressure</option>
                         <option value="light">Light</option>
                         <option value="motion">Motion</option>
+                        <option value="status">Status</option>
                       </select>
                     </div>
 
@@ -357,6 +537,9 @@ export const RuleForm: React.FC<RuleFormProps> = ({
                 </div>
               ))}
             </div>
+            {fieldErrors.conditions && (
+              <p className="text-xs text-red-500 mt-2">{fieldErrors.conditions}</p>
+            )}
           </div>
 
           {/* Actions */}
@@ -378,13 +561,15 @@ export const RuleForm: React.FC<RuleFormProps> = ({
                 <div key={action.id} className="p-4 border border-slate-200 rounded-lg bg-slate-50">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-medium text-slate-900">Action {index + 1}</h4>
-                    <button
-                      type="button"
-                      onClick={() => removeAction(index)}
-                      className="p-1 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {formData.actions.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeAction(index)}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -434,6 +619,9 @@ export const RuleForm: React.FC<RuleFormProps> = ({
                 </div>
               ))}
             </div>
+            {fieldErrors.actions && (
+              <p className="text-xs text-red-500 mt-2">{fieldErrors.actions}</p>
+            )}
           </div>
 
           {/* Submit */}
@@ -447,7 +635,7 @@ export const RuleForm: React.FC<RuleFormProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isFormValid()}
               className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
               {isSubmitting ? (
