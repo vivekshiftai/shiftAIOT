@@ -25,35 +25,52 @@ import com.iotplatform.model.Rule;
 import com.iotplatform.model.RuleAction;
 import com.iotplatform.model.RuleCondition;
 import com.iotplatform.model.User;
+import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.service.RuleService;
 
 import jakarta.validation.Valid;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/rules")
+@RequestMapping("/api/rules")
 public class RuleController {
 
-    @Autowired
-    private RuleService ruleService;
+    private final RuleService ruleService;
+
+    public RuleController(RuleService ruleService) {
+        this.ruleService = ruleService;
+    }
 
     @GetMapping
     @PreAuthorize("hasAuthority('RULE_READ')")
-    public ResponseEntity<List<Rule>> getAllRules(@AuthenticationPrincipal User user) {
+    public ResponseEntity<List<Rule>> getAllRules(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
         List<Rule> rules = ruleService.getAllRules(user.getOrganizationId());
         return ResponseEntity.ok(rules);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('RULE_READ')")
-    public ResponseEntity<Rule> getRule(@PathVariable String id, @AuthenticationPrincipal User user) {
+    public ResponseEntity<Rule> getRule(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
         Optional<Rule> rule = ruleService.getRule(id, user.getOrganizationId());
         return rule.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('RULE_WRITE')")
-    public ResponseEntity<Rule> createRule(@Valid @RequestBody RuleCreateRequest request, @AuthenticationPrincipal User user) {
+    public ResponseEntity<Rule> createRule(@Valid @RequestBody RuleCreateRequest request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         Rule rule = new Rule();
         rule.setName(request.getName());
         rule.setDescription(request.getDescription());
@@ -78,7 +95,12 @@ public class RuleController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('RULE_WRITE')")
-    public ResponseEntity<Rule> updateRule(@PathVariable String id, @Valid @RequestBody RuleCreateRequest request, @AuthenticationPrincipal User user) {
+    public ResponseEntity<Rule> updateRule(@PathVariable String id, @Valid @RequestBody RuleCreateRequest request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         try {
             Rule rule = new Rule();
             rule.setName(request.getName());
@@ -106,7 +128,12 @@ public class RuleController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('RULE_DELETE')")
-    public ResponseEntity<?> deleteRule(@PathVariable String id, @AuthenticationPrincipal User user) {
+    public ResponseEntity<?> deleteRule(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         try {
             ruleService.deleteRule(id, user.getOrganizationId());
             return ResponseEntity.ok().build();
@@ -117,7 +144,12 @@ public class RuleController {
 
     @PatchMapping("/{id}/toggle")
     @PreAuthorize("hasAuthority('RULE_WRITE')")
-    public ResponseEntity<Rule> toggleRule(@PathVariable String id, @AuthenticationPrincipal User user) {
+    public ResponseEntity<Rule> toggleRule(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         try {
             Optional<Rule> ruleOpt = ruleService.getRule(id, user.getOrganizationId());
             if (ruleOpt.isPresent()) {
@@ -134,14 +166,22 @@ public class RuleController {
 
     @GetMapping("/active")
     @PreAuthorize("hasAuthority('RULE_READ')")
-    public ResponseEntity<List<Rule>> getActiveRules(@AuthenticationPrincipal User user) {
+    public ResponseEntity<List<Rule>> getActiveRules(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
         List<Rule> activeRules = ruleService.getActiveRules(user.getOrganizationId());
         return ResponseEntity.ok(activeRules);
     }
 
     @GetMapping("/stats")
     @PreAuthorize("hasAuthority('RULE_READ')")
-    public ResponseEntity<RuleStats> getRuleStats(@AuthenticationPrincipal User user) {
+    public ResponseEntity<RuleStats> getRuleStats(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
         RuleStats stats = ruleService.getRuleStats(user.getOrganizationId());
         return ResponseEntity.ok(stats);
     }
@@ -150,7 +190,11 @@ public class RuleController {
     @PreAuthorize("hasAuthority('RULE_WRITE')")
     public ResponseEntity<?> generateRules(
             @RequestBody Map<String, Object> request,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
         try {
             String pdfFilename = (String) request.get("pdf_filename");
             Integer chunkSize = (Integer) request.getOrDefault("chunk_size", 1000);

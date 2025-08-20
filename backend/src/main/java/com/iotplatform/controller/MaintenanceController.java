@@ -1,147 +1,186 @@
 package com.iotplatform.controller;
 
 import java.util.List;
-import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.iotplatform.model.MaintenanceSchedule;
 import com.iotplatform.model.User;
-import com.iotplatform.repository.MaintenanceScheduleRepository;
+import com.iotplatform.security.CustomUserDetails;
+import com.iotplatform.service.MaintenanceService;
 
 import jakarta.validation.Valid;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/maintenance")
+@RequestMapping("/api/maintenance")
+@CrossOrigin(origins = "*")
 public class MaintenanceController {
 
-    @Autowired
-    private MaintenanceScheduleRepository repo;
+    private final MaintenanceService maintenanceService;
+
+    public MaintenanceController(MaintenanceService maintenanceService) {
+        this.maintenanceService = maintenanceService;
+    }
 
     @GetMapping
     @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
-    public ResponseEntity<List<MaintenanceSchedule>> getAll(@AuthenticationPrincipal User user) {
-        List<MaintenanceSchedule> tasks = repo.findByOrganizationId(user.getOrganizationId());
+    public ResponseEntity<List<MaintenanceSchedule>> getAll(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        List<MaintenanceSchedule> tasks = maintenanceService.getAllTasks(user.getOrganizationId());
         return ResponseEntity.ok(tasks);
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
-    public ResponseEntity<MaintenanceSchedule> getOne(@PathVariable String id, @AuthenticationPrincipal User user) {
-        Optional<MaintenanceSchedule> task = repo.findByIdAndOrganizationId(id, user.getOrganizationId());
-        return task.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<MaintenanceSchedule> getOne(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        return maintenanceService.getTask(id, user.getOrganizationId())
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
     @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
-    public ResponseEntity<MaintenanceSchedule> create(@Valid @RequestBody MaintenanceSchedule task, @AuthenticationPrincipal User user) {
-        // Set organization ID and default values
+    public ResponseEntity<MaintenanceSchedule> create(@Valid @RequestBody MaintenanceSchedule task, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
         task.setOrganizationId(user.getOrganizationId());
-        if (task.getStatus() == null || task.getStatus().isBlank()) {
-            task.setStatus("pending");
-        }
-        if (task.getPriority() == null || task.getPriority().isBlank()) {
-            task.setPriority("medium");
-        }
-        
-        MaintenanceSchedule saved = repo.save(task);
-        return ResponseEntity.ok(saved);
+        MaintenanceSchedule createdTask = maintenanceService.createTask(task);
+        return ResponseEntity.ok(createdTask);
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
-    public ResponseEntity<MaintenanceSchedule> update(@PathVariable String id, @Valid @RequestBody MaintenanceSchedule updates, @AuthenticationPrincipal User user) {
-        return repo.findByIdAndOrganizationId(id, user.getOrganizationId()).map(existing -> {
-            // Update fields if provided
-            if (updates.getTaskName() != null) existing.setTaskName(updates.getTaskName());
-            if (updates.getDeviceId() != null) existing.setDeviceId(updates.getDeviceId());
-            if (updates.getDeviceName() != null) existing.setDeviceName(updates.getDeviceName());
-            if (updates.getComponentName() != null) existing.setComponentName(updates.getComponentName());
-            if (updates.getMaintenanceType() != null) existing.setMaintenanceType(updates.getMaintenanceType());
-            if (updates.getFrequency() != null) existing.setFrequency(updates.getFrequency());
-            if (updates.getLastMaintenance() != null) existing.setLastMaintenance(updates.getLastMaintenance());
-            if (updates.getNextMaintenance() != null) existing.setNextMaintenance(updates.getNextMaintenance());
-            if (updates.getDescription() != null) existing.setDescription(updates.getDescription());
-            if (updates.getPriority() != null) existing.setPriority(updates.getPriority());
-            if (updates.getAssignedTo() != null) existing.setAssignedTo(updates.getAssignedTo());
-            if (updates.getNotes() != null) existing.setNotes(updates.getNotes());
-            if (updates.getStatus() != null) existing.setStatus(updates.getStatus());
-            
-            MaintenanceSchedule saved = repo.save(existing);
-            return ResponseEntity.ok(saved);
-        }).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<MaintenanceSchedule> update(@PathVariable String id, @Valid @RequestBody MaintenanceSchedule updates, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        try {
+            MaintenanceSchedule updatedTask = maintenanceService.updateTask(id, updates, user.getOrganizationId());
+            return ResponseEntity.ok(updatedTask);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('MAINTENANCE_DELETE')")
-    public ResponseEntity<?> delete(@PathVariable String id, @AuthenticationPrincipal User user) {
-        return repo.findByIdAndOrganizationId(id, user.getOrganizationId()).map(existing -> {
-            repo.delete(existing);
+    public ResponseEntity<?> delete(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        try {
+            maintenanceService.deleteTask(id, user.getOrganizationId());
             return ResponseEntity.ok().build();
-        }).orElse(ResponseEntity.notFound().build());
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
-    @GetMapping("/search")
-    @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
-    public ResponseEntity<List<MaintenanceSchedule>> search(
-            @RequestParam String query, 
-            @AuthenticationPrincipal User user) {
-        List<MaintenanceSchedule> tasks = repo.searchByOrganizationIdAndTaskNameOrDescription(user.getOrganizationId(), query);
-        return ResponseEntity.ok(tasks);
+    @PatchMapping("/{id}/complete")
+    @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
+    public ResponseEntity<MaintenanceSchedule> markAsCompleted(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        try {
+            MaintenanceSchedule completedTask = maintenanceService.markAsCompleted(id, user.getOrganizationId());
+            return ResponseEntity.ok(completedTask);
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @GetMapping("/overdue")
     @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
-    public ResponseEntity<List<MaintenanceSchedule>> getOverdueTasks(@AuthenticationPrincipal User user) {
-        List<MaintenanceSchedule> tasks = repo.findOverdueTasks(user.getOrganizationId());
-        return ResponseEntity.ok(tasks);
+    public ResponseEntity<List<MaintenanceSchedule>> getOverdueTasks(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        List<MaintenanceSchedule> overdueTasks = maintenanceService.getOverdueTasks(user.getOrganizationId());
+        return ResponseEntity.ok(overdueTasks);
     }
 
     @GetMapping("/upcoming")
     @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
-    public ResponseEntity<List<MaintenanceSchedule>> getUpcomingTasks(@AuthenticationPrincipal User user) {
-        List<MaintenanceSchedule> tasks = repo.findUpcomingTasks(user.getOrganizationId());
-        return ResponseEntity.ok(tasks);
+    public ResponseEntity<List<MaintenanceSchedule>> getUpcomingTasks(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        List<MaintenanceSchedule> upcomingTasks = maintenanceService.getUpcomingTasks(user.getOrganizationId());
+        return ResponseEntity.ok(upcomingTasks);
     }
 
-    @GetMapping("/status/{status}")
+    @GetMapping("/stats")
     @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
-    public ResponseEntity<List<MaintenanceSchedule>> getByStatus(
-            @PathVariable String status, 
-            @AuthenticationPrincipal User user) {
-        List<MaintenanceSchedule> tasks = repo.findByOrganizationIdAndStatus(user.getOrganizationId(), status);
-        return ResponseEntity.ok(tasks);
-    }
-
-    @GetMapping("/priority/{priority}")
-    @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
-    public ResponseEntity<List<MaintenanceSchedule>> getByPriority(
-            @PathVariable String priority, 
-            @AuthenticationPrincipal User user) {
-        List<MaintenanceSchedule> tasks = repo.findByOrganizationIdAndPriority(user.getOrganizationId(), priority);
-        return ResponseEntity.ok(tasks);
+    public ResponseEntity<MaintenanceStats> getStats(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        MaintenanceStats stats = maintenanceService.getStats(user.getOrganizationId());
+        return ResponseEntity.ok(stats);
     }
 
     @GetMapping("/device/{deviceId}")
     @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
-    public ResponseEntity<List<MaintenanceSchedule>> getByDevice(
-            @PathVariable String deviceId, 
-            @AuthenticationPrincipal User user) {
-        List<MaintenanceSchedule> tasks = repo.findByOrganizationIdAndDeviceId(user.getOrganizationId(), deviceId);
-        return ResponseEntity.ok(tasks);
+    public ResponseEntity<List<MaintenanceSchedule>> getTasksByDevice(@PathVariable String deviceId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        List<MaintenanceSchedule> deviceTasks = maintenanceService.getTasksByDevice(deviceId, user.getOrganizationId());
+        return ResponseEntity.ok(deviceTasks);
+    }
+
+    @GetMapping("/type/{type}")
+    @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
+    public ResponseEntity<List<MaintenanceSchedule>> getTasksByType(@PathVariable String type, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        List<MaintenanceSchedule> typeTasks = maintenanceService.getTasksByType(type, user.getOrganizationId());
+        return ResponseEntity.ok(typeTasks);
+    }
+
+    // DTO for maintenance statistics
+    public static class MaintenanceStats {
+        private long totalTasks;
+        private long completedTasks;
+        private long overdueTasks;
+        private long upcomingTasks;
+
+        public MaintenanceStats(long totalTasks, long completedTasks, long overdueTasks, long upcomingTasks) {
+            this.totalTasks = totalTasks;
+            this.completedTasks = completedTasks;
+            this.overdueTasks = overdueTasks;
+            this.upcomingTasks = upcomingTasks;
+        }
+
+        // Getters
+        public long getTotalTasks() { return totalTasks; }
+        public long getCompletedTasks() { return completedTasks; }
+        public long getOverdueTasks() { return overdueTasks; }
+        public long getUpcomingTasks() { return upcomingTasks; }
     }
 }

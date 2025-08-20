@@ -38,6 +38,7 @@ import com.iotplatform.model.Rule;
 import com.iotplatform.model.DeviceMaintenance;
 import com.iotplatform.model.DeviceSafetyPrecaution;
 import com.iotplatform.service.PDFProcessingService;
+import com.iotplatform.security.CustomUserDetails;
 
 import jakarta.validation.Valid;
 
@@ -66,50 +67,43 @@ public class DeviceController {
 
     @GetMapping
     public ResponseEntity<List<Device>> getAllDevices(
-            @AuthenticationPrincipal User user,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String type,
-            @RequestParam(required = false) String search) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         
-        String userEmail = getUserEmail(user);
-        String organizationId = getOrganizationId(user);
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
         
         logger.info("User {} requesting devices with filters - status: {}, type: {}, search: {}", 
-                   userEmail, status, type, search);
+                   userEmail, null, null, null);
         logger.info("Organization ID: {}", organizationId);
         
         List<Device> devices;
         
         try {
-            if (search != null && !search.trim().isEmpty()) {
-                devices = deviceService.searchDevices(organizationId, search.trim());
-                logger.info("Found {} devices matching search: {}", devices.size(), search);
-            } else if (status != null && !status.trim().isEmpty()) {
-                devices = deviceService.getDevicesByStatus(organizationId, Device.DeviceStatus.valueOf(status.toUpperCase()));
-                logger.info("Found {} devices with status: {}", devices.size(), status);
-            } else if (type != null && !type.trim().isEmpty()) {
-                devices = deviceService.getDevicesByType(organizationId, Device.DeviceType.valueOf(type.toUpperCase()));
-                logger.info("Found {} devices with type: {}", devices.size(), type);
-            } else {
-                devices = deviceService.getAllDevices(organizationId);
-                logger.info("Found {} total devices for organization: {}", devices.size(), organizationId);
-            }
-            
-            logger.info("Returning {} devices to user: {}", devices.size(), userEmail);
-            return ResponseEntity.ok(devices);
-        } catch (IllegalArgumentException e) {
-            logger.error("Invalid filter parameter for user {}: {}", userEmail, e.getMessage());
-            return ResponseEntity.badRequest().build();
+            devices = deviceService.getAllDevices(organizationId);
+            logger.info("Found {} total devices for organization: {}", devices.size(), organizationId);
         } catch (Exception e) {
             logger.error("Error getting devices for user {}: {}", userEmail, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+        
+        logger.info("Returning {} devices to user: {}", devices.size(), userEmail);
+        return ResponseEntity.ok(devices);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Device> getDevice(@PathVariable String id, @AuthenticationPrincipal User user) {
-        String userEmail = getUserEmail(user);
-        String organizationId = getOrganizationId(user);
+    public ResponseEntity<Device> getDevice(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
         
         logger.info("User {} requesting device with ID: {}", userEmail, id);
         
@@ -130,13 +124,19 @@ public class DeviceController {
     }
 
     @PostMapping
-    public ResponseEntity<Device> createDevice(@Valid @RequestBody Device device, @AuthenticationPrincipal User user) {
-        String userEmail = getUserEmail(user);
-        String organizationId = getOrganizationId(user);
+    public ResponseEntity<Device> createDevice(@Valid @RequestBody Device device, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
         
         logger.info("User {} creating new device: {}", userEmail, device.getName());
         
         try {
+            device.setOrganizationId(organizationId);
             Device createdDevice = deviceService.createDevice(device, organizationId);
             logger.info("Device {} created successfully with ID: {}", device.getName(), createdDevice.getId());
             return ResponseEntity.ok(createdDevice);
@@ -152,10 +152,15 @@ public class DeviceController {
             @RequestParam(value = "manualFile", required = false) MultipartFile manualFile,
             @RequestParam(value = "datasheetFile", required = false) MultipartFile datasheetFile,
             @RequestParam(value = "certificateFile", required = false) MultipartFile certificateFile,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         
-        String userEmail = getUserEmail(user);
-        String organizationId = getOrganizationId(user);
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
         
         logger.info("User {} creating new device with files: {}", userEmail, deviceData);
         
@@ -183,9 +188,14 @@ public class DeviceController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Device> updateDevice(@PathVariable String id, @Valid @RequestBody Device deviceDetails, @AuthenticationPrincipal User user) {
-        String userEmail = getUserEmail(user);
-        String organizationId = getOrganizationId(user);
+    public ResponseEntity<Device> updateDevice(@PathVariable String id, @Valid @RequestBody Device deviceDetails, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
         
         logger.info("User {} updating device: {}", userEmail, id);
         
@@ -205,9 +215,14 @@ public class DeviceController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteDevice(@PathVariable String id, @AuthenticationPrincipal User user) {
-        String userEmail = getUserEmail(user);
-        String organizationId = getOrganizationId(user);
+    public ResponseEntity<?> deleteDevice(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
         
         logger.info("User {} deleting device: {}", userEmail, id);
         
@@ -227,9 +242,14 @@ public class DeviceController {
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Device> updateDeviceStatus(@PathVariable String id, @RequestBody Device.DeviceStatus status, @AuthenticationPrincipal User user) {
-        String userEmail = getUserEmail(user);
-        String organizationId = getOrganizationId(user);
+    public ResponseEntity<Device> updateDeviceStatus(@PathVariable String id, @RequestBody Device.DeviceStatus status, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
         
         logger.info("User {} updating device {} status to: {}", userEmail, id, status);
         
@@ -254,7 +274,15 @@ public class DeviceController {
     }
 
     @PostMapping("/{id}/telemetry")
-    public ResponseEntity<?> postTelemetryData(@PathVariable String id, @Valid @RequestBody TelemetryDataRequest telemetryData) {
+    public ResponseEntity<?> postTelemetryData(@PathVariable String id, @Valid @RequestBody TelemetryDataRequest telemetryData, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
+        
         logger.debug("Receiving telemetry data for device: {}", id);
         
         if (id == null || id.trim().isEmpty()) {
@@ -273,7 +301,15 @@ public class DeviceController {
     }
 
     @GetMapping("/{id}/telemetry")
-    public ResponseEntity<String> getTelemetryData(@PathVariable String id, @RequestParam(defaultValue = "1h") String range) {
+    public ResponseEntity<String> getTelemetryData(@PathVariable String id, @RequestParam(defaultValue = "1h") String range, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
+        
         logger.debug("User requesting telemetry data for device: {} with range: {}", id, range);
         
         if (id == null || id.trim().isEmpty()) {
@@ -291,9 +327,14 @@ public class DeviceController {
     }
 
     @GetMapping("/stats")
-    public ResponseEntity<DeviceStatsResponse> getDeviceStats(@AuthenticationPrincipal User user) {
-        String userEmail = getUserEmail(user);
-        String organizationId = getOrganizationId(user);
+    public ResponseEntity<DeviceStatsResponse> getDeviceStats(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
         
         logger.info("User {} requesting device statistics", userEmail);
         
@@ -312,10 +353,15 @@ public class DeviceController {
     public ResponseEntity<byte[]> downloadDeviceDocumentation(
             @PathVariable String id,
             @PathVariable String type,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         
-        String userEmail = getUserEmail(user);
-        String organizationId = getOrganizationId(user);
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
         
         logger.info("User {} requesting device documentation: device={}, type={}", userEmail, id, type);
         
@@ -361,10 +407,15 @@ public class DeviceController {
     @GetMapping("/{id}/documentation")
     public ResponseEntity<Map<String, Object>> getDeviceDocumentationInfo(
             @PathVariable String id,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         
-        String userEmail = getUserEmail(user);
-        String organizationId = getOrganizationId(user);
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
         
         logger.info("User {} requesting device documentation info: device={}", userEmail, id);
         
@@ -398,10 +449,15 @@ public class DeviceController {
             @RequestParam(value = "datasheetFile", required = false) MultipartFile datasheetFile,
             @RequestParam(value = "certificateFile", required = false) MultipartFile certificateFile,
             @RequestParam(value = "aiRules", required = false) String aiRulesJson,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         
-        String userEmail = getUserEmail(user);
-        String organizationId = getOrganizationId(user);
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
         
         logger.info("User {} starting AI-powered device onboarding", userEmail);
         
@@ -430,9 +486,14 @@ public class DeviceController {
     }
     
     @GetMapping("/{id}/pdf-results")
-    public ResponseEntity<?> getDevicePDFResults(@PathVariable String id, @AuthenticationPrincipal User user) {
+    public ResponseEntity<?> getDevicePDFResults(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         try {
-            String organizationId = getOrganizationId(user);
+            String organizationId = user.getOrganizationId();
             
             Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
             if (deviceOpt.isEmpty()) {
@@ -461,9 +522,14 @@ public class DeviceController {
     }
 
     @GetMapping("/{id}/maintenance")
-    public ResponseEntity<?> getDeviceMaintenance(@PathVariable String id, @AuthenticationPrincipal User user) {
+    public ResponseEntity<?> getDeviceMaintenance(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         try {
-            String organizationId = getOrganizationId(user);
+            String organizationId = user.getOrganizationId();
             
             Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
             if (deviceOpt.isEmpty()) {
@@ -480,9 +546,14 @@ public class DeviceController {
     }
 
     @GetMapping("/{id}/safety-precautions")
-    public ResponseEntity<?> getDeviceSafetyPrecautions(@PathVariable String id, @AuthenticationPrincipal User user) {
+    public ResponseEntity<?> getDeviceSafetyPrecautions(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         try {
-            String organizationId = getOrganizationId(user);
+            String organizationId = user.getOrganizationId();
             
             Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
             if (deviceOpt.isEmpty()) {
@@ -499,9 +570,14 @@ public class DeviceController {
     }
 
     @GetMapping("/{id}/rules")
-    public ResponseEntity<?> getDeviceRules(@PathVariable String id, @AuthenticationPrincipal User user) {
+    public ResponseEntity<?> getDeviceRules(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
         try {
-            String organizationId = getOrganizationId(user);
+            String organizationId = user.getOrganizationId();
             
             Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
             if (deviceOpt.isEmpty()) {
