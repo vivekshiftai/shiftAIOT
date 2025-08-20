@@ -3,7 +3,7 @@
 
 export const API_CONFIG = {
   // Backend API (your Spring Boot application)
-  BACKEND_BASE_URL: 'http://20.57.36.66:8100/api',
+  BACKEND_BASE_URL: 'http://20.57.36.66:8100',
   
   // External PDF Processing API
   PDF_PROCESSING_API_URL: 'http://20.57.36.66:8000', // Updated to use new VM IP

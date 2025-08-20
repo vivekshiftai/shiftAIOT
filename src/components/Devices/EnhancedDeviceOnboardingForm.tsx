@@ -3,7 +3,7 @@ import { X, ChevronLeft, ChevronRight, Upload, FileText, Settings, Wifi, Databas
 import { pdfProcessingService } from '../../services/pdfprocess';
 import { EnhancedOnboardingLoader } from '../Loading/EnhancedOnboardingLoader';
 import { DeviceChatInterface } from './DeviceChatInterface';
-
+import { getApiConfig } from '../../config/api';
 
 
 interface DeviceFormData {
@@ -417,7 +417,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         };
 
         // Create device in backend
-        const response = await fetch('/api/devices', {
+        const response = await fetch(`${getApiConfig().BACKEND_BASE_URL}/api/devices`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
