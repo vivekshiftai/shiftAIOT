@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Play, Pause, Trash2, Edit, Zap, AlertTriangle, CheckCircle, Info, Settings, X } from 'lucide-react';
-import { Device, Rule, RuleCondition, RuleAction } from '../../types';
+import { Device, Rule } from '../../types';
 import { useIoT } from '../../contexts/IoTContext';
-import { RuleBuilder } from '../Rules/RuleBuilder';
+import { RuleForm } from '../Forms';
 
 interface DeviceRulesProps {
   device: Device;
@@ -251,7 +251,7 @@ export const DeviceRules: React.FC<DeviceRulesProps> = ({ device, onClose }) => 
         </div>
 
         {/* Rule Builder Modal */}
-        <RuleBuilder
+        <RuleForm
           isOpen={showRuleBuilder}
           onClose={() => {
             setShowRuleBuilder(false);

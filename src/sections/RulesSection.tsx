@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Play, Pause, Trash2, Edit, Zap, Filter, Search, AlertTriangle, CheckCircle, Info, RefreshCw } from 'lucide-react';
-import { RuleBuilder } from '../components/Rules/RuleBuilder';
 import { useIoT } from '../contexts/IoTContext';
 import { ruleAPI } from '../services/api';
-import { Rule } from '../types';
+import { Rule, RuleCondition, RuleAction } from '../types';
 import { LoadingSpinner, LoadingButton } from '../components/Loading/LoadingComponents';
+import { RuleForm } from '../components/Forms';
 
 export const RulesSection: React.FC = () => {
   const { rules, createRule, updateRule, deleteRule, toggleRule, refreshRules, loading } = useIoT();
@@ -391,13 +391,29 @@ export const RulesSection: React.FC = () => {
       )}
 
       {/* Rule Builder Modal */}
-      <RuleBuilder
+      <RuleForm
         isOpen={showRuleBuilder}
         onClose={() => {
           setShowRuleBuilder(false);
           setEditingRule(null);
         }}
-        rule={editingRule || undefined}
+        onSubmit={(data) => {
+          if (editingRule) {
+            updateRule(editingRule.id, data).then(() => {
+              refreshRules();
+              setShowRuleBuilder(false);
+              setEditingRule(null);
+            });
+          } else {
+            createRule(data).then(() => {
+              refreshRules();
+              setShowRuleBuilder(false);
+              setEditingRule(null);
+            });
+          }
+        }}
+        initialValues={editingRule}
+        isSubmitting={isSubmitting}
       />
     </div>
   );

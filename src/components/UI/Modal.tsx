@@ -76,7 +76,7 @@ const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[1050] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[1050] flex items-center justify-center">
       {/* Backdrop */}
       <div
         className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-200 ${
@@ -87,7 +87,7 @@ const Modal: React.FC<ModalProps> = ({
       
       {/* Modal */}
       <div
-        className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-h-[90vh] flex flex-col transition-all duration-300 ${
+        className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-[90vw] max-h-[90vh] flex flex-col transition-all duration-300 mx-4 ${
           isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
         } ${getSizeClasses()} ${className}`}
         onClick={(e) => e.stopPropagation()}

@@ -1,17 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Target, 
-  Shield, 
-  AlertTriangle, 
-  Edit, 
-  Trash2, 
-  Save, 
-  X, 
-  Plus,
-  Clock,
-  Zap,
-  Settings
-} from 'lucide-react';
+import { Plus, Trash2, X, AlertTriangle, CheckCircle, Clock, Zap } from 'lucide-react';
+import { Device } from '../../types';
+import { useIoT } from '../../contexts/IoTContext';
+import { RuleForm } from '../Forms';
 import { IoTRule, MaintenanceTask } from '../../services/pdfprocess';
 
 interface DeviceRulesManagerProps {
@@ -82,9 +73,9 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
   const getRuleIcon = (ruleType: string) => {
     switch (ruleType) {
       case 'monitoring':
-        return <Target className="w-4 h-4" />;
+        return <CheckCircle className="w-4 h-4" />;
       case 'maintenance':
-        return <Shield className="w-4 h-4" />;
+        return <Clock className="w-4 h-4" />;
       case 'alert':
         return <AlertTriangle className="w-4 h-4" />;
       default:
@@ -189,15 +180,15 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Target className="w-6 h-6 text-blue-600" />
+                  <CheckCircle className="w-6 h-6 text-green-600" />
                   <h3 className="text-lg font-semibold text-slate-800">IoT Rules</h3>
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">
+                  <span className="px-2 py-1 bg-green-100 text-green-700 text-sm rounded-full">
                     {rules.length} rules
                   </span>
                 </div>
                 <button
                   onClick={() => setShowAddRule(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   Add Rule
@@ -208,83 +199,26 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
             <div className="p-6 space-y-4">
               {/* Add New Rule Form */}
               {showAddRule && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-medium text-blue-800">Add New Rule</h4>
-                    <button
-                      onClick={() => setShowAddRule(false)}
-                      className="p-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                                         <div>
-                       <label className="block text-sm font-medium text-blue-700 mb-1">Category</label>
-                       <select
-                         value={newRule.category}
-                         onChange={(e) => setNewRule({...newRule, category: e.target.value as any})}
-                         className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                       >
-                         <option value="monitoring">Monitoring</option>
-                         <option value="maintenance">Maintenance</option>
-                         <option value="alert">Alert</option>
-                       </select>
-                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-blue-700 mb-1">Priority</label>
-                      <select
-                        value={newRule.priority}
-                        onChange={(e) => setNewRule({...newRule, priority: e.target.value as any})}
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-blue-700 mb-1">Condition</label>
-                      <textarea
-                        value={newRule.condition || ''}
-                        onChange={(e) => setNewRule({...newRule, condition: e.target.value})}
-                        placeholder="e.g., Temperature exceeds 85°C"
-                        rows={2}
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-blue-700 mb-1">Action</label>
-                      <textarea
-                        value={newRule.action || ''}
-                        onChange={(e) => setNewRule({...newRule, action: e.target.value})}
-                        placeholder="e.g., Send alert to maintenance team"
-                        rows={2}
-                        className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    
-                  </div>
-                  
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={handleAddRule}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                      Add Rule
-                    </button>
-                    <button
-                      onClick={() => setShowAddRule(false)}
-                      className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
+                <RuleForm
+                  isOpen={showAddRule}
+                  onClose={() => setShowAddRule(false)}
+                  deviceId={deviceId}
+                  onSubmit={async (ruleData) => {
+                    try {
+                      // Convert to the format expected by the existing system
+                      const newRule: IoTRule = {
+                        condition: ruleData.conditions[0]?.metric + ' ' + ruleData.conditions[0]?.operator + ' ' + ruleData.conditions[0]?.value,
+                        action: ruleData.actions[0]?.type,
+                        category: 'monitoring',
+                        priority: 'medium'
+                      };
+                      setRules([...rules, newRule]);
+                      setShowAddRule(false);
+                    } catch (error) {
+                      console.error('Failed to create rule:', error);
+                    }
+                  }}
+                />
               )}
 
                              {/* Existing Rules */}
@@ -339,7 +273,7 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
             <div className="p-6 border-b border-slate-200">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Shield className="w-6 h-6 text-purple-600" />
+                  <Clock className="w-6 h-6 text-purple-600" />
                   <h3 className="text-lg font-semibold text-slate-800">Maintenance Schedule</h3>
                   <span className="px-2 py-1 bg-purple-100 text-purple-700 text-sm rounded-full">
                     {maintenanceData.length} items
@@ -369,30 +303,30 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
                     </button>
                   </div>
                   
-                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                     <div>
-                       <label className="block text-sm font-medium text-purple-700 mb-1">Task</label>
-                       <input
-                         type="text"
-                         value={newMaintenance.task || ''}
-                         onChange={(e) => setNewMaintenance({...newMaintenance, task: e.target.value})}
-                         placeholder="e.g., Filter Assembly"
-                         className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                       />
-                     </div>
-                     <div>
-                       <label className="block text-sm font-medium text-purple-700 mb-1">Category</label>
-                       <select
-                         value={newMaintenance.category}
-                         onChange={(e) => setNewMaintenance({...newMaintenance, category: e.target.value})}
-                         className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                       >
-                         <option value="preventive">Preventive</option>
-                         <option value="corrective">Corrective</option>
-                         <option value="predictive">Predictive</option>
-                       </select>
-                     </div>
-                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                    <div>
+                      <label className="block text-sm font-medium text-purple-700 mb-1">Task</label>
+                      <input
+                        type="text"
+                        value={newMaintenance.task || ''}
+                        onChange={(e) => setNewMaintenance({...newMaintenance, task: e.target.value})}
+                        placeholder="e.g., Filter Assembly"
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-purple-700 mb-1">Category</label>
+                      <select
+                        value={newMaintenance.category}
+                        onChange={(e) => setNewMaintenance({...newMaintenance, category: e.target.value})}
+                        className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      >
+                        <option value="preventive">Preventive</option>
+                        <option value="corrective">Corrective</option>
+                        <option value="predictive">Predictive</option>
+                      </select>
+                    </div>
+                  </div>
                   
                   <div className="space-y-3">
                     <div>
@@ -439,7 +373,7 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
                  <div key={`${maintenance.task}-${index}`} className="bg-slate-50 rounded-lg p-4 border border-slate-200">
                    <div className="flex items-center justify-between mb-3">
                      <div className="flex items-center gap-3">
-                       <Shield className="w-4 h-4 text-purple-600" />
+                       <Clock className="w-4 h-4 text-purple-600" />
                        <div>
                          <h4 className="font-semibold text-slate-800">{maintenance.task}</h4>
                          <p className="text-sm text-slate-600 capitalize">{maintenance.category} Maintenance</p>
