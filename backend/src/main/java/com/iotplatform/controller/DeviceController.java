@@ -37,8 +37,13 @@ import com.iotplatform.service.TelemetryService;
 import com.iotplatform.model.Rule;
 import com.iotplatform.model.DeviceMaintenance;
 import com.iotplatform.model.DeviceSafetyPrecaution;
+import com.iotplatform.model.RuleCondition;
 import com.iotplatform.service.PDFProcessingService;
 import com.iotplatform.security.CustomUserDetails;
+import com.iotplatform.repository.RuleRepository;
+import com.iotplatform.repository.RuleConditionRepository;
+import com.iotplatform.repository.DeviceMaintenanceRepository;
+import com.iotplatform.repository.DeviceSafetyPrecautionRepository;
 
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -58,12 +63,20 @@ public class DeviceController {
     private final TelemetryService telemetryService;
     private final FileStorageService fileStorageService;
     private final PDFProcessingService pdfProcessingService;
+    private final RuleRepository ruleRepository;
+    private final RuleConditionRepository ruleConditionRepository;
+    private final DeviceMaintenanceRepository deviceMaintenanceRepository;
+    private final DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository;
 
-    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService) {
+    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.fileStorageService = fileStorageService;
         this.pdfProcessingService = pdfProcessingService;
+        this.ruleRepository = ruleRepository;
+        this.ruleConditionRepository = ruleConditionRepository;
+        this.deviceMaintenanceRepository = deviceMaintenanceRepository;
+        this.deviceSafetyPrecautionRepository = deviceSafetyPrecautionRepository;
     }
 
     @GetMapping
@@ -587,11 +600,115 @@ public class DeviceController {
             }
             
             List<Rule> rules = pdfProcessingService.getDeviceRules(id);
+            logger.info("Retrieved {} rules for device: {}", rules.size(), id);
             return ResponseEntity.ok(rules);
             
         } catch (Exception e) {
             logger.error("Error retrieving rules for device: {}", id, e);
             return ResponseEntity.status(500).body(Map.of("error", "Failed to retrieve rules"));
+        }
+    }
+
+    @GetMapping("/{id}/test-data")
+    public ResponseEntity<?> getDeviceTestData(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        try {
+            String organizationId = user.getOrganizationId();
+            
+            Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
+            if (deviceOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Device device = deviceOpt.get();
+            List<Rule> rules = pdfProcessingService.getDeviceRules(id);
+            List<DeviceMaintenance> maintenance = pdfProcessingService.getDeviceMaintenance(id);
+            List<DeviceSafetyPrecaution> safetyPrecautions = pdfProcessingService.getDeviceSafetyPrecautions(id);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("device", device);
+            response.put("rules", rules);
+            response.put("maintenance", maintenance);
+            response.put("safetyPrecautions", safetyPrecautions);
+            response.put("rulesCount", rules.size());
+            response.put("maintenanceCount", maintenance.size());
+            response.put("safetyCount", safetyPrecautions.size());
+            
+            logger.info("Test data for device {}: {} rules, {} maintenance, {} safety", 
+                       id, rules.size(), maintenance.size(), safetyPrecautions.size());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error retrieving test data for device: {}", id, e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to retrieve test data"));
+        }
+    }
+
+    @GetMapping("/{id}/debug-data")
+    public ResponseEntity<?> getDeviceDebugData(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        try {
+            String organizationId = user.getOrganizationId();
+            
+            Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
+            if (deviceOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Device device = deviceOpt.get();
+            
+            // Get all rules for the organization to see if any exist
+            List<Rule> allRules = ruleRepository.findByOrganizationId(organizationId);
+            
+            // Get all rule conditions to see if any are linked to this device
+            List<RuleCondition> allConditions = ruleConditionRepository.findAll();
+            List<RuleCondition> deviceConditions = ruleConditionRepository.findByDeviceId(id);
+            
+            // Get all maintenance for the organization
+            List<DeviceMaintenance> allMaintenance = deviceMaintenanceRepository.findByOrganizationId(organizationId);
+            List<DeviceMaintenance> deviceMaintenance = deviceMaintenanceRepository.findByDeviceId(id);
+            
+            // Get all safety precautions for the organization
+            List<DeviceSafetyPrecaution> allSafety = deviceSafetyPrecautionRepository.findByOrganizationId(organizationId);
+            List<DeviceSafetyPrecaution> deviceSafety = deviceSafetyPrecautionRepository.findByDeviceId(id);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("device", Map.of(
+                "id", device.getId(),
+                "name", device.getName(),
+                "organizationId", device.getOrganizationId(),
+                "config", device.getConfig()
+            ));
+            response.put("debug", Map.of(
+                "totalRulesInOrg", allRules.size(),
+                "totalConditions", allConditions.size(),
+                "deviceConditions", deviceConditions.size(),
+                "totalMaintenanceInOrg", allMaintenance.size(),
+                "deviceMaintenance", deviceMaintenance.size(),
+                "totalSafetyInOrg", allSafety.size(),
+                "deviceSafety", deviceSafety.size()
+            ));
+            response.put("deviceConditions", deviceConditions);
+            response.put("deviceMaintenance", deviceMaintenance);
+            response.put("deviceSafety", deviceSafety);
+            
+            logger.info("Debug data for device {}: {} total rules, {} device conditions, {} device maintenance, {} device safety", 
+                       id, allRules.size(), deviceConditions.size(), deviceMaintenance.size(), deviceSafety.size());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error retrieving debug data for device: {}", id, e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to retrieve debug data", "exception", e.getMessage()));
         }
     }
 

@@ -44,7 +44,9 @@ const DeviceAnalyticsDisplay: React.FC<DeviceAnalyticsDisplayProps> = ({ deviceI
   const loadAnalytics = async () => {
     try {
       setLoading(true);
+      console.log('Loading analytics for device:', deviceId);
       const response = await analyticsAPI.getByDevice(deviceId, timeRange);
+      console.log('Analytics response:', response.data);
       setAnalytics(response.data);
       setError(null);
     } catch (err) {

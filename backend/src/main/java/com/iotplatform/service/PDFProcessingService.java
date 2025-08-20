@@ -3,6 +3,7 @@ package com.iotplatform.service;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -190,24 +191,39 @@ public class PDFProcessingService {
      * Get all maintenance items for a device
      */
     public List<DeviceMaintenance> getDeviceMaintenance(String deviceId) {
-        return deviceMaintenanceRepository.findByDeviceId(deviceId);
+        List<DeviceMaintenance> maintenance = deviceMaintenanceRepository.findByDeviceId(deviceId);
+        logger.info("Found {} maintenance items for device: {}", maintenance.size(), deviceId);
+        return maintenance;
     }
     
     /**
      * Get all safety precautions for a device
      */
     public List<DeviceSafetyPrecaution> getDeviceSafetyPrecautions(String deviceId) {
-        // Note: This method needs organizationId, but for now we'll return all active precautions for the device
-        // In a real implementation, you'd need to pass organizationId as well
-        return deviceSafetyPrecautionRepository.findByDeviceIdAndIsActiveTrueAndOrganizationId(deviceId, "default");
+        // Return all safety precautions for the device (both active and inactive)
+        List<DeviceSafetyPrecaution> precautions = deviceSafetyPrecautionRepository.findByDeviceId(deviceId);
+        logger.info("Found {} safety precautions for device: {}", precautions.size(), deviceId);
+        return precautions;
     }
     
     /**
      * Get all rules for a device
      */
     public List<Rule> getDeviceRules(String deviceId) {
-        // This would need to be implemented based on how rules are associated with devices
-        // For now, returning all active rules for the organization
-        return ruleRepository.findByActiveTrue();
+        // Get rules that have conditions associated with this device
+        List<RuleCondition> conditions = ruleConditionRepository.findByDeviceId(deviceId);
+        List<String> ruleIds = conditions.stream()
+            .map(condition -> condition.getRule().getId())
+            .distinct()
+            .collect(Collectors.toList());
+        
+        if (ruleIds.isEmpty()) {
+            logger.warn("No rules found for device: {}", deviceId);
+            return new ArrayList<>();
+        }
+        
+        List<Rule> rules = ruleRepository.findAllById(ruleIds);
+        logger.info("Found {} rules for device: {}", rules.size(), deviceId);
+        return rules;
     }
 }

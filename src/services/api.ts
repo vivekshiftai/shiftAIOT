@@ -201,6 +201,7 @@ export const deviceAPI = {
     api.get(`/api/devices/${deviceId}/documentation/${type}`, {
       responseType: 'blob'
     }),
+  getDebugData: (deviceId: string) => api.get(`/api/devices/${deviceId}/debug-data`),
 };
 
 // Rule API
@@ -211,7 +212,7 @@ export const ruleAPI = {
   update: (id: string, rule: any) => api.put(`/api/rules/${id}`, rule),
   delete: (id: string) => api.delete(`/api/rules/${id}`),
   toggle: (id: string) => api.patch(`/api/rules/${id}/toggle`),
-  getByDevice: (deviceId: string) => api.get(`/api/rules/device/${deviceId}`),
+  getByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/rules`),
   // Added new endpoint for rules generation
   generateRules: (request: {
     pdf_filename: string;
@@ -253,11 +254,12 @@ export const maintenanceAPI = {
   create: (item: any) => api.post('/api/maintenance', item),
   update: (id: string, item: any) => api.put(`/api/maintenance/${id}`, item),
   delete: (id: string) => api.delete(`/api/maintenance/${id}`),
+  getByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/maintenance`),
 };
 
 // Device Safety Precautions API
 export const deviceSafetyPrecautionsAPI = {
-  getAllByDevice: (deviceId: string) => api.get(`/api/device-safety-precautions/device/${deviceId}`),
+  getAllByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/safety-precautions`),
   getActiveByDevice: (deviceId: string) => api.get(`/api/device-safety-precautions/device/${deviceId}/active`),
   getById: (id: string) => api.get(`/api/device-safety-precautions/${id}`),
   create: (safetyPrecaution: any) => api.post('/api/device-safety-precautions', safetyPrecaution),

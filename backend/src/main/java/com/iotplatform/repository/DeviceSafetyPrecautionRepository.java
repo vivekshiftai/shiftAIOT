@@ -11,6 +11,8 @@ import java.util.List;
 @Repository
 public interface DeviceSafetyPrecautionRepository extends JpaRepository<DeviceSafetyPrecaution, String> {
     
+    List<DeviceSafetyPrecaution> findByDeviceId(String deviceId);
+    
     List<DeviceSafetyPrecaution> findByDeviceIdAndOrganizationId(String deviceId, String organizationId);
     
     List<DeviceSafetyPrecaution> findByDeviceIdAndIsActiveTrueAndOrganizationId(String deviceId, String organizationId);

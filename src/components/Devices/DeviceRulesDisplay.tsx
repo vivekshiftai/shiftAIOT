@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Zap, AlertTriangle, CheckCircle, Clock, Filter, Search, Plus, Edit, Trash2 } from 'lucide-react';
+import { Settings, AlertTriangle, CheckCircle, Clock, Filter, Search, Plus, Edit, Trash2 } from 'lucide-react';
 import { ruleAPI } from '../../services/api';
 
 interface IoTRule {
@@ -35,7 +35,9 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
   const loadRules = async () => {
     try {
       setLoading(true);
+      console.log('Loading rules for device:', deviceId);
       const response = await ruleAPI.getByDevice(deviceId);
+      console.log('Rules response:', response.data);
       setRules(response.data);
       setError(null);
     } catch (err) {
@@ -192,7 +194,7 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
       <div className="space-y-4">
         {filteredRules.length === 0 ? (
           <div className="text-center py-8">
-            <Zap className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <Settings className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500">No IoT rules found</p>
           </div>
         ) : (
@@ -205,7 +207,7 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3 flex-1">
-                  <Zap className="w-5 h-5 text-blue-500 mt-1" />
+                  <Settings className="w-5 h-5 text-blue-500 mt-1" />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h4 className="font-medium text-gray-900">{rule.name}</h4>

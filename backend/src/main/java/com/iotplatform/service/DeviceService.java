@@ -234,53 +234,32 @@ public class DeviceService {
     private void processPDFResults(Device device, DeviceCreateWithFileRequest.PDFResults pdfResults) {
         logger.info("Processing PDF results for device: {}", device.getId());
         
-        // Process IoT Rules
-        if (pdfResults.getIotRules() != null && !pdfResults.getIotRules().isEmpty()) {
-            logger.info("Processing {} IoT rules for device: {}", pdfResults.getIotRules().size(), device.getId());
-            for (DeviceCreateWithFileRequest.IoTRule ruleData : pdfResults.getIotRules()) {
-                // Here you would create Rule entities and save them to the database
-                // For now, we'll log the rules
-                logger.info("IoT Rule: {} - {} - {}", ruleData.getDeviceName(), ruleData.getRuleType(), ruleData.getCondition());
+        try {
+            // Save all PDF processing results to the database using PDFProcessingService
+            pdfProcessingService.savePDFProcessingResults(device, pdfResults);
+            
+            // Store PDF processing metadata in device config
+            Map<String, String> deviceConfig = device.getConfig();
+            if (deviceConfig == null) {
+                deviceConfig = new HashMap<>();
             }
+            
+            deviceConfig.put("pdf_processed", "true");
+            deviceConfig.put("pdf_filename", pdfResults.getPdfFilename());
+            deviceConfig.put("processing_summary", pdfResults.getProcessingSummary());
+            deviceConfig.put("iot_rules_count", String.valueOf(pdfResults.getIotRules() != null ? pdfResults.getIotRules().size() : 0));
+            deviceConfig.put("maintenance_items_count", String.valueOf(pdfResults.getMaintenanceData() != null ? pdfResults.getMaintenanceData().size() : 0));
+            deviceConfig.put("safety_precautions_count", String.valueOf(pdfResults.getSafetyPrecautions() != null ? pdfResults.getSafetyPrecautions().size() : 0));
+            
+            device.setConfig(deviceConfig);
+            deviceRepository.save(device);
+            
+            logger.info("PDF results processing completed for device: {}", device.getId());
+            
+        } catch (Exception e) {
+            logger.error("Error processing PDF results for device: {}", device.getId(), e);
+            throw new RuntimeException("Failed to process PDF results", e);
         }
-        
-        // Process Maintenance Data
-        if (pdfResults.getMaintenanceData() != null && !pdfResults.getMaintenanceData().isEmpty()) {
-            logger.info("Processing {} maintenance items for device: {}", pdfResults.getMaintenanceData().size(), device.getId());
-            for (DeviceCreateWithFileRequest.MaintenanceData maintenanceData : pdfResults.getMaintenanceData()) {
-                // Here you would create Maintenance entities and save them to the database
-                // For now, we'll log the maintenance data
-                logger.info("Maintenance: {} - {} - {}", maintenanceData.getComponentName(), maintenanceData.getMaintenanceType(), maintenanceData.getFrequency());
-            }
-        }
-        
-        // Process Safety Precautions
-        if (pdfResults.getSafetyPrecautions() != null && !pdfResults.getSafetyPrecautions().isEmpty()) {
-            logger.info("Processing {} safety precautions for device: {}", pdfResults.getSafetyPrecautions().size(), device.getId());
-            for (DeviceCreateWithFileRequest.SafetyPrecaution safetyData : pdfResults.getSafetyPrecautions()) {
-                // Here you would create Safety entities and save them to the database
-                // For now, we'll log the safety precautions
-                logger.info("Safety: {} - {} - {}", safetyData.getTitle(), safetyData.getSeverity(), safetyData.getCategory());
-            }
-        }
-        
-        // Store PDF processing metadata in device config
-        Map<String, String> deviceConfig = device.getConfig();
-        if (deviceConfig == null) {
-            deviceConfig = new HashMap<>();
-        }
-        
-        deviceConfig.put("pdf_processed", "true");
-        deviceConfig.put("pdf_filename", pdfResults.getPdfFilename());
-        deviceConfig.put("processing_summary", pdfResults.getProcessingSummary());
-        deviceConfig.put("iot_rules_count", String.valueOf(pdfResults.getIotRules() != null ? pdfResults.getIotRules().size() : 0));
-        deviceConfig.put("maintenance_items_count", String.valueOf(pdfResults.getMaintenanceData() != null ? pdfResults.getMaintenanceData().size() : 0));
-        deviceConfig.put("safety_precautions_count", String.valueOf(pdfResults.getSafetyPrecautions() != null ? pdfResults.getSafetyPrecautions().size() : 0));
-        
-        device.setConfig(deviceConfig);
-        deviceRepository.save(device);
-        
-        logger.info("PDF results processing completed for device: {}", device.getId());
     }
     
 

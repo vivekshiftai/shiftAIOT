@@ -27,7 +27,7 @@ import {
   Thermometer
 } from 'lucide-react';
 import { Device } from '../../types';
-import { deviceAPI } from '../../services/api';
+import { deviceAPI, ruleAPI, maintenanceAPI, deviceSafetyPrecautionsAPI } from '../../services/api';
 import { DeviceRulesManager } from './DeviceRulesManager';
 import DeviceRulesDisplay from './DeviceRulesDisplay';
 import DeviceAnalyticsDisplay from './DeviceAnalyticsDisplay';
@@ -87,14 +87,13 @@ const deviceTypeConfig = {
 };
 
 const tabs = [
-  { id: 'profile', label: 'Profile', icon: Info },
+  { id: 'profile', label: 'Profile & Specifications', icon: Info },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'rules', label: 'Rules', icon: Zap },
   { id: 'logs', label: 'Logs', icon: FileText },
   { id: 'connection', label: 'Connection Details', icon: Wifi },
   { id: 'maintenance', label: 'Maintenance Details', icon: Wrench },
-  { id: 'chat', label: 'Chat History', icon: MessageSquare },
-  { id: 'specifications', label: 'Specifications', icon: Database }
+  { id: 'chat', label: 'Chat History', icon: MessageSquare }
 ];
 
 export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, onStatusChange }) => {
@@ -208,11 +207,42 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
     }, 1500);
   };
 
+  const debugDataRetrieval = async () => {
+    try {
+      console.log('=== DEBUGGING DATA RETRIEVAL ===');
+      console.log('Device ID:', device.id);
+      
+      // Test rules retrieval
+      console.log('Testing rules retrieval...');
+      const rulesResponse = await ruleAPI.getByDevice(device.id);
+      console.log('Rules response:', rulesResponse.data);
+      
+      // Test maintenance retrieval
+      console.log('Testing maintenance retrieval...');
+      const maintenanceResponse = await maintenanceAPI.getByDevice(device.id);
+      console.log('Maintenance response:', maintenanceResponse.data);
+      
+      // Test safety precautions retrieval
+      console.log('Testing safety precautions retrieval...');
+      const safetyResponse = await deviceSafetyPrecautionsAPI.getByDevice(device.id);
+      console.log('Safety response:', safetyResponse.data);
+      
+      // Test debug endpoint
+      console.log('Testing debug endpoint...');
+      const debugResponse = await deviceAPI.getDebugData(device.id);
+      console.log('Debug response:', debugResponse.data);
+      
+      console.log('=== DEBUG COMPLETE ===');
+    } catch (error) {
+      console.error('Debug error:', error);
+    }
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'profile':
         return (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Status and Basic Info */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
@@ -242,7 +272,68 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
               </div>
             </div>
 
-
+            {/* Device Information */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                  <Database className="w-5 h-5" />
+                  Device Information
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Manufacturer</label>
+                    <p className="text-slate-800">{device.manufacturer || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Model</label>
+                    <p className="text-slate-800">{device.model || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Serial Number</label>
+                    <p className="text-slate-800">{device.serialNumber || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Firmware</label>
+                    <p className="text-slate-800">{device.firmware || 'Not specified'}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  Power & Environment
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Power Source</label>
+                    <p className="text-slate-800">{device.powerSource || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Power Consumption</label>
+                    <p className="text-slate-800">{device.powerConsumption ? `${device.powerConsumption}W` : 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Operating Temperature</label>
+                    <p className="text-slate-800">
+                      {device.operatingTemperatureMin && device.operatingTemperatureMax 
+                        ? `${device.operatingTemperatureMin}°C to ${device.operatingTemperatureMax}°C`
+                        : 'Not specified'
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Operating Humidity</label>
+                    <p className="text-slate-800">
+                      {device.operatingHumidityMin && device.operatingHumidityMax 
+                        ? `${device.operatingHumidityMin}% to ${device.operatingHumidityMax}%`
+                        : 'Not specified'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Tags */}
             {device.tags && device.tags.length > 0 && (
@@ -263,6 +354,68 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
                 </div>
               </div>
             )}
+
+            {/* Documentation */}
+            <div className="border-t border-slate-200 pt-6">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Documentation
+              </h3>
+              
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                  <p className="text-slate-600 mt-2">Loading documentation...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {['manual', 'datasheet', 'certificate'].map((type) => {
+                    const fileInfo = documentationInfo?.files[type as keyof typeof documentationInfo.files];
+                    const isAvailable = fileInfo?.available;
+                    const isDownloading = downloading === type;
+                    
+                    return (
+                      <div
+                        key={type}
+                        className={`p-4 rounded-xl border-2 ${
+                          isAvailable 
+                            ? 'border-green-200 bg-green-50 hover:bg-green-100 cursor-pointer' 
+                            : 'border-slate-200 bg-slate-50'
+                        } transition-colors`}
+                        onClick={() => isAvailable && downloadDocumentation(type as any)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${
+                            isAvailable ? 'bg-green-100' : 'bg-slate-200'
+                          }`}>
+                            {type === 'manual' && <FileText className="w-4 h-4 text-green-600" />}
+                            {type === 'datasheet' && <Settings className="w-4 h-4 text-green-600" />}
+                            {type === 'certificate' && <CheckCircle className="w-4 h-4 text-green-600" />}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-800 capitalize">{type}</p>
+                            {isAvailable ? (
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm text-slate-600">
+                                  {fileInfo.size ? formatFileSize(fileInfo.size) : 'Available'}
+                                </p>
+                                {isDownloading ? (
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b border-green-600"></div>
+                                ) : (
+                                  <Download className="w-3 h-3 text-green-600" />
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-slate-500">Not available</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         );
 
@@ -421,128 +574,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
           </div>
         );
 
-      case 'specifications':
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800">Device Information</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Manufacturer</label>
-                    <p className="text-slate-800">{device.manufacturer || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Model</label>
-                    <p className="text-slate-800">{device.model || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Serial Number</label>
-                    <p className="text-slate-800">{device.serialNumber || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Firmware</label>
-                    <p className="text-slate-800">{device.firmware || 'Not specified'}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800">Power & Environment</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Power Source</label>
-                    <p className="text-slate-800">{device.powerSource || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Power Consumption</label>
-                    <p className="text-slate-800">{device.powerConsumption ? `${device.powerConsumption}W` : 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Operating Temperature</label>
-                    <p className="text-slate-800">
-                      {device.operatingTemperatureMin && device.operatingTemperatureMax 
-                        ? `${device.operatingTemperatureMin}°C to ${device.operatingTemperatureMax}°C`
-                        : 'Not specified'
-                      }
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Operating Humidity</label>
-                    <p className="text-slate-800">
-                      {device.operatingHumidityMin && device.operatingHumidityMax 
-                        ? `${device.operatingHumidityMin}% to ${device.operatingHumidityMax}%`
-                        : 'Not specified'
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            {/* Documentation */}
-            <div className="border-t border-slate-200 pt-6">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                Documentation
-              </h3>
-              
-              {loading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                  <p className="text-slate-600 mt-2">Loading documentation...</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {['manual', 'datasheet', 'certificate'].map((type) => {
-                    const fileInfo = documentationInfo?.files[type as keyof typeof documentationInfo.files];
-                    const isAvailable = fileInfo?.available;
-                    const isDownloading = downloading === type;
-                    
-                    return (
-                      <div
-                        key={type}
-                        className={`p-4 rounded-xl border-2 ${
-                          isAvailable 
-                            ? 'border-green-200 bg-green-50 hover:bg-green-100 cursor-pointer' 
-                            : 'border-slate-200 bg-slate-50'
-                        } transition-colors`}
-                        onClick={() => isAvailable && downloadDocumentation(type as any)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${
-                            isAvailable ? 'bg-green-100' : 'bg-slate-200'
-                          }`}>
-                            {type === 'manual' && <FileText className="w-4 h-4 text-green-600" />}
-                            {type === 'datasheet' && <Settings className="w-4 h-4 text-green-600" />}
-                            {type === 'certificate' && <CheckCircle className="w-4 h-4 text-green-600" />}
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-slate-800 capitalize">{type}</p>
-                            {isAvailable ? (
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm text-slate-600">
-                                  {fileInfo.size ? formatFileSize(fileInfo.size) : 'Available'}
-                                </p>
-                                {isDownloading ? (
-                                  <div className="animate-spin rounded-full h-3 w-3 border-b border-green-600"></div>
-                                ) : (
-                                  <Download className="w-3 h-3 text-green-600" />
-                                )}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-slate-500">Not available</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        );
 
       default:
         return null;
@@ -630,31 +662,38 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
           </div>
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-6 border-t border-slate-200 bg-slate-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-slate-700">Status:</label>
-              <select
-                value={device.status}
-                onChange={(e) => onStatusChange(device.id, e.target.value as Device['status'])}
-                className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="ONLINE">Online</option>
-                <option value="OFFLINE">Offline</option>
-                <option value="WARNING">Warning</option>
-                <option value="ERROR">Error</option>
-              </select>
-            </div>
-            
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        </div>
+                 {/* Footer Actions */}
+         <div className="p-6 border-t border-slate-200 bg-slate-50">
+           <div className="flex items-center justify-between">
+             <div className="flex items-center gap-4">
+               <label className="text-sm font-medium text-slate-700">Status:</label>
+               <select
+                 value={device.status}
+                 onChange={(e) => onStatusChange(device.id, e.target.value as Device['status'])}
+                 className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+               >
+                 <option value="ONLINE">Online</option>
+                 <option value="OFFLINE">Offline</option>
+                 <option value="WARNING">Warning</option>
+                 <option value="ERROR">Error</option>
+               </select>
+               
+               <button
+                 onClick={debugDataRetrieval}
+                 className="px-3 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm"
+               >
+                 Debug Data
+               </button>
+             </div>
+             
+             <button
+               onClick={onClose}
+               className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+             >
+               Close
+             </button>
+           </div>
+         </div>
       </div>
 
       {/* Device Rules Modal */}
