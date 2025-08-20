@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, Settings, Plus, Trash2, Play, Square, Eye, EyeOff } from 'lucide-react';
+import { Settings, Plus, Trash2, Eye, EyeOff, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { DeviceConnection } from '../../types';
 import { deviceConnectionAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -125,15 +125,15 @@ export const DeviceConnectionManager: React.FC<DeviceConnectionManagerProps> = (
   const getStatusIcon = (status: DeviceConnection['status']) => {
     switch (status) {
       case 'CONNECTED':
-        return <Wifi className="w-4 h-4 text-green-600" />;
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
       case 'DISCONNECTED':
-        return <WifiOff className="w-4 h-4 text-slate-400" />;
+        return <Clock className="w-4 h-4 text-slate-400" />;
       case 'CONNECTING':
         return <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />;
       case 'ERROR':
-        return <div className="w-4 h-4 bg-red-500 rounded-full" />;
+        return <AlertTriangle className="w-4 h-4 text-red-500" />;
       default:
-        return <WifiOff className="w-4 h-4 text-slate-400" />;
+        return <Clock className="w-4 h-4 text-slate-400" />;
     }
   };
 
@@ -209,7 +209,7 @@ export const DeviceConnectionManager: React.FC<DeviceConnectionManagerProps> = (
                             className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                             title="Connect"
                           >
-                            <Play className="w-4 h-4" />
+                            <CheckCircle className="w-4 h-4" />
                           </button>
                         ) : (
                           <button
@@ -217,7 +217,7 @@ export const DeviceConnectionManager: React.FC<DeviceConnectionManagerProps> = (
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Disconnect"
                           >
-                            <Square className="w-4 h-4" />
+                            <AlertTriangle className="w-4 h-4" />
                           </button>
                         )}
                       </>

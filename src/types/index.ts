@@ -41,6 +41,7 @@ export interface Device {
   operatingTemperatureMax: number;
   operatingHumidityMin: number;
   operatingHumidityMax: number;
+  lastSeen: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -161,3 +162,20 @@ export type Priority = 'LOW' | 'MEDIUM' | 'HIGH';
 export type DeviceType = 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER';
 export type Protocol = 'MQTT' | 'HTTP' | 'COAP';
 export type UserRole = 'ADMIN' | 'USER';
+
+// Device Connection Types
+export interface DeviceConnection {
+  id: string;
+  deviceId: string;
+  connectionType: 'MQTT' | 'HTTP' | 'WEBSOCKET' | 'COAP' | 'TCP' | 'UDP';
+  status: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING' | 'ERROR';
+  brokerUrl?: string;
+  username?: string;
+  password?: string;
+  topic?: string;
+  port?: number;
+  apiKey?: string;
+  webhookUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
