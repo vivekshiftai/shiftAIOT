@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { deviceAPI, ruleAPI, notificationAPI } from '../services/api';
 import { useAuth } from './AuthContext';
-import { NotificationService } from '../services/notificationService';
+import NotificationService from '../services/notificationService';
 import { Device, Rule, Notification, TelemetryData, Status } from '../types';
 import { getApiConfig } from '../config/api';
-import api from '../services/api';
 import { ensureValidToken } from '../utils/authUtils';
 
 interface IoTContextType {
