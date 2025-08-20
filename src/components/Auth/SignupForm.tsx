@@ -36,6 +36,8 @@ export const SignupForm: React.FC = () => {
     hasSpecialChar: false,
     passwordsMatch: false
   });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
 
   // Real-time password validation
   useEffect(() => {
@@ -60,6 +62,70 @@ export const SignupForm: React.FC = () => {
     }));
     // Clear error when user starts typing
     if (error) setError('');
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleBlur = (fieldName: string) => {
+    setTouchedFields(prev => ({ ...prev, [fieldName]: true }));
+    
+    // Validate the field that was blurred
+    const newErrors = { ...fieldErrors };
+    
+    switch (fieldName) {
+      case 'firstName':
+        if (!formData.firstName.trim()) {
+          newErrors.firstName = 'First name is required';
+        } else if (formData.firstName.trim().length < 2) {
+          newErrors.firstName = 'First name must be at least 2 characters';
+        } else {
+          delete newErrors.firstName;
+        }
+        break;
+        
+      case 'lastName':
+        if (!formData.lastName.trim()) {
+          newErrors.lastName = 'Last name is required';
+        } else if (formData.lastName.trim().length < 1) {
+          newErrors.lastName = 'Last name must be at least 1 character';
+        } else {
+          delete newErrors.lastName;
+        }
+        break;
+        
+      case 'email':
+        if (!formData.email.trim()) {
+          newErrors.email = 'Email is required';
+        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+          newErrors.email = 'Please enter a valid email address';
+        } else {
+          delete newErrors.email;
+        }
+        break;
+        
+      case 'password':
+        if (!formData.password) {
+          newErrors.password = 'Password is required';
+        } else if (formData.password.length < 3) {
+          newErrors.password = 'Password must be at least 3 characters long';
+        } else {
+          delete newErrors.password;
+        }
+        break;
+        
+      case 'confirmPassword':
+        if (!formData.confirmPassword) {
+          newErrors.confirmPassword = 'Please confirm your password';
+        } else if (formData.password !== formData.confirmPassword) {
+          newErrors.confirmPassword = 'Passwords do not match';
+        } else {
+          delete newErrors.confirmPassword;
+        }
+        break;
+    }
+    
+    setFieldErrors(newErrors);
   };
 
   const getErrorMessage = (error: string): string => {
@@ -97,14 +163,28 @@ export const SignupForm: React.FC = () => {
     setError('');
     setSuccess('');
 
-    // Enhanced validation
-    if (!formData.firstName.trim()) {
-      setError('First name is required');
+    // Validate all fields before submission
+    const fieldsToValidate = ['firstName', 'lastName', 'email', 'password', 'confirmPassword'];
+    fieldsToValidate.forEach(field => {
+      if (!touchedFields[field]) {
+        handleBlur(field);
+      }
+    });
+
+    // Check if there are any field errors
+    if (Object.keys(fieldErrors).length > 0) {
+      setError('Please fix the errors above before submitting');
       return;
     }
 
-    if (!formData.lastName.trim()) {
-      setError('Last name is required');
+    // Final validation check
+    if (!formData.firstName.trim() || formData.firstName.trim().length < 2) {
+      setError('First name must be at least 2 characters');
+      return;
+    }
+
+    if (!formData.lastName.trim() || formData.lastName.trim().length < 1) {
+      setError('Last name must be at least 1 character');
       return;
     }
 
@@ -113,12 +193,12 @@ export const SignupForm: React.FC = () => {
       return;
     }
 
-    if (!validation.hasMinLength) {
+    if (formData.password.length < 3) {
       setError('Password must be at least 3 characters long');
       return;
     }
 
-    if (!validation.passwordsMatch) {
+    if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
@@ -239,10 +319,14 @@ export const SignupForm: React.FC = () => {
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
+                    onBlur={() => handleBlur('firstName')}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
                     placeholder="First Name"
                     required
                   />
+                  {touchedFields.firstName && fieldErrors.firstName && (
+                    <p className="text-xs text-red-500 mt-1">{fieldErrors.firstName}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -253,10 +337,14 @@ export const SignupForm: React.FC = () => {
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleChange}
+                    onBlur={() => handleBlur('lastName')}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
                     placeholder="Last Name"
                     required
                   />
+                  {touchedFields.lastName && fieldErrors.lastName && (
+                    <p className="text-xs text-red-500 mt-1">{fieldErrors.lastName}</p>
+                  )}
                 </div>
               </div>
 
@@ -269,10 +357,14 @@ export const SignupForm: React.FC = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
+                  onBlur={() => handleBlur('email')}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
                   placeholder="Enter your email"
                   required
                 />
+                {touchedFields.email && fieldErrors.email && (
+                  <p className="text-xs text-red-500 mt-1">{fieldErrors.email}</p>
+                )}
               </div>
 
               <div>
@@ -285,6 +377,7 @@ export const SignupForm: React.FC = () => {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
+                    onBlur={() => handleBlur('password')}
                     className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
                     placeholder="Enter your password"
                     required
@@ -297,24 +390,11 @@ export const SignupForm: React.FC = () => {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {touchedFields.password && fieldErrors.password && (
+                  <p className="text-xs text-red-500 mt-1">{fieldErrors.password}</p>
+                )}
                 
                 {/* Password Requirements - Always Visible */}
-                <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm font-semibold text-blue-800 mb-3">Password Requirements:</p>
-                  <div className="grid grid-cols-1 gap-2">
-                    <ValidationItem isValid={validation.hasMinLength} text="At least 3 characters (required)" />
-                    <ValidationItem isValid={validation.hasUppercase} text="One uppercase letter (A-Z) - recommended" />
-                    <ValidationItem isValid={validation.hasLowercase} text="One lowercase letter (a-z) - recommended" />
-                    <ValidationItem isValid={validation.hasNumber} text="One number (0-9) - recommended" />
-                    <ValidationItem isValid={validation.hasSpecialChar} text="One special character (!@#$%^&*) - recommended" />
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-blue-200">
-                    <ValidationItem isValid={validation.passwordsMatch && formData.confirmPassword.length > 0} text="Passwords match" />
-                  </div>
-                  <p className="text-xs text-blue-600 mt-2 italic">
-                    Only the 3-character minimum is required. Other requirements are recommended for better security.
-                  </p>
-                </div>
               </div>
 
               <div>
@@ -327,6 +407,7 @@ export const SignupForm: React.FC = () => {
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
+                    onBlur={() => handleBlur('confirmPassword')}
                     className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm ${
                       formData.confirmPassword ? (validation.passwordsMatch ? 'border-green-300' : 'border-red-300') : 'border-slate-300'
                     }`}
@@ -341,6 +422,9 @@ export const SignupForm: React.FC = () => {
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {touchedFields.confirmPassword && fieldErrors.confirmPassword && (
+                  <p className="text-xs text-red-500 mt-1">{fieldErrors.confirmPassword}</p>
+                )}
                 {formData.confirmPassword && (
                   <div className="mt-1 flex items-center space-x-2">
                     {validation.passwordsMatch ? (
@@ -401,7 +485,7 @@ export const SignupForm: React.FC = () => {
 
               <button
                 type="submit"
-                disabled={isLoading || !validation.hasMinLength || !validation.passwordsMatch}
+                disabled={isLoading}
                 className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2.5 px-4 rounded-lg hover:from-blue-600 hover:to-indigo-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm text-sm"
               >
                 {isLoading ? 'Creating Account...' : 'Create Account'}
