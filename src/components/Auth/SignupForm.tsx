@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Cpu, UserPlus, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
+import { Settings, User, CheckCircle, AlertTriangle, FileText, Eye, EyeOff } from 'lucide-react';
 
 interface ValidationState {
   hasMinLength: boolean;
@@ -238,7 +238,7 @@ export const SignupForm: React.FC = () => {
       {isValid ? (
         <CheckCircle className="w-4 h-4 text-green-500" />
       ) : (
-        <XCircle className="w-4 h-4 text-gray-400" />
+        <AlertTriangle className="w-4 h-4 text-gray-400" />
       )}
       <span className={`text-xs ${isValid ? 'text-green-600' : 'text-gray-500'}`}>
         {text}
@@ -259,7 +259,7 @@ export const SignupForm: React.FC = () => {
             
             <div className="text-center text-white relative z-10">
               <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg backdrop-blur-sm">
-                <UserPlus className="w-10 h-10 text-white" />
+                <User className="w-10 h-10 text-white" />
               </div>
               <h2 className="text-2xl font-bold mb-3">Join shiftAIOT Platform</h2>
               <p className="text-sm text-white/90 mb-6 leading-relaxed">
@@ -299,7 +299,7 @@ export const SignupForm: React.FC = () => {
             <div className="mb-6">
               <div className="flex items-center mb-6">
                 <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mr-3 shadow-md">
-                  <Cpu className="w-6 h-6 text-white" />
+                  <Settings className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-slate-800">shiftAIOT Platform</h1>
@@ -387,7 +387,7 @@ export const SignupForm: React.FC = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
                 {touchedFields.password && fieldErrors.password && (
@@ -419,7 +419,7 @@ export const SignupForm: React.FC = () => {
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
                   >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                         {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
                 {touchedFields.confirmPassword && fieldErrors.confirmPassword && (
@@ -430,7 +430,7 @@ export const SignupForm: React.FC = () => {
                     {validation.passwordsMatch ? (
                       <CheckCircle className="w-4 h-4 text-green-500" />
                     ) : (
-                      <XCircle className="w-4 h-4 text-red-500" />
+                                             <AlertTriangle className="w-4 h-4 text-red-500" />
                     )}
                     <span className={`text-xs ${validation.passwordsMatch ? 'text-green-600' : 'text-red-600'}`}>
                       {validation.passwordsMatch ? 'Passwords match' : 'Passwords do not match'}
@@ -459,7 +459,7 @@ export const SignupForm: React.FC = () => {
                 <div className="p-4 bg-red-50 border border-red-300 rounded-lg shadow-sm">
                   <div className="flex">
                     <div className="flex-shrink-0">
-                      <XCircle className="h-5 w-5 text-red-500" />
+                                             <AlertTriangle className="h-5 w-5 text-red-500" />
                     </div>
                     <div className="ml-3">
                       <h3 className="text-sm font-semibold text-red-800">Signup Error</h3>

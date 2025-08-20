@@ -130,7 +130,8 @@ export class PDFProcessingService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`MinerU API call failed: ${response.status} ${response.statusText} - ${errorText}`);
+        console.error('MinerU API error response:', response.status, errorText);
+        throw new Error(`PDF upload failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
@@ -139,6 +140,11 @@ export class PDFProcessingService {
 
     } catch (error) {
       console.error('PDF upload to MinerU failed:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('Network Error')) {
+          throw new Error('PDF processing service is unavailable. Please check your internet connection and try again.');
+        }
+      }
       throw error;
     }
   }
@@ -210,7 +216,8 @@ export class PDFProcessingService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`MinerU rules generation failed: ${response.status} ${response.statusText} - ${errorText}`);
+        console.error('MinerU rules generation error:', response.status, errorText);
+        throw new Error(`Rules generation failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
@@ -219,6 +226,11 @@ export class PDFProcessingService {
 
     } catch (error) {
       console.error('IoT rules generation with MinerU failed:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('Network Error')) {
+          throw new Error('PDF processing service is unavailable. Please check your internet connection and try again.');
+        }
+      }
       throw error;
     }
   }

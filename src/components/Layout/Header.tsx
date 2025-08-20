@@ -5,17 +5,11 @@ import { useToast } from '../UI/Toast';
 import { NotificationDropdown } from './NotificationDropdown';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Menu, 
   Search, 
   Settings, 
-  Sun, 
-  Moon, 
-  Bell, 
   User, 
-  LogOut, 
-  ChevronDown,
-  HelpCircle,
-  Shield
+  AlertTriangle,
+  Trash2
 } from 'lucide-react';
 import Button from '../UI/Button';
 import { IconButton } from '../UI/Button';
@@ -54,7 +48,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
       <div className="flex items-center gap-4">
         {/* Sidebar Toggle */}
         <IconButton
-          icon={<Menu className="w-5 h-5" />}
+          icon={<Settings className="w-5 h-5" />}
           variant="ghost"
           size="sm"
           onClick={onToggleSidebar}
@@ -84,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
 
         {/* Theme Toggle */}
         <IconButton
-          icon={theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          icon={<Settings className="w-5 h-5" />}
           variant="ghost"
           size="sm"
           onClick={toggleTheme}
@@ -94,7 +88,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
 
         {/* Help */}
         <IconButton
-          icon={<HelpCircle className="w-5 h-5" />}
+          icon={<AlertTriangle className="w-5 h-5" />}
           variant="ghost"
           size="sm"
           onClick={() => {
@@ -124,7 +118,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 {user?.role?.toLowerCase() || 'User'}
               </p>
             </div>
-            <ChevronDown className={`w-4 h-4 text-secondary transition-transform ${
+            <Settings className={`w-4 h-4 text-secondary transition-transform ${
               userDropdownOpen ? 'rotate-180' : ''
             }`} />
           </button>
@@ -171,7 +165,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                   }}
                   className="flex items-center gap-3 w-full px-4 py-2 text-sm text-primary hover:bg-tertiary transition-colors"
                 >
-                  <Shield className="w-4 h-4" />
+                  <AlertTriangle className="w-4 h-4" />
                   Security
                 </button>
               </div>
@@ -184,7 +178,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                   }}
                   className="flex items-center gap-3 w-full px-4 py-2 text-sm text-error-500 hover:bg-error-500/10 transition-colors"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4" />
                   Sign out
                 </button>
               </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import { Clock } from 'lucide-react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'ghost' | 'outline';
@@ -66,7 +66,7 @@ const Button: React.FC<ButtonProps> = ({
       {...props}
     >
       {loading ? (
-        <Loader2 className="animate-spin" />
+        <Clock className="animate-spin" />
       ) : (
         <>
           {leftIcon && <span className="flex-shrink-0">{leftIcon}</span>}

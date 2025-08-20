@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
+import { Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -48,13 +48,13 @@ const Toast: React.FC<ToastProps> = ({
       case 'success':
         return <CheckCircle className="w-5 h-5 text-green-500" />;
       case 'error':
-        return <AlertCircle className="w-5 h-5 text-red-500" />;
+        return <AlertTriangle className="w-5 h-5 text-red-500" />;
       case 'warning':
         return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
       case 'info':
-        return <Info className="w-5 h-5 text-blue-500" />;
+        return <CheckCircle className="w-5 h-5 text-blue-500" />;
       default:
-        return <Info className="w-5 h-5 text-blue-500" />;
+        return <CheckCircle className="w-5 h-5 text-blue-500" />;
     }
   };
 
@@ -106,7 +106,7 @@ const Toast: React.FC<ToastProps> = ({
         className="flex-shrink-0 ml-3 p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         aria-label="Close notification"
       >
-        <X className="w-4 h-4" />
+        <Trash2 className="w-4 h-4" />
       </button>
     </div>
   );

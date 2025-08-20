@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Upload, FileText, Settings, Wifi, Database, Bot, CheckCircle, AlertCircle, MessageSquare } from 'lucide-react';
+import { Trash2, Upload, FileText, Settings, Bot, CheckCircle, AlertTriangle, MessageSquare, Clock } from 'lucide-react';
 import { pdfProcessingService } from '../../services/pdfprocess';
 import { EnhancedOnboardingLoader } from '../Loading/EnhancedOnboardingLoader';
 import { DeviceChatInterface } from './DeviceChatInterface';
@@ -855,7 +855,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   Location
                 </label>
                 <div className="relative">
-                  <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <AlertTriangle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <input
                     type="text"
                     value={formData.location}
@@ -872,7 +872,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   Tags
                 </label>
                 <div className="relative">
-                  <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <AlertTriangle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <input
                     type="text"
                     value={formData.metadata}
@@ -910,7 +910,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   Authentication Credential *
                 </label>
                 <div className="relative">
-                  <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <AlertTriangle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <input
                     type="password"
                     value={formData.authenticationCredential}
@@ -927,7 +927,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   Connection Protocol *
                 </label>
                 <div className="relative">
-                  <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <AlertTriangle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                   <select
                     value={formData.connectionProtocol}
                     onChange={(e) => handleInputChange('connectionProtocol', e.target.value)}
@@ -1063,9 +1063,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                       {uploadedFile.status === 'success' ? (
                         <CheckCircle className="w-5 h-5 text-green-600" />
                       ) : uploadedFile.status === 'error' ? (
-                        <AlertCircle className="w-5 h-5 text-red-600" />
+                        <AlertTriangle className="w-5 h-5 text-red-600" />
                       ) : (
-                        <AlertCircle className="w-5 h-5 text-blue-600 animate-spin" />
+                        <Clock className="w-5 h-5 text-blue-600 animate-spin" />
                       )}
                       <div>
                         <p className="text-sm font-medium text-slate-800">{uploadedFile.file.name}</p>
@@ -1085,14 +1085,14 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                       onClick={removeFile}
                       className="p-1 hover:bg-slate-100 rounded transition-colors"
                     >
-                      <X className="w-4 h-4 text-slate-600" />
+                      <Trash2 className="w-4 h-4 text-slate-600" />
                     </button>
                   </div>
                 </div>
 
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <AlertCircle className="w-4 h-4 text-blue-600" />
+                    <AlertTriangle className="w-4 h-4 text-blue-600" />
                     <span className="text-sm font-medium text-blue-800">AI Analysis</span>
                   </div>
                   <p className="text-sm text-blue-700">
@@ -1134,7 +1134,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     if (validation?.isValid === false) {
       return (
         <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-          <AlertCircle className="w-4 h-4" />
+          <AlertTriangle className="w-4 h-4" />
           {validation.message}
         </p>
       );
@@ -1184,7 +1184,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               onClick={onCancel}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-slate-600" />
+              <Trash2 className="w-5 h-5 text-slate-600" />
             </button>
           </div>
 
@@ -1273,7 +1273,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               disabled={currentStep === 1}
               className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <X className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" />
               Previous
             </button>
 
@@ -1295,7 +1295,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 >
                   {isSubmitting ? (
                     <>
-                      <X className="w-4 h-4 animate-spin" />
+                      <Clock className="w-4 h-4 animate-spin" />
                       Starting Onboarding...
                     </>
                   ) : (
@@ -1312,7 +1312,6 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
                   Next
-                  <ChevronRight className="w-4 h-4" />
                 </button>
               )}
             </div>

@@ -1,21 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { 
   CheckCircle, 
-  Target, 
-  Wrench, 
   AlertTriangle, 
-  X,
-  Activity,
-  Zap,
-  Sparkles,
   Bot,
-  Cpu,
   Brain,
-  CircuitBoard,
-  Database,
   MessageSquare,
-  Shield,
-  Eye
+  Settings,
+  Trash2,
+  Clock
 } from 'lucide-react';
 
 interface OnboardingResult {
@@ -57,16 +49,16 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
 
     // Generate device transformation icons
     const deviceIconList = [
-      { icon: Cpu, delay: 0 },
+      { icon: Settings, delay: 0 },
       { icon: Brain, delay: 200 },
-      { icon: CircuitBoard, delay: 400 },
-      { icon: Database, delay: 600 },
+      { icon: Bot, delay: 400 },
+      { icon: Settings, delay: 600 },
       { icon: Bot, delay: 800 },
-      { icon: Sparkles, delay: 1000 },
-      { icon: Zap, delay: 1200 },
-      { icon: Shield, delay: 1400 },
-      { icon: Eye, delay: 1600 },
-      { icon: Activity, delay: 1800 }
+      { icon: CheckCircle, delay: 1000 },
+      { icon: Clock, delay: 1200 },
+      { icon: Settings, delay: 1400 },
+      { icon: AlertTriangle, delay: 1600 },
+      { icon: MessageSquare, delay: 1800 }
     ];
 
     const newDeviceIcons = deviceIconList.map((item, i) => ({
@@ -157,7 +149,7 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
                 animationPhase === 'transforming' ? 'animate-spin' : ''
               }`}>
                 {animationPhase === 'initial' && <CheckCircle className="w-12 h-12 text-green-300" />}
-                {animationPhase === 'transforming' && <Cpu className="w-12 h-12 text-blue-300" />}
+                {animationPhase === 'transforming' && <Settings className="w-12 h-12 text-blue-300" />}
                 {animationPhase === 'ai-ready' && <Brain className="w-12 h-12 text-purple-300" />}
                 {animationPhase === 'complete' && <Bot className="w-12 h-12 text-indigo-300" />}
               </div>
@@ -209,7 +201,7 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
               <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transition-all duration-1000 ${
                 animationPhase === 'complete' ? 'bg-blue-500 text-white scale-110' : 'bg-blue-100 text-blue-600'
               }`}>
-                <Target className="w-8 h-8" />
+                <CheckCircle className="w-8 h-8" />
               </div>
               <div className={`text-3xl font-bold mb-2 transition-all duration-1000 ${
                 animationPhase === 'complete' ? 'text-blue-900' : 'text-gray-400'
@@ -225,7 +217,7 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
               <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transition-all duration-1000 ${
                 animationPhase === 'complete' ? 'bg-orange-500 text-white scale-110' : 'bg-orange-100 text-orange-600'
               }`}>
-                <Wrench className="w-8 h-8" />
+                <Settings className="w-8 h-8" />
               </div>
               <div className={`text-3xl font-bold mb-2 transition-all duration-1000 ${
                 animationPhase === 'complete' ? 'text-orange-900' : 'text-gray-400'
@@ -257,7 +249,7 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
             <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-200 mb-8">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-white" />
+                  <CheckCircle className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="text-xl font-bold text-purple-900">Your Device is Now AI-Powered!</h3>
               </div>
@@ -271,11 +263,11 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
                   <span>Intelligent Analysis</span>
                 </div>
                 <div className="flex items-center gap-2 text-purple-800">
-                  <Activity className="w-4 h-4 text-purple-600" />
+                  <MessageSquare className="w-4 h-4 text-purple-600" />
                   <span>Predictive Monitoring</span>
                 </div>
                 <div className="flex items-center gap-2 text-purple-800">
-                  <Zap className="w-4 h-4 text-purple-600" />
+                  <Settings className="w-4 h-4 text-purple-600" />
                   <span>Smart Automation</span>
                 </div>
               </div>
@@ -318,7 +310,7 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
               onClick={onClose}
               className="flex items-center justify-center gap-3 px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold"
             >
-              <X className="w-5 h-5" />
+              <Trash2 className="w-5 h-5" />
               Close
             </button>
           </div>

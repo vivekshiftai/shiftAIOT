@@ -50,6 +50,8 @@ declare module 'lucide-react' {
   export const User: ComponentType<IconProps>;
   export const Plus: ComponentType<IconProps>;
   export const Settings: ComponentType<IconProps>;
+  export const Eye: ComponentType<IconProps>;
+  export const EyeOff: ComponentType<IconProps>;
 }
 
 declare namespace JSX {

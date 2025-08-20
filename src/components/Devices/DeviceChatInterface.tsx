@@ -3,189 +3,13 @@ import {
   Send, 
   Bot, 
   User, 
-  Loader2, 
   FileText, 
-  Sparkles,
   MessageSquare, 
-  X,
-  RotateCcw,
-  Brain,
-  Cpu,
-  Zap,
-  Shield,
-  Activity,
   Settings,
-  Wifi,
-  Database,
-  CircuitBoard,
-  Eye,
-  Target,
-  Wrench,
   AlertTriangle,
   CheckCircle,
-  Star,
-  Heart,
-  Lightbulb,
-  Rocket,
-  Globe,
-  Cloud,
-  Lock,
-  Unlock,
-  Key,
-  Fingerprint,
-  Scan,
-  QrCode,
-  Barcode,
-  Tag,
-  Hash,
-  Binary,
-  Code,
-  Server,
-  Network,
-  HardDrive,
-  Memory,
-  Power,
-  Battery,
-  Thermometer,
-  Gauge,
-  Fan,
-  Cog,
-  Antenna,
-  Transmitter,
-  Receiver,
-  Modem,
-  Router,
-  Switch,
-  Hub,
-  Gateway,
-  Bridge,
-  Repeater,
-  Amplifier,
-  Filter,
-  Sensor,
-  Detector,
-  Scanner,
-  Camera,
-  Microphone,
-  Speaker,
-  Headphones,
-  Display,
-  Screen,
-  Tablet,
-  Laptop,
-  Desktop,
-  Workstation,
-  Terminal,
-  Console,
-  Keyboard,
-  Mouse,
-  Touchpad,
-  Joystick,
-  Gamepad,
-  Controller,
-  Remote,
-  Handheld,
-  Watch,
-  Headset,
-  Earbuds,
-  Chip,
-  Card,
-  Token,
-  Medal,
-  Trophy,
-  Award,
-  Badge,
-  Certificate,
-  Diploma,
-  License,
-  CreditCard,
-  Wallet,
-  Safe,
-  Vault,
-  Cabinet,
-  Drawer,
-  Shelf,
-  Rack,
-  Mount,
-  Stand,
-  Platform,
-  Stage,
-  Home,
-  Building,
-  Tower,
-  Castle,
-  Palace,
-  Villa,
-  Cottage,
-  Cabin,
-  Tent,
-  Houseboat,
-  Submarine,
-  Rocket,
-  Satellite,
-  Planet,
-  Star,
-  Moon,
-  Sun,
-  Galaxy,
-  Space,
-  Orbit,
-  Path,
-  Route,
-  Road,
-  Street,
-  Avenue,
-  Highway,
-  Drive,
-  Lane,
-  Alley,
-  Court,
-  Place,
-  Square,
-  Circle,
-  Triangle,
-  Rectangle,
-  Pentagon,
-  Hexagon,
-  Octagon,
-  Diamond,
-  Heart,
-  Cross,
-  Plus,
-  Minus,
-  Divide,
-  Multiply,
-  Equal,
-  NotEqual,
-  GreaterThan,
-  LessThan,
-  GreaterThanOrEqual,
-  LessThanOrEqual,
-  Infinity,
-  Pi,
-  Sigma,
-  Omega,
-  Alpha,
-  Beta,
-  Gamma,
-  Delta,
-  Epsilon,
-  Zeta,
-  Eta,
-  Theta,
-  Iota,
-  Kappa,
-  Lambda,
-  Mu,
-  Nu,
-  Xi,
-  Omicron,
-  Rho,
-  Tau,
-  Upsilon,
-  Phi,
-  Chi,
-  Psi
+  Trash2,
+  Clock
 } from 'lucide-react';
 import { pdfProcessingService } from '../../services/pdfprocess';
 
@@ -240,30 +64,8 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
 
     // Generate floating AI icons
     const iconList = [
-      Brain, Cpu, CircuitBoard, Database, Bot, Sparkles, Zap, Shield, Eye, Activity,
-      Target, Wrench, AlertTriangle, CheckCircle, Star, Heart, Lightbulb, Rocket,
-      Globe, Cloud, Lock, Unlock, Key, Fingerprint, Scan, QrCode, Barcode, Tag,
-      Hash, Binary, Code, Server, Network, HardDrive, Memory, Power, Battery,
-      Thermometer, Gauge, Fan, Cog, Antenna, Transmitter, Receiver, Modem,
-      Router, Switch, Hub, Gateway, Bridge, Repeater, Amplifier, Filter, Sensor,
-      Detector, Scanner, Camera, Microphone, Speaker, Headphones, Display, Screen,
-      Tablet, Laptop, Desktop, Workstation, Terminal, Console, Keyboard, Mouse,
-      Touchpad, Joystick, Gamepad, Controller, Remote, Handheld, Watch,
-      Headset, Earbuds, Chip, Card, Token, Medal,
-      Trophy, Award, Badge, Certificate, Diploma, License,
-      CreditCard, Wallet, Safe, Vault, Cabinet, Drawer, Shelf, Rack,
-      Mount, Stand, Platform, Stage, Home,
-      Building, Tower, Castle, Palace,
-      Villa, Cottage, Cabin, Tent, Houseboat, Submarine,
-      Rocket, Satellite, Planet, Star, Moon, Sun, Galaxy,
-      Space, Orbit, Path, Route, Road, Street, Avenue,
-      Highway, Drive, Lane, Alley, Court,
-      Place, Square, Circle, Triangle, Rectangle, Pentagon,
-      Hexagon, Octagon, Diamond, Heart, Cross, Plus, Minus, Divide, Multiply,
-      Equal, NotEqual, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual,
-      Infinity, Pi, Sigma, Omega, Alpha, Beta, Gamma, Delta, Epsilon, Zeta, Eta,
-      Theta, Iota, Kappa, Lambda, Mu, Nu, Xi, Omicron, Rho, Tau, Upsilon, Phi,
-      Chi, Psi
+      Bot, Settings, AlertTriangle, CheckCircle,
+      FileText, Send, User, MessageSquare, Trash2, Clock
     ];
 
     const newFloatingIcons = Array.from({ length: 15 }, (_, i) => ({
@@ -470,7 +272,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
               <div>
                 <h1 className="text-xl font-bold">AI Assistant</h1>
                 <p className="text-blue-100 text-sm flex items-center gap-2">
-                  <Sparkles className="w-3 h-3" />
+                  <CheckCircle className="w-3 h-3" />
                   Ask me anything about {deviceName}
                 </p>
               </div>
@@ -479,7 +281,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
               onClick={onClose}
               className="p-2 hover:bg-white/20 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5" />
+              <Trash2 className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -563,7 +365,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
               }`}
             >
               {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Clock className="w-5 h-5 animate-spin" />
               ) : (
                 <Send className="w-5 h-5" />
               )}
@@ -576,14 +378,14 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
               onClick={() => setInputValue('How do I set up this device?')}
               className="px-3 py-2 bg-white/10 backdrop-blur-sm text-white/80 rounded-full text-xs hover:bg-white/20 transition-all duration-300 border border-white/20 hover:border-white/40"
             >
-              <Rocket className="w-3 h-3 inline mr-1" />
+              <CheckCircle className="w-3 h-3 inline mr-1" />
               Setup Guide
             </button>
             <button
               onClick={() => setInputValue('What maintenance is required?')}
               className="px-3 py-2 bg-white/10 backdrop-blur-sm text-white/80 rounded-full text-xs hover:bg-white/20 transition-all duration-300 border border-white/20 hover:border-white/40"
             >
-              <Wrench className="w-3 h-3 inline mr-1" />
+              <Settings className="w-3 h-3 inline mr-1" />
               Maintenance
             </button>
             <button
@@ -615,14 +417,14 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
                 onClick={() => setMessages([messages[0]])}
                 className="flex items-center gap-1 px-3 py-1 text-white/60 hover:text-white transition-colors text-xs hover:bg-white/10 rounded-lg"
               >
-                <RotateCcw className="w-3 h-3" />
+                <Clock className="w-3 h-3" />
                 Reset
               </button>
               <button
                 onClick={onContinue}
                 className="flex items-center gap-1 px-4 py-1 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:from-green-600 hover:to-blue-600 transition-all duration-300 font-medium text-xs transform hover:scale-105 shadow-lg"
               >
-                <Sparkles className="w-3 h-3" />
+                <CheckCircle className="w-3 h-3" />
                 Continue
               </button>
             </div>

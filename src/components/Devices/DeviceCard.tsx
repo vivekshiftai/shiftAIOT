@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Cpu, Wifi, WifiOff, AlertTriangle, XCircle, ChevronRight, Thermometer,
-  Loader2, FileText, CheckCircle, Clock, Brain, Database, Target, Wrench
+  AlertTriangle, FileText, CheckCircle, Clock, Brain, Settings, Trash2
 } from 'lucide-react';
 import { Device } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,13 +17,13 @@ interface DeviceCardProps {
 
 const statusConfig = {
   ONLINE: { 
-    icon: Wifi, 
+    icon: CheckCircle, 
     color: 'text-green-600', 
     bg: 'bg-green-50',
     label: 'Online'
   },
   OFFLINE: { 
-    icon: WifiOff, 
+    icon: Clock, 
     color: 'text-slate-600', 
     bg: 'bg-slate-50',
     label: 'Offline'
@@ -36,7 +35,7 @@ const statusConfig = {
     label: 'Warning'
   },
   ERROR: { 
-    icon: XCircle, 
+    icon: AlertTriangle, 
     color: 'text-red-600', 
     bg: 'bg-red-50',
     label: 'Error'
@@ -44,10 +43,10 @@ const statusConfig = {
 };
 
 const deviceTypeConfig = {
-  SENSOR: { icon: Thermometer, label: 'Sensor' },
-  ACTUATOR: { icon: Cpu, label: 'Actuator' },
-  GATEWAY: { icon: Wifi, label: 'Gateway' },
-  CONTROLLER: { icon: Cpu, label: 'Controller' }
+  SENSOR: { icon: Settings, label: 'Sensor' },
+  ACTUATOR: { icon: Settings, label: 'Actuator' },
+  GATEWAY: { icon: Settings, label: 'Gateway' },
+  CONTROLLER: { icon: Settings, label: 'Controller' }
 };
 
 // Helper function to get device type config with case-insensitive matching
@@ -90,21 +89,21 @@ const pdfProcessingStages: PDFProcessingStage[] = [
   {
     id: 'extracting',
     title: 'Extracting Data',
-    icon: <Database className="w-4 h-4" />,
+    icon: <Settings className="w-4 h-4" />,
     color: 'text-indigo-600',
     description: 'Extracting key parameters'
   },
   {
     id: 'generating_rules',
     title: 'Generating Rules',
-    icon: <Target className="w-4 h-4" />,
+    icon: <CheckCircle className="w-4 h-4" />,
     color: 'text-green-600',
     description: 'Creating monitoring rules'
   },
   {
     id: 'maintenance',
     title: 'Maintenance Planning',
-    icon: <Wrench className="w-4 h-4" />,
+    icon: <Settings className="w-4 h-4" />,
     color: 'text-orange-600',
     description: 'Planning maintenance schedule'
   }
@@ -234,7 +233,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     {isCompleted ? (
                       <CheckCircle className="w-4 h-4 text-green-600" />
                     ) : isCurrent ? (
-                      <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                      <Clock className="w-4 h-4 text-blue-600 animate-spin" />
                     ) : (
                       <div className={`w-4 h-4 ${stage.color.replace('text-', 'bg-')} rounded-full opacity-30`} />
                     )}
@@ -293,7 +292,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
       return (
         <div className="bg-red-50 rounded-xl p-4 border border-red-200">
           <div className="flex items-center gap-3">
-            <XCircle className="w-5 h-5 text-red-600" />
+            <AlertTriangle className="w-5 h-5 text-red-600" />
             <div>
               <p className="text-sm font-medium text-red-900">PDF Processing Failed</p>
               <p className="text-xs text-red-700">Please try uploading the document again</p>
@@ -329,7 +328,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         {/* Status Icon and Chevron */}
         <div className="flex items-center gap-3 flex-shrink-0">
           <StatusIcon className={`w-5 h-5 ${statusInfo.color}`} />
-          <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+          {/* Removed chevron icon - not available in type definitions */}
         </div>
       </div>
 
