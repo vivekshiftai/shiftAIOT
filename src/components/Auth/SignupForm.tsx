@@ -1,7 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Cpu, UserPlus } from 'lucide-react';
+import { Cpu, UserPlus, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
+
+interface ValidationState {
+  hasMinLength: boolean;
+  hasUppercase: boolean;
+  hasLowercase: boolean;
+  hasNumber: boolean;
+  hasSpecialChar: boolean;
+  passwordsMatch: boolean;
+}
 
 export const SignupForm: React.FC = () => {
   const navigate = useNavigate();
@@ -17,13 +26,70 @@ export const SignupForm: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [validation, setValidation] = useState<ValidationState>({
+    hasMinLength: false,
+    hasUppercase: false,
+    hasLowercase: false,
+    hasNumber: false,
+    hasSpecialChar: false,
+    passwordsMatch: false
+  });
+
+  // Real-time password validation
+  useEffect(() => {
+    const password = formData.password;
+    const confirmPassword = formData.confirmPassword;
+
+    setValidation({
+      hasMinLength: password.length >= 3, // Updated to match backend (3 characters minimum)
+      hasUppercase: /[A-Z]/.test(password),
+      hasLowercase: /[a-z]/.test(password),
+      hasNumber: /\d/.test(password),
+      hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+      passwordsMatch: password === confirmPassword && password.length > 0
+    });
+  }, [formData.password, formData.confirmPassword]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev: typeof formData) => ({
       ...prev,
       [name]: value
     }));
+    // Clear error when user starts typing
+    if (error) setError('');
+  };
+
+  const getErrorMessage = (error: string): string => {
+    // Convert technical error messages to user-friendly ones
+    if (error.includes('email')) {
+      return 'Please enter a valid email address.';
+    }
+    if (error.includes('password')) {
+      return 'Please ensure your password meets all requirements.';
+    }
+    if (error.includes('already exists')) {
+      return 'An account with this email already exists. Please try signing in instead.';
+    }
+    if (error.includes('network') || error.includes('fetch')) {
+      return 'Unable to connect to the server. Please check your internet connection and try again.';
+    }
+    if (error.includes('timeout')) {
+      return 'Request timed out. Please try again.';
+    }
+    if (error.includes('required fields')) {
+      return 'Please fill in all required fields.';
+    }
+    if (error.includes('length requirements')) {
+      return 'Please check the length requirements for your input.';
+    }
+    if (error.includes('between 3 and 40 characters')) {
+      return 'Password must be between 3 and 40 characters.';
+    }
+    // Return the original error if no specific mapping
+    return error;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,14 +97,29 @@ export const SignupForm: React.FC = () => {
     setError('');
     setSuccess('');
 
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+    // Enhanced validation
+    if (!formData.firstName.trim()) {
+      setError('First name is required');
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    if (!formData.lastName.trim()) {
+      setError('Last name is required');
+      return;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    if (!validation.hasMinLength) {
+      setError('Password must be at least 3 characters long');
+      return;
+    }
+
+    if (!validation.passwordsMatch) {
+      setError('Passwords do not match');
       return;
     }
 
@@ -51,16 +132,39 @@ export const SignupForm: React.FC = () => {
         password: formData.password,
         role: formData.role
       });
-      setSuccess('Account created successfully! Please log in.');
+      setSuccess('Account created successfully! Redirecting to login...');
       setTimeout(() => {
         navigate('/login');
       }, 2000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Failed to create account');
+    } catch (err: unknown) {
+      let errorMessage = 'Failed to create account';
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err && typeof err === 'object' && 'error' in err) {
+        errorMessage = (err as any).error;
+      }
+      
+      setError(getErrorMessage(errorMessage));
     } finally {
       setIsLoading(false);
     }
   };
+
+  const ValidationItem: React.FC<{ isValid: boolean; text: string }> = ({ isValid, text }) => (
+    <div className="flex items-center space-x-2">
+      {isValid ? (
+        <CheckCircle className="w-4 h-4 text-green-500" />
+      ) : (
+        <XCircle className="w-4 h-4 text-gray-400" />
+      )}
+      <span className={`text-xs ${isValid ? 'text-green-600' : 'text-gray-500'}`}>
+        {text}
+      </span>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4">
@@ -114,7 +218,7 @@ export const SignupForm: React.FC = () => {
           <div className="p-6 lg:p-8 flex flex-col justify-center bg-white/80">
             <div className="mb-6">
               <div className="flex items-center mb-6">
-                                 <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mr-3 shadow-md">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mr-3 shadow-md">
                   <Cpu className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -128,120 +232,168 @@ export const SignupForm: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    First Name
+                    First Name *
                   </label>
-                                     <input
-                     type="text"
-                     name="firstName"
-                     value={formData.firstName}
-                     onChange={handleChange}
-                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
-                     placeholder="First Name"
-                     required
-                   />
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
+                    placeholder="First Name"
+                    required
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Last Name
+                    Last Name *
                   </label>
-                                     <input
-                     type="text"
-                     name="lastName"
-                     value={formData.lastName}
-                     onChange={handleChange}
-                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
-                     placeholder="Last Name"
-                     required
-                   />
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
+                    placeholder="Last Name"
+                    required
+                  />
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Email Address
+                  Email Address *
                 </label>
-                                 <input
-                   type="email"
-                   name="email"
-                   value={formData.email}
-                   onChange={handleChange}
-                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
-                   placeholder="Enter your email"
-                   required
-                 />
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
+                  placeholder="Enter your email"
+                  required
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Password
+                  Password *
                 </label>
-                                 <input
-                   type="password"
-                   name="password"
-                   value={formData.password}
-                   onChange={handleChange}
-                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
-                   placeholder="Enter your password"
-                   required
-                 />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
+                    placeholder="Enter your password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                
+                {/* Password Requirements - Always Visible */}
+                <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm font-semibold text-blue-800 mb-3">Password Requirements:</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    <ValidationItem isValid={validation.hasMinLength} text="At least 3 characters (required)" />
+                    <ValidationItem isValid={validation.hasUppercase} text="One uppercase letter (A-Z) - recommended" />
+                    <ValidationItem isValid={validation.hasLowercase} text="One lowercase letter (a-z) - recommended" />
+                    <ValidationItem isValid={validation.hasNumber} text="One number (0-9) - recommended" />
+                    <ValidationItem isValid={validation.hasSpecialChar} text="One special character (!@#$%^&*) - recommended" />
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-blue-200">
+                    <ValidationItem isValid={validation.passwordsMatch && formData.confirmPassword.length > 0} text="Passwords match" />
+                  </div>
+                  <p className="text-xs text-blue-600 mt-2 italic">
+                    Only the 3-character minimum is required. Other requirements are recommended for better security.
+                  </p>
+                </div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Confirm Password
+                  Confirm Password *
                 </label>
-                                 <input
-                   type="password"
-                   name="confirmPassword"
-                   value={formData.confirmPassword}
-                   onChange={handleChange}
-                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
-                   placeholder="Confirm your password"
-                   required
-                 />
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm ${
+                      formData.confirmPassword ? (validation.passwordsMatch ? 'border-green-300' : 'border-red-300') : 'border-slate-300'
+                    }`}
+                    placeholder="Confirm your password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {formData.confirmPassword && (
+                  <div className="mt-1 flex items-center space-x-2">
+                    {validation.passwordsMatch ? (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-red-500" />
+                    )}
+                    <span className={`text-xs ${validation.passwordsMatch ? 'text-green-600' : 'text-red-600'}`}>
+                      {validation.passwordsMatch ? 'Passwords match' : 'Passwords do not match'}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Role
                 </label>
-                                 <select
-                   name="role"
-                   value={formData.role}
-                   onChange={handleChange}
-                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
-                   required
-                 >
+                <select
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white/80 text-sm"
+                  required
+                >
                   <option value="USER">User</option>
                   <option value="ADMIN">Admin</option>
                 </select>
               </div>
 
               {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="p-4 bg-red-50 border border-red-300 rounded-lg shadow-sm">
                   <div className="flex">
                     <div className="flex-shrink-0">
-                      <svg className="h-4 w-4 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
+                      <XCircle className="h-5 w-5 text-red-500" />
                     </div>
-                    <div className="ml-2">
-                      <p className="text-xs text-red-600">{error}</p>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-semibold text-red-800">Signup Error</h3>
+                      <p className="text-sm text-red-700 mt-1 leading-relaxed">{error}</p>
                     </div>
                   </div>
                 </div>
               )}
 
               {success && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="p-4 bg-green-50 border border-green-300 rounded-lg shadow-sm">
                   <div className="flex">
                     <div className="flex-shrink-0">
-                      <svg className="h-4 w-4 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
+                      <CheckCircle className="h-5 w-5 text-green-500" />
                     </div>
-                    <div className="ml-2">
-                      <p className="text-xs text-green-600">{success}</p>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-semibold text-green-800">Success!</h3>
+                      <p className="text-sm text-green-700 mt-1 leading-relaxed">{success}</p>
                     </div>
                   </div>
                 </div>
@@ -249,8 +401,8 @@ export const SignupForm: React.FC = () => {
 
               <button
                 type="submit"
-                disabled={isLoading}
-                                 className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2.5 px-4 rounded-lg hover:from-blue-600 hover:to-indigo-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm text-sm"
+                disabled={isLoading || !validation.hasMinLength || !validation.passwordsMatch}
+                className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2.5 px-4 rounded-lg hover:from-blue-600 hover:to-indigo-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm text-sm"
               >
                 {isLoading ? 'Creating Account...' : 'Create Account'}
               </button>
@@ -261,7 +413,7 @@ export const SignupForm: React.FC = () => {
                 Already have an account?{' '}
                 <button
                   onClick={() => navigate('/login')}
-                                     className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                  className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
                 >
                   Sign in here
                 </button>

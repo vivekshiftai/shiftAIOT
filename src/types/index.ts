@@ -1,3 +1,4 @@
+// User Types
 export interface User {
   id: string;
   firstName: string;
@@ -9,72 +10,100 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   lastLogin?: string;
-  // IoT Connection Settings
-  mqttBrokerUrl?: string;
-  mqttUsername?: string;
-  mqttPassword?: string;
-  apiKey?: string;
-  webhookUrl?: string;
-  connectionType?: 'MQTT' | 'HTTP' | 'WEBSOCKET' | 'COAP';
 }
 
+// Device Types
 export interface Device {
   id: string;
   name: string;
   type: 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER';
   status: 'ONLINE' | 'OFFLINE' | 'WARNING' | 'ERROR';
   location: string;
-  lastSeen: string;
-  batteryLevel?: number;
+  protocol: 'MQTT' | 'HTTP' | 'COAP';
+  firmware: string;
+  tags: string[];
+  manufacturer: string;
+  model: string;
+  serialNumber: string;
+  macAddress: string;
+  ipAddress: string;
+  port: number;
+  description: string;
+  installationNotes: string;
+  maintenanceSchedule: string;
+  warrantyInfo: string;
+  wifiSsid: string;
+  mqttBroker: string;
+  mqttTopic: string;
+  powerSource: string;
+  powerConsumption: number;
+  operatingTemperatureMin: number;
+  operatingTemperatureMax: number;
+  operatingHumidityMin: number;
+  operatingHumidityMax: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Notification Types
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  status: 'READ' | 'UNREAD';
+  createdAt: string;
+  updatedAt: string;
+  userId?: string;
+  deviceId?: string;
+}
+
+// Rule Types
+export interface Rule {
+  id: string;
+  name: string;
+  description: string;
+  condition: string;
+  action: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  status: 'ACTIVE' | 'INACTIVE';
+  category: string;
+  createdAt: string;
+  updatedAt: string;
+  deviceId?: string;
+}
+
+// Maintenance Types
+export interface MaintenanceTask {
+  id: string;
+  title: string;
+  description: string;
+  type: 'PREVENTIVE' | 'CORRECTIVE' | 'PREDICTIVE';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  assignedTo?: string;
+  deviceId?: string;
+  scheduledDate: string;
+  completedDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Analytics Types
+export interface AnalyticsData {
+  deviceId: string;
+  timestamp: string;
   temperature?: number;
   humidity?: number;
-  firmware?: string;
-  protocol: 'MQTT' | 'HTTP' | 'COAP';
-  tags?: string[];
-  manufacturer?: string;
-  model?: string;
-  serialNumber?: string;
-  macAddress?: string;
-  ipAddress?: string;
-  port?: number;
-  powerSource?: string;
-  powerConsumption?: number;
-  operatingTemperatureMin?: number;
-  operatingTemperatureMax?: number;
-  operatingHumidityMin?: number;
-  operatingHumidityMax?: number;
-  wifiSsid?: string;
-  mqttBroker?: string;
-  mqttTopic?: string;
-  description?: string;
-  installationNotes?: string;
-  maintenanceSchedule?: string;
-  warrantyInfo?: string;
-  organizationId: string;
-  createdAt: string;
-  updatedAt: string;
+  pressure?: number;
+  voltage?: number;
+  current?: number;
+  power?: number;
+  status: string;
 }
 
-export interface DeviceConnection {
-  id: string;
-  deviceId: string;
-  connectionType: 'MQTT' | 'HTTP' | 'WEBSOCKET' | 'COAP' | 'TCP' | 'UDP';
-  brokerUrl?: string;
-  username?: string;
-  password?: string;
-  topic?: string;
-  port?: number;
-  apiKey?: string;
-  webhookUrl?: string;
-  status: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING' | 'ERROR' | 'TIMEOUT';
-  lastConnected?: string;
-  lastDisconnected?: string;
-  config?: Record<string, string>;
-  organizationId: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
+// Telemetry Data Types
 export interface TelemetryData {
   id: string;
   deviceId: string;
@@ -83,149 +112,52 @@ export interface TelemetryData {
   location?: string;
 }
 
-export interface Rule {
+// API Response Types
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+  error?: string;
+}
+
+export interface PaginatedResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+}
+
+// Form Types
+export interface FileUpload {
+  file: File;
+  type: 'manual' | 'datasheet' | 'certificate';
+  status: 'uploading' | 'success' | 'error';
+  error?: string;
+}
+
+export interface AIGeneratedRule {
   id: string;
   name: string;
   description: string;
-  active: boolean;
-  conditions: RuleCondition[];
-  actions: RuleAction[];
-  organizationId: string;
-  createdAt: string;
-  updatedAt: string;
-  lastTriggered?: string;
+  condition: string;
+  action: string;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  isSelected: boolean;
 }
 
-export interface RuleCondition {
-  id: string;
-  type: 'telemetry_threshold' | 'device_status' | 'time_based';
-  deviceId?: string;
-  metric?: string;
-  operator: '>' | '<' | '=' | '>=' | '<=';
-  value: number | string;
-  logicOperator?: 'AND' | 'OR';
-}
-
-export interface RuleAction {
-  id: string;
-  type: 'notification' | 'device_control' | 'webhook' | 'log';
-  config: Record<string, any>;
-}
-
-export interface Notification {
-  id?: string;
-  title: string;
+// Error Types
+export interface ApiError {
   message: string;
-  type: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
-  read: boolean;
-  userId: string;
-  deviceId?: string;
-  organizationId?: string;
-  createdAt?: string;
+  status: number;
+  code?: string;
 }
 
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface SignupRequest {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-  role: 'admin' | 'user';
-}
-
-export interface JwtResponse {
-  token: string;
-  type: string;
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  authorities: string[];
-}
-
-export interface DeviceCreateRequest {
-  name: string;
-  type: 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER';
-  location: string;
-  protocol: 'MQTT' | 'HTTP' | 'COAP';
-  firmware?: string;
-  tags?: string[];
-  manufacturer?: string;
-  model?: string;
-  serialNumber?: string;
-  macAddress?: string;
-  ipAddress?: string;
-  port?: number;
-  powerSource?: string;
-  powerConsumption?: number;
-  operatingTemperatureMin?: number;
-  operatingTemperatureMax?: number;
-  operatingHumidityMin?: number;
-  operatingHumidityMax?: number;
-  wifiSsid?: string;
-  mqttBroker?: string;
-  mqttTopic?: string;
-  description?: string;
-  installationNotes?: string;
-  maintenanceSchedule?: string;
-  warrantyInfo?: string;
-}
-
-export interface DeviceConnectionRequest {
-  deviceId: string;
-  connectionType: 'MQTT' | 'HTTP' | 'WEBSOCKET' | 'COAP';
-  brokerUrl?: string;
-  username?: string;
-  password?: string;
-  topic?: string;
-  port?: number;
-  apiKey?: string;
-  webhookUrl?: string;
-  connectionConfig?: Record<string, string>;
-}
-
-export interface MqttConnectionRequest {
-  deviceId: string;
-  brokerUrl: string;
-  username?: string;
-  password?: string;
-  topic: string;
-  port?: number;
-}
-
-export interface HttpConnectionRequest {
-  deviceId: string;
-  webhookUrl: string;
-  apiKey?: string;
-}
-
-export interface WebSocketConnectionRequest {
-  deviceId: string;
-  brokerUrl: string;
-  port?: number;
-}
-
-export interface CoapConnectionRequest {
-  deviceId: string;
-  brokerUrl: string;
-  port?: number;
-}
-
-export interface KnowledgeDocument {
-  id: string;
-  name: string;
-  type: 'pdf' | 'docx' | 'txt' | 'doc';
-  uploadedAt: string;
-  processedAt?: string;
-  size: number;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  vectorized: boolean;
-  organizationId?: string;
-  description?: string;
-  tags?: string[];
-}
+// Generic Types
+export type Status = 'ONLINE' | 'OFFLINE' | 'WARNING' | 'ERROR';
+export type Priority = 'LOW' | 'MEDIUM' | 'HIGH';
+export type DeviceType = 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER';
+export type Protocol = 'MQTT' | 'HTTP' | 'COAP';
+export type UserRole = 'ADMIN' | 'USER';

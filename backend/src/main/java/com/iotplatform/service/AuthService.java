@@ -75,9 +75,18 @@ public class AuthService {
     }
 
     public User signup(SignupRequest signupRequest) {
+        // Check if email already exists
         if (userRepository.existsByEmail(signupRequest.getEmail())) {
             throw new RuntimeException("Email is already in use!");
         }
+
+        // Validate password strength
+        String password = signupRequest.getPassword();
+        if (password.length() < 3) {
+            throw new RuntimeException("Password must be at least 3 characters long");
+        }
+        // Removed complex password validation to match frontend requirements
+        // Users can now use simpler passwords as per the updated requirements
 
         User user = new User();
         user.setId(UUID.randomUUID().toString());

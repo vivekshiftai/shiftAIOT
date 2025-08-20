@@ -4,22 +4,17 @@ import {
   Upload, 
   FileText, 
   Settings, 
-  Wifi, 
-  Cpu, 
-  Thermometer, 
-  Zap,
-  AlertCircle,
   CheckCircle,
-  X,
-  ArrowRight,
-  ArrowLeft,
+  X as XIcon, 
+  ArrowRight as ArrowRightIcon,
+  ArrowLeft as ArrowLeftIcon,
   Brain,
   Sparkles,
   Loader2,
   FileSearch,
   Bot
 } from 'lucide-react';
-import { knowledgeAPI } from '../../services/api';
+
 import { pdfProcessingService } from '../../services/pdfprocess';
 
 interface DeviceFormData {
@@ -75,7 +70,7 @@ interface AddDeviceFormProps {
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
-export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel }) => {
+export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel }: AddDeviceFormProps) => {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -116,8 +111,8 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
   const [aiGeneratedRules, setAiGeneratedRules] = useState<AIGeneratedRule[]>([]);
   const [processingProgress, setProcessingProgress] = useState(0);
 
-  const handleInputChange = (field: keyof DeviceFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (field: keyof DeviceFormData, value: string | number | string[]) => {
+    setFormData((prev: DeviceFormData) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
@@ -242,10 +237,10 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
       const firstFile = fileUploads[0].file;
       console.log('Uploading PDF:', firstFile.name);
       
-      // Upload PDF via backend knowledge API
-      const uploadResult = await knowledgeAPI.uploadPDF(firstFile);
-      console.log('PDF uploaded successfully:', uploadResult?.data);
-      const pdfFilename = (uploadResult as any)?.data?.pdf_filename || firstFile.name;
+      // Upload PDF directly to PDF processing service
+      const uploadResult = await pdfProcessingService.uploadPDF(firstFile);
+      console.log('PDF uploaded successfully:', uploadResult);
+      const pdfFilename = uploadResult.pdf_name || firstFile.name;
 
       // Step 2: Generate IoT Rules from the uploaded PDF
       console.log('Generating IoT rules...');
@@ -804,7 +799,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                         onClick={() => removeFile(index)}
                         className="p-1 hover:bg-slate-200 rounded transition-colors"
                       >
-                        <X className="w-4 h-4 text-slate-500" />
+                        <XIcon className="w-4 h-4 text-slate-500" />
                       </button>
                     </div>
                   ))}
@@ -924,7 +919,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
               onClick={onCancel}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-slate-600" />
+              <XIcon className="w-5 h-5 text-slate-600" />
             </button>
           </div>
 
@@ -983,7 +978,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
               disabled={currentStep === 1}
               className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeftIcon className="w-4 h-4" />
               Previous
             </button>
 
@@ -1022,7 +1017,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                   className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
                   Next
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRightIcon className="w-4 h-4" />
                 </button>
               )}
             </div>

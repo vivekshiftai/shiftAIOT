@@ -66,8 +66,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Never logout user automatically - keep existing session
         return false;
       }
-    } catch (error: any) {
-      console.warn('AuthContext - Token validation failed:', error.message);
+    } catch (error: unknown) {
+      console.warn('AuthContext - Token validation failed:', error instanceof Error ? error.message : 'Unknown error');
       // Never logout user on validation errors - keep existing session
       return false;
     }
@@ -123,13 +123,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   // Never logout user automatically - keep existing user data
                 }
               }
-            } catch (refreshError: any) {
-              console.warn('AuthContext - Token refresh failed:', refreshError.message);
+            } catch (refreshError: unknown) {
+              console.warn('AuthContext - Token refresh failed:', refreshError instanceof Error ? refreshError.message : 'Unknown error');
               // Never logout user on refresh failure - keep existing session
             }
           }
-        } catch (parseError) {
-          console.warn('AuthContext - Failed to parse saved user:', parseError);
+        } catch (parseError: unknown) {
+          console.warn('AuthContext - Failed to parse saved user:', parseError instanceof Error ? parseError.message : 'Unknown error');
           // Try to validate token and load profile, but never logout automatically
           await validateTokenAndLoadProfile(token);
         }
@@ -166,7 +166,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           const parsedUser = JSON.parse(savedUser);
           setUser(parsedUser);
-        } catch {
+        } catch (error: unknown) {
+          console.warn('Failed to parse saved user:', error instanceof Error ? error.message : 'Unknown error');
           setUser(null);
         }
       } else {
@@ -175,36 +176,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('storageChange', handleStorageChange as any);
+    window.addEventListener('storageChange', handleStorageChange as EventListener);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('storageChange', handleStorageChange as any);
+      window.removeEventListener('storageChange', handleStorageChange as EventListener);
     };
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await authAPI.login({ email, password });
-    const { token, id, name, email: userEmail, role, organizationId } = response.data;
+    setIsLoading(true);
+    try {
+      const response = await authAPI.login({ email, password });
+      const { token, id, name, email: userEmail, role, organizationId } = response.data;
 
-    const user: User = {
-      id,
-      firstName: name.split(' ')[0],
-      lastName: name.split(' ').slice(1).join(' '),
-      email: userEmail,
-      role: role as 'ADMIN' | 'USER',
-      organizationId,
-      enabled: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString()
-    };
+      const user: User = {
+        id,
+        firstName: name.split(' ')[0],
+        lastName: name.split(' ').slice(1).join(' '),
+        email: userEmail,
+        role: role as 'ADMIN' | 'USER',
+        organizationId,
+        enabled: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString()
+      };
 
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      api.defaults.headers.common.Authorization = `Bearer ${token}`;
 
-    window.dispatchEvent(new Event('storageChange'));
-    setUser(user);
+      window.dispatchEvent(new Event('storageChange'));
+      setUser(user);
+    } catch (error: unknown) {
+      console.error('Login failed:', error);
+      // setError(error instanceof Error ? error.message : 'Login failed'); // This line was not in the new_code, so it's removed.
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const signup = async (data: { firstName: string; lastName: string; email: string; password: string; role: 'ADMIN' | 'USER' }) => {
@@ -226,8 +235,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     try {
       await validateTokenAndLoadProfile(token);
-    } catch (error) {
-      console.warn('Failed to refresh user profile:', error);
+    } catch (error: unknown) {
+      console.warn('Failed to refresh user profile:', error instanceof Error ? error.message : 'Unknown error');
     }
   };
 

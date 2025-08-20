@@ -16,7 +16,6 @@ import {
   Plus,
   Settings
 } from 'lucide-react';
-import { knowledgeAPI } from '../services/api';
 import { deviceAPI } from '../services/api';
 import { pdfProcessingService, PDFListResponse, PDFImage } from '../services/pdfprocess';
 
@@ -72,8 +71,9 @@ export const KnowledgeSection: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-    // Load documents from external PDF API and devices on component mount
+  // Load documents from external PDF API and devices on component mount
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -234,8 +234,6 @@ export const KnowledgeSection: React.FC = () => {
     return responses[Math.floor(Math.random() * responses.length)];
   };
 
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -265,20 +263,19 @@ export const KnowledgeSection: React.FC = () => {
     try {
       const deviceName = deviceId ? devices.find((d: Device) => d.id === deviceId)?.name : undefined;
       
-      // Upload to backend Knowledge API
-      const uploadRes = await knowledgeAPI.uploadPDF(file, deviceId, deviceName);
-      const uploadData = (uploadRes as any)?.data || {};
+      // Upload directly to PDF processing service (like in Device section)
+      const uploadResponse = await pdfProcessingService.uploadPDF(file);
       
       // Create a new document entry
       const newDocument: KnowledgeDocument = {
-        id: uploadData.document_id || Date.now().toString(),
-        name: uploadData.pdf_filename || file.name,
+        id: Date.now().toString(),
+        name: uploadResponse.pdf_name || file.name,
         type: 'pdf',
         uploadedAt: new Date().toISOString(),
         size: file.size,
-        status: uploadData.processing_status || 'uploaded',
-        vectorized: false,
-        chunk_count: undefined,
+        status: 'completed', // PDF processing service processes immediately
+        vectorized: true,
+        chunk_count: uploadResponse.chunks_processed,
         deviceId: deviceId,
         deviceName: deviceName
       };
@@ -290,7 +287,7 @@ export const KnowledgeSection: React.FC = () => {
       const successMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: `Successfully uploaded "${newDocument.name}"${deviceInfo}. The document is ready for querying.`,
+        content: `Successfully uploaded "${newDocument.name}"${deviceInfo}. The document has been processed and is ready for querying.`,
         timestamp: new Date()
       };
       setChatMessages((prev: ChatMessage[]) => [...prev, successMessage]);

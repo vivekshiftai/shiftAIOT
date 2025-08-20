@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { deviceAPI, ruleAPI, notificationAPI, userAPI, authAPI } from '../services/api';
-import { Device, TelemetryData, Rule, Notification } from '../types';
+import { Device, TelemetryData, Rule, Notification, Status } from '../types';
 import { useAuth } from './AuthContext';
 import NotificationService from '../services/notificationService';
 import api from '../services/api';
@@ -12,7 +12,7 @@ interface IoTContextType {
   rules: Rule[];
   notifications: Notification[];
   loading: boolean;
-  updateDeviceStatus: (deviceId: string, status: Device['status']) => Promise<void>;
+  updateDeviceStatus: (deviceId: string, status: Status) => Promise<void>;
   addTelemetryData: (data: TelemetryData) => Promise<void>;
   createRule: (rule: Omit<Rule, 'id' | 'createdAt'>) => Promise<void>;
   updateRule: (id: string, rule: Partial<Rule>) => Promise<void>;
@@ -167,8 +167,8 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
           console.log('IoTContext - No devices data in response');
           setDevices([]);
         }
-      } catch (error) {
-        console.error('IoTContext - Failed to load devices:', error);
+      } catch (error: unknown) {
+        console.error('Failed to load devices:', error instanceof Error ? error.message : 'Unknown error');
         setDevices([]);
       }
 
@@ -200,11 +200,8 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         } else {
           setNotifications([]);
         }
-      } catch (error: any) {
-        // Don't log 401 errors as they're expected when token is invalid
-        if (error.response?.status !== 401) {
-          console.error('IoTContext - Failed to load notifications:', error);
-        }
+      } catch (error: unknown) {
+        console.error('Failed to load notifications:', error instanceof Error ? error.message : 'Unknown error');
         setNotifications([]);
       }
 
@@ -224,27 +221,16 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
 
   // Note: Removed periodic device refresh to prevent interference with database data
 
-  const updateDeviceStatus = async (deviceId: string, status: Device['status']) => {
-    try {
-      console.log('IoTContext - Updating device status:', deviceId, status);
-      
-      // Update status in backend first
-      const response = await deviceAPI.updateStatus(deviceId, status);
-      const updatedDevice = response.data;
-      
-      console.log('IoTContext - Device status updated in backend');
-      
-      // Update local state with the device returned from backend
-      setDevices(prev => prev.map(device => 
-        device.id === deviceId ? updatedDevice : device
-      ));
-      
-      // Note: Removed automatic status change notifications to prevent unwanted notifications
-    } catch (error) {
-      console.error('Failed to update device status in backend:', error);
-      // Don't update local state if backend fails
-      throw new Error(`Failed to update device status: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+  const updateDeviceStatus = (deviceId: string, status: Status) => {
+    setDevices((prev: Device[]) => 
+      prev.map((device: Device) => 
+        device.id === deviceId ? { ...device, status } : device
+      )
+    );
+  };
+
+  const addNotification = (notification: Notification) => {
+    setNotifications((prev: Notification[]) => [notification, ...prev]);
   };
 
   const addTelemetryData = async (data: TelemetryData) => {

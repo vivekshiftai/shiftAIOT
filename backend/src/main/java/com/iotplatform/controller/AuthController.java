@@ -11,6 +11,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.http.HttpStatus;
 
 import com.iotplatform.dto.JwtResponse;
 import com.iotplatform.dto.LoginRequest;
@@ -22,6 +26,8 @@ import com.iotplatform.security.JwtTokenProvider;
 import com.iotplatform.service.AuthService;
 
 import jakarta.validation.Valid;
+
+import java.util.Map;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -79,7 +85,25 @@ public class AuthController {
                     user.getOrganizationId()
             ));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Error: " + e.getMessage());
+            String errorMessage = e.getMessage();
+            
+            // Convert technical error messages to user-friendly ones
+            if (errorMessage.contains("Email is already in use")) {
+                errorMessage = "An account with this email already exists. Please try signing in instead.";
+            } else if (errorMessage.contains("Password must contain")) {
+                errorMessage = "Password must meet all requirements: at least 8 characters, one uppercase letter, one lowercase letter, one number, and one special character.";
+            } else if (errorMessage.contains("Please enter a valid email address")) {
+                errorMessage = "Please enter a valid email address.";
+            } else if (errorMessage.contains("First name is required") || errorMessage.contains("Last name is required")) {
+                errorMessage = "Please fill in all required fields.";
+            } else if (errorMessage.contains("must be between")) {
+                errorMessage = "Please check the length requirements for your input.";
+            }
+            
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", errorMessage,
+                "success", false
+            ));
         }
     }
 
@@ -125,5 +149,19 @@ public class AuthController {
         } catch (Exception e) {
             return ResponseEntity.status(401).body("Token refresh failed: " + e.getMessage());
         }
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<?> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        StringBuilder errorMessage = new StringBuilder();
+        ex.getBindingResult().getFieldErrors().forEach(error -> {
+            errorMessage.append(error.getDefaultMessage()).append("; ");
+        });
+        
+        return ResponseEntity.badRequest().body(Map.of(
+            "error", errorMessage.toString().trim(),
+            "success", false
+        ));
     }
 }
