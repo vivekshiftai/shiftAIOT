@@ -120,23 +120,32 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     setProgress(0);
     setCurrentProcess('pdf');
 
-    try {
-      // Step 1: Upload PDF to knowledge base
-      setCurrentSubStage('Uploading PDF to knowledge base...');
+          // Step 0: Check backend connectivity
+      setCurrentSubStage('Checking backend connectivity...');
+      setProgress(5);
+      
+      try {
+        // Test backend connectivity by trying to get devices list
+        await deviceAPI.getAll();
+        console.log('Backend connectivity confirmed');
+      } catch (error) {
+        console.error('Backend connectivity check failed:', error);
+        throw new Error('Cannot connect to backend server. Please check if the backend is running.');
+      }
+
+      // Step 1: Upload PDF to MinerU processing service
+      // Step 1: Upload PDF to MinerU processing service
+      setCurrentSubStage('Uploading PDF to processing service...');
       setProgress(10);
       
-      const pdfUploadResponse = await knowledgeAPI.uploadPDF(
-        uploadedFile.file, 
-        undefined, 
-        formData.deviceName
-      );
+      const pdfUploadResponse = await pdfProcessingService.uploadPDF(uploadedFile.file);
       
-      if (!pdfUploadResponse.data.success) {
-        throw new Error('PDF upload failed');
+      if (!pdfUploadResponse.success) {
+        throw new Error('PDF upload to processing service failed');
       }
 
       setProgress(30);
-      setCurrentSubStage('PDF uploaded successfully');
+      setCurrentSubStage('PDF uploaded and processed successfully');
 
       // Step 2: Create device in database
       setCurrentProcess('rules');
@@ -162,48 +171,102 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         }
       };
 
-      const deviceResponse = await deviceAPI.create(deviceData);
-      const createdDevice = deviceResponse.data;
+      console.log('Creating device in backend with data:', deviceData);
       
-      setProgress(60);
+      let createdDevice;
+      try {
+        const deviceResponse = await deviceAPI.create(deviceData);
+        createdDevice = deviceResponse.data;
+        
+        console.log('Device created successfully in backend:', createdDevice);
+        
+        if (!createdDevice || !createdDevice.id) {
+          throw new Error('Device creation failed: No device ID returned from backend');
+        }
+        
+      } catch (error) {
+        console.error('Device creation failed:', error);
+        throw new Error(`Failed to create device in backend: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+      
+      setProgress(50);
       setCurrentSubStage('Device created successfully');
 
-      // Step 3: Generate rules from PDF
-      setCurrentSubStage('Generating rules from PDF...');
-      setProgress(70);
+      // Step 3: Generate IoT Rules from PDF using MinerU
+      setCurrentSubStage('Generating IoT rules from PDF...');
+      setProgress(60);
 
-      const rulesResponse = await ruleAPI.generateRules({
-        pdf_filename: uploadedFile.file.name,
-        chunk_size: 1000,
-        rule_types: ['monitoring', 'alerting', 'maintenance']
-      });
+      const rulesResponse = await pdfProcessingService.generateRules(pdfUploadResponse.pdf_name);
 
-      if (!rulesResponse.data.success) {
-        throw new Error('Rules generation failed');
+      if (!rulesResponse.success) {
+        throw new Error('IoT rules generation failed');
       }
 
-      setProgress(85);
-      setCurrentSubStage('Rules generated successfully');
+      setProgress(70);
+      setCurrentSubStage('IoT rules generated successfully');
 
-      // Step 4: Finalize setup
+      // Step 4: Generate Maintenance Schedule from PDF using MinerU
+      setCurrentSubStage('Generating maintenance schedule...');
+      setProgress(75);
+
+      const maintenanceResponse = await pdfProcessingService.generateMaintenance(pdfUploadResponse.pdf_name);
+
+      if (!maintenanceResponse.success) {
+        throw new Error('Maintenance schedule generation failed');
+      }
+
+      setProgress(80);
+      setCurrentSubStage('Maintenance schedule generated');
+
+      // Step 5: Generate Safety Information from PDF using MinerU
+      setCurrentSubStage('Generating safety information...');
+      setProgress(85);
+
+      const safetyResponse = await pdfProcessingService.generateSafety(pdfUploadResponse.pdf_name);
+
+      if (!safetyResponse.success) {
+        throw new Error('Safety information generation failed');
+      }
+
+      setProgress(90);
+      setCurrentSubStage('Safety information generated');
+
+      // Step 6: Upload processed data to knowledge base
       setCurrentProcess('knowledgebase');
-      setCurrentSubStage('Finalizing device setup...');
+      setCurrentSubStage('Uploading processed data to knowledge base...');
       setProgress(95);
 
-      // Wait a bit for final processing
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Upload the processed PDF data to our knowledge base
+      console.log('Uploading PDF to knowledge base with device ID:', createdDevice.id || createdDevice.deviceId);
+      
+      let knowledgeUploadResponse;
+      try {
+        knowledgeUploadResponse = await knowledgeAPI.uploadPDF(
+          uploadedFile.file, 
+          createdDevice.id || createdDevice.deviceId, 
+          formData.deviceName
+        );
+        console.log('Knowledge base upload response:', knowledgeUploadResponse.data);
+      } catch (error) {
+        console.error('Knowledge base upload failed:', error);
+        // Don't throw error here, just log it as the device was already created
+        console.warn('Knowledge base upload failed, but device was created successfully');
+      }
 
       setProgress(100);
       setCurrentSubStage('Onboarding complete!');
       
-      // Set success result with actual data
+      // Set success result with actual data from MinerU
       setOnboardingResult({
         deviceId: createdDevice.id || createdDevice.deviceId,
-        rulesGenerated: rulesResponse.data.rules?.length || 0,
-        maintenanceItems: rulesResponse.data.maintenance_tasks?.length || 0,
-        safetyPrecautions: rulesResponse.data.safety_information?.length || 0,
+        rulesGenerated: rulesResponse.rules?.length || 0,
+        maintenanceItems: maintenanceResponse.maintenance_tasks?.length || 0,
+        safetyPrecautions: safetyResponse.safety_information?.length || 0,
         deviceData: createdDevice,
-        pdfData: pdfUploadResponse.data
+        pdfData: {
+          ...pdfUploadResponse,
+          knowledgeUpload: knowledgeUploadResponse?.data || null
+        }
       });
 
       setTimeout(() => {
@@ -469,8 +532,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     </div>
   );
 
-  if (showOnboardingLoader) {
-    return (
+  // Render loading screen within the modal
+  const renderLoadingContent = () => (
+    <div className="flex-1 flex items-center justify-center p-6">
       <EnhancedOnboardingLoader
         isProcessing={true}
         currentProcess={currentProcess}
@@ -479,11 +543,12 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         pdfFileName={uploadedFile?.file.name}
         currentSubStage={currentSubStage}
       />
-    );
-  }
+    </div>
+  );
 
-  if (showSuccessMessage) {
-    return (
+  // Render success message within the modal
+  const renderSuccessContent = () => (
+    <div className="flex-1 flex items-center justify-center p-6">
       <OnboardingSuccess
         result={{
           deviceId: onboardingResult?.deviceId || 'DEV-001',
@@ -497,19 +562,20 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         onContinue={handleSuccessContinue}
         onClose={onCancel}
       />
-    );
-  }
+    </div>
+  );
 
-  if (showChatInterface) {
-    return (
+  // Render chat interface within the modal
+  const renderChatContent = () => (
+    <div className="flex-1 flex items-center justify-center p-6">
       <DeviceChatInterface
         deviceName={formData.deviceName}
         pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
         onClose={handleChatClose}
         onContinue={handleChatClose}
       />
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -518,48 +584,76 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-6 text-white flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold">Device Onboarding</h2>
-              <p className="text-purple-100 mt-1">Enter basic device information and specifications</p>
+              <h2 className="text-2xl font-bold">
+                {showOnboardingLoader ? 'Processing Device...' : 
+                 showSuccessMessage ? 'Onboarding Complete!' :
+                 showChatInterface ? 'Device Chat Interface' :
+                 'Device Onboarding'}
+              </h2>
+              <p className="text-purple-100 mt-1">
+                {showOnboardingLoader 
+                  ? 'Please wait while we process your device documentation' 
+                  : showSuccessMessage
+                  ? 'Your device has been successfully onboarded'
+                  : showChatInterface
+                  ? 'Chat with your device AI assistant'
+                  : 'Enter basic device information and specifications'
+                }
+              </p>
             </div>
-            <button
-              onClick={onCancel}
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {!showOnboardingLoader && !showSuccessMessage && !showChatInterface && (
+              <button
+                onClick={onCancel}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
           {renderProgressBar()}
         </div>
 
         {/* Content - Scrollable */}
         <div className="flex-1 overflow-y-auto p-6 min-h-0">
-          {currentStep === 1 && renderStep1()}
-          {currentStep === 2 && renderStep2()}
-          {currentStep === 3 && renderStep3()}
+          {showOnboardingLoader ? (
+            renderLoadingContent()
+          ) : showSuccessMessage ? (
+            renderSuccessContent()
+          ) : showChatInterface ? (
+            renderChatContent()
+          ) : (
+            <>
+              {currentStep === 1 && renderStep1()}
+              {currentStep === 2 && renderStep2()}
+              {currentStep === 3 && renderStep3()}
+            </>
+          )}
         </div>
 
-        {/* Footer - Always visible */}
-        <div className="p-6 border-t border-slate-200 bg-slate-50 flex-shrink-0">
-          <div className="flex justify-between items-center">
-            <button
-              onClick={prevStep}
-              disabled={currentStep === 1}
-              className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Previous
-            </button>
+        {/* Footer - Hidden during loading, success, and chat */}
+        {!showOnboardingLoader && !showSuccessMessage && !showChatInterface && (
+          <div className="p-6 border-t border-slate-200 bg-slate-50 flex-shrink-0">
+            <div className="flex justify-between items-center">
+              <button
+                onClick={prevStep}
+                disabled={currentStep === 1}
+                className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Previous
+              </button>
 
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting || (currentStep === 3 && !uploadedFile)}
-              className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              {currentStep === 3 ? 'Start Onboarding' : 'Next'}
-              <ArrowRight className="w-4 h-4" />
-            </button>
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting || (currentStep === 3 && !uploadedFile)}
+                className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {currentStep === 3 ? 'Start Onboarding' : 'Next'}
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
