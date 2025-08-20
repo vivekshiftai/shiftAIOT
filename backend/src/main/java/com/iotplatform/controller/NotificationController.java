@@ -32,7 +32,7 @@ public class NotificationController {
             return ResponseEntity.status(401).build();
         }
         User user = userDetails.getUser();
-        List<Notification> notifications = notificationService.getAllNotifications(user.getOrganizationId());
+        List<Notification> notifications = notificationService.getUserNotifications(user.getOrganizationId(), user.getId());
         return ResponseEntity.ok(notifications);
     }
 
@@ -57,7 +57,7 @@ public class NotificationController {
         User user = userDetails.getUser();
         
         try {
-            notificationService.markAsRead(id, user.getOrganizationId());
+            notificationService.markAsRead(id, user.getOrganizationId(), user.getId());
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
@@ -72,7 +72,7 @@ public class NotificationController {
         }
         User user = userDetails.getUser();
         
-        notificationService.markAllAsRead(user.getOrganizationId());
+        notificationService.markAllAsRead(user.getOrganizationId(), user.getId());
         return ResponseEntity.ok().build();
     }
 
@@ -91,7 +91,7 @@ public class NotificationController {
             return ResponseEntity.status(401).build();
         }
         User user = userDetails.getUser();
-        Long count = notificationService.getUnreadCount(user.getOrganizationId());
+        Long count = notificationService.getUnreadCount(user.getOrganizationId(), user.getId());
         return ResponseEntity.ok(count);
     }
 }

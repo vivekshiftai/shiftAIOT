@@ -1,6 +1,7 @@
 package com.iotplatform.controller;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -9,8 +10,8 @@ import org.springframework.web.bind.annotation.*;
 
 import com.iotplatform.model.MaintenanceSchedule;
 import com.iotplatform.model.User;
+import com.iotplatform.repository.MaintenanceScheduleRepository;
 import com.iotplatform.security.CustomUserDetails;
-import com.iotplatform.service.MaintenanceService;
 
 import jakarta.validation.Valid;
 
@@ -19,10 +20,10 @@ import jakarta.validation.Valid;
 @CrossOrigin(origins = "*")
 public class MaintenanceController {
 
-    private final MaintenanceService maintenanceService;
+    private final MaintenanceScheduleRepository maintenanceRepository;
 
-    public MaintenanceController(MaintenanceService maintenanceService) {
-        this.maintenanceService = maintenanceService;
+    public MaintenanceController(MaintenanceScheduleRepository maintenanceRepository) {
+        this.maintenanceRepository = maintenanceRepository;
     }
 
     @GetMapping
@@ -32,7 +33,7 @@ public class MaintenanceController {
             return ResponseEntity.status(401).build();
         }
         User user = userDetails.getUser();
-        List<MaintenanceSchedule> tasks = maintenanceService.getAllTasks(user.getOrganizationId());
+        List<MaintenanceSchedule> tasks = maintenanceRepository.findByOrganizationId(user.getOrganizationId());
         return ResponseEntity.ok(tasks);
     }
 
@@ -43,9 +44,8 @@ public class MaintenanceController {
             return ResponseEntity.status(401).build();
         }
         User user = userDetails.getUser();
-        return maintenanceService.getTask(id, user.getOrganizationId())
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        Optional<MaintenanceSchedule> task = maintenanceRepository.findByIdAndOrganizationId(id, user.getOrganizationId());
+        return task.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
@@ -56,7 +56,13 @@ public class MaintenanceController {
         }
         User user = userDetails.getUser();
         task.setOrganizationId(user.getOrganizationId());
-        MaintenanceSchedule createdTask = maintenanceService.createTask(task);
+        if (task.getStatus() == null || task.getStatus().isBlank()) {
+            task.setStatus("pending");
+        }
+        if (task.getPriority() == null || task.getPriority().isBlank()) {
+            task.setPriority("medium");
+        }
+        MaintenanceSchedule createdTask = maintenanceRepository.save(task);
         return ResponseEntity.ok(createdTask);
     }
 
@@ -68,12 +74,25 @@ public class MaintenanceController {
         }
         User user = userDetails.getUser();
         
-        try {
-            MaintenanceSchedule updatedTask = maintenanceService.updateTask(id, updates, user.getOrganizationId());
-            return ResponseEntity.ok(updatedTask);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        return maintenanceRepository.findByIdAndOrganizationId(id, user.getOrganizationId()).map(existing -> {
+            // Update fields if provided
+            if (updates.getTaskName() != null) existing.setTaskName(updates.getTaskName());
+            if (updates.getDeviceId() != null) existing.setDeviceId(updates.getDeviceId());
+            if (updates.getDeviceName() != null) existing.setDeviceName(updates.getDeviceName());
+            if (updates.getComponentName() != null) existing.setComponentName(updates.getComponentName());
+            if (updates.getMaintenanceType() != null) existing.setMaintenanceType(updates.getMaintenanceType());
+            if (updates.getFrequency() != null) existing.setFrequency(updates.getFrequency());
+            if (updates.getLastMaintenance() != null) existing.setLastMaintenance(updates.getLastMaintenance());
+            if (updates.getNextMaintenance() != null) existing.setNextMaintenance(updates.getNextMaintenance());
+            if (updates.getDescription() != null) existing.setDescription(updates.getDescription());
+            if (updates.getPriority() != null) existing.setPriority(updates.getPriority());
+            if (updates.getAssignedTo() != null) existing.setAssignedTo(updates.getAssignedTo());
+            if (updates.getNotes() != null) existing.setNotes(updates.getNotes());
+            if (updates.getStatus() != null) existing.setStatus(updates.getStatus());
+            
+            MaintenanceSchedule saved = maintenanceRepository.save(existing);
+            return ResponseEntity.ok(saved);
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
@@ -84,12 +103,10 @@ public class MaintenanceController {
         }
         User user = userDetails.getUser();
         
-        try {
-            maintenanceService.deleteTask(id, user.getOrganizationId());
+        return maintenanceRepository.findByIdAndOrganizationId(id, user.getOrganizationId()).map(existing -> {
+            maintenanceRepository.delete(existing);
             return ResponseEntity.ok().build();
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @PatchMapping("/{id}/complete")
@@ -100,12 +117,11 @@ public class MaintenanceController {
         }
         User user = userDetails.getUser();
         
-        try {
-            MaintenanceSchedule completedTask = maintenanceService.markAsCompleted(id, user.getOrganizationId());
+        return maintenanceRepository.findByIdAndOrganizationId(id, user.getOrganizationId()).map(existing -> {
+            existing.setStatus("completed");
+            MaintenanceSchedule completedTask = maintenanceRepository.save(existing);
             return ResponseEntity.ok(completedTask);
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/overdue")
@@ -115,7 +131,7 @@ public class MaintenanceController {
             return ResponseEntity.status(401).build();
         }
         User user = userDetails.getUser();
-        List<MaintenanceSchedule> overdueTasks = maintenanceService.getOverdueTasks(user.getOrganizationId());
+        List<MaintenanceSchedule> overdueTasks = maintenanceRepository.findOverdueTasks(user.getOrganizationId());
         return ResponseEntity.ok(overdueTasks);
     }
 
@@ -126,7 +142,7 @@ public class MaintenanceController {
             return ResponseEntity.status(401).build();
         }
         User user = userDetails.getUser();
-        List<MaintenanceSchedule> upcomingTasks = maintenanceService.getUpcomingTasks(user.getOrganizationId());
+        List<MaintenanceSchedule> upcomingTasks = maintenanceRepository.findUpcomingTasks(user.getOrganizationId());
         return ResponseEntity.ok(upcomingTasks);
     }
 
@@ -137,7 +153,13 @@ public class MaintenanceController {
             return ResponseEntity.status(401).build();
         }
         User user = userDetails.getUser();
-        MaintenanceStats stats = maintenanceService.getStats(user.getOrganizationId());
+        
+        long totalTasks = maintenanceRepository.countByOrganizationId(user.getOrganizationId());
+        long completedTasks = maintenanceRepository.countByOrganizationIdAndStatus(user.getOrganizationId(), "completed");
+        long overdueTasks = maintenanceRepository.findOverdueTasks(user.getOrganizationId()).size();
+        long upcomingTasks = maintenanceRepository.findUpcomingTasks(user.getOrganizationId()).size();
+        
+        MaintenanceStats stats = new MaintenanceStats(totalTasks, completedTasks, overdueTasks, upcomingTasks);
         return ResponseEntity.ok(stats);
     }
 
@@ -148,7 +170,7 @@ public class MaintenanceController {
             return ResponseEntity.status(401).build();
         }
         User user = userDetails.getUser();
-        List<MaintenanceSchedule> deviceTasks = maintenanceService.getTasksByDevice(deviceId, user.getOrganizationId());
+        List<MaintenanceSchedule> deviceTasks = maintenanceRepository.findByOrganizationIdAndDeviceId(user.getOrganizationId(), deviceId);
         return ResponseEntity.ok(deviceTasks);
     }
 
@@ -159,7 +181,7 @@ public class MaintenanceController {
             return ResponseEntity.status(401).build();
         }
         User user = userDetails.getUser();
-        List<MaintenanceSchedule> typeTasks = maintenanceService.getTasksByType(type, user.getOrganizationId());
+        List<MaintenanceSchedule> typeTasks = maintenanceRepository.findByOrganizationIdAndMaintenanceType(user.getOrganizationId(), type);
         return ResponseEntity.ok(typeTasks);
     }
 

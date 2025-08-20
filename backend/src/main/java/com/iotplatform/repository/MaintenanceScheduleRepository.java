@@ -26,8 +26,17 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
     // Find by organization and device ID
     List<MaintenanceSchedule> findByOrganizationIdAndDeviceId(String organizationId, String deviceId);
     
+    // Find by organization and maintenance type
+    List<MaintenanceSchedule> findByOrganizationIdAndMaintenanceType(String organizationId, String maintenanceType);
+    
     // Find by ID and organization (for security)
     Optional<MaintenanceSchedule> findByIdAndOrganizationId(String id, String organizationId);
+    
+    // Count by organization
+    long countByOrganizationId(String organizationId);
+    
+    // Count by organization and status
+    long countByOrganizationIdAndStatus(String organizationId, String status);
     
     // Search by task name or description
     @Query("SELECT m FROM MaintenanceSchedule m WHERE m.organizationId = :organizationId AND (LOWER(m.taskName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR LOWER(m.description) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
