@@ -1,4 +1,5 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
+import { getApiConfig } from '../config/api';
 
 const TOKEN_KEY = 'token';
 const USER_KEY = 'user';
@@ -6,8 +7,14 @@ const USER_KEY = 'user';
 class TokenService {
   private static instance: TokenService;
   private tokenRefreshPromise: Promise<string | null> | null = null;
+  private axiosInstance: AxiosInstance;
 
-  private constructor() {}
+  private constructor() {
+    this.axiosInstance = axios.create({
+      baseURL: getApiConfig().BACKEND_BASE_URL,
+      timeout: 10000,
+    });
+  }
 
   public static getInstance(): TokenService {
     if (!TokenService.instance) {
@@ -31,12 +38,12 @@ class TokenService {
   public removeToken(): void {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
-    delete axios.defaults.headers.common.Authorization;
+    delete this.axiosInstance.defaults.headers.common.Authorization;
   }
 
   // Set axios authorization header
   public setAxiosAuthHeader(token: string): void {
-    axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+    this.axiosInstance.defaults.headers.common.Authorization = `Bearer ${token}`;
   }
 
   // Check if token exists
@@ -67,7 +74,7 @@ class TokenService {
       this.setAxiosAuthHeader(token);
       
       // Make a simple request to validate token
-      const response = await axios.get('/api/users/profile');
+      const response = await this.axiosInstance.get('/api/users/profile');
       return response.status === 200;
     } catch (error: any) {
       console.warn('Token validation failed:', error.message);
@@ -99,7 +106,7 @@ class TokenService {
 
   private async performTokenRefresh(currentToken: string): Promise<string | null> {
     try {
-      const response = await axios.post('/auth/refresh', { token: currentToken });
+      const response = await this.axiosInstance.post('/auth/refresh', { token: currentToken });
       const newToken = response.data?.token;
       
       if (newToken) {

@@ -101,7 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           // Validate token in background
           console.log('AuthContext - Validating token in background');
-          const isValid = await validateTokenAndLoadProfile(token);
+          const isValid = await validateTokenAndLoadProfile();
           console.log('AuthContext - Token validation result:', isValid);
           
           if (!isValid) {
@@ -116,7 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 tokenService.setAxiosAuthHeader(newToken);
                 
                 // Try to validate with new token
-                const newTokenValid = await validateTokenAndLoadProfile(newToken);
+                const newTokenValid = await validateTokenAndLoadProfile();
                 console.log('AuthContext - New token validation result:', newTokenValid);
                 if (!newTokenValid) {
                   console.warn('AuthContext - Token refresh succeeded but profile still unavailable');
@@ -131,12 +131,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (parseError: unknown) {
           console.warn('AuthContext - Failed to parse saved user:', parseError instanceof Error ? parseError.message : 'Unknown error');
           // Try to validate token and load profile, but never logout automatically
-          await validateTokenAndLoadProfile(token);
+          await validateTokenAndLoadProfile();
         }
       } else {
         console.log('AuthContext - No saved user, loading profile with token');
         // No saved user, try to load profile with token
-        const profileLoaded = await validateTokenAndLoadProfile(token);
+        const profileLoaded = await validateTokenAndLoadProfile();
         if (!profileLoaded) {
           console.warn('AuthContext - Failed to load profile, but never logging out automatically');
           // Never logout user automatically - just keep loading state false
@@ -234,7 +234,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!token) return;
     
     try {
-      await validateTokenAndLoadProfile(token);
+      await validateTokenAndLoadProfile();
     } catch (error: unknown) {
       console.warn('Failed to refresh user profile:', error instanceof Error ? error.message : 'Unknown error');
     }
