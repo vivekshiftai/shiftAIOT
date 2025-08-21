@@ -7,16 +7,9 @@ import {
   Trash2, 
   Search, 
   Filter, 
-  ArrowLeft, 
-  Calendar,
   Clock,
   CheckCircle,
-  AlertTriangle,
-  Wrench,
-  Settings,
-  Repeat,
-  Bell,
-  Cog
+  AlertTriangle
 } from 'lucide-react';
 import Button from '../components/UI/Button';
 import Modal from '../components/UI/Modal';
@@ -242,7 +235,7 @@ const MaintenancePage: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending': return <Clock className="w-4 h-4" />;
-      case 'in_progress': return <Wrench className="w-4 h-4" />;
+      case 'in_progress': return <Clock className="w-4 h-4" />; // Changed from Wrench to Clock
       case 'completed': return <CheckCircle className="w-4 h-4" />;
       case 'overdue': return <AlertTriangle className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
@@ -274,19 +267,9 @@ const MaintenancePage: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={<ArrowLeft className="w-4 h-4" />}
-            onClick={() => navigate('/dashboard')}
-          >
-            Back to Dashboard
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-primary">Maintenance Schedule</h1>
-            <p className="text-secondary">Manage device maintenance tasks and schedules</p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-primary">Maintenance Schedule</h1>
+          <p className="text-secondary">Manage device maintenance tasks and schedules</p>
         </div>
         
         <Button
@@ -349,92 +332,107 @@ const MaintenancePage: React.FC = () => {
         </div>
       )}
 
-      {/* Maintenance Tasks Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTasks.map((task) => (
-          <div key={task.id} className="card p-6 hover-lift">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  task.status === 'completed' ? 'bg-success-500' :
-                  task.status === 'in_progress' ? 'bg-primary-500' :
-                  isOverdue(task.nextMaintenance) ? 'bg-error-500' : 'bg-warning-500'
-                }`} />
-                <h3 className="font-semibold text-primary">{task.taskName}</h3>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleEdit(task)}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(task.id)}
-                  className="text-error-500 hover:text-error-600"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-            
-            {task.description && (
-              <p className="text-secondary text-sm mb-4">{task.description}</p>
-            )}
-            
-            <div className="space-y-3 mb-4">
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="w-4 h-4 text-secondary" />
-                <span className="text-secondary">Next Due:</span>
-                <span className={`font-medium ${isOverdue(task.nextMaintenance) ? 'text-error-600' : 'text-primary'}`}>
-                  {new Date(task.nextMaintenance).toLocaleDateString()}
-                </span>
-              </div>
-              
-              {task.lastMaintenance && (
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle className="w-4 h-4 text-success-500" />
-                  <span className="text-secondary">Last performed:</span>
-                  <span className="font-medium text-primary">
-                    {new Date(task.lastMaintenance).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-              
-              {task.assignedTo && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Bell className="w-4 h-4 text-primary-500" />
-                  <span className="text-secondary">Assigned to:</span>
-                  <span className="font-medium text-primary">{task.assignedTo}</span>
-                </div>
-              )}
-            </div>
-            
-            <div className="flex items-center gap-2 mb-4">
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
-                {getStatusIcon(task.status)}
-                <span className="ml-1 capitalize">{task.status.replace('_', ' ')}</span>
-              </span>
-              
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                <span className="capitalize">{task.priority}</span>
-              </span>
-            </div>
-            
-            <div className="flex items-center justify-between text-xs text-tertiary">
-              <span>Created: {new Date(task.createdAt).toLocaleDateString()}</span>
-              <span>Updated: {new Date(task.updatedAt).toLocaleDateString()}</span>
-            </div>
-          </div>
-        ))}
+      {/* Maintenance Tasks Table */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Task
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Device
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Next Due
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Priority
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Assigned To
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-slate-200">
+              {filteredTasks.map((task) => (
+                <tr key={task.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      <div className="text-sm font-medium text-slate-900">{task.taskName}</div>
+                      {task.description && (
+                        <div className="text-sm text-slate-500 truncate max-w-xs">{task.description}</div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-slate-900">{task.deviceName}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className={`text-sm font-medium ${
+                      isOverdue(task.nextMaintenance) ? 'text-red-600' : 'text-slate-900'
+                    }`}>
+                      {new Date(task.nextMaintenance).toLocaleDateString()}
+                      {isOverdue(task.nextMaintenance) && (
+                        <span className="ml-2 text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
+                          Overdue
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+                      {getStatusIcon(task.status)}
+                      <span className="ml-1 capitalize">{task.status.replace('_', ' ')}</span>
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                      <span className="capitalize">{task.priority}</span>
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-slate-900">
+                      {task.assignedTo || 'Unassigned'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(task)}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(task.id)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {filteredTasks.length === 0 && !loading && (
         <div className="text-center py-12">
-          <Wrench className="w-16 h-16 text-secondary mx-auto mb-4" />
+          <Clock className="w-16 h-16 text-secondary mx-auto mb-4" /> {/* Changed from Wrench to Clock */}
           <h3 className="text-lg font-semibold text-primary mb-2">No maintenance tasks found</h3>
           <p className="text-secondary mb-4">
             {searchTerm || filterStatus !== 'all' || filterPriority !== 'all'
@@ -763,7 +761,7 @@ const MaintenancePage: React.FC = () => {
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
               rows={3}
               placeholder="Additional notes or instructions"
             />

@@ -208,14 +208,17 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     }
   };
 
+  // Handle success continue - close onboarding and show chat
   const handleSuccessContinue = () => {
     setShowSuccessMessage(false);
     setShowChatInterface(true);
   };
 
+  // Handle chat close - close everything and return to devices list
   const handleChatClose = () => {
     setShowChatInterface(false);
-    onCancel();
+    setShowSuccessMessage(false);
+    onCancel(); // Close the entire onboarding form
   };
 
   const renderStep1 = () => (
@@ -563,7 +566,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
   // Render success message within the modal
   const renderSuccessContent = () => (
-    <div className="flex-1 flex items-center justify-center p-6">
+    <div className="flex-1 flex items-center justify-center p-4">
       <OnboardingSuccess
         result={{
           deviceId: onboardingResult?.deviceId || 'DEV-001',
@@ -575,101 +578,112 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           pdfFileName: uploadedFile?.file.name || 'device_documentation.pdf'
         }}
         onContinue={handleSuccessContinue}
-        onClose={onCancel}
+        onClose={handleChatClose}
       />
     </div>
   );
 
-  // Render chat interface within the modal
+  // Render chat interface as separate modal
   const renderChatContent = () => (
-    <div className="flex-1 flex items-center justify-center p-6">
-      <DeviceChatInterface
-        deviceName={formData.deviceName}
-        pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
-        onClose={handleChatClose}
-        onContinue={handleChatClose}
-      />
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] overflow-hidden">
+        <DeviceChatInterface
+          deviceName={formData.deviceName}
+          pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
+          onClose={handleChatClose}
+          onContinue={handleChatClose}
+        />
+      </div>
     </div>
   );
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] flex flex-col">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-6 text-white flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">
-                {showOnboardingLoader ? 'Processing Device...' : 
-                 showSuccessMessage ? 'Onboarding Complete!' :
-                 showChatInterface ? 'Device Chat Interface' :
-                 'Device Onboarding'}
-              </h2>
-              <p className="text-purple-100 mt-1">
-                {showOnboardingLoader 
-                  ? 'Please wait while we process your device documentation' 
-                  : showSuccessMessage
-                  ? 'Your device has been successfully onboarded'
-                  : showChatInterface
-                  ? 'Chat with your device AI assistant'
-                  : 'Enter basic device information and specifications'
-                }
-              </p>
+    <>
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] flex flex-col">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-6 text-white flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">
+                  {showOnboardingLoader ? 'Processing Device...' : 
+                   showSuccessMessage ? 'Onboarding Complete!' :
+                   'Device Onboarding'}
+                </h2>
+                <p className="text-purple-100 mt-1">
+                  {showOnboardingLoader 
+                    ? 'Please wait while we process your device documentation' 
+                    : showSuccessMessage
+                    ? 'Your device has been successfully onboarded'
+                    : 'Enter basic device information and specifications'
+                  }
+                </p>
+              </div>
+              {!showOnboardingLoader && !showSuccessMessage && (
+                <button
+                  onClick={onCancel}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              )}
             </div>
-            {!showOnboardingLoader && !showSuccessMessage && !showChatInterface && (
-              <button
-                onClick={onCancel}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
+            {renderProgressBar()}
+          </div>
+
+          {/* Content - Scrollable */}
+          <div className="flex-1 overflow-y-auto p-6 min-h-0">
+            {showOnboardingLoader ? (
+              renderLoadingContent()
+            ) : showSuccessMessage ? (
+              renderSuccessContent()
+            ) : (
+              <>
+                {currentStep === 1 && renderStep1()}
+                {currentStep === 2 && renderStep2()}
+                {currentStep === 3 && renderStep3()}
+              </>
             )}
           </div>
-          {renderProgressBar()}
-        </div>
 
-        {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-6 min-h-0">
-          {showOnboardingLoader ? (
-            renderLoadingContent()
-          ) : showSuccessMessage ? (
-            renderSuccessContent()
-          ) : showChatInterface ? (
-            renderChatContent()
-          ) : (
-            <>
-              {currentStep === 1 && renderStep1()}
-              {currentStep === 2 && renderStep2()}
-              {currentStep === 3 && renderStep3()}
-            </>
+          {/* Footer - Hidden during loading and success */}
+          {!showOnboardingLoader && !showSuccessMessage && (
+            <div className="p-6 border-t border-slate-200 bg-slate-50 flex-shrink-0">
+              <div className="flex justify-between items-center">
+                <button
+                  onClick={prevStep}
+                  disabled={currentStep === 1}
+                  className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Previous
+                </button>
+                
+                <div className="flex gap-2">
+                  <button
+                    onClick={onCancel}
+                    className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  
+                  <button
+                    onClick={currentStep === 3 ? handleSubmit : nextStep}
+                    disabled={isSubmitting || (currentStep === 3 && !uploadedFile) || !validateStep(currentStep)}
+                    className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                  >
+                    {currentStep === 3 ? 'Complete Onboarding' : 'Next'}
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
-
-        {/* Footer - Hidden during loading, success, and chat */}
-        {!showOnboardingLoader && !showSuccessMessage && !showChatInterface && (
-          <div className="p-6 border-t border-slate-200 bg-slate-50 flex-shrink-0">
-            <div className="flex justify-between items-center">
-              <button
-                onClick={prevStep}
-                disabled={currentStep === 1}
-                className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Previous
-              </button>
-
-              <button
-                onClick={handleSubmit}
-                disabled={isSubmitting || (currentStep === 3 && !uploadedFile)}
-                className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                {currentStep === 3 ? 'Start Onboarding' : 'Next'}
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
-    </div>
+
+      {/* Chat Interface Modal - Separate from onboarding */}
+      {showChatInterface && renderChatContent()}
+    </>
   );
 };

@@ -201,68 +201,47 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
 
   return (
     <div className="w-full h-full relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-blue-900">
-        {/* Floating Particles */}
-        <div className="absolute inset-0 overflow-hidden">
-          {particles.map(particle => (
-            <div
-              key={particle.id}
-              className="absolute rounded-full opacity-20 animate-pulse"
-              style={{
-                left: `${particle.x}%`,
-                top: `${particle.y}%`,
-                width: `${particle.size}px`,
-                height: `${particle.size}px`,
-                backgroundColor: particle.color,
-                animationDelay: `${particle.id * 0.1}s`,
-                animationDuration: `${2 + Math.random() * 2}s`
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Floating AI Icons */}
-        <div className="absolute inset-0 overflow-hidden">
-          {floatingIcons.map(({ id, icon: Icon, x, y, delay, rotation }) => (
-            <div
-              key={id}
-              className="absolute text-white/5 transition-all duration-300 animate-bounce"
-              style={{
-                left: `${x}%`,
-                top: `${y}%`,
-                animationDelay: `${delay}ms`,
-                transform: `rotate(${rotation}deg)`,
-                animationDuration: `${3 + Math.random() * 2}s`
-              }}
-            >
-              <Icon className="w-3 h-3" />
-            </div>
-          ))}
+      {/* Modern Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        {/* Subtle Pattern */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `radial-gradient(circle at 25% 25%, #3B82F6 1px, transparent 1px),
+                              radial-gradient(circle at 75% 75%, #8B5CF6 1px, transparent 1px)`,
+            backgroundSize: '50px 50px'
+          }}></div>
         </div>
       </div>
 
-      <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 overflow-hidden h-full flex flex-col relative z-10">
-        {/* Enhanced Header */}
-        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white p-4 relative overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-xl overflow-hidden h-full flex flex-col relative z-10">
+        {/* Modern Header */}
+        <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white p-4 relative overflow-hidden">
+          {/* Subtle Pattern Overlay */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `radial-gradient(circle at 20% 50%, #ffffff 1px, transparent 1px)`,
+              backgroundSize: '30px 30px'
+            }}></div>
+          </div>
+          
           {/* AI Status Indicator */}
-          <div className="absolute top-2 right-2 flex items-center gap-2">
+          <div className="absolute top-3 right-3 flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full ${
               aiStatus === 'idle' ? 'bg-green-400' :
               aiStatus === 'thinking' ? 'bg-yellow-400 animate-pulse' :
               'bg-blue-400 animate-ping'
             }`}></div>
-            <span className="text-xs text-blue-100">
+            <span className="text-xs text-white/80 font-medium">
               {aiStatus === 'idle' ? 'AI Ready' :
                aiStatus === 'thinking' ? 'Thinking...' :
                'Responding...'}
             </span>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between relative z-10">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
                   <Bot className="w-5 h-5" />
                 </div>
                 {aiStatus === 'thinking' && (
@@ -271,7 +250,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
               </div>
               <div>
                 <h1 className="text-xl font-bold">AI Assistant</h1>
-                <p className="text-blue-100 text-sm flex items-center gap-2">
+                <p className="text-white/90 text-sm flex items-center gap-2">
                   <CheckCircle className="w-3 h-3" />
                   Ask me anything about {deviceName}
                 </p>
@@ -279,70 +258,68 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              className="p-2 hover:bg-white/20 rounded-lg transition-all duration-300 hover:scale-105"
             >
               <Trash2 className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Enhanced Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-4 h-64">
-          <div className="space-y-4">
-            {messages.map((message) => (
+        {/* Modern Chat Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
               <div
-                key={message.id}
-                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm border ${
+                  message.type === 'user'
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-indigo-400/30'
+                    : 'bg-white/90 backdrop-blur-sm text-gray-800 border-gray-200/50'
+                }`}
               >
-                <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-3 backdrop-blur-sm border ${
-                    message.type === 'user'
-                      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-400/30'
-                      : 'bg-white/10 text-gray-900 border-white/20'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    {message.type === 'assistant' && (
-                      <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                        <Bot className="w-3 h-3 text-white" />
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      {message.isLoading ? (
-                        <div className="flex items-center gap-3">
-                          <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                          </div>
-                          <span className="text-sm text-gray-600">AI is thinking...</span>
-                        </div>
-                      ) : (
-                        <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                          {message.content}
-                        </div>
-                      )}
+                <div className="flex items-start gap-3">
+                  {message.type === 'assistant' && (
+                    <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-center">
+                      <Bot className="w-3 h-3 text-white" />
                     </div>
-                    {message.type === 'user' && (
-                      <div className="flex-shrink-0 w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                        <User className="w-3 h-3 text-white" />
+                  )}
+                  <div className="flex-1">
+                    {message.isLoading ? (
+                      <div className="flex items-center gap-3">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                          <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        </div>
+                        <span className="text-sm text-gray-600">AI is thinking...</span>
+                      </div>
+                    ) : (
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                        {message.content}
                       </div>
                     )}
                   </div>
-                  <div className={`text-xs mt-2 ${
-                    message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
-                  }`}>
-                    {message.timestamp.toLocaleTimeString()}
-                  </div>
+                  {message.type === 'user' && (
+                    <div className="flex-shrink-0 w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                      <User className="w-3 h-3 text-white" />
+                    </div>
+                  )}
+                </div>
+                <div className={`text-xs mt-2 ${
+                  message.type === 'user' ? 'text-white/70' : 'text-gray-500'
+                }`}>
+                  {message.timestamp.toLocaleTimeString()}
                 </div>
               </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
         </div>
 
-        {/* Enhanced Input Area */}
-        <div className="border-t border-white/20 p-4 bg-white/5 backdrop-blur-sm">
+        {/* Modern Input Area */}
+        <div className="border-t border-gray-200/50 p-4 bg-white/50 backdrop-blur-sm">
           <div className="flex items-end gap-3">
             <div className="flex-1">
               <textarea
@@ -350,7 +327,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Ask me about setup, maintenance, troubleshooting, or specifications..."
-                className="w-full px-4 py-3 border border-white/20 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm bg-white/10 backdrop-blur-sm text-white placeholder-white/60"
+                className="w-full px-4 py-3 border border-gray-300/50 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-sm bg-white/80 backdrop-blur-sm text-gray-800 placeholder-gray-500 transition-all duration-300"
                 rows={2}
                 disabled={isLoading}
               />
@@ -360,8 +337,8 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
               disabled={!inputValue.trim() || isLoading}
               className={`flex-shrink-0 w-12 h-12 rounded-xl transition-all duration-300 flex items-center justify-center ${
                 inputValue.trim() && !isLoading
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 transform hover:scale-105 shadow-lg'
-                  : 'bg-white/20 text-white/40 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transform hover:scale-105 shadow-lg'
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
               {isLoading ? (
@@ -372,32 +349,32 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
             </button>
           </div>
 
-          {/* Enhanced Quick Actions */}
+          {/* Modern Quick Actions */}
           <div className="mt-4 flex flex-wrap gap-2">
             <button
               onClick={() => setInputValue('How do I set up this device?')}
-              className="px-3 py-2 bg-white/10 backdrop-blur-sm text-white/80 rounded-full text-xs hover:bg-white/20 transition-all duration-300 border border-white/20 hover:border-white/40"
+              className="px-3 py-2 bg-white/80 backdrop-blur-sm text-gray-700 rounded-full text-xs hover:bg-white transition-all duration-300 border border-gray-200/50 hover:border-gray-300 hover:shadow-sm"
             >
               <CheckCircle className="w-3 h-3 inline mr-1" />
               Setup Guide
             </button>
             <button
               onClick={() => setInputValue('What maintenance is required?')}
-              className="px-3 py-2 bg-white/10 backdrop-blur-sm text-white/80 rounded-full text-xs hover:bg-white/20 transition-all duration-300 border border-white/20 hover:border-white/40"
+              className="px-3 py-2 bg-white/80 backdrop-blur-sm text-gray-700 rounded-full text-xs hover:bg-white transition-all duration-300 border border-gray-200/50 hover:border-gray-300 hover:shadow-sm"
             >
               <Settings className="w-3 h-3 inline mr-1" />
               Maintenance
             </button>
             <button
               onClick={() => setInputValue('Help me troubleshoot issues')}
-              className="px-3 py-2 bg-white/10 backdrop-blur-sm text-white/80 rounded-full text-xs hover:bg-white/20 transition-all duration-300 border border-white/20 hover:border-white/40"
+              className="px-3 py-2 bg-white/80 backdrop-blur-sm text-gray-700 rounded-full text-xs hover:bg-white transition-all duration-300 border border-gray-200/50 hover:border-gray-300 hover:shadow-sm"
             >
               <AlertTriangle className="w-3 h-3 inline mr-1" />
               Troubleshooting
             </button>
             <button
               onClick={() => setInputValue('Show me technical specifications')}
-              className="px-3 py-2 bg-white/10 backdrop-blur-sm text-white/80 rounded-full text-xs hover:bg-white/20 transition-all duration-300 border border-white/20 hover:border-white/40"
+              className="px-3 py-2 bg-white/80 backdrop-blur-sm text-gray-700 rounded-full text-xs hover:bg-white transition-all duration-300 border border-gray-200/50 hover:border-gray-300 hover:shadow-sm"
             >
               <Settings className="w-3 h-3 inline mr-1" />
               Specifications
@@ -405,24 +382,24 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
           </div>
         </div>
 
-        {/* Enhanced Footer */}
-        <div className="border-t border-white/20 p-4 bg-white/5 backdrop-blur-sm">
+        {/* Modern Footer */}
+        <div className="border-t border-gray-200/50 p-4 bg-white/50 backdrop-blur-sm">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs text-white/60">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
               <FileText className="w-3 h-3" />
               <span>Analyzed: {pdfFileName}</span>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setMessages([messages[0]])}
-                className="flex items-center gap-1 px-3 py-1 text-white/60 hover:text-white transition-colors text-xs hover:bg-white/10 rounded-lg"
+                className="flex items-center gap-1 px-3 py-1 text-gray-500 hover:text-gray-700 transition-colors text-xs hover:bg-white/50 rounded-lg"
               >
                 <Clock className="w-3 h-3" />
                 Reset
               </button>
               <button
                 onClick={onContinue}
-                className="flex items-center gap-1 px-4 py-1 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg hover:from-green-600 hover:to-blue-600 transition-all duration-300 font-medium text-xs transform hover:scale-105 shadow-lg"
+                className="flex items-center gap-1 px-4 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-300 font-medium text-xs transform hover:scale-105 shadow-lg"
               >
                 <CheckCircle className="w-3 h-3" />
                 Continue

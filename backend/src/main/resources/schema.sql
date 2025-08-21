@@ -130,6 +130,9 @@ CREATE TABLE IF NOT EXISTS device_maintenance (
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
 );
 
+-- Add organization_id column to device_maintenance if it doesn't exist
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS organization_id VARCHAR(255) NOT NULL DEFAULT 'default';
+
 -- Device Safety Precautions table for onboarding flow - Updated to match new model
 CREATE TABLE IF NOT EXISTS device_safety_precautions (
     id VARCHAR(255) PRIMARY KEY,
@@ -146,6 +149,9 @@ CREATE TABLE IF NOT EXISTS device_safety_precautions (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
 );
+
+-- Add organization_id column to device_safety_precautions if it doesn't exist
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS organization_id VARCHAR(255) NOT NULL DEFAULT 'default';
 
 -- Device Tags table
 CREATE TABLE IF NOT EXISTS device_tags (

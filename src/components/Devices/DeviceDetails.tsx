@@ -1,30 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  X, 
+  Trash2, 
   Download, 
   FileText, 
   Settings, 
   CheckCircle, 
   AlertCircle,
-  Wifi,
-  Cpu,
-  MapPin,
-  Calendar,
-  Shield,
-  Zap,
   Info,
   Clock,
-  Tag,
   MessageSquare,
-  Wrench,
-  Database,
-  HardDrive,
   AlertTriangle,
-  ChevronRight,
-  ChevronLeft,
-  BarChart3,
-  Activity,
-  Thermometer
+  BarChart3
 } from 'lucide-react';
 import { Device } from '../../types';
 import { deviceAPI, ruleAPI, maintenanceAPI, deviceSafetyPrecautionsAPI } from '../../services/api';
@@ -32,6 +18,7 @@ import { DeviceRulesManager } from './DeviceRulesManager';
 import DeviceRulesDisplay from './DeviceRulesDisplay';
 import DeviceAnalyticsDisplay from './DeviceAnalyticsDisplay';
 import DeviceLogsDisplay from './DeviceLogsDisplay';
+import { DeviceStatsService } from '../../services/deviceStatsService';
 
 interface DeviceDetailsProps {
   device: Device;
@@ -80,19 +67,19 @@ const statusConfig = {
 };
 
 const deviceTypeConfig = {
-  SENSOR: { icon: Thermometer, label: 'Sensor' },
-  ACTUATOR: { icon: Cpu, label: 'Actuator' },
-  GATEWAY: { icon: Wifi, label: 'Gateway' },
-  CONTROLLER: { icon: Cpu, label: 'Controller' }
+  SENSOR: { icon: 'Thermometer', label: 'Sensor' },
+  ACTUATOR: { icon: 'Cpu', label: 'Actuator' },
+  GATEWAY: { icon: 'Wifi', label: 'Gateway' },
+  CONTROLLER: { icon: 'Cpu', label: 'Controller' }
 };
 
 const tabs = [
   { id: 'profile', label: 'Profile & Specifications', icon: Info },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'rules', label: 'Rules', icon: Zap },
+  { id: 'rules', label: 'Rules', icon: 'Zap' },
   { id: 'logs', label: 'Logs', icon: FileText },
-  { id: 'connection', label: 'Connection Details', icon: Wifi },
-  { id: 'maintenance', label: 'Maintenance Details', icon: Wrench },
+  { id: 'connection', label: 'Connection Details', icon: 'Wifi' },
+  { id: 'maintenance', label: 'Maintenance Details', icon: 'Wrench' },
   { id: 'chat', label: 'Chat History', icon: MessageSquare }
 ];
 
@@ -628,7 +615,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
               onClick={onClose}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-slate-600" />
+              <Trash2 className="w-5 h-5 text-slate-600" />
             </button>
           </div>
         </div>
