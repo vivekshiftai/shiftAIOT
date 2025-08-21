@@ -1,6 +1,6 @@
 /* Knowledge Section Layout Styles */
 .knowledge-section {
-  height: 100vh !important;
+  height: 100% !important;
   overflow: hidden !important;
   position: relative;
 }

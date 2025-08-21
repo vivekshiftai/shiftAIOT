@@ -398,7 +398,7 @@ export const KnowledgeSection: React.FC = () => {
   );
 
   return (
-    <div className="knowledge-section h-screen flex flex-col bg-gray-50 -m-8">
+    <div className="knowledge-section flex flex-col bg-gray-50 h-full">
       {/* Fixed Header */}
       <div className="knowledge-fixed-header flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">

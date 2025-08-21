@@ -89,8 +89,8 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
   }, [result.deviceId, result.rulesGenerated, result.maintenanceItems, result.safetyPrecautions]);
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-500">
+    <div className="w-full h-full flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-500">
         {/* Header */}
         <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-3 sm:p-4 border-b border-green-200">
           <div className="flex items-center justify-between">

@@ -44,7 +44,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   };
 
   return (
-            <header className="bg-card text-primary h-16 flex items-center justify-between px-6 shadow-sm sticky top-0 z-50 border-b border-light">
+            <header className="bg-card text-primary h-16 flex items-center justify-between px-6 shadow-sm border-b border-light flex-shrink-0">
       <div className="flex items-center gap-4">
         {/* Sidebar Toggle */}
         <IconButton
@@ -112,7 +112,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             </div>
             <div className="hidden md:block text-left">
               <p className="text-sm font-medium text-primary">
-                {user?.email || 'User'}
+                {user?.firstName && user?.lastName 
+                  ? `${user.firstName} ${user.lastName}` 
+                  : user?.email || 'User'
+                }
               </p>
               <p className="text-xs text-secondary capitalize">
                 {user?.role?.toLowerCase() || 'User'}
@@ -128,7 +131,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             <div className="absolute right-0 mt-2 w-56 bg-card rounded-xl shadow-lg border border-light py-2 z-50">
               <div className="px-4 py-3 border-b border-light">
                 <p className="text-sm font-medium text-primary">
-                  {user?.email}
+                  {user?.firstName && user?.lastName 
+                    ? `${user.firstName} ${user.lastName}` 
+                    : user?.email || 'User'
+                  }
                 </p>
                 <p className="text-xs text-secondary capitalize">
                   {user?.role?.toLowerCase() || 'User'}

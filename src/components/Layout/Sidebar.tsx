@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   Home, 
   Cpu, 
@@ -33,11 +34,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   collapsed 
 }) => {
   const location = useLocation();
+  const { user } = useAuth();
 
   return (
     <aside className={`bg-card text-primary transition-all duration-300 ${
       collapsed ? 'w-16' : 'w-64'
-    } min-h-screen flex flex-col shadow-sm border-r border-light`}>
+    } h-screen flex flex-col shadow-sm border-r border-light flex-shrink-0`}>
       <div className="p-4 border-b border-light">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center shadow-sm">
@@ -86,12 +88,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-4 border-t border-light">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center shadow-sm">
-            <span className="text-white text-sm font-medium">JS</span>
+            <span className="text-white text-sm font-medium">
+              {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+            </span>
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate text-primary">John Smith</p>
-              <p className="text-xs text-secondary truncate">Admin</p>
+              <p className="text-sm font-medium truncate text-primary">
+                {user?.firstName && user?.lastName 
+                  ? `${user.firstName} ${user.lastName}` 
+                  : user?.email || 'User'
+                }
+              </p>
+              <p className="text-xs text-secondary truncate capitalize">
+                {user?.role?.toLowerCase() || 'User'}
+              </p>
             </div>
           )}
         </div>

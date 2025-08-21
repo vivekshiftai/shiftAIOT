@@ -218,67 +218,66 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     }
   }, [currentStep, uploadedFile, validateStep, startOnboardingProcess, nextStep]);
 
-  // Handle success continue - close onboarding and show chat
+  // Handle success continue - close onboarding (chat is now integrated)
   const handleSuccessContinue = useCallback(() => {
-    setShowSuccessMessage(false);
-    setShowChatInterface(true);
-  }, []);
-
-  // Handle chat close - close everything and return to devices list
-  const handleChatClose = useCallback(() => {
-    setShowChatInterface(false);
     setShowSuccessMessage(false);
     onCancel(); // Close the entire onboarding form
   }, [onCancel]);
 
-  const renderStep1 = useCallback(() => (
-    <div className="w-3/5 mx-auto h-3/4 flex flex-col justify-center animate-fadeIn">
-      {/* Enhanced Header with Glassmorphism */}
-      <div className="text-center mb-8 p-6 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-xl">
-        <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <Settings className="w-10 h-10 text-white" />
-        </div>
-        <h3 className="text-2xl font-bold text-white mb-2 drop-shadow-lg">Basic Device Information</h3>
-        <p className="text-white/80 text-lg">Enter the essential details about your device</p>
+  // Chat is now integrated into success screen, no separate handler needed
+
+  // Handle success close - close everything and return to devices list
+  const handleSuccessClose = useCallback(() => {
+    setShowSuccessMessage(false);
+    setShowChatInterface(false);
+    onCancel(); // Close the entire onboarding form
+  }, [onCancel]);
+
+    const renderStep1 = useCallback(() => (
+    <div className="w-full max-w-4xl mx-auto space-y-8">
+      {/* Step Header */}
+      <div className="text-center">
+        <h3 className="text-2xl font-bold text-gray-800 mb-2">Basic Device Information</h3>
+        <p className="text-gray-600">Enter the essential details about your device</p>
       </div>
 
-      {/* Form Container with Glassmorphism */}
-      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20 shadow-xl">
+      {/* Input Fields */}
+      <div className="space-y-6">
         {/* First Row - Device Name and Location */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-white mb-2">
+            <label className="block text-sm font-semibold text-gray-700">
               Device Name *
             </label>
             <input
               type="text"
               value={formData.deviceName}
               onChange={(e) => handleInputChange('deviceName', e.target.value)}
-              className={`w-full px-4 py-4 border-2 rounded-xl focus:ring-4 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all duration-300 bg-white/20 backdrop-blur-sm text-white placeholder-white/60 ${
-                errors.deviceName ? 'border-red-400' : 'border-white/30'
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
+                errors.deviceName ? 'border-red-400' : 'border-gray-300'
               }`}
               placeholder="e.g., Temperature Sensor 001"
             />
             {errors.deviceName && (
-              <p className="text-red-300 text-sm mt-1">{errors.deviceName}</p>
+              <p className="text-red-600 text-sm mt-1">{errors.deviceName}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-white mb-2">
+            <label className="block text-sm font-semibold text-gray-700">
               Location *
             </label>
             <input
               type="text"
               value={formData.location}
               onChange={(e) => handleInputChange('location', e.target.value)}
-              className={`w-full px-4 py-4 border-2 rounded-xl focus:ring-4 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all duration-300 bg-white/20 backdrop-blur-sm text-white placeholder-white/60 ${
-                errors.location ? 'border-red-400' : 'border-white/30'
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
+                errors.location ? 'border-red-400' : 'border-gray-300'
               }`}
               placeholder="e.g., Building A, Floor 2, Room 205"
             />
             {errors.location && (
-              <p className="text-red-300 text-sm mt-1">{errors.location}</p>
+              <p className="text-red-600 text-sm mt-1">{errors.location}</p>
             )}
           </div>
         </div>
@@ -286,41 +285,41 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         {/* Second Row - Manufacturer and Device Status */}
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-white mb-2">
+            <label className="block text-sm font-semibold text-gray-700">
               Manufacturer *
             </label>
             <input
               type="text"
               value={formData.manufacturer}
               onChange={(e) => handleInputChange('manufacturer', e.target.value)}
-              className={`w-full px-4 py-4 border-2 rounded-xl focus:ring-4 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all duration-300 bg-white/20 backdrop-blur-sm text-white placeholder-white/60 ${
-                errors.manufacturer ? 'border-red-400' : 'border-white/30'
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
+                errors.manufacturer ? 'border-red-400' : 'border-gray-300'
               }`}
               placeholder="e.g., Siemens, Schneider Electric"
             />
             {errors.manufacturer && (
-              <p className="text-red-300 text-sm mt-1">{errors.manufacturer}</p>
+              <p className="text-red-600 text-sm mt-1">{errors.manufacturer}</p>
             )}
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-semibold text-white mb-2">
+            <label className="block text-sm font-semibold text-gray-700">
               Device Status *
             </label>
             <select
               value={formData.deviceStatus}
               onChange={(e) => handleInputChange('deviceStatus', e.target.value)}
-              className={`w-full px-4 py-4 border-2 rounded-xl focus:ring-4 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all duration-300 bg-white/20 backdrop-blur-sm text-white ${
-                errors.deviceStatus ? 'border-red-400' : 'border-white/30'
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 ${
+                errors.deviceStatus ? 'border-red-400' : 'border-gray-300'
               }`}
             >
-              <option value="ONLINE" className="bg-gray-800 text-white">🟢 Online</option>
-              <option value="OFFLINE" className="bg-gray-800 text-white">🔴 Offline</option>
-              <option value="WARNING" className="bg-gray-800 text-white">🟡 Warning</option>
-              <option value="ERROR" className="bg-gray-800 text-white">🔴 Error</option>
+              <option value="ONLINE" className="bg-white text-gray-800">🟢 Online</option>
+              <option value="OFFLINE" className="bg-white text-gray-800">🔴 Offline</option>
+              <option value="WARNING" className="bg-white text-gray-800">🟡 Warning</option>
+              <option value="ERROR" className="bg-white text-gray-800">🔴 Error</option>
             </select>
             {errors.deviceStatus && (
-              <p className="text-red-300 text-sm mt-1">{errors.deviceStatus}</p>
+              <p className="text-red-600 text-sm mt-1">{errors.deviceStatus}</p>
             )}
           </div>
         </div>
@@ -328,110 +327,106 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     </div>
   ), [formData.deviceName, formData.location, formData.manufacturer, formData.deviceStatus, errors.deviceName, errors.location, errors.manufacturer, errors.deviceStatus, handleInputChange]);
 
-  const renderStep2 = useCallback(() => (
-    <div className="w-3/5 mx-auto h-3/4 flex flex-col justify-center animate-fadeIn">
-      {/* Enhanced Header with Glassmorphism */}
-      <div className="text-center mb-8 p-6 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-xl">
-        <div className="w-20 h-20 bg-gradient-to-br from-green-500 via-blue-600 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <Bot className="w-10 h-10 text-white" />
-        </div>
-        <h3 className="text-2xl font-bold text-white mb-2 drop-shadow-lg">Connection Settings</h3>
-        <p className="text-white/80 text-lg">Configure how your device will communicate</p>
+    const renderStep2 = useCallback(() => (
+    <div className="w-full max-w-4xl mx-auto space-y-8">
+      {/* Step Header */}
+      <div className="text-center">
+        <h3 className="text-2xl font-bold text-gray-800 mb-2">Connection Settings</h3>
+        <p className="text-gray-600">Configure how your device will communicate</p>
       </div>
 
-      {/* Form Container with Glassmorphism */}
-      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20 shadow-xl">
-        <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-semibold text-white mb-2">
-              Connection Type *
-            </label>
-            <div className="grid grid-cols-3 gap-4">
-              {(['MQTT', 'HTTP', 'COAP'] as const).map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => handleInputChange('connectionType', type)}
-                  className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                    formData.connectionType === type
-                      ? 'border-indigo-400 bg-indigo-500/20 text-white shadow-lg'
-                      : 'border-white/30 hover:border-white/50 bg-white/10 text-white/80 hover:text-white'
-                  }`}
-                >
-                  <div className="text-center">
-                    <div className="text-lg font-semibold">{type}</div>
-                    <div className="text-xs text-white/60 mt-1">
-                      {type === 'MQTT' && 'Message Queue'}
-                      {type === 'HTTP' && 'REST API'}
-                      {type === 'COAP' && 'Constrained Application'}
-                    </div>
+      {/* Input Fields */}
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-3">
+            Connection Type *
+          </label>
+          <div className="grid grid-cols-3 gap-4">
+            {(['MQTT', 'HTTP', 'COAP'] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleInputChange('connectionType', type)}
+                className={`p-4 rounded-lg border-2 transition-all duration-300 ${
+                  formData.connectionType === type
+                    ? 'border-indigo-400 bg-indigo-500/20 text-indigo-700 shadow-lg'
+                    : 'border-gray-300 hover:border-gray-400 bg-white text-gray-700 hover:text-gray-900'
+                }`}
+              >
+                <div className="text-center">
+                  <div className="text-lg font-semibold">{type}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {type === 'MQTT' && 'Message Queue'}
+                    {type === 'HTTP' && 'REST API'}
+                    {type === 'COAP' && 'Constrained Application'}
                   </div>
-                </button>
-              ))}
-            </div>
+                </div>
+              </button>
+            ))}
           </div>
+        </div>
 
         {/* MQTT Fields */}
         {formData.connectionType === 'MQTT' && (
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-semibold text-white mb-2">
+              <label className="block text-sm font-semibold text-gray-700">
                 Broker URL *
               </label>
               <input
                 type="text"
                 value={formData.brokerUrl || ''}
                 onChange={(e) => handleInputChange('brokerUrl', e.target.value)}
-                className={`w-full px-4 py-4 border-2 rounded-xl focus:ring-4 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all duration-300 bg-white/20 backdrop-blur-sm text-white placeholder-white/60 ${
-                  errors.brokerUrl ? 'border-red-400' : 'border-white/30'
+                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
+                  errors.brokerUrl ? 'border-red-400' : 'border-gray-300'
                 }`}
                 placeholder="e.g., mqtt://broker.example.com:1883"
               />
               {errors.brokerUrl && (
-                <p className="text-red-300 text-sm mt-1">{errors.brokerUrl}</p>
+                <p className="text-red-600 text-sm mt-1">{errors.brokerUrl}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-white mb-2">
+              <label className="block text-sm font-semibold text-gray-700">
                 Topic *
               </label>
               <input
                 type="text"
                 value={formData.topic || ''}
                 onChange={(e) => handleInputChange('topic', e.target.value)}
-                className={`w-full px-4 py-4 border-2 rounded-xl focus:ring-4 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all duration-300 bg-white/20 backdrop-blur-sm text-white placeholder-white/60 ${
-                  errors.topic ? 'border-red-400' : 'border-white/30'
+                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
+                  errors.topic ? 'border-red-400' : 'border-gray-300'
                 }`}
                 placeholder="e.g., device/sensor001/data"
               />
               {errors.topic && (
-                <p className="text-red-300 text-sm mt-1">{errors.topic}</p>
+                <p className="text-red-600 text-sm mt-1">{errors.topic}</p>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-white mb-2">
+                <label className="block text-sm font-semibold text-gray-700">
                   Username
                 </label>
                 <input
                   type="text"
                   value={formData.username || ''}
                   onChange={(e) => handleInputChange('username', e.target.value)}
-                  className="w-full px-4 py-4 border-2 border-white/30 rounded-xl focus:ring-4 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all duration-300 bg-white/20 backdrop-blur-sm text-white placeholder-white/60"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
                   placeholder="Optional"
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-white mb-2">
+                <label className="block text-sm font-semibold text-gray-700">
                   Password
                 </label>
                 <input
                   type="password"
                   value={formData.password || ''}
                   onChange={(e) => handleInputChange('password', e.target.value)}
-                  className="w-full px-4 py-4 border-2 border-white/30 rounded-xl focus:ring-4 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all duration-300 bg-white/20 backdrop-blur-sm text-white placeholder-white/60"
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
                   placeholder="Optional"
                 />
               </div>
@@ -541,25 +536,110 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             </div>
           </div>
         )}
-        </div>
+
+        {/* HTTP Fields */}
+        {formData.connectionType === 'HTTP' && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Endpoint URL *
+              </label>
+              <input
+                type="text"
+                value={formData.httpEndpoint || ''}
+                onChange={(e) => handleInputChange('httpEndpoint', e.target.value)}
+                className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
+                placeholder="e.g., https://api.example.com/data"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                HTTP Method *
+              </label>
+              <select
+                value={formData.httpMethod || 'GET'}
+                onChange={(e) => handleInputChange('httpMethod', e.target.value)}
+                className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800"
+              >
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="PATCH">PATCH</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Headers (JSON)
+              </label>
+              <textarea
+                value={formData.httpHeaders || ''}
+                onChange={(e) => handleInputChange('httpHeaders', e.target.value)}
+                className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
+                placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'
+                rows={3}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* COAP Fields */}
+        {formData.connectionType === 'COAP' && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                COAP Host *
+              </label>
+              <input
+                type="text"
+                value={formData.coapHost || ''}
+                onChange={(e) => handleInputChange('coapHost', e.target.value)}
+                className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
+                placeholder="e.g., coap://example.com"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Port
+                </label>
+                <input
+                  type="text"
+                  value={formData.coapPort || ''}
+                  onChange={(e) => handleInputChange('coapPort', e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
+                  placeholder="5683"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Path
+                </label>
+                <input
+                  type="text"
+                  value={formData.coapPath || ''}
+                  onChange={(e) => handleInputChange('coapPath', e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
+                  placeholder="/sensor/data"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   ), [formData.connectionType, formData.brokerUrl, formData.topic, formData.username, formData.password, formData.httpEndpoint, formData.httpMethod, formData.httpHeaders, formData.coapHost, formData.coapPort, formData.coapPath, errors, handleInputChange]);
 
   const renderStep3 = useCallback(() => (
-    <div className="w-3/5 mx-auto h-3/4 flex flex-col justify-center animate-fadeIn">
-      {/* Enhanced Header with Glassmorphism */}
-      <div className="text-center mb-8 p-6 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-xl">
-        <div className="w-20 h-20 bg-gradient-to-br from-purple-500 via-pink-600 to-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <FileText className="w-10 h-10 text-white" />
-        </div>
-        <h3 className="text-2xl font-bold text-white mb-2 drop-shadow-lg">Upload Device Documentation</h3>
-        <p className="text-white/80 text-lg">Upload a PDF to automatically configure your device</p>
+    <div className="w-full max-w-4xl mx-auto space-y-8">
+      {/* Step Header */}
+      <div className="text-center">
+        <h3 className="text-2xl font-bold text-gray-800 mb-2">Upload Device Documentation</h3>
+        <p className="text-gray-600">Upload a PDF to automatically configure your device</p>
       </div>
 
-      {/* Form Container with Glassmorphism */}
-      <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 border border-white/20 shadow-xl">
-        <div className="border-2 border-dashed border-white/40 rounded-xl p-8 text-center hover:border-white/60 transition-all duration-300 bg-white/5">
+      {/* Input Fields */}
+      <div className="space-y-6">
+        <div className="border-2 border-dashed border-gray-400 rounded-lg p-8 text-center hover:border-gray-500 transition-all duration-300 bg-gray-50">
           <input
             type="file"
             accept=".pdf"
@@ -568,21 +648,21 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             id="file-upload"
           />
           <label htmlFor="file-upload" className="cursor-pointer">
-            <Upload className="w-16 h-16 text-white/60 mx-auto mb-4" />
-            <p className="text-xl font-semibold text-white mb-2">
+            <Upload className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+            <p className="text-xl font-semibold text-gray-800 mb-2">
               {uploadedFile ? uploadedFile.file.name : 'Click to upload PDF'}
             </p>
-            <p className="text-white/70 text-lg">
+            <p className="text-gray-600">
               {uploadedFile ? 'File uploaded successfully' : 'Upload device manual, datasheet, or documentation'}
             </p>
           </label>
         </div>
 
         {uploadedFile && (
-          <div className="mt-6 bg-green-500/20 border border-green-400/30 rounded-xl p-4 backdrop-blur-sm">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center">
-              <CheckCircle className="w-6 h-6 text-green-400 mr-3" />
-              <span className="text-green-100 font-semibold text-lg">File uploaded successfully</span>
+              <CheckCircle className="w-6 h-6 text-green-600 mr-3" />
+              <span className="text-green-800 font-semibold">File uploaded successfully</span>
             </div>
           </div>
         )}
@@ -617,7 +697,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
   // Render loading screen within the modal
   const renderLoadingContent = useCallback(() => (
-    <div className="w-3/5 mx-auto h-3/4 flex items-center justify-center">
+    <div className="w-full max-w-4xl mx-auto flex items-center justify-center">
       <EnhancedOnboardingLoader
         isProcessing={true}
         currentProcess={currentProcess}
@@ -629,43 +709,58 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     </div>
   ), [currentProcess, progress, uploadedFile?.file.name, currentSubStage]);
 
-  // Render success message within the modal
+  // Render success message with integrated chat
   const renderSuccessContent = useCallback(() => (
-    <div className="w-3/5 mx-auto h-3/4 flex items-center justify-center">
-      <OnboardingSuccess
-        result={{
-          deviceId: onboardingResult?.deviceId || 'DEV-001',
-          deviceName: formData.deviceName,
-          rulesGenerated: onboardingResult?.rulesGenerated || 5,
-          maintenanceItems: onboardingResult?.maintenanceItems || 3,
-          safetyPrecautions: onboardingResult?.safetyPrecautions || 2,
-          processingTime: onboardingStartTime ? Math.round((Date.now() - onboardingStartTime) / 1000) : 0,
-          pdfFileName: uploadedFile?.file.name || 'device_documentation.pdf'
-        }}
-        onContinue={handleSuccessContinue}
-        onClose={handleChatClose}
-      />
-    </div>
-  ), [onboardingResult, formData.deviceName, onboardingStartTime, uploadedFile?.file.name, handleSuccessContinue, handleChatClose]);
+    <div className="w-full max-w-6xl mx-auto space-y-6">
+      {/* Success Header */}
+      <div className="text-center">
+        <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="w-8 h-8 text-white" />
+        </div>
+        <h3 className="text-2xl font-bold text-gray-800 mb-2">✨ AI Machine Ready!</h3>
+        <p className="text-gray-600">You can now chat with {formData.deviceName} like a human!</p>
+      </div>
 
-  // Render chat interface as separate modal
-  const renderChatContent = useCallback(() => (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[60]">
-      <div className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-xl rounded-3xl shadow-2xl w-1/2 h-1/2 overflow-hidden border border-white/30">
+      {/* Device Info */}
+      <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div>
+            <span className="text-green-600 font-medium">Device:</span>
+            <p className="text-green-800 font-semibold">{formData.deviceName}</p>
+          </div>
+          <div>
+            <span className="text-green-600 font-medium">Processing Time:</span>
+            <p className="text-green-800 font-semibold">{onboardingStartTime ? Math.round((Date.now() - onboardingStartTime) / 1000) : 0}s</p>
+          </div>
+          <div>
+            <span className="text-green-600 font-medium">AI Rules:</span>
+            <p className="text-green-800 font-semibold">{onboardingResult?.rulesGenerated || 5}</p>
+          </div>
+          <div>
+            <span className="text-green-600 font-medium">Maintenance:</span>
+            <p className="text-green-800 font-semibold">{onboardingResult?.maintenanceItems || 3}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Integrated Chat Interface */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-96">
         <DeviceChatInterface
           deviceName={formData.deviceName}
           pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
-          onClose={handleChatClose}
-          onContinue={handleChatClose}
+          onClose={handleSuccessClose}
+          onContinue={handleSuccessClose}
         />
       </div>
     </div>
-  ), [formData.deviceName, uploadedFile?.file.name, handleChatClose]);
+  ), [onboardingResult, formData.deviceName, onboardingStartTime, uploadedFile?.file.name, handleSuccessClose]);
+
+  // Chat interface is now integrated into success screen
 
   return (
     <>
       <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
-        <div className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-xl rounded-3xl shadow-2xl max-w-4xl w-full max-h-[95vh] flex flex-col border border-white/30">
+        <div className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col border border-white/30">
           {/* Header */}
           <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 text-white flex-shrink-0 rounded-t-3xl">
             <div className="flex items-center justify-between">
@@ -747,8 +842,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         </div>
       </div>
 
-      {/* Chat Interface Modal - Separate from onboarding */}
-      {showChatInterface && renderChatContent()}
+      {/* Chat Interface Modal - No longer needed as it's integrated into success screen */}
     </>
   );
 };

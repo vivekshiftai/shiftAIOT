@@ -199,20 +199,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
   };
 
   return (
-    <div className="w-full h-full relative overflow-hidden">
-      {/* Modern Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        {/* Subtle Pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 25% 25%, #3B82F6 1px, transparent 1px),
-                              radial-gradient(circle at 75% 75%, #8B5CF6 1px, transparent 1px)`,
-            backgroundSize: '50px 50px'
-          }}></div>
-        </div>
-      </div>
-
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/60 shadow-xl overflow-hidden h-full flex flex-col relative z-10">
+    <div className="w-full h-full flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden">
         {/* Modern Header */}
         <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white p-4 relative overflow-hidden">
           {/* Subtle Pattern Overlay */}
@@ -410,3 +397,5 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     </div>
   );
 };
+
+export default DeviceChatInterface;

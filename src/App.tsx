@@ -115,7 +115,7 @@ const MainAppLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-secondary flex">
+    <div className="h-screen bg-secondary flex overflow-hidden">
       <Sidebar
         activeSection={section}
         onSectionChange={handleSectionChange}
