@@ -76,10 +76,10 @@ const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[1050] flex items-center justify-center">
+    <div className="fixed inset-0 z-[1050] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className={`absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-200 ${
+        className={`absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-200 ${
           isVisible ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={handleBackdropClick}
@@ -87,16 +87,16 @@ const Modal: React.FC<ModalProps> = ({
       
       {/* Modal */}
       <div
-        className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-[90vw] max-h-[90vh] flex flex-col transition-all duration-300 mx-4 ${
+        className={`relative bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-slate-200/60 w-full max-w-[95vw] max-h-[90vh] flex flex-col transition-all duration-300 ${
           isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
         } ${getSizeClasses()} ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-200/60 flex-shrink-0 bg-white/80 backdrop-blur-sm">
             {title && (
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-800">
                 {title}
               </h2>
             )}
@@ -108,17 +108,17 @@ const Modal: React.FC<ModalProps> = ({
                   setIsVisible(false);
                   setTimeout(onClose, 200);
                 }}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="p-2 hover:bg-slate-100/80 text-slate-600 hover:text-slate-800"
                 aria-label="Close modal"
               >
-                <Trash2 className="w-5 h-5" />
+                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
             )}
           </div>
         )}
         
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {children}
         </div>
       </div>

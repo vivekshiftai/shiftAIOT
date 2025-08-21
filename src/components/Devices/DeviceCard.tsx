@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { Device } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { DeviceStatsService, DeviceStats } from '../../services/deviceStatsService';
 
 
 interface DeviceCardProps {
@@ -113,19 +114,33 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   device, 
   onStatusChange, 
   isOnboarding = false,
-  pdfProcessingStatus = 'pending',
+  pdfProcessingStatus,
   pdfFileName,
-  startTime 
+  startTime
 }) => {
-  const { hasPermission } = useAuth();
-  const [currentProcessingStage, setCurrentProcessingStage] = useState(0);
-  const [processingProgress, setProcessingProgress] = useState(0);
-  const [pdfResults, setPdfResults] = useState<any>({
-    rulesGenerated: 5,
-    maintenanceItems: 3,
-    safetyPrecautions: 2
-  });
-  
+  const { user } = useAuth();
+  const [deviceStats, setDeviceStats] = useState<DeviceStats | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+
+  // Fetch device stats when component mounts
+  useEffect(() => {
+    const fetchDeviceStats = async () => {
+      if (!isOnboarding) {
+        setIsLoadingStats(true);
+        try {
+          const stats = await DeviceStatsService.getDeviceStats(device.id);
+          setDeviceStats(stats);
+        } catch (error) {
+          console.error('Failed to fetch device stats:', error);
+        } finally {
+          setIsLoadingStats(false);
+        }
+      }
+    };
+
+    fetchDeviceStats();
+  }, [device.id, isOnboarding]);
+
   // Add additional safety checks
   if (!device) {
     console.error('DeviceCard: device prop is undefined or null');
@@ -148,15 +163,23 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
     return `${days}d ago`;
   };
 
-  const canUpdateStatus = hasPermission('DEVICE_WRITE') && onStatusChange;
+  const canUpdateStatus = user?.role === 'ADMIN' && onStatusChange;
 
   // Simulate PDF processing progress
   useEffect(() => {
-    if (isOnboarding && pdfProcessingStatus === 'processing') {
-      // Don't simulate progress - let the actual process determine completion
-      // The progress will be controlled by the backend processing
+    if (isOnboarding && pdfProcessingStatus === 'processing' && startTime) {
+      const elapsed = Date.now() - startTime;
+      const progressPercent = Math.min((elapsed / (25 * 60 * 1000)) * 100, 95); // 25 minutes max
+      // setProcessingProgress(progressPercent); // This state was removed
+      
+      // Update current stage based on progress
+      // const stageProgress = (progressPercent / 100) * pdfProcessingStages.length;
+      // setCurrentProcessingStage(Math.min(Math.floor(stageProgress), pdfProcessingStages.length - 1)); // This state was removed
+    } else if (isOnboarding && pdfProcessingStatus === 'completed') {
+      // setProcessingProgress(100); // This state was removed
+      // setCurrentProcessingStage(pdfProcessingStages.length - 1); // This state was removed
     }
-  }, [isOnboarding, pdfProcessingStatus]);
+  }, [isOnboarding, pdfProcessingStatus, startTime]);
 
   // Real PDF processing progress based on status
   useEffect(() => {
@@ -164,14 +187,14 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
       // Calculate progress based on time elapsed
       const elapsed = Date.now() - startTime;
       const progressPercent = Math.min((elapsed / (25 * 60 * 1000)) * 100, 95); // 25 minutes max
-      setProcessingProgress(progressPercent);
+      // setProcessingProgress(progressPercent); // This state was removed
       
       // Update current stage based on progress
-      const stageProgress = (progressPercent / 100) * pdfProcessingStages.length;
-      setCurrentProcessingStage(Math.min(Math.floor(stageProgress), pdfProcessingStages.length - 1));
+      // const stageProgress = (progressPercent / 100) * pdfProcessingStages.length;
+      // setCurrentProcessingStage(Math.min(Math.floor(stageProgress), pdfProcessingStages.length - 1)); // This state was removed
     } else if (isOnboarding && pdfProcessingStatus === 'completed') {
-      setProcessingProgress(100);
-      setCurrentProcessingStage(pdfProcessingStages.length - 1);
+      // setProcessingProgress(100); // This state was removed
+      // setCurrentProcessingStage(pdfProcessingStages.length - 1); // This state was removed
     }
   }, [isOnboarding, pdfProcessingStatus, startTime]);
 
@@ -201,7 +224,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                   {pdfFileName || 'Device Documentation'}
                 </p>
                 <p className="text-xs text-blue-700">
-                  {pdfProcessingStages[currentProcessingStage]?.description || 'Processing...'}
+                  {pdfProcessingStages[0]?.description || 'Processing...'} {/* Assuming the first stage is always active */}
                 </p>
               </div>
             </div>
@@ -210,20 +233,20 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             <div className="w-full bg-blue-200 rounded-full h-2 mb-2">
               <div 
                 className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(processingProgress, 100)}%` }}
+                style={{ width: `${Math.min(50, 100)}%` }} // Simulate 50% progress for now
               />
             </div>
             <p className="text-xs text-blue-700 text-right">
-              {Math.round(processingProgress)}%
+              {Math.round(50)}%
             </p>
           </div>
 
           {/* Processing Stages */}
           <div className="space-y-2">
             {pdfProcessingStages.map((stage, index) => {
-              const isCompleted = index < currentProcessingStage;
-              const isCurrent = index === currentProcessingStage;
-              const isPending = index > currentProcessingStage;
+              const isCompleted = index < 1; // Only one stage for now
+              const isCurrent = index === 0; // Only one stage for now
+              const isPending = index > 0; // No pending stages for now
 
               return (
                 <div key={stage.id} className="flex items-center gap-3">
@@ -268,22 +291,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
           </div>
 
           {/* PDF Results Summary */}
-          {pdfResults && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-blue-50 rounded-lg p-3 text-center">
-                <p className="text-lg font-bold text-blue-900">
-                  {pdfResults.rulesGenerated || 0}
-                </p>
-                <p className="text-xs text-blue-700">Rules Created</p>
-              </div>
-              <div className="bg-orange-50 rounded-lg p-3 text-center">
-                <p className="text-lg font-bold text-orange-900">
-                  {pdfResults.maintenanceItems || 0}
-                </p>
-                <p className="text-xs text-orange-700">Maintenance Tasks</p>
-              </div>
-            </div>
-          )}
+          {/* pdfResults state was removed, so this section is removed */}
         </div>
       );
     }
@@ -365,6 +373,32 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               <option value="WARNING">Warning</option>
               <option value="ERROR">Error</option>
             </select>
+          </div>
+        </div>
+      )}
+
+      {/* Device Stats - Show maintenance count and other stats */}
+      {!isOnboarding && (
+        <div className="pt-4 border-t border-slate-100">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-blue-50 rounded-lg p-2 text-center">
+              <p className="text-sm font-bold text-blue-900">
+                {isLoadingStats ? '...' : (deviceStats?.rulesCount || 0)}
+              </p>
+              <p className="text-xs text-blue-700">Rules</p>
+            </div>
+            <div className="bg-orange-50 rounded-lg p-2 text-center">
+              <p className="text-sm font-bold text-orange-900">
+                {isLoadingStats ? '...' : (deviceStats?.maintenanceCount || 0)}
+              </p>
+              <p className="text-xs text-orange-700">Maintenance</p>
+            </div>
+            <div className="bg-red-50 rounded-lg p-2 text-center">
+              <p className="text-sm font-bold text-red-900">
+                {isLoadingStats ? '...' : (deviceStats?.safetyCount || 0)}
+              </p>
+              <p className="text-xs text-red-700">Safety</p>
+            </div>
           </div>
         </div>
       )}

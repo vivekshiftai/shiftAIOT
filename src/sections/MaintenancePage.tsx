@@ -88,17 +88,17 @@ const MaintenancePage: React.FC = () => {
   ];
 
   const priorityOptions = [
-    { value: 'low', label: 'Low', color: 'text-green-600 bg-green-50' },
-    { value: 'medium', label: 'Medium', color: 'text-yellow-600 bg-yellow-50' },
-    { value: 'high', label: 'High', color: 'text-orange-600 bg-orange-50' },
-    { value: 'critical', label: 'Critical', color: 'text-red-600 bg-red-50' }
+    { value: 'low', label: 'Low', color: 'text-green-600 bg-green-50/80' },
+    { value: 'medium', label: 'Medium', color: 'text-yellow-600 bg-yellow-50/80' },
+    { value: 'high', label: 'High', color: 'text-orange-600 bg-orange-50/80' },
+    { value: 'critical', label: 'Critical', color: 'text-red-600 bg-red-50/80' }
   ];
 
   const statusOptions = [
-    { value: 'pending', label: 'Pending', color: 'text-gray-600 bg-gray-50' },
-    { value: 'in_progress', label: 'In Progress', color: 'text-blue-600 bg-blue-50' },
-    { value: 'completed', label: 'Completed', color: 'text-green-600 bg-green-50' },
-    { value: 'overdue', label: 'Overdue', color: 'text-red-600 bg-red-50' }
+    { value: 'pending', label: 'Pending', color: 'text-slate-600 bg-slate-50/80' },
+    { value: 'in_progress', label: 'In Progress', color: 'text-blue-600 bg-blue-50/80' },
+    { value: 'completed', label: 'Completed', color: 'text-green-600 bg-green-50/80' },
+    { value: 'overdue', label: 'Overdue', color: 'text-red-600 bg-red-50/80' }
   ];
 
   // Fetch maintenance tasks with polling
@@ -264,12 +264,12 @@ const MaintenancePage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 min-h-screen p-4 sm:p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-primary">Maintenance Schedule</h1>
-          <p className="text-secondary">Manage device maintenance tasks and schedules</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Maintenance Schedule</h1>
+          <p className="text-slate-600 text-sm sm:text-base">Manage device maintenance tasks and schedules</p>
         </div>
         
         <Button
@@ -286,15 +286,15 @@ const MaintenancePage: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
           <input
             type="text"
             placeholder="Search maintenance tasks..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700 placeholder-slate-400"
           />
         </div>
         
@@ -302,7 +302,7 @@ const MaintenancePage: React.FC = () => {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as any)}
-            className="px-4 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+            className="px-3 sm:px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700 text-sm"
           >
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
@@ -314,7 +314,7 @@ const MaintenancePage: React.FC = () => {
           <select
             value={filterPriority}
             onChange={(e) => setFilterPriority(e.target.value as any)}
-            className="px-4 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+            className="px-3 sm:px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700 text-sm"
           >
             <option value="all">All Priority</option>
             <option value="low">Low</option>
@@ -327,57 +327,57 @@ const MaintenancePage: React.FC = () => {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-error-50 border border-error-200 text-error-700 px-4 py-3 rounded-lg">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {error}
         </div>
       )}
 
       {/* Maintenance Tasks Table */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/60 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-slate-50/80 border-b border-slate-200/60">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Task
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Device
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Next Due
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Priority
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Assigned To
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
+            <tbody className="bg-white/60 divide-y divide-slate-200/60">
               {filteredTasks.map((task) => (
-                <tr key={task.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                <tr key={task.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="text-sm font-medium text-slate-900">{task.taskName}</div>
+                      <div className="text-sm font-medium text-slate-800">{task.taskName}</div>
                       {task.description && (
                         <div className="text-sm text-slate-500 truncate max-w-xs">{task.description}</div>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-slate-900">{task.deviceName}</div>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-slate-700">{task.deviceName}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                     <div className={`text-sm font-medium ${
-                      isOverdue(task.nextMaintenance) ? 'text-red-600' : 'text-slate-900'
+                      isOverdue(task.nextMaintenance) ? 'text-red-600' : 'text-slate-700'
                     }`}>
                       {new Date(task.nextMaintenance).toLocaleDateString()}
                       {isOverdue(task.nextMaintenance) && (
@@ -387,29 +387,29 @@ const MaintenancePage: React.FC = () => {
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
                       {getStatusIcon(task.status)}
                       <span className="ml-1 capitalize">{task.status.replace('_', ' ')}</span>
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
                       <span className="capitalize">{task.priority}</span>
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-slate-900">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-slate-700">
                       {task.assignedTo || 'Unassigned'}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEdit(task)}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -417,7 +417,7 @@ const MaintenancePage: React.FC = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleDelete(task.id)}
-                        className="text-red-600 hover:text-red-800"
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -432,9 +432,9 @@ const MaintenancePage: React.FC = () => {
 
       {filteredTasks.length === 0 && !loading && (
         <div className="text-center py-12">
-          <Clock className="w-16 h-16 text-secondary mx-auto mb-4" /> {/* Changed from Wrench to Clock */}
-          <h3 className="text-lg font-semibold text-primary mb-2">No maintenance tasks found</h3>
-          <p className="text-secondary mb-4">
+          <Clock className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">No maintenance tasks found</h3>
+          <p className="text-slate-600 mb-4">
             {searchTerm || filterStatus !== 'all' || filterPriority !== 'all'
               ? 'Try adjusting your search or filters'
               : 'Create your first maintenance task to get started'
@@ -456,44 +456,44 @@ const MaintenancePage: React.FC = () => {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         title="Create Maintenance Task"
-        size="lg"
+        size="md"
       >
-        <div className="space-y-6 bg-secondary p-6 rounded-lg">
+        <div className="space-y-4 bg-slate-50/50 p-4 rounded-lg">
           {/* Basic Info */}
           <div>
-            <label className="block text-sm font-medium text-primary mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Task Name *
             </label>
             <input
               type="text"
               value={formData.taskName}
               onChange={(e) => setFormData(prev => ({ ...prev, taskName: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
-                formErrors.taskName ? 'border-error-500' : 'border-light'
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700 ${
+                formErrors.taskName ? 'border-red-300' : 'border-slate-200'
               }`}
               placeholder="Enter task name"
             />
             {formErrors.taskName && (
-              <p className="text-error-500 text-sm mt-1">{formErrors.taskName}</p>
+              <p className="text-red-500 text-sm mt-1">{formErrors.taskName}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-primary mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Description
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
-              rows={3}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700"
+              rows={2}
               placeholder="Describe the maintenance task"
             />
           </div>
 
           {/* Device Selection */}
           <div>
-            <label className="block text-sm font-medium text-primary mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Device *
             </label>
             <select
@@ -506,8 +506,8 @@ const MaintenancePage: React.FC = () => {
                   deviceName: device?.name || ''
                 }));
               }}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
-                formErrors.deviceId ? 'border-error-500' : 'border-light'
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700 ${
+                formErrors.deviceId ? 'border-red-300' : 'border-slate-200'
               }`}
             >
               <option value="">Select Device</option>
@@ -516,20 +516,20 @@ const MaintenancePage: React.FC = () => {
               ))}
             </select>
             {formErrors.deviceId && (
-              <p className="text-error-500 text-sm mt-1">{formErrors.deviceId}</p>
+              <p className="text-red-500 text-sm mt-1">{formErrors.deviceId}</p>
             )}
           </div>
 
           {/* Schedule */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-primary mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Frequency
               </label>
               <select
                 value={formData.frequency}
                 onChange={(e) => setFormData(prev => ({ ...prev, frequency: e.target.value }))}
-                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700"
               >
                 {frequencyOptions.map(freq => (
                   <option key={freq.value} value={freq.value}>{freq.label}</option>
@@ -538,33 +538,33 @@ const MaintenancePage: React.FC = () => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-primary mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Next Due Date *
               </label>
               <input
                 type="date"
                 value={formData.nextMaintenance}
                 onChange={(e) => setFormData(prev => ({ ...prev, nextMaintenance: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
-                  formErrors.nextMaintenance ? 'border-error-500' : 'border-light'
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700 ${
+                  formErrors.nextMaintenance ? 'border-red-300' : 'border-slate-200'
                 }`}
               />
               {formErrors.nextMaintenance && (
-                <p className="text-error-500 text-sm mt-1">{formErrors.nextMaintenance}</p>
+                <p className="text-red-500 text-sm mt-1">{formErrors.nextMaintenance}</p>
               )}
             </div>
           </div>
 
           {/* Priority and Assignment */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-primary mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Priority
               </label>
               <select
                 value={formData.priority}
                 onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as any }))}
-                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700"
               >
                 {priorityOptions.map(priority => (
                   <option key={priority.value} value={priority.value}>{priority.label}</option>
@@ -573,14 +573,14 @@ const MaintenancePage: React.FC = () => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-primary mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Assigned To
               </label>
               <input
                 type="text"
                 value={formData.assignedTo}
                 onChange={(e) => setFormData(prev => ({ ...prev, assignedTo: e.target.value }))}
-                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700"
                 placeholder="Enter assignee name"
               />
             </div>
@@ -588,21 +588,21 @@ const MaintenancePage: React.FC = () => {
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-primary mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Notes
             </label>
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
-              rows={3}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700"
+              rows={2}
               placeholder="Additional notes or instructions"
             />
           </div>
         </div>
         
         {/* Fixed Footer */}
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-light bg-white sticky bottom-0">
+        <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-200 bg-white/80 backdrop-blur-sm sticky bottom-0">
           <Button
             variant="outline"
             onClick={() => setShowAddModal(false)}
@@ -623,44 +623,44 @@ const MaintenancePage: React.FC = () => {
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         title="Edit Maintenance Task"
-        size="lg"
+        size="md"
       >
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Basic Info */}
           <div>
-            <label className="block text-sm font-medium text-primary mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Task Name *
             </label>
             <input
               type="text"
               value={formData.taskName}
               onChange={(e) => setFormData(prev => ({ ...prev, taskName: e.target.value }))}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
-                formErrors.taskName ? 'border-error-500' : 'border-light'
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700 ${
+                formErrors.taskName ? 'border-red-300' : 'border-slate-200'
               }`}
               placeholder="Enter task name"
             />
             {formErrors.taskName && (
-              <p className="text-error-500 text-sm mt-1">{formErrors.taskName}</p>
+              <p className="text-red-500 text-sm mt-1">{formErrors.taskName}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-primary mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Description
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-            className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
-              rows={3}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700"
+              rows={2}
               placeholder="Describe the maintenance task"
             />
           </div>
 
           {/* Device Selection */}
           <div>
-            <label className="block text-sm font-medium text-primary mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Device *
             </label>
             <select
@@ -673,8 +673,8 @@ const MaintenancePage: React.FC = () => {
                   deviceName: device?.name || ''
                 }));
               }}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
-                formErrors.deviceId ? 'border-error-500' : 'border-light'
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700 ${
+                formErrors.deviceId ? 'border-red-300' : 'border-slate-200'
               }`}
             >
               <option value="">Select Device</option>
@@ -683,20 +683,20 @@ const MaintenancePage: React.FC = () => {
               ))}
             </select>
             {formErrors.deviceId && (
-              <p className="text-error-500 text-sm mt-1">{formErrors.deviceId}</p>
+              <p className="text-red-500 text-sm mt-1">{formErrors.deviceId}</p>
             )}
           </div>
 
           {/* Schedule */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-primary mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Frequency
               </label>
               <select
                 value={formData.frequency}
                 onChange={(e) => setFormData(prev => ({ ...prev, frequency: e.target.value }))}
-                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700"
               >
                 {frequencyOptions.map(freq => (
                   <option key={freq.value} value={freq.value}>{freq.label}</option>
@@ -705,33 +705,33 @@ const MaintenancePage: React.FC = () => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-primary mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Next Due Date *
               </label>
               <input
                 type="date"
                 value={formData.nextMaintenance}
                 onChange={(e) => setFormData(prev => ({ ...prev, nextMaintenance: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white ${
-                  formErrors.nextMaintenance ? 'border-error-500' : 'border-light'
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700 ${
+                  formErrors.nextMaintenance ? 'border-red-300' : 'border-slate-200'
                 }`}
               />
               {formErrors.nextMaintenance && (
-                <p className="text-error-500 text-sm mt-1">{formErrors.nextMaintenance}</p>
+                <p className="text-red-500 text-sm mt-1">{formErrors.nextMaintenance}</p>
               )}
             </div>
           </div>
 
           {/* Priority and Assignment */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-primary mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Priority
               </label>
               <select
                 value={formData.priority}
                 onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as any }))}
-                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700"
               >
                 {priorityOptions.map(priority => (
                   <option key={priority.value} value={priority.value}>{priority.label}</option>
@@ -740,14 +740,14 @@ const MaintenancePage: React.FC = () => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-primary mb-2">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Assigned To
               </label>
               <input
                 type="text"
                 value={formData.assignedTo}
                 onChange={(e) => setFormData(prev => ({ ...prev, assignedTo: e.target.value }))}
-                className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700"
                 placeholder="Enter assignee name"
               />
             </div>
@@ -755,21 +755,21 @@ const MaintenancePage: React.FC = () => {
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-primary mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Notes
             </label>
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              className="w-full px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
-              rows={3}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm text-slate-700"
+              rows={2}
               placeholder="Additional notes or instructions"
             />
           </div>
         </div>
         
         {/* Fixed Footer */}
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-light bg-white sticky bottom-0">
+        <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-200 bg-white/80 backdrop-blur-sm sticky bottom-0">
           <Button
             variant="outline"
             onClick={() => setShowEditModal(false)}

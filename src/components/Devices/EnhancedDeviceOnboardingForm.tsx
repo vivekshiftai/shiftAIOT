@@ -221,7 +221,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     onCancel(); // Close the entire onboarding form
   };
 
-  const renderStep1 = () => (
+  const renderStep1 = useCallback(() => (
     <div className="space-y-6 animate-fadeIn">
       <div className="text-center mb-8">
         <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -287,9 +287,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         </div>
       </div>
     </div>
-  );
+  ), [formData.deviceName, formData.location, formData.manufacturer, errors, handleInputChange]);
 
-  const renderStep2 = () => (
+  const renderStep2 = useCallback(() => (
     <div className="space-y-6 animate-fadeIn">
       <div className="text-center mb-8">
         <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -302,33 +302,48 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
-            Connection Type
+            Connection Type *
           </label>
-          <select
-            value={formData.connectionType}
-            onChange={(e) => handleInputChange('connectionType', e.target.value)}
-            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-          >
-            <option value="MQTT">MQTT</option>
-            <option value="HTTP">HTTP</option>
-            <option value="COAP">COAP</option>
-          </select>
+          <div className="grid grid-cols-3 gap-3">
+            {(['MQTT', 'HTTP', 'COAP'] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleInputChange('connectionType', type)}
+                className={`p-3 rounded-lg border-2 transition-all ${
+                  formData.connectionType === type
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-slate-300 hover:border-slate-400'
+                }`}
+              >
+                <div className="text-center">
+                  <div className="text-lg font-semibold">{type}</div>
+                  <div className="text-xs text-slate-500">
+                    {type === 'MQTT' && 'Message Queue'}
+                    {type === 'HTTP' && 'REST API'}
+                    {type === 'COAP' && 'Constrained Application'}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
 
+        {/* MQTT Fields */}
         {formData.connectionType === 'MQTT' && (
-          <>
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Broker URL *
               </label>
               <input
                 type="text"
-                value={formData.brokerUrl}
+                value={formData.brokerUrl || ''}
                 onChange={(e) => handleInputChange('brokerUrl', e.target.value)}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
                   errors.brokerUrl ? 'border-red-300' : 'border-slate-300'
                 }`}
-                placeholder="e.g., mqtt.broker.com"
+                placeholder="e.g., mqtt://broker.example.com:1883"
               />
               {errors.brokerUrl && (
                 <p className="text-red-500 text-sm mt-1">{errors.brokerUrl}</p>
@@ -341,12 +356,12 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               </label>
               <input
                 type="text"
-                value={formData.topic}
+                value={formData.topic || ''}
                 onChange={(e) => handleInputChange('topic', e.target.value)}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
                   errors.topic ? 'border-red-300' : 'border-slate-300'
                 }`}
-                placeholder="e.g., sensors/temperature"
+                placeholder="e.g., device/sensor001/data"
               />
               {errors.topic && (
                 <p className="text-red-500 text-sm mt-1">{errors.topic}</p>
@@ -360,10 +375,10 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 </label>
                 <input
                   type="text"
-                  value={formData.username}
+                  value={formData.username || ''}
                   onChange={(e) => handleInputChange('username', e.target.value)}
                   className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  placeholder="mqtt_user"
+                  placeholder="Optional"
                 />
               </div>
               <div>
@@ -372,81 +387,84 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 </label>
                 <input
                   type="password"
-                  value={formData.password}
+                  value={formData.password || ''}
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  placeholder="mqtt_password"
+                  placeholder="Optional"
                 />
               </div>
             </div>
-          </>
+          </div>
         )}
 
+        {/* HTTP Fields */}
         {formData.connectionType === 'HTTP' && (
-          <>
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Endpoint URL *
               </label>
               <input
                 type="text"
-                value={formData.httpEndpoint}
+                value={formData.httpEndpoint || ''}
                 onChange={(e) => handleInputChange('httpEndpoint', e.target.value)}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
                   errors.httpEndpoint ? 'border-red-300' : 'border-slate-300'
                 }`}
-                placeholder="e.g., http://192.168.1.100:8080/api/data"
+                placeholder="e.g., https://api.example.com/device/data"
               />
               {errors.httpEndpoint && (
                 <p className="text-red-500 text-sm mt-1">{errors.httpEndpoint}</p>
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                HTTP Method
-              </label>
-              <select
-                value={formData.httpMethod}
-                onChange={(e) => handleInputChange('httpMethod', e.target.value)}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-              >
-                <option value="GET">GET</option>
-                <option value="POST">POST</option>
-                <option value="PUT">PUT</option>
-                <option value="PATCH">PATCH</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  HTTP Method
+                </label>
+                <select
+                  value={formData.httpMethod || 'GET'}
+                  onChange={(e) => handleInputChange('httpMethod', e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                >
+                  <option value="GET">GET</option>
+                  <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="PATCH">PATCH</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Headers (JSON)
+                </label>
+                <input
+                  type="text"
+                  value={formData.httpHeaders || ''}
+                  onChange={(e) => handleInputChange('httpHeaders', e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  placeholder='{"Content-Type": "application/json"}'
+                />
+              </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Headers (JSON)
-              </label>
-              <textarea
-                value={formData.httpHeaders}
-                onChange={(e) => handleInputChange('httpHeaders', e.target.value)}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'
-                rows={3}
-              />
-            </div>
-          </>
+          </div>
         )}
 
+        {/* COAP Fields */}
         {formData.connectionType === 'COAP' && (
-          <>
+          <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Host *
               </label>
               <input
                 type="text"
-                value={formData.coapHost}
+                value={formData.coapHost || ''}
                 onChange={(e) => handleInputChange('coapHost', e.target.value)}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
                   errors.coapHost ? 'border-red-300' : 'border-slate-300'
                 }`}
-                placeholder="e.g., 192.168.1.100"
+                placeholder="e.g., coap.example.com"
               />
               {errors.coapHost && (
                 <p className="text-red-500 text-sm mt-1">{errors.coapHost}</p>
@@ -459,8 +477,8 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   Port
                 </label>
                 <input
-                  type="number"
-                  value={formData.coapPort}
+                  type="text"
+                  value={formData.coapPort || ''}
                   onChange={(e) => handleInputChange('coapPort', e.target.value)}
                   className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   placeholder="5683"
@@ -472,20 +490,20 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 </label>
                 <input
                   type="text"
-                  value={formData.coapPath}
+                  value={formData.coapPath || ''}
                   onChange={(e) => handleInputChange('coapPath', e.target.value)}
                   className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  placeholder="e.g., sensors/temperature"
+                  placeholder="/device/data"
                 />
               </div>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
-  );
+  ), [formData.connectionType, formData.brokerUrl, formData.topic, formData.username, formData.password, formData.httpEndpoint, formData.httpMethod, formData.httpHeaders, formData.coapHost, formData.coapPort, formData.coapPath, errors, handleInputChange]);
 
-  const renderStep3 = () => (
+  const renderStep3 = useCallback(() => (
     <div className="space-y-6 animate-fadeIn">
       <div className="text-center mb-8">
         <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -523,12 +541,12 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         </div>
       )}
     </div>
-  );
+  ), [uploadedFile, handleFileUpload]);
 
-  const renderProgressBar = () => (
+  const renderProgressBar = useCallback(() => (
     <div className="flex items-center justify-center mb-8">
       {[1, 2, 3].map((step) => (
-        <React.Fragment key={step}>
+        <div key={step} className="flex items-center">
           <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
             currentStep >= step 
               ? 'bg-blue-500 border-blue-500 text-white' 
@@ -545,13 +563,13 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               currentStep > step ? 'bg-blue-500' : 'bg-slate-300'
             }`} />
           )}
-        </React.Fragment>
+        </div>
       ))}
     </div>
-  );
+  ), [currentStep]);
 
   // Render loading screen within the modal
-  const renderLoadingContent = () => (
+  const renderLoadingContent = useCallback(() => (
     <div className="flex-1 flex items-center justify-center p-6">
       <EnhancedOnboardingLoader
         isProcessing={true}
@@ -562,10 +580,10 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         currentSubStage={currentSubStage}
       />
     </div>
-  );
+  ), [currentProcess, progress, uploadedFile?.file.name, currentSubStage]);
 
   // Render success message within the modal
-  const renderSuccessContent = () => (
+  const renderSuccessContent = useCallback(() => (
     <div className="flex-1 flex items-center justify-center p-4">
       <OnboardingSuccess
         result={{
@@ -581,10 +599,10 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         onClose={handleChatClose}
       />
     </div>
-  );
+  ), [onboardingResult, formData.deviceName, onboardingStartTime, uploadedFile?.file.name, handleSuccessContinue, handleChatClose]);
 
   // Render chat interface as separate modal
-  const renderChatContent = () => (
+  const renderChatContent = useCallback(() => (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] overflow-hidden">
         <DeviceChatInterface
@@ -595,7 +613,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         />
       </div>
     </div>
-  );
+  ), [formData.deviceName, uploadedFile?.file.name, handleChatClose]);
 
   return (
     <>
