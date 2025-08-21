@@ -198,6 +198,17 @@ public class RuleController {
         return ResponseEntity.ok(stats);
     }
 
+    @GetMapping("/device/{deviceId}")
+    @PreAuthorize("hasAuthority('RULE_READ')")
+    public ResponseEntity<List<Rule>> getRulesByDevice(@PathVariable String deviceId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        List<Rule> rules = ruleService.getRulesByDevice(deviceId, user.getOrganizationId());
+        return ResponseEntity.ok(rules);
+    }
+
     @PostMapping("/generate-rules")
     @PreAuthorize("hasAuthority('RULE_WRITE')")
     public ResponseEntity<?> generateRules(

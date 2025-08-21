@@ -7,8 +7,7 @@ import {
   MessageSquare,
   Settings,
   Clock,
-  FileText,
-  Trash2
+  FileText
 } from 'lucide-react';
 import { DeviceStatsService, DeviceStats } from '../../services/deviceStatsService';
 
@@ -108,7 +107,7 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
               onClick={onClose}
               className="w-6 h-6 sm:w-8 sm:h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
             >
-              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+              <span className="text-lg font-bold text-white">×</span>
             </button>
           </div>
         </div>

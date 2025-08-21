@@ -32,12 +32,20 @@ export const RuleForm: React.FC<RuleFormProps> = ({
   const [formData, setFormData] = useState<{
     name: string;
     description: string;
+    metric: string;
+    metricValue: string;
+    threshold: string;
+    consequence: string;
     active: boolean;
     conditions: RuleCondition[];
     actions: RuleAction[];
   }>({
     name: rule?.name || '',
     description: rule?.description || '',
+    metric: rule?.metric || '',
+    metricValue: rule?.metricValue || '',
+    threshold: rule?.threshold || '',
+    consequence: rule?.consequence || '',
     active: rule?.active ?? true,
     conditions: rule?.conditions || [
       {
@@ -65,6 +73,10 @@ export const RuleForm: React.FC<RuleFormProps> = ({
       setFormData({
         name: rule.name,
         description: rule.description,
+        metric: rule.metric || '',
+        metricValue: rule.metricValue || '',
+        threshold: rule.threshold || '',
+        consequence: rule.consequence || '',
         active: rule.active,
         conditions: rule.conditions,
         actions: rule.actions
@@ -73,6 +85,10 @@ export const RuleForm: React.FC<RuleFormProps> = ({
       setFormData({
         name: '',
         description: '',
+        metric: '',
+        metricValue: '',
+        threshold: '',
+        consequence: '',
         active: true,
         conditions: [
           {
@@ -290,6 +306,10 @@ export const RuleForm: React.FC<RuleFormProps> = ({
         await onSubmit({
           name: formData.name,
           description: formData.description,
+          metric: formData.metric,
+          metricValue: formData.metricValue,
+          threshold: formData.threshold,
+          consequence: formData.consequence,
           active: formData.active,
           conditions: formData.conditions,
           actions: formData.actions
@@ -299,6 +319,10 @@ export const RuleForm: React.FC<RuleFormProps> = ({
         await updateRule(rule.id, {
           name: formData.name,
           description: formData.description,
+          metric: formData.metric,
+          metricValue: formData.metricValue,
+          threshold: formData.threshold,
+          consequence: formData.consequence,
           active: formData.active,
           conditions: formData.conditions,
           actions: formData.actions
@@ -308,6 +332,10 @@ export const RuleForm: React.FC<RuleFormProps> = ({
         await createRule({
           name: formData.name,
           description: formData.description,
+          metric: formData.metric,
+          metricValue: formData.metricValue,
+          threshold: formData.threshold,
+          consequence: formData.consequence,
           active: formData.active,
           conditions: formData.conditions,
           actions: formData.actions
@@ -429,6 +457,61 @@ export const RuleForm: React.FC<RuleFormProps> = ({
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900"
               placeholder="Describe what this rule does"
             />
+          </div>
+
+          {/* New Rule Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Metric
+              </label>
+              <input
+                type="text"
+                value={formData.metric}
+                onChange={(e) => setFormData(prev => ({ ...prev, metric: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900"
+                placeholder="e.g., vibration, temperature, pressure"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Metric Value
+              </label>
+              <input
+                type="text"
+                value={formData.metricValue}
+                onChange={(e) => setFormData(prev => ({ ...prev, metricValue: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900"
+                placeholder="e.g., 2.5 mm/s, 25°C"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Threshold
+              </label>
+              <input
+                type="text"
+                value={formData.threshold}
+                onChange={(e) => setFormData(prev => ({ ...prev, threshold: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900"
+                placeholder="e.g., Vibration > 2.5 mm/s"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Consequence
+              </label>
+              <input
+                type="text"
+                value={formData.consequence}
+                onChange={(e) => setFormData(prev => ({ ...prev, consequence: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900"
+                placeholder="e.g., Mechanical damage, safety risk"
+              />
+            </div>
           </div>
 
           {/* Conditions */}

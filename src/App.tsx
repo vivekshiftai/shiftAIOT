@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavig
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { IoTProvider } from './contexts/IoTContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { logError } from './utils/logger';
 
 import { LoginForm } from './components/Auth/LoginForm';
 import { SignupForm } from './components/Auth/SignupForm';
@@ -35,7 +36,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    logError('App', 'ErrorBoundary caught an error', error, errorInfo);
   }
 
   render() {

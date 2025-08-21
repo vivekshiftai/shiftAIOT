@@ -5,6 +5,7 @@ import NotificationService from '../services/notificationService';
 import { Device, Rule, Notification, TelemetryData, Status } from '../types';
 import { getApiConfig } from '../config/api';
 import { tokenService } from '../services/tokenService';
+import { logInfo, logWarn, logError, logComponentMount, logComponentError } from '../utils/logger';
 
 interface IoTContextType {
   devices: Device[];
@@ -54,7 +55,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   // Load notifications from database and subscribe to updates
   useEffect(() => {
     if (!user || !notificationService) {
-      console.log('IoTContext - No user or notification service, skipping notification load');
+      logInfo('IoT', 'No user or notification service, skipping notification load');
       return;
     }
 
@@ -62,7 +63,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       try {
         await notificationService.loadFromDatabase();
       } catch (error) {
-        console.error('IoTContext - Failed to load notifications:', error);
+        logError('IoT', 'Failed to load notifications', error instanceof Error ? error : new Error('Unknown error'));
       }
     };
 
@@ -79,18 +80,18 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
 
   // Load data from backend when user is authenticated
   useEffect(() => {
-    console.log('IoTContext - useEffect triggered, user:', user ? 'exists' : 'null', 'authLoading:', authLoading);
+    logInfo('IoT', `useEffect triggered, user: ${user ? 'exists' : 'null'}, authLoading: ${authLoading}`);
     
     // If AuthContext is still loading, keep IoTContext in loading state
     if (authLoading) {
-      console.log('IoTContext - AuthContext still loading, keeping IoTContext in loading state');
+      logInfo('IoT', 'AuthContext still loading, keeping IoTContext in loading state');
       setLoading(true);
       return;
     }
 
     // AuthContext has finished loading, now check if we have a user
     if (!user) {
-      console.log('IoTContext - No user after auth finished loading, setting loading to false and skipping data load');
+      logInfo('IoT', 'No user after auth finished loading, setting loading to false and skipping data load');
       setLoading(false);
       setDevices([]);
       setRules([]);
@@ -101,10 +102,10 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
 
     // We have a user, check if user has valid token
     const token = localStorage.getItem('token');
-    console.log('IoTContext - Token check:', token ? 'exists' : 'not found');
+    logInfo('IoT', `Token check: ${token ? 'exists' : 'not found'}`);
     
     if (!token) {
-      console.log('IoTContext - No token found, setting loading to false and skipping data load');
+      logInfo('IoT', 'No token found, setting loading to false and skipping data load');
       setLoading(false);
       setDevices([]);
       setRules([]);
@@ -119,7 +120,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         const isValid = await tokenService.validateToken();
         
         if (!isValid) {
-          console.warn('IoTContext - Token validation failed, but continuing with data load attempt');
+          logWarn('IoT', 'Token validation failed, but continuing with data load attempt');
           // Don't skip data load, try anyway with existing token
           setLoading(true);
           await loadData();
@@ -127,13 +128,13 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         }
         
         // Token is valid, proceed with data loading
-        console.log('IoTContext - Token validated, starting data load');
+        logInfo('IoT', 'Token validated, starting data load');
         setLoading(true);
         await loadData();
       } catch (error) {
-        console.error('IoTContext - Token validation failed:', error);
+        logError('IoT', 'Token validation failed', error instanceof Error ? error : new Error('Unknown error'));
         // Don't stop loading, try to load data anyway
-        console.log('IoTContext - Attempting data load despite token validation failure');
+        logInfo('IoT', 'Attempting data load despite token validation failure');
         setLoading(true);
         await loadData();
       }
@@ -143,46 +144,44 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   }, [user, authLoading]); // Add authLoading dependency to wait for AuthContext
 
   const loadData = async () => {
-    console.log('IoTContext - Loading data from backend');
+    logInfo('IoT', 'Loading data from backend');
     setLoading(true);
     
     // Add a timeout to prevent getting stuck in loading state
     const timeoutId = setTimeout(() => {
-      console.log('IoTContext - Loading timeout, setting loading to false');
+      logInfo('IoT', 'Loading timeout, setting loading to false');
       setLoading(false);
     }, 10000); // 10 second timeout
     
     try {
       // Load all data from backend independently to handle partial failures
-      console.log('IoTContext - Starting to load data from backend...');
+      logInfo('IoT', 'Starting to load data from backend...');
       
       // Load devices first (most important)
       try {
-        console.log('IoTContext - About to call deviceAPI.getAll()');
-        console.log('IoTContext - Current API base URL:', getApiConfig().BACKEND_BASE_URL);
-        console.log('IoTContext - Current token:', localStorage.getItem('token') ? 'exists' : 'not found');
+        logInfo('IoT', 'About to call deviceAPI.getAll()');
+        logInfo('IoT', `Current API base URL: ${getApiConfig().BACKEND_BASE_URL}`);
+        logInfo('IoT', `Current token: ${localStorage.getItem('token') ? 'exists' : 'not found'}`);
         
         const devicesRes = await deviceAPI.getAll();
-        console.log('IoTContext - Raw device response:', devicesRes);
+        logInfo('IoT', 'Raw device response', devicesRes);
         
         if (devicesRes.data) {
-          console.log('IoTContext - Setting devices:', devicesRes.data);
+          logInfo('IoT', 'Setting devices', devicesRes.data);
           setDevices(devicesRes.data);
         } else {
-          console.log('IoTContext - No devices data in response');
+          logInfo('IoT', 'No devices data in response');
           setDevices([]);
         }
       } catch (error: unknown) {
-        console.error('IoTContext - Failed to load devices:', error);
-        console.error('IoTContext - Error details:', error instanceof Error ? error.message : 'Unknown error');
-        console.error('IoTContext - Error stack:', error instanceof Error ? error.stack : 'No stack');
+        logError('IoT', 'Failed to load devices', error instanceof Error ? error : new Error('Unknown error'));
         setDevices([]);
       }
 
       // Load rules (optional) - skip if endpoint doesn't exist
       try {
         const rulesRes = await ruleAPI.getAll();
-        console.log('IoTContext - Raw rules response:', rulesRes);
+        logInfo('IoT', 'Raw rules response', rulesRes);
         
         if (rulesRes.data) {
           setRules(rulesRes.data);
@@ -192,7 +191,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       } catch (error: any) {
         // Don't log 401 errors as they're expected when token is invalid
         if (error.response?.status !== 401) {
-          console.error('IoTContext - Failed to load rules:', error);
+          logError('IoT', 'Failed to load rules', error);
         }
         setRules([]);
       }
@@ -200,7 +199,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       // Load notifications (optional) - skip if endpoint doesn't exist
       try {
         const notificationsRes = await notificationAPI.getAll();
-        console.log('IoTContext - Raw notifications response:', notificationsRes);
+        logInfo('IoT', 'Raw notifications response', notificationsRes);
         
         if (notificationsRes.data) {
           setNotifications(notificationsRes.data);
@@ -208,18 +207,18 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
           setNotifications([]);
         }
       } catch (error: unknown) {
-        console.error('Failed to load notifications:', error instanceof Error ? error.message : 'Unknown error');
+        logError('IoT', 'Failed to load notifications', error instanceof Error ? error : new Error('Unknown error'));
         setNotifications([]);
       }
 
-      console.log('IoTContext - Data loading completed');
+      logInfo('IoT', 'Data loading completed');
     } catch (error) {
-      console.error('IoTContext - Failed to load data from backend:', error);
+      logError('IoT', 'Failed to load data from backend', error instanceof Error ? error : new Error('Unknown error'));
       // Don't set any dummy data - let the UI show empty state if no data
-      console.log('IoTContext - No data loaded from backend, showing empty state');
+      logInfo('IoT', 'No data loaded from backend, showing empty state');
     } finally {
       clearTimeout(timeoutId);
-      console.log('IoTContext - Setting loading to false');
+      logInfo('IoT', 'Setting loading to false');
       setLoading(false);
     }
   };
@@ -248,7 +247,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       // Update local state
       setTelemetryData(prev => [...prev.slice(-99), data]);
     } catch (error) {
-      console.error('Failed to add telemetry data:', error);
+      logError('IoT', 'Failed to add telemetry data', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   };
@@ -258,7 +257,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       const response = await ruleAPI.create(rule);
       setRules(prev => [...prev, response.data]);
     } catch (error) {
-      console.error('Failed to create rule:', error);
+      logError('IoT', 'Failed to create rule', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   };
@@ -272,7 +271,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         )
       );
     } catch (error) {
-      console.error('Failed to update rule:', error);
+      logError('IoT', 'Failed to update rule', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   };
@@ -282,7 +281,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       await ruleAPI.delete(id);
       setRules(prev => prev.filter(rule => rule.id !== id));
     } catch (error) {
-      console.error('Failed to delete rule:', error);
+      logError('IoT', 'Failed to delete rule', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   };
@@ -296,7 +295,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         )
       );
     } catch (error) {
-      console.error('Failed to toggle rule:', error);
+      logError('IoT', 'Failed to toggle rule', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   };
@@ -308,23 +307,23 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         notificationService.markAsRead(notificationId);
       }
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      logError('IoT', 'Failed to mark notification as read', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   };
 
   const refreshDevices = async () => {
     try {
-      console.log('IoTContext - Refreshing devices from backend');
+      logInfo('IoT', 'Refreshing devices from backend');
       
       const response = await deviceAPI.getAll();
       const freshDevices = response.data;
       
-      console.log('IoTContext - Loaded', freshDevices.length, 'devices from backend');
+      logInfo('IoT', `Loaded ${freshDevices.length} devices from backend`);
       
       setDevices(freshDevices);
     } catch (error) {
-      console.error('Failed to refresh devices from backend:', error);
+      logError('IoT', 'Failed to refresh devices from backend', error instanceof Error ? error : new Error('Unknown error'));
       throw new Error(`Failed to refresh devices: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
@@ -334,7 +333,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       const response = await ruleAPI.getAll();
       setRules(response.data);
     } catch (error) {
-      console.error('Failed to refresh rules:', error);
+      logError('IoT', 'Failed to refresh rules', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   };
@@ -345,20 +344,20 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       // For now, we'll just refresh devices which might include maintenance info
       await refreshDevices();
     } catch (error) {
-      console.error('Failed to refresh maintenance:', error);
+      logError('IoT', 'Failed to refresh maintenance', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   };
 
   const addDevice = async (device: Omit<Device, 'id'>) => {
     try {
-      console.log('IoTContext - Adding device to backend:', device.name);
+      logInfo('IoT', `Adding device to backend: ${device.name}`);
       
       // First, try to create device in backend
       const response = await deviceAPI.create(device);
       const newDevice = response.data;
       
-      console.log('IoTContext - Device created in backend:', newDevice.id);
+      logInfo('IoT', `Device created in backend: ${newDevice.id}`);
       
       // Refresh the entire device list to ensure consistency
       await refreshDevices();
@@ -367,7 +366,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       
       return newDevice;
     } catch (error) {
-      console.error('Failed to add device to backend:', error);
+      logError('IoT', 'Failed to add device to backend', error instanceof Error ? error : new Error('Unknown error'));
       // Don't update local state if backend fails
       throw new Error(`Failed to create device: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -383,7 +382,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         notificationService.onDeviceAssigned(device, userId);
       }
     } catch (error) {
-      console.error('Failed to assign device:', error);
+      logError('IoT', 'Failed to assign device', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   };
@@ -419,7 +418,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         }
       }
     } catch (error) {
-      console.error('Failed to evaluate rules:', error);
+      logError('IoT', 'Failed to evaluate rules', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   };

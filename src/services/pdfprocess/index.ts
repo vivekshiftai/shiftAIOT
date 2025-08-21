@@ -52,10 +52,12 @@ export interface PDFListResponse {
 }
 
 export interface IoTRule {
-  condition: string;
-  action: string;
-  category: string;
-  priority: string;
+  rule_name: string;
+  threshold: string;
+  metric: string;
+  metric_value: string;
+  description: string;
+  consequence: string;
 }
 
 export interface MaintenanceTask {
@@ -63,13 +65,18 @@ export interface MaintenanceTask {
   frequency: string;
   category: string;
   description: string;
+  priority: string;
+  estimated_duration: string;
+  required_tools: string;
+  safety_notes: string;
 }
 
 export interface SafetyInformation {
-  type: string;
-  title: string;
-  description: string;
-  category: string;
+  name: string;
+  about_reaction: string;
+  causes: string;
+  how_to_avoid: string;
+  safety_info: string;
 }
 
 export interface RulesGenerationResponse {
@@ -105,6 +112,13 @@ export interface HealthCheckResponse {
     maintenance: string;
     safety: string;
   };
+}
+
+export interface PDFDeleteResponse {
+  success: boolean;
+  message: string;
+  pdf_name: string;
+  deleted_at: string;
 }
 
 // Consolidated PDF Processing Service
@@ -320,6 +334,60 @@ export class PDFProcessingService {
       return result;
     } catch (error) {
       console.error('MinerU service info failed:', error);
+      throw error;
+    }
+  }
+
+  // Delete PDF from MinerU processing service
+  async deletePDF(pdfName: string): Promise<PDFDeleteResponse> {
+    try {
+      console.log(`🗑️ [PDF Processing] Starting deletion of PDF: "${pdfName}"`);
+      console.log(`🌐 [PDF Processing] DELETE request to: ${this.baseUrl}/pdfs/${pdfName}`);
+
+      const startTime = Date.now();
+      const response = await fetch(`${this.baseUrl}/pdfs/${pdfName}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ [PDF Processing] Delete failed for "${pdfName}":`, {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+          duration: `${duration}ms`,
+          url: `${this.baseUrl}/pdfs/${pdfName}`
+        });
+        throw new Error(`PDF deletion failed: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log(`✅ [PDF Processing] Successfully deleted "${pdfName}":`, {
+        result,
+        duration: `${duration}ms`,
+        status: response.status
+      });
+      return result as PDFDeleteResponse;
+
+    } catch (error) {
+      console.error(`💥 [PDF Processing] PDF deletion failed for "${pdfName}":`, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        url: `${this.baseUrl}/pdfs/${pdfName}`
+      });
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('Network Error')) {
+          console.error(`🌐 [PDF Processing] Network error detected for "${pdfName}" - service may be unavailable`);
+          throw new Error('PDF processing service is unavailable. Please check your internet connection and try again.');
+        }
+      }
       throw error;
     }
   }

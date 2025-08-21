@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Trash2, CheckCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, AlertTriangle } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -106,7 +106,7 @@ const Toast: React.FC<ToastProps> = ({
         className="flex-shrink-0 ml-3 p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         aria-label="Close notification"
       >
-        <Trash2 className="w-4 h-4" />
+        <span className="text-lg font-bold">×</span>
       </button>
     </div>
   );

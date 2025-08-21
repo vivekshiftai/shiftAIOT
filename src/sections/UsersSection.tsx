@@ -460,7 +460,7 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
                 onClick={() => setShowUserDetails(false)}
                 className="p-1 hover:bg-slate-100 rounded transition-colors"
               >
-                <XCircle className="w-5 h-5 text-slate-600" />
+                <span className="text-xl font-bold text-slate-600">×</span>
               </button>
             </div>
             

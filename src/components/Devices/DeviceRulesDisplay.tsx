@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, AlertTriangle, CheckCircle, Clock, Filter, Search, Plus, Edit, Trash2 } from 'lucide-react';
 import { ruleAPI } from '../../services/api';
+import { RuleForm } from '../Forms';
+import Modal from '../UI/Modal';
+import Button from '../UI/Button';
 
 interface IoTRule {
   id: string;
   name: string;
   description: string;
+  metric?: string;
+  metricValue?: string;
+  threshold?: string;
+  consequence?: string;
   condition: string;
   action: string;
   priority: 'LOW' | 'MEDIUM' | 'HIGH';
@@ -27,6 +34,9 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingRule, setEditingRule] = useState<IoTRule | null>(null);
 
   useEffect(() => {
     loadRules();
@@ -35,14 +45,13 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
   const loadRules = async () => {
     try {
       setLoading(true);
-      console.log('Loading rules for device:', deviceId);
       const response = await ruleAPI.getByDevice(deviceId);
-      console.log('Rules response:', response.data);
-      setRules(response.data);
+      setRules(response.data || []);
       setError(null);
     } catch (err) {
       console.error('Error loading rules:', err);
       setError('Failed to load IoT rules');
+      setRules([]);
     } finally {
       setLoading(false);
     }
@@ -77,10 +86,23 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
     const matchesStatus = filterStatus === 'all' || rule.status === filterStatus;
     const matchesSearch = rule.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          rule.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         rule.condition.toLowerCase().includes(searchTerm.toLowerCase());
+                         rule.condition.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (rule.metric && rule.metric.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (rule.threshold && rule.threshold.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (rule.consequence && rule.consequence.toLowerCase().includes(searchTerm.toLowerCase()));
     
     return matchesPriority && matchesStatus && matchesSearch;
   });
+
+  const handleAddRule = () => {
+    setEditingRule(null);
+    setShowAddModal(true);
+  };
+
+  const handleEditRule = (rule: IoTRule) => {
+    setEditingRule(rule);
+    setShowEditModal(true);
+  };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this rule?')) {
@@ -107,6 +129,23 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
     }
   };
 
+  const handleRuleSubmit = async (ruleData: any) => {
+    try {
+      if (editingRule) {
+        await ruleAPI.update(editingRule.id, { ...ruleData, deviceId });
+      } else {
+        await ruleAPI.create({ ...ruleData, deviceId });
+      }
+      await loadRules();
+      setShowAddModal(false);
+      setShowEditModal(false);
+      setEditingRule(null);
+    } catch (err) {
+      console.error('Error saving rule:', err);
+      setError('Failed to save rule');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -121,12 +160,12 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
         <div className="text-center">
           <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <p className="text-red-600">{error}</p>
-          <button
+          <Button
             onClick={loadRules}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            className="mt-4"
           >
             Retry
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -142,12 +181,13 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
             {rules.length} rule{rules.length !== 1 ? 's' : ''} found
           </p>
         </div>
-        <button
-          className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+        <Button
+          onClick={handleAddRule}
+          className="flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           Add Rule
-        </button>
+        </Button>
       </div>
 
       {/* Filters */}
@@ -193,9 +233,24 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
       {/* Rules List */}
       <div className="space-y-4">
         {filteredRules.length === 0 ? (
-          <div className="text-center py-8">
-            <Settings className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No IoT rules found</p>
+          <div className="text-center py-12">
+            <Settings className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No IoT rules found</h3>
+            <p className="text-gray-500 mb-4">
+              {rules.length === 0 
+                ? "This device doesn't have any IoT rules yet."
+                : "No rules match your current filters."
+              }
+            </p>
+            {rules.length === 0 && (
+              <Button
+                onClick={handleAddRule}
+                className="flex items-center gap-2 mx-auto"
+              >
+                <Plus className="w-4 h-4" />
+                Add Your First Rule
+              </Button>
+            )}
           </div>
         ) : (
           filteredRules.map((rule) => (
@@ -221,6 +276,34 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
                     
                     <div className="space-y-2 text-sm">
                       <div>
+                        <strong className="text-gray-700">Description:</strong>
+                        <p className="text-gray-600 ml-2">{rule.description}</p>
+                      </div>
+                      {rule.metric && (
+                        <div>
+                          <strong className="text-gray-700">Metric:</strong>
+                          <p className="text-gray-600 ml-2">{rule.metric}</p>
+                        </div>
+                      )}
+                      {rule.metricValue && (
+                        <div>
+                          <strong className="text-gray-700">Metric Value:</strong>
+                          <p className="text-gray-600 ml-2">{rule.metricValue}</p>
+                        </div>
+                      )}
+                      {rule.threshold && (
+                        <div>
+                          <strong className="text-gray-700">Threshold:</strong>
+                          <p className="text-gray-600 ml-2">{rule.threshold}</p>
+                        </div>
+                      )}
+                      {rule.consequence && (
+                        <div>
+                          <strong className="text-gray-700">Consequence:</strong>
+                          <p className="text-gray-600 ml-2">{rule.consequence}</p>
+                        </div>
+                      )}
+                      <div>
                         <strong className="text-gray-700">Condition:</strong>
                         <p className="text-gray-600 ml-2">{rule.condition}</p>
                       </div>
@@ -228,12 +311,6 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
                         <strong className="text-gray-700">Action:</strong>
                         <p className="text-gray-600 ml-2">{rule.action}</p>
                       </div>
-                      {rule.description && (
-                        <div>
-                          <strong className="text-gray-700">Description:</strong>
-                          <p className="text-gray-600 ml-2">{rule.description}</p>
-                        </div>
-                      )}
                     </div>
                     
                     <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
@@ -260,6 +337,7 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
                     )}
                   </button>
                   <button
+                    onClick={() => handleEditRule(rule)}
                     className="p-1 text-blue-600 hover:bg-blue-100 rounded"
                     title="Edit"
                   >
@@ -278,6 +356,29 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
           ))
         )}
       </div>
+
+      {/* Add/Edit Modal */}
+      <Modal
+        isOpen={showAddModal || showEditModal}
+        onClose={() => {
+          setShowAddModal(false);
+          setShowEditModal(false);
+          setEditingRule(null);
+        }}
+        title={editingRule ? 'Edit IoT Rule' : 'Add IoT Rule'}
+      >
+        <RuleForm
+          isOpen={showAddModal || showEditModal}
+          onClose={() => {
+            setShowAddModal(false);
+            setShowEditModal(false);
+            setEditingRule(null);
+          }}
+          rule={editingRule || undefined}
+          deviceId={deviceId}
+          onSubmit={handleRuleSubmit}
+        />
+      </Modal>
     </div>
   );
 };

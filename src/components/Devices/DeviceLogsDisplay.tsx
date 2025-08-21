@@ -45,20 +45,31 @@ const DeviceLogsDisplay: React.FC<DeviceLogsDisplayProps> = ({ deviceId }) => {
   const loadLogs = async () => {
     try {
       setLoading(true);
-      const response = await logAPI.getByDevice(deviceId, {
-        level: filterLevel !== 'all' ? filterLevel : undefined,
-        category: filterCategory !== 'all' ? filterCategory : undefined,
-        page,
-        size: 50
-      });
+      const response = await logAPI.getByDevice(deviceId);
       
-      if (page === 1) {
-        setLogs(response.data.content);
-      } else {
-        setLogs(prev => [...prev, ...response.data.content]);
+      // Filter logs on the client side since the API doesn't support filtering
+      let filteredData = response.data;
+      
+      if (filterLevel !== 'all') {
+        filteredData = filteredData.filter((log: DeviceLog) => log.level === filterLevel);
       }
       
-      setHasMore(!response.data.last);
+      if (filterCategory !== 'all') {
+        filteredData = filteredData.filter((log: DeviceLog) => log.category === filterCategory);
+      }
+      
+      // Simple pagination on client side
+      const startIndex = (page - 1) * 50;
+      const endIndex = startIndex + 50;
+      const paginatedData = filteredData.slice(startIndex, endIndex);
+      
+      if (page === 1) {
+        setLogs(paginatedData);
+      } else {
+        setLogs(prev => [...prev, ...paginatedData]);
+      }
+      
+      setHasMore(endIndex < filteredData.length);
       setError(null);
     } catch (err) {
       console.error('Error loading logs:', err);

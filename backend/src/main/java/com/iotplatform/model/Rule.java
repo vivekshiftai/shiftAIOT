@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -25,6 +26,7 @@ import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "rules")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Rule {
     
     private static final Logger logger = LoggerFactory.getLogger(Rule.class);
@@ -41,6 +43,25 @@ public class Rule {
     @Size(max = 500)
     @Column(name = "description")
     private String description;
+
+    @Size(max = 100)
+    @Column(name = "metric")
+    private String metric;
+
+    @Size(max = 100)
+    @Column(name = "metric_value")
+    private String metricValue;
+
+    @Size(max = 200)
+    @Column(name = "threshold")
+    private String threshold;
+
+    @Size(max = 500)
+    @Column(name = "consequence")
+    private String consequence;
+
+    @Column(name = "device_id")
+    private String deviceId;
 
     @Column(name = "active", nullable = false)
     private boolean active = true;
@@ -92,6 +113,21 @@ public class Rule {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public String getMetric() { return metric; }
+    public void setMetric(String metric) { this.metric = metric; }
+
+    public String getMetricValue() { return metricValue; }
+    public void setMetricValue(String metricValue) { this.metricValue = metricValue; }
+
+    public String getThreshold() { return threshold; }
+    public void setThreshold(String threshold) { this.threshold = threshold; }
+
+    public String getConsequence() { return consequence; }
+    public void setConsequence(String consequence) { this.consequence = consequence; }
+
+    public String getDeviceId() { return deviceId; }
+    public void setDeviceId(String deviceId) { this.deviceId = deviceId; }
 
     public boolean isActive() { return active; }
     public void setActive(boolean active) { 

@@ -65,6 +65,10 @@ export interface Rule {
   id: string;
   name: string;
   description: string;
+  metric?: string;
+  metricValue?: string;
+  threshold?: string;
+  consequence?: string;
   condition: string;
   action: string;
   priority: 'LOW' | 'MEDIUM' | 'HIGH';
@@ -87,6 +91,9 @@ export interface MaintenanceTask {
   deviceId?: string;
   scheduledDate: string;
   completedDate?: string;
+  estimatedDuration?: string;
+  requiredTools?: string;
+  safetyNotes?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -189,6 +196,10 @@ export interface DeviceSafetyPrecaution {
   category: string;
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   recommendedAction?: string;
+  aboutReaction?: string;
+  causes?: string;
+  howToAvoid?: string;
+  safetyInfo?: string;
   isActive: boolean;
   organizationId: string;
   createdAt: string;

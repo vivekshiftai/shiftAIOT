@@ -1,6 +1,7 @@
 import { pdfProcessingService } from './pdfprocess';
 import { deviceAPI, ruleAPI, maintenanceAPI, deviceSafetyPrecautionsAPI } from './api';
 import { getApiConfig } from '../config/api';
+import { logInfo, logError, logWarn } from '../utils/logger';
 
 export interface OnboardingResult {
   deviceId: string;
@@ -73,7 +74,7 @@ export class OnboardingService {
         manufacturer: formData.manufacturer,
         model: formData.manufacturer,
         protocol: formData.connectionType,
-        status: 'OFFLINE',
+        status: formData.deviceStatus,
         type: 'SENSOR',
         description: `Device onboarded via PDF: ${uploadedFile.name}`,
         
@@ -127,20 +128,22 @@ export class OnboardingService {
       if (rulesResponse.rules && rulesResponse.rules.length > 0) {
         try {
           const rulesToSave = rulesResponse.rules.map((rule: any) => ({
-            name: `${rule.category} Rule`,
-            description: rule.condition,
-            condition: rule.condition,
-            action: rule.action,
-            priority: rule.priority.toUpperCase(),
+            name: rule.rule_name,
+            description: rule.description,
+            metric: rule.metric,
+            metricValue: rule.metric_value,
+            threshold: rule.threshold,
+            consequence: rule.consequence,
             status: 'ACTIVE',
             deviceId: createdDevice.id,
-            category: rule.category
+            organizationId: 'default'
           }));
 
+          console.log('🔧 [Onboarding] Saving rules with enhanced data:', rulesToSave);
           await ruleAPI.createBulk(rulesToSave);
-          console.log('Rules saved to backend successfully:', rulesToSave.length, 'rules');
+          logInfo('Onboarding', `Rules saved to backend successfully: ${rulesToSave.length} rules with enhanced data`);
         } catch (error) {
-          console.error('Failed to save rules to backend:', error);
+          logError('Onboarding', 'Failed to save rules to backend', error instanceof Error ? error : new Error('Unknown error'));
           // Don't throw error, continue with onboarding
         }
       }
@@ -176,15 +179,20 @@ export class OnboardingService {
             maintenanceType: 'PREVENTIVE',
             frequency: task.frequency.toUpperCase(),
             description: task.description,
-            priority: 'MEDIUM',
+            priority: task.priority?.toUpperCase() || 'MEDIUM',
+            estimatedDuration: task.estimated_duration,
+            requiredTools: task.required_tools,
+            safetyNotes: task.safety_notes,
             status: 'ACTIVE',
-            organizationId: 'default' // This should come from user context
+            organizationId: 'default', // This should come from user context
+            nextMaintenance: new Date().toISOString().split('T')[0] // Set to today as default
           }));
 
+          console.log('🔧 [Onboarding] Saving maintenance tasks with enhanced data:', maintenanceToSave);
           await maintenanceAPI.createBulk(maintenanceToSave);
-          console.log('Maintenance tasks saved to backend successfully:', maintenanceToSave.length, 'tasks');
+          logInfo('Onboarding', `Maintenance tasks saved to backend successfully: ${maintenanceToSave.length} tasks with enhanced data`);
         } catch (error) {
-          console.error('Failed to save maintenance tasks to backend:', error);
+          logError('Onboarding', 'Failed to save maintenance tasks to backend', error instanceof Error ? error : new Error('Unknown error'));
           // Don't throw error, continue with onboarding
         }
       }
@@ -214,19 +222,23 @@ export class OnboardingService {
         try {
           const safetyPrecautions = safetyResponse.safety_information.map((safety: any) => ({
             deviceId: createdDevice.id,
-            title: safety.title,
-            description: safety.description,
-            type: safety.type,
-            category: safety.category,
-            severity: 'MEDIUM',
+            title: safety.name,
+            description: safety.about_reaction,
+            type: 'warning',
+            category: 'safety_hazard',
+            severity: 'HIGH',
+            aboutReaction: safety.about_reaction,
+            causes: safety.causes,
+            howToAvoid: safety.how_to_avoid,
+            safetyInfo: safety.safety_info,
             isActive: true,
             organizationId: 'default' // This should come from user context
           }));
 
           await deviceSafetyPrecautionsAPI.createBulk(safetyPrecautions);
-          console.log('Safety precautions saved to backend successfully:', safetyPrecautions.length, 'precautions');
+          logInfo('Onboarding', `Safety precautions saved to backend successfully: ${safetyPrecautions.length} precautions with enhanced data`);
         } catch (error) {
-          console.error('Failed to save safety precautions to backend:', error);
+          logError('Onboarding', 'Failed to save safety precautions to backend', error instanceof Error ? error : new Error('Unknown error'));
           // Don't throw error, continue with onboarding
         }
       }
@@ -249,9 +261,9 @@ export class OnboardingService {
       try {
         // This would be your knowledge base API call
         // knowledgeUploadResponse = await knowledgeAPI.uploadPDF(uploadedFile, createdDevice.id, formData.deviceName);
-        console.log('Knowledge base upload completed');
+        logInfo('Onboarding', 'Knowledge base upload completed');
       } catch (error) {
-        console.error('Knowledge base upload failed:', error);
+        logError('Onboarding', 'Knowledge base upload failed', error instanceof Error ? error : new Error('Unknown error'));
         // Don't throw error, this is optional
       }
 
@@ -279,7 +291,7 @@ export class OnboardingService {
       };
 
     } catch (error) {
-      console.error('Onboarding process failed:', error);
+      logError('Onboarding', 'Onboarding process failed', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   }
@@ -323,7 +335,7 @@ export class OnboardingService {
       };
 
     } catch (error) {
-      console.error('Failed to generate data from PDF:', error);
+      logError('Onboarding', 'Failed to generate data from PDF', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   }
@@ -344,7 +356,7 @@ export class OnboardingService {
       await pdfProcessingService.healthCheck();
       results.pdfService = true;
     } catch (error) {
-      console.error('PDF service health check failed:', error);
+      logError('Onboarding', 'PDF service health check failed', error instanceof Error ? error : new Error('Unknown error'));
     }
 
     try {
@@ -352,7 +364,7 @@ export class OnboardingService {
       const response = await fetch(`${this.baseUrl}/api/health`);
       results.backend = response.ok;
     } catch (error) {
-      console.error('Backend health check failed:', error);
+      logError('Onboarding', 'Backend health check failed', error instanceof Error ? error : new Error('Unknown error'));
     }
 
     return results;

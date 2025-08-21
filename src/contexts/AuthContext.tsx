@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI, userAPI } from '../services/api';
 import { User } from '../types';
 import { tokenService } from '../services/tokenService';
+import { logInfo, logWarn, logError, logAuthSuccess, logAuthFailure } from '../utils/logger';
 
 interface AuthContextType {
   user: User | null;
@@ -35,16 +36,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Validate token and load user profile
   const validateTokenAndLoadProfile = async (): Promise<boolean> => {
-    console.log('AuthContext - validateTokenAndLoadProfile called');
+    logInfo('Auth', 'validateTokenAndLoadProfile called');
     try {
       const isValid = await tokenService.validateToken();
-      console.log('AuthContext - Token validation result:', isValid);
+      logInfo('Auth', `Token validation result: ${isValid}`);
       
       if (isValid) {
         // Get user profile
         const response = await userAPI.getProfile();
         const profileData = response.data;
-        console.log('AuthContext - Profile data received:', profileData);
+        logInfo('Auth', 'Profile data received', profileData);
         
         const userData: User = {
           id: profileData.id,
@@ -59,16 +60,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           lastLogin: profileData.lastLogin
         };
         
-        console.log('AuthContext - Setting user data:', userData);
+        logInfo('Auth', 'Setting user data', userData);
         setUser(userData);
         tokenService.setUser(userData);
         return true;
       } else {
-        console.warn('AuthContext - Token validation failed');
+        logWarn('Auth', 'Token validation failed');
         return false;
       }
     } catch (error: unknown) {
-      console.warn('AuthContext - Token validation failed:', error instanceof Error ? error.message : 'Unknown error');
+      logWarn('Auth', 'Token validation failed', undefined, error instanceof Error ? error : new Error('Unknown error'));
       return false;
     }
   };
@@ -76,74 +77,74 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Check for existing session on mount
   useEffect(() => {
     const checkAuth = async () => {
-      console.log('AuthContext - Starting authentication check');
+      logInfo('Auth', 'Starting authentication check');
       const savedUser = localStorage.getItem('user');
       const token = localStorage.getItem('token');
 
-      console.log('AuthContext - Token exists:', !!token);
-      console.log('AuthContext - Saved user exists:', !!savedUser);
+      logInfo('Auth', `Token exists: ${!!token}`);
+      logInfo('Auth', `Saved user exists: ${!!savedUser}`);
 
       if (!token) {
-        console.log('AuthContext - No token found, setting loading to false');
+        logInfo('Auth', 'No token found, setting loading to false');
         setIsLoading(false);
         return;
       }
 
       // Set token in API headers
       tokenService.setAxiosAuthHeader(token);
-      console.log('AuthContext - Token set in API headers');
+      logInfo('Auth', 'Token set in API headers');
 
       if (savedUser) {
         try {
           const parsedUser = JSON.parse(savedUser);
-          console.log('AuthContext - Setting user from localStorage:', parsedUser);
+          logInfo('Auth', 'Setting user from localStorage', parsedUser);
           setUser(parsedUser);
           
           // Validate token in background
-          console.log('AuthContext - Validating token in background');
+          logInfo('Auth', 'Validating token in background');
           const isValid = await validateTokenAndLoadProfile();
-          console.log('AuthContext - Token validation result:', isValid);
+          logInfo('Auth', `Token validation result: ${isValid}`);
           
           if (!isValid) {
-            console.log('AuthContext - Token invalid, attempting refresh');
+            logInfo('Auth', 'Token invalid, attempting refresh');
             // Try token refresh
             try {
               const refreshResponse = await authAPI.refresh(token);
               const newToken = refreshResponse.data?.token;
               if (newToken) {
-                console.log('AuthContext - Token refresh successful');
+                logInfo('Auth', 'Token refresh successful');
                 localStorage.setItem('token', newToken);
                 tokenService.setAxiosAuthHeader(newToken);
                 
                 // Try to validate with new token
                 const newTokenValid = await validateTokenAndLoadProfile();
-                console.log('AuthContext - New token validation result:', newTokenValid);
+                logInfo('Auth', `New token validation result: ${newTokenValid}`);
                 if (!newTokenValid) {
-                  console.warn('AuthContext - Token refresh succeeded but profile still unavailable');
+                  logWarn('Auth', 'Token refresh succeeded but profile still unavailable');
                   // Never logout user automatically - keep existing user data
                 }
               }
             } catch (refreshError: unknown) {
-              console.warn('AuthContext - Token refresh failed:', refreshError instanceof Error ? refreshError.message : 'Unknown error');
+              logWarn('Auth', 'Token refresh failed', undefined, refreshError instanceof Error ? refreshError : new Error('Unknown error'));
               // Never logout user on refresh failure - keep existing session
             }
           }
         } catch (parseError: unknown) {
-          console.warn('AuthContext - Failed to parse saved user:', parseError instanceof Error ? parseError.message : 'Unknown error');
+          logWarn('Auth', 'Failed to parse saved user', undefined, parseError instanceof Error ? parseError : new Error('Unknown error'));
           // Try to validate token and load profile, but never logout automatically
           await validateTokenAndLoadProfile();
         }
       } else {
-        console.log('AuthContext - No saved user, loading profile with token');
+        logInfo('Auth', 'No saved user, loading profile with token');
         // No saved user, try to load profile with token
         const profileLoaded = await validateTokenAndLoadProfile();
         if (!profileLoaded) {
-          console.warn('AuthContext - Failed to load profile, but never logging out automatically');
+          logWarn('Auth', 'Failed to load profile, but never logging out automatically');
           // Never logout user automatically - just keep loading state false
         }
       }
 
-      console.log('AuthContext - Authentication check complete, setting loading to false');
+      logInfo('Auth', 'Authentication check complete, setting loading to false');
       setIsLoading(false);
     };
 
@@ -167,7 +168,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const parsedUser = JSON.parse(savedUser);
           setUser(parsedUser);
         } catch (error: unknown) {
-          console.warn('Failed to parse saved user:', error instanceof Error ? error.message : 'Unknown error');
+          logWarn('Auth', 'Failed to parse saved user', undefined, error instanceof Error ? error : new Error('Unknown error'));
           setUser(null);
         }
       } else {
@@ -209,7 +210,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       window.dispatchEvent(new Event('storageChange'));
       setUser(user);
     } catch (error: unknown) {
-      console.error('Login failed:', error);
+      logError('Auth', 'Login failed', error instanceof Error ? error : new Error('Unknown error'));
       // setError(error instanceof Error ? error.message : 'Login failed'); // This line was not in the new_code, so it's removed.
     } finally {
       setIsLoading(false);
@@ -236,7 +237,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await validateTokenAndLoadProfile();
     } catch (error: unknown) {
-      console.warn('Failed to refresh user profile:', error instanceof Error ? error.message : 'Unknown error');
+      logWarn('Auth', 'Failed to refresh user profile', undefined, error instanceof Error ? error : new Error('Unknown error'));
     }
   };
 

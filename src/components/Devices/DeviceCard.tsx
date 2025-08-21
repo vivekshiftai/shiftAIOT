@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { Device } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
-import { DeviceStatsService, DeviceStats } from '../../services/deviceStatsService';
+
 
 
 interface DeviceCardProps {
@@ -119,39 +119,6 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   startTime
 }) => {
   const { user } = useAuth();
-  const [deviceStats, setDeviceStats] = useState<DeviceStats | null>(null);
-  const [isLoadingStats, setIsLoadingStats] = useState(false);
-
-  // Fetch device stats when component mounts
-  useEffect(() => {
-    const fetchDeviceStats = async () => {
-      if (!isOnboarding) { // Only fetch if not in onboarding mode
-        setIsLoadingStats(true);
-        try {
-          const stats = await DeviceStatsService.getDeviceStats(device.id);
-          setDeviceStats(stats);
-        } catch (error) {
-          console.error('Failed to fetch device stats:', error);
-          // Set default values on error
-          setDeviceStats({
-            deviceId: device.id,
-            rulesCount: 0,
-            maintenanceCount: 0,
-            safetyCount: 0,
-            totalItems: 0
-          });
-        } finally {
-          setIsLoadingStats(false);
-        }
-      }
-    };
-    
-    fetchDeviceStats();
-    
-    // Poll for updates every 60 seconds (reduced from 30 to prevent too many calls)
-    const interval = setInterval(fetchDeviceStats, 60000);
-    return () => clearInterval(interval);
-  }, [device.id, isOnboarding]); // Dependencies for useEffect
 
   // Add additional safety checks
   if (!device) {
@@ -389,31 +356,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         </div>
       )}
 
-      {/* Device Stats - Show maintenance count and other stats */}
-      {!isOnboarding && (
-        <div className="pt-4 border-t border-slate-100">
-          <div className="grid grid-cols-3 gap-3">
-            <div className="bg-blue-50 rounded-lg p-2 text-center">
-              <p className="text-sm font-bold text-blue-900">
-                {isLoadingStats ? '...' : (deviceStats?.rulesCount || 0)}
-              </p>
-              <p className="text-xs text-blue-700">Rules</p>
-            </div>
-            <div className="bg-orange-50 rounded-lg p-2 text-center">
-              <p className="text-sm font-bold text-orange-900">
-                {isLoadingStats ? '...' : (deviceStats?.maintenanceCount || 0)}
-              </p>
-              <p className="text-xs text-orange-700">Maintenance</p>
-            </div>
-            <div className="bg-red-50 rounded-lg p-2 text-center">
-              <p className="text-sm font-bold text-red-900">
-                {isLoadingStats ? '...' : (deviceStats?.safetyCount || 0)}
-              </p>
-              <p className="text-xs text-red-700">Safety</p>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 };

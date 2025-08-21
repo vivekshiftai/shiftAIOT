@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Shield, AlertCircle, Info, Plus, Edit, Trash2, Filter, Search } from 'lucide-react';
 import { deviceSafetyPrecautionsAPI } from '../../services/api';
+import Button from '../UI/Button';
 
 interface DeviceSafetyPrecaution {
   id: string;
@@ -11,6 +12,10 @@ interface DeviceSafetyPrecaution {
   category: string;
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   recommendedAction?: string;
+  aboutReaction?: string;
+  causes?: string;
+  howToAvoid?: string;
+  safetyInfo?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -38,11 +43,12 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
     try {
       setLoading(true);
       const response = await deviceSafetyPrecautionsAPI.getAllByDevice(deviceId);
-      setSafetyPrecautions(response.data);
+      setSafetyPrecautions(response.data || []);
       setError(null);
     } catch (err) {
       console.error('Error loading safety precautions:', err);
       setError('Failed to load safety precautions');
+      setSafetyPrecautions([]);
     } finally {
       setLoading(false);
     }
@@ -99,7 +105,11 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
     const matchesType = filterType === 'all' || precaution.type === filterType;
     const matchesCategory = filterCategory === 'all' || precaution.category === filterCategory;
     const matchesSearch = precaution.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         precaution.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         precaution.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (precaution.aboutReaction && precaution.aboutReaction.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (precaution.causes && precaution.causes.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (precaution.howToAvoid && precaution.howToAvoid.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (precaution.safetyInfo && precaution.safetyInfo.toLowerCase().includes(searchTerm.toLowerCase()));
     
     return matchesType && matchesCategory && matchesSearch;
   });
@@ -143,12 +153,12 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <p className="text-red-600">{error}</p>
-          <button
+          <Button
             onClick={loadSafetyPrecautions}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            className="mt-4"
           >
             Retry
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -164,13 +174,13 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
             {safetyPrecautions.length} safety precaution{safetyPrecautions.length !== 1 ? 's' : ''} found
           </p>
         </div>
-        <button
+        <Button
           onClick={() => setShowAddForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          className="flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           Add Safety Info
-        </button>
+        </Button>
       </div>
 
       {/* Filters */}
@@ -220,9 +230,24 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
       {/* Safety Precautions List */}
       <div className="space-y-4">
         {filteredPrecautions.length === 0 ? (
-          <div className="text-center py-8">
-            <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500">No safety precautions found</p>
+          <div className="text-center py-12">
+            <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No safety precautions found</h3>
+            <p className="text-gray-500 mb-4">
+              {safetyPrecautions.length === 0 
+                ? "This device doesn't have any safety precautions yet."
+                : "No precautions match your current filters."
+              }
+            </p>
+            {safetyPrecautions.length === 0 && (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors mx-auto"
+              >
+                <Plus className="w-4 h-4" />
+                Add Your First Safety Precaution
+              </button>
+            )}
           </div>
         ) : (
           filteredPrecautions.map((precaution) => (
@@ -248,6 +273,32 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
                       )}
                     </div>
                     <p className="text-sm text-gray-700 mb-2">{precaution.description}</p>
+                    
+                    {/* Enhanced Safety Information Display */}
+                    {precaution.aboutReaction && (
+                      <div className="text-sm text-gray-600 mb-2">
+                        <strong>About Reaction:</strong> {precaution.aboutReaction}
+                      </div>
+                    )}
+                    
+                    {precaution.causes && (
+                      <div className="text-sm text-gray-600 mb-2">
+                        <strong>Causes:</strong> {precaution.causes}
+                      </div>
+                    )}
+                    
+                    {precaution.howToAvoid && (
+                      <div className="text-sm text-gray-600 mb-2">
+                        <strong>How to Avoid:</strong> {precaution.howToAvoid}
+                      </div>
+                    )}
+                    
+                    {precaution.safetyInfo && (
+                      <div className="text-sm text-gray-600 mb-2">
+                        <strong>Safety Information:</strong> {precaution.safetyInfo}
+                      </div>
+                    )}
+                    
                     {precaution.recommendedAction && (
                       <div className="text-sm text-gray-600">
                         <strong>Recommended Action:</strong> {precaution.recommendedAction}

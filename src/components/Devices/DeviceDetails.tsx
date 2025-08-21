@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Trash2, 
   Download, 
   FileText, 
   Settings, 
@@ -10,7 +9,13 @@ import {
   Clock,
   MessageSquare,
   AlertTriangle,
-  BarChart3
+  BarChart3,
+  Wifi,
+  Database,
+  Activity,
+  Tag,
+  Zap,
+  Wrench
 } from 'lucide-react';
 import { Device } from '../../types';
 import { deviceAPI, ruleAPI, maintenanceAPI, deviceSafetyPrecautionsAPI } from '../../services/api';
@@ -18,7 +23,10 @@ import { DeviceRulesManager } from './DeviceRulesManager';
 import DeviceRulesDisplay from './DeviceRulesDisplay';
 import DeviceAnalyticsDisplay from './DeviceAnalyticsDisplay';
 import DeviceLogsDisplay from './DeviceLogsDisplay';
+import DeviceMaintenanceDisplay from './DeviceMaintenanceDisplay';
+import DeviceSafetyInfo from './DeviceSafetyInfo';
 import { DeviceStatsService } from '../../services/deviceStatsService';
+import { logError, logInfo } from '../../utils/logger';
 
 interface DeviceDetailsProps {
   device: Device;
@@ -76,10 +84,10 @@ const deviceTypeConfig = {
 const tabs = [
   { id: 'profile', label: 'Profile & Specifications', icon: Info },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'rules', label: 'Rules', icon: 'Zap' },
+  { id: 'rules', label: 'Rules', icon: Zap },
   { id: 'logs', label: 'Logs', icon: FileText },
-  { id: 'connection', label: 'Connection Details', icon: 'Wifi' },
-  { id: 'maintenance', label: 'Maintenance Details', icon: 'Wrench' },
+  { id: 'maintenance', label: 'Maintenance', icon: Wrench },
+  { id: 'safety', label: 'Safety', icon: AlertTriangle },
   { id: 'chat', label: 'Chat History', icon: MessageSquare }
 ];
 
@@ -121,7 +129,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
       const response = await deviceAPI.getDocumentation(device.id);
       setDocumentationInfo(response.data);
     } catch (error) {
-      console.error('Failed to fetch documentation info:', error);
+      logError('DeviceDetails', 'Failed to fetch documentation info', error instanceof Error ? error : new Error('Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -144,7 +152,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
-      console.error(`Failed to download ${type}:`, error);
+      logError('DeviceDetails', `Failed to download ${type}`, error instanceof Error ? error : new Error('Unknown error'));
     } finally {
       setDownloading(null);
     }
@@ -196,58 +204,58 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
 
   const debugDataRetrieval = async () => {
     try {
-      console.log('=== DEBUGGING DATA RETRIEVAL ===');
-      console.log('Device ID:', device.id);
+      logInfo('DeviceDetails', '=== DEBUGGING DATA RETRIEVAL ===');
+      logInfo('DeviceDetails', `Device ID: ${device.id}`);
       
       // Test authentication first
-      console.log('🔐 Testing authentication...');
+      logInfo('DeviceDetails', '🔐 Testing authentication...');
       try {
         const authResponse = await deviceAPI.testAuth();
-        console.log('✅ Auth test successful:', authResponse.data);
+        logInfo('DeviceDetails', '✅ Auth test successful', authResponse.data);
       } catch (authError) {
-        console.error('❌ Auth test failed:', authError);
+        logError('DeviceDetails', '❌ Auth test failed', authError instanceof Error ? authError : new Error('Unknown error'));
         return; // Stop if auth fails
       }
       
       // Test rules retrieval
-      console.log('📋 Testing rules retrieval...');
+      logInfo('DeviceDetails', '📋 Testing rules retrieval...');
       try {
         const rulesResponse = await ruleAPI.getByDevice(device.id);
-        console.log('✅ Rules response:', rulesResponse.data);
+        logInfo('DeviceDetails', '✅ Rules response', rulesResponse.data);
       } catch (error) {
-        console.error('❌ Rules retrieval failed:', error);
+        logError('DeviceDetails', '❌ Rules retrieval failed', error instanceof Error ? error : new Error('Unknown error'));
       }
       
       // Test maintenance retrieval
-      console.log('🔧 Testing maintenance retrieval...');
+      logInfo('DeviceDetails', '🔧 Testing maintenance retrieval...');
       try {
         const maintenanceResponse = await maintenanceAPI.getByDevice(device.id);
-        console.log('✅ Maintenance response:', maintenanceResponse.data);
+        logInfo('DeviceDetails', '✅ Maintenance response', maintenanceResponse.data);
       } catch (error) {
-        console.error('❌ Maintenance retrieval failed:', error);
+        logError('DeviceDetails', '❌ Maintenance retrieval failed', error instanceof Error ? error : new Error('Unknown error'));
       }
       
       // Test safety precautions retrieval
-      console.log('⚠️ Testing safety precautions retrieval...');
+      logInfo('DeviceDetails', '⚠️ Testing safety precautions retrieval...');
       try {
         const safetyResponse = await deviceSafetyPrecautionsAPI.getByDevice(device.id);
-        console.log('✅ Safety response:', safetyResponse.data);
+        logInfo('DeviceDetails', '✅ Safety response', safetyResponse.data);
       } catch (error) {
-        console.error('❌ Safety precautions retrieval failed:', error);
+        logError('DeviceDetails', '❌ Safety precautions retrieval failed', error instanceof Error ? error : new Error('Unknown error'));
       }
       
       // Test debug endpoint
-      console.log('🔍 Testing debug endpoint...');
+      logInfo('DeviceDetails', '🔍 Testing debug endpoint...');
       try {
         const debugResponse = await deviceAPI.getDebugData(device.id);
-        console.log('✅ Debug response:', debugResponse.data);
+        logInfo('DeviceDetails', '✅ Debug response', debugResponse.data);
       } catch (error) {
-        console.error('❌ Debug endpoint failed:', error);
+        logError('DeviceDetails', '❌ Debug endpoint failed', error instanceof Error ? error : new Error('Unknown error'));
       }
       
-      console.log('=== DEBUG COMPLETE ===');
+      logInfo('DeviceDetails', '=== DEBUG COMPLETE ===');
     } catch (error) {
-      console.error('Debug error:', error);
+      logError('DeviceDetails', 'Debug error', error instanceof Error ? error : new Error('Unknown error'));
     }
   };
 
@@ -429,54 +437,60 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
                 </div>
               )}
             </div>
+
+            {/* Connection Details */}
+            <div className="border-t border-slate-200 pt-6">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <Wifi className="w-5 h-5" />
+                Connection Details
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h4 className="text-md font-semibold text-slate-700">Network Configuration</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">WiFi SSID</label>
+                      <p className="text-slate-800">{device.wifiSsid || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">IP Address</label>
+                      <p className="text-slate-800">{device.ipAddress || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">MAC Address</label>
+                      <p className="text-slate-800">{device.macAddress || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">Port</label>
+                      <p className="text-slate-800">{device.port || 'Not specified'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-md font-semibold text-slate-700">MQTT Configuration</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">MQTT Broker</label>
+                      <p className="text-slate-800">{device.mqttBroker || 'Not specified'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">MQTT Topic</label>
+                      <p className="text-slate-800">{device.mqttTopic || 'Not specified'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         );
 
       case 'maintenance':
-        return (
-          <div className="space-y-6">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                <h3 className="font-semibold text-yellow-800">Maintenance Schedule</h3>
-              </div>
-              <p className="text-yellow-700">{device.maintenanceSchedule || 'No maintenance schedule defined'}</p>
-            </div>
+        return <DeviceMaintenanceDisplay deviceId={device.id} />;
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800">Maintenance History</h3>
-                <div className="space-y-3">
-                  <div className="p-3 bg-slate-50 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-800">Last Maintenance</span>
-                      <span className="text-sm text-slate-600">2 weeks ago</span>
-                    </div>
-                    <p className="text-sm text-slate-600 mt-1">Routine calibration check</p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-800">Next Scheduled</span>
-                      <span className="text-sm text-slate-600">In 2 weeks</span>
-                    </div>
-                    <p className="text-sm text-slate-600 mt-1">Full system inspection</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800">Warranty Information</h3>
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="font-medium text-green-800">Under Warranty</span>
-                  </div>
-                  <p className="text-green-700">{device.warrantyInfo || 'Standard warranty coverage'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
+      case 'safety':
+        return <DeviceSafetyInfo deviceId={device.id} />;
 
       case 'analytics':
         return <DeviceAnalyticsDisplay deviceId={device.id} />;
@@ -487,48 +501,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
       case 'logs':
         return <DeviceLogsDisplay deviceId={device.id} />;
 
-      case 'connection':
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800">Network Configuration</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">WiFi SSID</label>
-                    <p className="text-slate-800">{device.wifiSsid || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">IP Address</label>
-                    <p className="text-slate-800">{device.ipAddress || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">MAC Address</label>
-                    <p className="text-slate-800">{device.macAddress || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Port</label>
-                    <p className="text-slate-800">{device.port || 'Not specified'}</p>
-                  </div>
-                </div>
-              </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800">MQTT Configuration</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">MQTT Broker</label>
-                    <p className="text-slate-800">{device.mqttBroker || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">MQTT Topic</label>
-                    <p className="text-slate-800">{device.mqttTopic || 'Not specified'}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
 
       case 'chat':
         return (
@@ -615,7 +588,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
               onClick={onClose}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <Trash2 className="w-5 h-5 text-slate-600" />
+              <span className="text-xl font-bold text-slate-600">×</span>
             </button>
           </div>
         </div>

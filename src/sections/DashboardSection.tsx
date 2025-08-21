@@ -8,6 +8,7 @@ import Button from '../components/UI/Button';
 import Modal from '../components/UI/Modal';
 import TaskManager from '../components/TaskManager/TaskManager';
 import { maintenanceAPI } from '../services/api';
+import { logError } from '../utils/logger';
 
 import { 
   CheckCircle, 
@@ -26,28 +27,31 @@ export const DashboardSection: React.FC = () => {
   const navigate = useNavigate();
   const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
   const [showTaskManager, setShowTaskManager] = useState(false);
-  const [maintenanceTasks, setMaintenanceTasks] = useState<any[]>([]);
+  const [upcomingMaintenance, setUpcomingMaintenance] = useState<any[]>([]);
+  const [maintenanceCount, setMaintenanceCount] = useState(0);
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
 
-  // Fetch maintenance tasks
+  // Fetch upcoming maintenance tasks
   useEffect(() => {
-    const fetchMaintenanceTasks = async () => {
+    const fetchUpcomingMaintenance = async () => {
       try {
         setMaintenanceLoading(true);
-        const response = await maintenanceAPI.getAll();
-        setMaintenanceTasks(response.data || []);
+        const response = await maintenanceAPI.getUpcoming();
+        setUpcomingMaintenance(response.data?.upcomingMaintenance || []);
+        setMaintenanceCount(response.data?.totalCount || 0);
       } catch (error) {
-        console.error('Failed to fetch maintenance tasks:', error);
-        setMaintenanceTasks([]);
+        logError('Dashboard', 'Failed to fetch upcoming maintenance', error instanceof Error ? error : new Error('Unknown error'));
+        setUpcomingMaintenance([]);
+        setMaintenanceCount(0);
       } finally {
         setMaintenanceLoading(false);
       }
     };
 
-    fetchMaintenanceTasks();
+    fetchUpcomingMaintenance();
     
-    // Poll for maintenance updates every 60 seconds (reduced from 30)
-    const interval = setInterval(fetchMaintenanceTasks, 60000);
+    // Poll for maintenance updates every 60 seconds
+    const interval = setInterval(fetchUpcomingMaintenance, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -56,73 +60,52 @@ export const DashboardSection: React.FC = () => {
     const onlineDevices = devices.filter(d => d.status === 'ONLINE').length;
     const totalDevices = devices.length;
     
-    // Real maintenance data
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay());
-    startOfWeek.setHours(0, 0, 0, 0);
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 7);
-
-    const maintenanceThisWeek = maintenanceTasks.filter(task => {
-      const taskDate = new Date(task.nextMaintenance);
-      return taskDate >= startOfWeek && taskDate < endOfWeek;
-    });
-
-    const rulesCompletedThisWeek = rules.filter(r => 
-      r.createdAt && new Date(r.createdAt) >= startOfWeek && new Date(r.createdAt) < endOfWeek
-    ).length;
-
     return {
       totalDevices,
       onlineDevices,
-      maintenanceThisWeek: maintenanceThisWeek.length,
-      rulesCompletedThisWeek,
       totalRules: rules.length,
-      totalMaintenance: maintenanceTasks.length,
-      pendingMaintenance: maintenanceTasks.filter(task => task.status === 'pending').length,
-      completedMaintenance: maintenanceTasks.filter(task => task.status === 'completed').length
+      totalMaintenance: maintenanceCount,
+      pendingMaintenance: upcomingMaintenance.length,
+      completedMaintenance: 0 // This would need to be calculated from completed tasks
     };
-  }, [devices, notifications, rules, maintenanceTasks]);
+  }, [devices, rules, maintenanceCount, upcomingMaintenance]);
 
-  // Upcoming maintenance
-  const upcomingMaintenance = useMemo(() => {
-    return maintenanceTasks
-      .map(task => ({
-        id: task.id as string,
-        title: task.title,
-        message: task.description,
-        timestamp: new Date(task.nextMaintenance).toISOString(),
-        priority: task.priority
-      }))
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-      .slice(0, 5);
-  }, [maintenanceTasks]);
+  // Handle maintenance card click
+  const handleMaintenanceClick = () => {
+    navigate('/maintenance');
+  };
 
-  function derivePriority(dateStr?: string) {
-    const date = dateStr ? new Date(dateStr) : new Date();
-    const diffMs = date.getTime() - Date.now();
-    const diffHours = diffMs / (1000 * 60 * 60);
-    if (diffHours < 0) return 'overdue';
-    if (diffHours <= 24) return 'soon';
-    return 'later';
-  }
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'overdue': return 'text-error-500 bg-error-500/20';
-      case 'soon': return 'text-warning-500 bg-warning-500/20';
-      case 'later': return 'text-secondary-500 bg-secondary-500/20';
-      default: return 'text-tertiary bg-tertiary/20';
+  // Format maintenance date
+  const formatMaintenanceDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      return 'Tomorrow';
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      });
     }
   };
 
-  const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'overdue': return <AlertTriangle className="w-4 h-4" />;
-      case 'soon': return <Clock className="w-4 h-4" />;
-      case 'later': return <Clock className="w-4 h-4" />;
-      default: return <Clock className="w-4 h-4" />;
+  // Get priority color
+  const getPriorityColor = (priority: string) => {
+    switch (priority?.toLowerCase()) {
+      case 'high':
+        return 'text-red-600 bg-red-50';
+      case 'medium':
+        return 'text-yellow-600 bg-yellow-50';
+      case 'low':
+        return 'text-green-600 bg-green-50';
+      default:
+        return 'text-gray-600 bg-gray-50';
     }
   };
 
@@ -226,10 +209,10 @@ export const DashboardSection: React.FC = () => {
                  <StatsCard
            title="Total Maintenance"
            value={metrics.totalMaintenance}
-           subtitle="Scheduled tasks"
-           icon={Shield} // Changed from Wrench to Shield
+           subtitle={`${metrics.pendingMaintenance} pending`}
+           icon={Shield}
            color="yellow"
-           onClick={handleShowMaintenance}
+           onClick={handleMaintenanceClick}
            className="hover-lift animate-fade-in"
          />
       </div>
@@ -287,14 +270,19 @@ export const DashboardSection: React.FC = () => {
                      <div className="card p-6 h-full">
             <div className="flex items-center justify-between mb-6">
               <div>
-                                 <h3 className="text-xl font-semibold text-primary">
-                   Upcoming Maintenance
-                 </h3>
+                <h3 className="text-xl font-semibold text-primary">
+                  Upcoming Maintenance
+                </h3>
                 <p className="text-secondary">
-                  Scheduled tasks and alerts
+                  Next 3 upcoming tasks
                 </p>
               </div>
-                             <Shield className="w-5 h-5 text-secondary" />
+              <div className="text-right">
+                <Shield className="w-5 h-5 text-secondary mb-1" />
+                <p className="text-xs text-secondary">
+                  {upcomingMaintenance.length} of {maintenanceCount} total
+                </p>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -303,27 +291,27 @@ export const DashboardSection: React.FC = () => {
                   <div
                     key={item.id}
                     className="p-4 rounded-xl border border-light hover:bg-secondary transition-colors cursor-pointer"
-                    onClick={() => navigate(`/notifications?id=${item.id}`)}
+                    onClick={handleMaintenanceClick}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <h4 className="font-medium text-primary text-sm mb-1">
-                          {item.title}
+                          {item.taskName || item.componentName}
                         </h4>
                         <p className="text-secondary text-xs mb-2">
-                          {item.message}
+                          {item.description || 'Maintenance task'}
                         </p>
                         <div className="flex items-center gap-2">
                           <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(item.priority)}`}>
-                            {getPriorityIcon(item.priority)}
-                            <span className="ml-1 capitalize">{item.priority}</span>
+                            <Clock className="w-4 h-4" />
+                            <span className="ml-1 capitalize">{item.priority || 'medium'}</span>
                           </span>
                           <span className="text-xs text-tertiary">
-                            {new Date(item.timestamp).toLocaleDateString()}
+                            {formatMaintenanceDate(item.nextMaintenance)}
                           </span>
                         </div>
                       </div>
-                                             <ArrowRight className="w-4 h-4 text-secondary" />
+                      <ArrowRight className="w-4 h-4 text-secondary" />
                     </div>
                   </div>
                 ))
@@ -343,9 +331,9 @@ export const DashboardSection: React.FC = () => {
                 size="sm"
                 className="w-full text-secondary hover:text-primary"
                 rightIcon={<ArrowRight className="w-4 h-4" />}
-                onClick={() => navigate('/notifications')}
+                onClick={handleMaintenanceClick}
               >
-                View All Notifications
+                View All Maintenance
               </Button>
             </div>
           </div>

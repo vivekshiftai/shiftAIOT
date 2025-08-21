@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, X, AlertTriangle, CheckCircle, Clock, Zap } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, CheckCircle, Clock, Zap } from 'lucide-react';
 import { Device } from '../../types';
 import { useIoT } from '../../contexts/IoTContext';
 import { RuleForm } from '../Forms';
@@ -299,7 +299,7 @@ export const DeviceRulesManager: React.FC<DeviceRulesManagerProps> = ({
                       onClick={() => setShowAddMaintenance(false)}
                       className="p-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors"
                     >
-                      <X className="w-4 h-4" />
+                      <span className="text-lg font-bold">×</span>
                     </button>
                   </div>
                   

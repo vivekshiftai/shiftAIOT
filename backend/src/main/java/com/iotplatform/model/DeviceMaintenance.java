@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.math.BigDecimal;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -21,6 +23,7 @@ import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "device_maintenance")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class DeviceMaintenance {
     
     @Id
@@ -68,6 +71,16 @@ public class DeviceMaintenance {
 
     @Column(name = "estimated_cost", precision = 10, scale = 2)
     private BigDecimal estimatedCost;
+
+    @Size(max = 100)
+    @Column(name = "estimated_duration")
+    private String estimatedDuration;
+
+    @Column(name = "required_tools", columnDefinition = "TEXT")
+    private String requiredTools;
+
+    @Column(name = "safety_notes", columnDefinition = "TEXT")
+    private String safetyNotes;
 
     @Size(max = 255)
     @Column(name = "assigned_to")
@@ -145,6 +158,15 @@ public class DeviceMaintenance {
 
     public BigDecimal getEstimatedCost() { return estimatedCost; }
     public void setEstimatedCost(BigDecimal estimatedCost) { this.estimatedCost = estimatedCost; }
+
+    public String getEstimatedDuration() { return estimatedDuration; }
+    public void setEstimatedDuration(String estimatedDuration) { this.estimatedDuration = estimatedDuration; }
+
+    public String getRequiredTools() { return requiredTools; }
+    public void setRequiredTools(String requiredTools) { this.requiredTools = requiredTools; }
+
+    public String getSafetyNotes() { return safetyNotes; }
+    public void setSafetyNotes(String safetyNotes) { this.safetyNotes = safetyNotes; }
 
     public String getAssignedTo() { return assignedTo; }
     public void setAssignedTo(String assignedTo) { this.assignedTo = assignedTo; }

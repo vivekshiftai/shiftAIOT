@@ -35,6 +35,7 @@ import { DeviceConnectionManager } from '../components/Devices/DeviceConnectionM
 import DeviceSafetyInfo from '../components/Devices/DeviceSafetyInfo';
 import { deviceAPI } from '../services/api';
 import { pdfProcessingService, PDFListResponse } from '../services/pdfprocess';
+import { logError } from '../utils/logger';
 
 interface DocumentationInfo {
   deviceId: string;
@@ -177,7 +178,7 @@ export const DeviceDetailsSection: React.FC = () => {
         ]);
       }
     } catch (error) {
-      console.error('Failed to load device PDFs:', error);
+      logError('DeviceDetails', 'Failed to load device PDFs', error instanceof Error ? error : new Error('Unknown error'));
     }
   };
 
@@ -195,7 +196,7 @@ export const DeviceDetailsSection: React.FC = () => {
       const response = await deviceAPI.getDocumentation(device.id);
       setDocumentationInfo(response.data);
     } catch (error) {
-      console.error('Failed to fetch documentation info:', error);
+      logError('DeviceDetails', 'Failed to fetch documentation info', error instanceof Error ? error : new Error('Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -218,7 +219,7 @@ export const DeviceDetailsSection: React.FC = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
-      console.error(`Failed to download ${type}:`, error);
+      logError('DeviceDetails', `Failed to download ${type}`, error instanceof Error ? error : new Error('Unknown error'));
     } finally {
       setDownloading(null);
     }
@@ -330,7 +331,7 @@ export const DeviceDetailsSection: React.FC = () => {
           };
           setChatMessages(prev => [...prev, assistantMessage]);
         } catch (queryError) {
-          console.error('Failed to query PDF:', queryError);
+          logError('DeviceDetails', 'Failed to query PDF', queryError instanceof Error ? queryError : new Error('Unknown error'));
           const errorMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
             type: 'assistant',
@@ -350,7 +351,7 @@ export const DeviceDetailsSection: React.FC = () => {
         setChatMessages(prev => [...prev, aiResponse]);
       }
     } catch (error) {
-      console.error('Failed to send message:', error);
+      logError('DeviceDetails', 'Failed to send message', error instanceof Error ? error : new Error('Unknown error'));
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Trash2 } from 'lucide-react';
 import Button from './Button';
 
 interface ModalProps {
@@ -111,7 +110,7 @@ const Modal: React.FC<ModalProps> = ({
                 className="p-2 hover:bg-slate-100/80 text-slate-600 hover:text-slate-800"
                 aria-label="Close modal"
               >
-                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-lg font-bold">×</span>
               </Button>
             )}
           </div>

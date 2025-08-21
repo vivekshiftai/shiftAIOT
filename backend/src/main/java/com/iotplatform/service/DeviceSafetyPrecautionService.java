@@ -85,6 +85,10 @@ public class DeviceSafetyPrecautionService {
             precaution.setCategory(updatedPrecaution.getCategory());
             precaution.setSeverity(updatedPrecaution.getSeverity());
             precaution.setRecommendedAction(updatedPrecaution.getRecommendedAction());
+            precaution.setAboutReaction(updatedPrecaution.getAboutReaction());
+            precaution.setCauses(updatedPrecaution.getCauses());
+            precaution.setHowToAvoid(updatedPrecaution.getHowToAvoid());
+            precaution.setSafetyInfo(updatedPrecaution.getSafetyInfo());
             precaution.setIsActive(updatedPrecaution.getIsActive());
             precaution.setUpdatedAt(LocalDateTime.now());
             

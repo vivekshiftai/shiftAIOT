@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
+import java.util.Comparator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -188,6 +189,37 @@ public class PDFProcessingService {
     }
     
     /**
+     * Get upcoming maintenance items for dashboard (top 3 due soon)
+     */
+    public List<DeviceMaintenance> getUpcomingMaintenance(String organizationId) {
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        LocalDate nextWeek = LocalDate.now().plusDays(7);
+        
+        List<DeviceMaintenance> allMaintenance = deviceMaintenanceRepository.findByOrganizationId(organizationId);
+        
+        // Filter for upcoming maintenance and sort by next maintenance date
+        List<DeviceMaintenance> upcomingMaintenance = allMaintenance.stream()
+            .filter(maint -> maint.getNextMaintenance() != null && 
+                           maint.getNextMaintenance().isAfter(LocalDate.now().minusDays(1)) &&
+                           maint.getStatus() == DeviceMaintenance.Status.ACTIVE)
+            .sorted(Comparator.comparing(DeviceMaintenance::getNextMaintenance))
+            .limit(3)
+            .collect(Collectors.toList());
+        
+        logger.info("Found {} upcoming maintenance items for organization: {}", upcomingMaintenance.size(), organizationId);
+        return upcomingMaintenance;
+    }
+    
+    /**
+     * Get maintenance count for dashboard
+     */
+    public long getMaintenanceCount(String organizationId) {
+        return deviceMaintenanceRepository.findByOrganizationId(organizationId).stream()
+            .filter(maint -> maint.getStatus() == DeviceMaintenance.Status.ACTIVE)
+            .count();
+    }
+    
+    /**
      * Get all maintenance items for a device
      */
     public List<DeviceMaintenance> getDeviceMaintenance(String deviceId) {
@@ -210,20 +242,14 @@ public class PDFProcessingService {
      * Get all rules for a device
      */
     public List<Rule> getDeviceRules(String deviceId) {
-        // Get rules that have conditions associated with this device
-        List<RuleCondition> conditions = ruleConditionRepository.findByDeviceId(deviceId);
-        List<String> ruleIds = conditions.stream()
-            .map(condition -> condition.getRule().getId())
-            .distinct()
-            .collect(Collectors.toList());
-        
-        if (ruleIds.isEmpty()) {
-            logger.warn("No rules found for device: {}", deviceId);
+        try {
+            // Use a more direct approach to avoid lazy loading issues
+            List<Rule> rules = ruleRepository.findByDeviceId(deviceId);
+            logger.info("Found {} rules for device: {}", rules.size(), deviceId);
+            return rules;
+        } catch (Exception e) {
+            logger.error("Error fetching rules for device: {}", deviceId, e);
             return new ArrayList<>();
         }
-        
-        List<Rule> rules = ruleRepository.findAllById(ruleIds);
-        logger.info("Found {} rules for device: {}", rules.size(), deviceId);
-        return rules;
     }
 }

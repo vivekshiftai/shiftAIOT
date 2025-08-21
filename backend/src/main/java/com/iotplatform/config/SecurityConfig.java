@@ -88,10 +88,7 @@ public class SecurityConfig {
                 .requestMatchers("/upload-pdf").permitAll()
                 .requestMatchers("/query").permitAll()
                 .requestMatchers("/pdfs/**").permitAll()
-                .requestMatchers("/generate/**").permitAll()
-                .requestMatchers("/generate-rules/**").permitAll()
-                .requestMatchers("/generate-maintenance/**").permitAll()
-                .requestMatchers("/generate-safety/**").permitAll()
+
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/websocket/**").permitAll()
                 .requestMatchers("/health/**").permitAll()

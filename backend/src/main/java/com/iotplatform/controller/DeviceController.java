@@ -29,6 +29,7 @@ import com.iotplatform.dto.DeviceCreateResponse;
 import com.iotplatform.dto.DeviceCreateWithFileRequest;
 import com.iotplatform.dto.DeviceCreateRequest;
 import com.iotplatform.dto.DeviceStatsResponse;
+
 import com.iotplatform.dto.TelemetryDataRequest;
 import com.iotplatform.model.Device;
 import com.iotplatform.model.User;
@@ -948,6 +949,33 @@ public class DeviceController {
             logger.info("AI rules processed for device: {}", deviceId);
         } catch (Exception e) {
             logger.warn("Failed to process AI rules for device {}: {}", deviceId, e.getMessage());
+        }
+    }
+
+    /**
+     * Get upcoming maintenance for dashboard
+     */
+    @GetMapping("/maintenance/upcoming")
+    @PreAuthorize("hasAuthority('DEVICE_READ')")
+    public ResponseEntity<?> getUpcomingMaintenance(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        try {
+            String organizationId = user.getOrganizationId();
+            List<DeviceMaintenance> upcomingMaintenance = pdfProcessingService.getUpcomingMaintenance(organizationId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("upcomingMaintenance", upcomingMaintenance);
+            response.put("totalCount", pdfProcessingService.getMaintenanceCount(organizationId));
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error retrieving upcoming maintenance: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to retrieve upcoming maintenance"));
         }
     }
 }

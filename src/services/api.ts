@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { getApiConfig } from '../config/api';
 import { tokenService } from './tokenService';
+import { logWarn, logError, logApiError } from '../utils/logger';
 
 const API_BASE_URL = getApiConfig().BACKEND_BASE_URL;
 
@@ -63,14 +64,14 @@ api.interceptors.response.use(
           return api(originalRequest);
         } else {
           // Token refresh failed, redirect to login
-          console.warn('Token refresh failed, redirecting to login');
+          logWarn('API', 'Token refresh failed, redirecting to login');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           window.location.href = '/login';
           return Promise.reject(error);
         }
       } catch (refreshErr: any) {
-        console.warn('Token refresh failed:', refreshErr.message);
+        logWarn('API', 'Token refresh failed', undefined, refreshErr);
         // Token refresh failed, redirect to login
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -83,7 +84,7 @@ api.interceptors.response.use(
     if (status === 500) {
       const url = error.config?.url || '';
       if (url.includes('/safety-precautions') || url.includes('/rules') || url.includes('/maintenance')) {
-        console.warn(`Server error for endpoint: ${url}. This might be due to missing database columns or backend issues.`);
+        logWarn('API', `Server error for endpoint: ${url}. This might be due to missing database columns or backend issues.`);
         // Return empty data instead of throwing error
         return Promise.resolve({ data: [] });
       }
@@ -137,10 +138,11 @@ export const ruleAPI = {
   createBulk: (rules: any[]) => api.post('/api/rules/bulk', rules),
   update: (id: string, rule: any) => api.put(`/api/rules/${id}`, rule),
   delete: (id: string) => api.delete(`/api/rules/${id}`),
-  getByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/rules`),
+  getByDevice: (deviceId: string) => api.get(`/api/rules/device/${deviceId}`),
   getByOrganization: (organizationId: string) => api.get(`/api/rules/organization/${organizationId}`),
   activate: (id: string) => api.patch(`/api/rules/${id}/activate`),
   deactivate: (id: string) => api.patch(`/api/rules/${id}/deactivate`),
+  toggle: (id: string) => api.patch(`/api/rules/${id}/toggle`),
 };
 
 // Analytics API
@@ -182,6 +184,7 @@ export const maintenanceAPI = {
   update: (id: string, item: any) => api.put(`/api/maintenance/${id}`, item),
   delete: (id: string) => api.delete(`/api/maintenance/${id}`),
   getByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/maintenance`),
+  getUpcoming: () => api.get('/api/devices/maintenance/upcoming'),
 };
 
 // Device Safety Precautions API
@@ -419,5 +422,44 @@ export const pdfAPI = {
     if (deviceId) payload.deviceId = deviceId;
     
     return pdfApi.post('/generate-safety', payload);
+  },
+
+  // Delete PDF from external processing service
+  deletePDF: async (pdfName: string) => {
+    console.log(`🗑️ [API] Starting PDF deletion via main API service: "${pdfName}"`);
+    console.log(`🌐 [API] DELETE request to: ${API_BASE_URL}/pdfs/${pdfName}`);
+    
+    const startTime = Date.now();
+    
+    // Create a separate axios instance without authentication for PDF deletion
+    const pdfApi = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: 30000,
+    });
+    
+    try {
+      const response = await pdfApi.delete(`/pdfs/${pdfName}`);
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      
+      console.log(`✅ [API] PDF deletion successful: "${pdfName}"`, {
+        status: response.status,
+        duration: `${duration}ms`,
+        data: response.data
+      });
+      
+      return response;
+    } catch (error) {
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      
+      console.error(`❌ [API] PDF deletion failed: "${pdfName}"`, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        duration: `${duration}ms`,
+        url: `${API_BASE_URL}/pdfs/${pdfName}`
+      });
+      
+      throw error;
+    }
   },
 };

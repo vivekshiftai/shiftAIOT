@@ -8,7 +8,6 @@ import {
   Settings,
   AlertTriangle,
   CheckCircle,
-  Trash2,
   Clock
 } from 'lucide-react';
 import { pdfProcessingService } from '../../services/pdfprocess';
@@ -65,12 +64,12 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     // Generate floating AI icons
     const iconList = [
       Bot, Settings, AlertTriangle, CheckCircle,
-      FileText, Send, User, MessageSquare, Trash2, Clock
+      FileText, Send, User, MessageSquare, Clock
     ];
 
     const newFloatingIcons = Array.from({ length: 15 }, (_, i) => ({
       id: i,
-      icon: iconList[Math.floor(Math.random() * iconList.length)],
+      icon: iconList[Math.floor(Math.random() * (iconList.length - 1))],
       x: Math.random() * 100,
       y: Math.random() * 100,
       delay: Math.random() * 2000,
@@ -260,7 +259,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
               onClick={onClose}
               className="p-2 hover:bg-white/20 rounded-lg transition-all duration-300 hover:scale-105"
             >
-              <Trash2 className="w-5 h-5" />
+              <span className="text-xl font-bold">×</span>
             </button>
           </div>
         </div>

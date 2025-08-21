@@ -53,6 +53,24 @@ public class RuleService {
                 rule.setId(UUID.randomUUID().toString());
                 rule.setName((String) ruleData.get("name"));
                 rule.setDescription((String) ruleData.get("description"));
+                
+                // Set new fields if available
+                if (ruleData.containsKey("metric")) {
+                    rule.setMetric((String) ruleData.get("metric"));
+                }
+                if (ruleData.containsKey("metricValue")) {
+                    rule.setMetricValue((String) ruleData.get("metricValue"));
+                }
+                if (ruleData.containsKey("threshold")) {
+                    rule.setThreshold((String) ruleData.get("threshold"));
+                }
+                if (ruleData.containsKey("consequence")) {
+                    rule.setConsequence((String) ruleData.get("consequence"));
+                }
+                if (ruleData.containsKey("deviceId")) {
+                    rule.setDeviceId((String) ruleData.get("deviceId"));
+                }
+                
                 rule.setActive(true);
                 rule.setOrganizationId(organizationId);
                 
@@ -120,6 +138,11 @@ public class RuleService {
 
         rule.setName(ruleDetails.getName());
         rule.setDescription(ruleDetails.getDescription());
+        rule.setMetric(ruleDetails.getMetric());
+        rule.setMetricValue(ruleDetails.getMetricValue());
+        rule.setThreshold(ruleDetails.getThreshold());
+        rule.setConsequence(ruleDetails.getConsequence());
+        rule.setDeviceId(ruleDetails.getDeviceId());
         rule.setActive(ruleDetails.isActive());
         rule.setConditions(ruleDetails.getConditions());
         rule.setActions(ruleDetails.getActions());
@@ -135,6 +158,10 @@ public class RuleService {
 
     public List<Rule> getActiveRules(String organizationId) {
         return ruleRepository.findByOrganizationIdAndActive(organizationId, true);
+    }
+
+    public List<Rule> getRulesByDevice(String deviceId, String organizationId) {
+        return ruleRepository.findByDeviceIdAndOrganizationId(deviceId, organizationId);
     }
 
     public RuleController.RuleStats getRuleStats(String organizationId) {
@@ -156,10 +183,12 @@ public class RuleService {
         
         if (device == null) return;
 
-        // Get active rules for this organization
-        List<Rule> activeRules = ruleRepository.findByOrganizationIdAndActive(organizationId, true);
+        // Get all rules for this specific device
+        List<Rule> deviceRules = ruleRepository.findByDeviceIdAndOrganizationId(deviceId, organizationId);
 
-        for (Rule rule : activeRules) {
+        for (Rule rule : deviceRules) {
+            // Only evaluate active rules
+            if (!rule.isActive()) continue;
             if (evaluateRuleConditions(rule, telemetryData)) {
                 executeRuleActions(rule, device, telemetryData);
                 
@@ -171,7 +200,41 @@ public class RuleService {
     }
 
     private boolean evaluateRuleConditions(Rule rule, TelemetryDataRequest telemetryData) {
-        // Simplified rule evaluation - in production, implement complex logic
+        // Enhanced rule evaluation using new metric and threshold fields
+        if (rule.getMetric() != null && rule.getThreshold() != null) {
+            // Use the new metric and threshold fields from the rule
+            String metric = rule.getMetric();
+            if (telemetryData.getMetrics().containsKey(metric)) {
+                double actualValue = telemetryData.getMetrics().get(metric);
+                
+                // Parse threshold value (e.g., "2.5 mm/s" -> 2.5)
+                String thresholdStr = rule.getThreshold();
+                try {
+                    // Extract numeric value from threshold string
+                    String numericPart = thresholdStr.replaceAll("[^0-9.]", "");
+                    if (!numericPart.isEmpty()) {
+                        double thresholdValue = Double.parseDouble(numericPart);
+                        
+                        // Determine operator from threshold string
+                        if (thresholdStr.contains(">")) {
+                            return actualValue > thresholdValue;
+                        } else if (thresholdStr.contains("<")) {
+                            return actualValue < thresholdValue;
+                        } else if (thresholdStr.contains("=")) {
+                            return actualValue == thresholdValue;
+                        } else if (thresholdStr.contains(">=")) {
+                            return actualValue >= thresholdValue;
+                        } else if (thresholdStr.contains("<=")) {
+                            return actualValue <= thresholdValue;
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    System.err.println("Failed to parse threshold value: " + thresholdStr);
+                }
+            }
+        }
+        
+        // Fallback to original condition evaluation
         for (RuleCondition condition : rule.getConditions()) {
             if (condition.getType() == RuleCondition.ConditionType.TELEMETRY_THRESHOLD) {
                 String metric = condition.getMetric();

@@ -1,10 +1,12 @@
 package com.iotplatform.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "device_safety_precautions")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class DeviceSafetyPrecaution {
     
     @Id
@@ -30,6 +32,18 @@ public class DeviceSafetyPrecaution {
     
     @Column(columnDefinition = "TEXT")
     private String recommendedAction;
+    
+    @Column(name = "about_reaction", columnDefinition = "TEXT")
+    private String aboutReaction;
+    
+    @Column(name = "causes", columnDefinition = "TEXT")
+    private String causes;
+    
+    @Column(name = "how_to_avoid", columnDefinition = "TEXT")
+    private String howToAvoid;
+    
+    @Column(name = "safety_info", columnDefinition = "TEXT")
+    private String safetyInfo;
     
     @Column(name = "is_active")
     private Boolean isActive = true;
@@ -124,6 +138,38 @@ public class DeviceSafetyPrecaution {
     
     public void setRecommendedAction(String recommendedAction) {
         this.recommendedAction = recommendedAction;
+    }
+    
+    public String getAboutReaction() {
+        return aboutReaction;
+    }
+    
+    public void setAboutReaction(String aboutReaction) {
+        this.aboutReaction = aboutReaction;
+    }
+    
+    public String getCauses() {
+        return causes;
+    }
+    
+    public void setCauses(String causes) {
+        this.causes = causes;
+    }
+    
+    public String getHowToAvoid() {
+        return howToAvoid;
+    }
+    
+    public void setHowToAvoid(String howToAvoid) {
+        this.howToAvoid = howToAvoid;
+    }
+    
+    public String getSafetyInfo() {
+        return safetyInfo;
+    }
+    
+    public void setSafetyInfo(String safetyInfo) {
+        this.safetyInfo = safetyInfo;
     }
     
     public Boolean getIsActive() {

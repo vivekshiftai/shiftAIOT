@@ -8,6 +8,7 @@ import { useIoT } from '../contexts/IoTContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device } from '../types';
 import { DevicesLoading } from '../components/Loading/LoadingComponents';
+import { logInfo } from '../utils/logger';
 
 export const DevicesSection: React.FC = () => {
   const navigate = useNavigate();
@@ -24,9 +25,7 @@ export const DevicesSection: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
 
   // Debug logging
-  console.log('DevicesSection - devices:', devices);
-  console.log('DevicesSection - loading:', loading);
-  console.log('DevicesSection - devices length:', devices?.length || 0);
+  logInfo('DevicesSection', 'Devices data', { devices: devices, loading, count: devices?.length || 0 });
 
   // Initialize filters from query params
   useEffect(() => {
@@ -54,16 +53,15 @@ export const DevicesSection: React.FC = () => {
     return sorted;
   }, [devices, searchTerm, statusFilter, typeFilter, sortBy]);
 
-  console.log('DevicesSection - filteredDevices:', filteredDevices);
-  console.log('DevicesSection - filteredDevices length:', filteredDevices.length);
+  logInfo('DevicesSection', 'Filtered devices', { filteredDevices, count: filteredDevices.length });
 
   const handleAddDeviceClick = () => {
-    console.log('Add Device button clicked, setting showAddForm to true');
+    logInfo('DevicesSection', 'Add Device button clicked, setting showAddForm to true');
     setShowAddForm(true);
   };
 
   const handleCancelAddDevice = useCallback(() => {
-    console.log('Cancel button clicked, setting showAddForm to false');
+    logInfo('DevicesSection', 'Cancel button clicked, setting showAddForm to false');
     setShowAddForm(false);
   }, []);
 

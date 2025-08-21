@@ -2,6 +2,8 @@ package com.iotplatform.repository;
 
 import com.iotplatform.model.Rule;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -13,4 +15,9 @@ public interface RuleRepository extends JpaRepository<Rule, String> {
     List<Rule> findByOrganizationIdAndActive(String organizationId, boolean active);
     Optional<Rule> findByIdAndOrganizationId(String id, String organizationId);
     List<Rule> findByActiveTrue();
+    
+    @Query("SELECT DISTINCT r FROM Rule r JOIN r.conditions c WHERE c.deviceId = :deviceId")
+    List<Rule> findByDeviceId(@Param("deviceId") String deviceId);
+    
+    List<Rule> findByDeviceIdAndOrganizationId(String deviceId, String organizationId);
 }

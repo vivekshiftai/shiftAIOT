@@ -21,6 +21,13 @@ CREATE TABLE IF NOT EXISTS users (
 -- Add phone column to users table if it doesn't exist
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
 
+-- Add new columns to rules table if they don't exist
+ALTER TABLE rules ADD COLUMN IF NOT EXISTS metric VARCHAR(100);
+ALTER TABLE rules ADD COLUMN IF NOT EXISTS metric_value VARCHAR(100);
+ALTER TABLE rules ADD COLUMN IF NOT EXISTS threshold VARCHAR(200);
+ALTER TABLE rules ADD COLUMN IF NOT EXISTS consequence TEXT;
+ALTER TABLE rules ADD COLUMN IF NOT EXISTS device_id VARCHAR(255);
+
 -- User Permissions table
 CREATE TABLE IF NOT EXISTS user_permissions (
     user_id VARCHAR(255) NOT NULL,
@@ -122,6 +129,9 @@ CREATE TABLE IF NOT EXISTS device_maintenance (
     description TEXT,
     priority VARCHAR(20) DEFAULT 'MEDIUM', -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
     estimated_cost DECIMAL(10,2),
+    estimated_duration VARCHAR(100), -- New field for estimated duration
+    required_tools TEXT, -- New field for required tools
+    safety_notes TEXT, -- New field for safety notes
     assigned_to VARCHAR(255),
     status VARCHAR(50) DEFAULT 'ACTIVE', -- 'ACTIVE', 'COMPLETED', 'CANCELLED', 'OVERDUE'
     organization_id VARCHAR(255) NOT NULL,
@@ -133,6 +143,11 @@ CREATE TABLE IF NOT EXISTS device_maintenance (
 -- Add organization_id column to device_maintenance if it doesn't exist
 ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS organization_id VARCHAR(255) NOT NULL DEFAULT 'default';
 
+-- Add new columns to device_maintenance for enhanced maintenance data
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS estimated_duration VARCHAR(100);
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS required_tools TEXT;
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS safety_notes TEXT;
+
 -- Device Safety Precautions table for onboarding flow - Updated to match new model
 CREATE TABLE IF NOT EXISTS device_safety_precautions (
     id VARCHAR(255) PRIMARY KEY,
@@ -143,6 +158,10 @@ CREATE TABLE IF NOT EXISTS device_safety_precautions (
     category VARCHAR(100) NOT NULL, -- 'thermal_hazard', 'electrical_hazard', 'mechanical_hazard', 'emergency_procedures', 'ppe_requirements'
     severity VARCHAR(20) DEFAULT 'MEDIUM', -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
     recommended_action TEXT,
+    about_reaction TEXT,
+    causes TEXT,
+    how_to_avoid TEXT,
+    safety_info TEXT,
     is_active BOOLEAN DEFAULT true,
     organization_id VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -152,6 +171,12 @@ CREATE TABLE IF NOT EXISTS device_safety_precautions (
 
 -- Add organization_id column to device_safety_precautions if it doesn't exist
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS organization_id VARCHAR(255) NOT NULL DEFAULT 'default';
+
+-- Add new columns to device_safety_precautions table if they don't exist
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS about_reaction TEXT;
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS causes TEXT;
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS how_to_avoid TEXT;
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS safety_info TEXT;
 
 -- Device Tags table
 CREATE TABLE IF NOT EXISTS device_tags (
@@ -175,11 +200,17 @@ CREATE TABLE IF NOT EXISTS rules (
     id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
+    metric VARCHAR(100),
+    metric_value VARCHAR(100),
+    threshold VARCHAR(200),
+    consequence TEXT,
+    device_id VARCHAR(255),
     active BOOLEAN DEFAULT true,
     organization_id VARCHAR(255) NOT NULL,
     last_triggered TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
 );
 
 -- Rule Conditions table - Updated to match new model
