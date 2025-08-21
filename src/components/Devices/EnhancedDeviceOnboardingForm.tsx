@@ -79,14 +79,20 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const [currentSubStage, setCurrentSubStage] = useState('');
   const [onboardingStartTime, setOnboardingStartTime] = useState<number>(0);
 
-  const handleInputChange = (field: keyof DeviceFormData, value: string) => {
+  const handleInputChange = useCallback((field: keyof DeviceFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-  };
+    // Clear error for this field if it exists
+    setErrors(prev => {
+      if (prev[field]) {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      }
+      return prev;
+    });
+  }, []); // Remove errors dependency to prevent infinite re-renders
 
-  const validateStep = (step: Step): boolean => {
+  const validateStep = useCallback((step: Step): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (step === 1) {
@@ -108,23 +114,23 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData.deviceName, formData.location, formData.manufacturer, formData.connectionType, formData.brokerUrl, formData.topic, formData.httpEndpoint, formData.coapHost]); // Specific dependencies instead of entire formData object
 
-  const nextStep = () => {
+  const nextStep = useCallback(() => {
     if (validateStep(currentStep)) {
       if (currentStep < 3) {
         setCurrentStep(prev => (prev + 1) as Step);
       }
     }
-  };
+  }, [currentStep, validateStep]);
 
-  const prevStep = () => {
+  const prevStep = useCallback(() => {
     if (currentStep > 1) {
       setCurrentStep(prev => (prev - 1) as Step);
     }
-  };
+  }, [currentStep]);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setUploadedFile({
@@ -132,7 +138,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         status: 'uploading'
       });
     }
-  };
+  }, []);
 
   const startOnboardingProcess = useCallback(async () => {
     if (!uploadedFile?.file) return;
@@ -198,7 +204,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     }
   }, [uploadedFile, formData]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!validateStep(currentStep)) return;
 
     if (currentStep === 3 && uploadedFile) {
@@ -206,20 +212,20 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     } else if (currentStep < 3) {
       nextStep();
     }
-  };
+  }, [currentStep, uploadedFile, validateStep, startOnboardingProcess, nextStep]);
 
   // Handle success continue - close onboarding and show chat
-  const handleSuccessContinue = () => {
+  const handleSuccessContinue = useCallback(() => {
     setShowSuccessMessage(false);
     setShowChatInterface(true);
-  };
+  }, []);
 
   // Handle chat close - close everything and return to devices list
-  const handleChatClose = () => {
+  const handleChatClose = useCallback(() => {
     setShowChatInterface(false);
     setShowSuccessMessage(false);
     onCancel(); // Close the entire onboarding form
-  };
+  }, [onCancel]);
 
   const renderStep1 = useCallback(() => (
     <div className="space-y-6 animate-fadeIn">
@@ -287,7 +293,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         </div>
       </div>
     </div>
-  ), [formData.deviceName, formData.location, formData.manufacturer, errors, handleInputChange]);
+  ), [formData.deviceName, formData.location, formData.manufacturer, errors.deviceName, errors.location, errors.manufacturer, handleInputChange]);
 
   const renderStep2 = useCallback(() => (
     <div className="space-y-6 animate-fadeIn">
@@ -687,7 +693,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   
                   <button
                     onClick={currentStep === 3 ? handleSubmit : nextStep}
-                    disabled={isSubmitting || (currentStep === 3 && !uploadedFile) || !validateStep(currentStep)}
+                    disabled={isSubmitting || (currentStep === 3 && !uploadedFile)}
                     className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
                   >
                     {currentStep === 3 ? 'Complete Onboarding' : 'Next'}

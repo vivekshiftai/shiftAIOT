@@ -125,21 +125,33 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   // Fetch device stats when component mounts
   useEffect(() => {
     const fetchDeviceStats = async () => {
-      if (!isOnboarding) {
+      if (!isOnboarding) { // Only fetch if not in onboarding mode
         setIsLoadingStats(true);
         try {
           const stats = await DeviceStatsService.getDeviceStats(device.id);
           setDeviceStats(stats);
         } catch (error) {
           console.error('Failed to fetch device stats:', error);
+          // Set default values on error
+          setDeviceStats({
+            deviceId: device.id,
+            rulesCount: 0,
+            maintenanceCount: 0,
+            safetyCount: 0,
+            totalItems: 0
+          });
         } finally {
           setIsLoadingStats(false);
         }
       }
     };
-
+    
     fetchDeviceStats();
-  }, [device.id, isOnboarding]);
+    
+    // Poll for updates every 60 seconds (reduced from 30 to prevent too many calls)
+    const interval = setInterval(fetchDeviceStats, 60000);
+    return () => clearInterval(interval);
+  }, [device.id, isOnboarding]); // Dependencies for useEffect
 
   // Add additional safety checks
   if (!device) {

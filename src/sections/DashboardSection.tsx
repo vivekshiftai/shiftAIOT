@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useIoT } from '../contexts/IoTContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -7,27 +7,17 @@ import Skeleton, { SkeletonCard } from '../components/UI/Skeleton';
 import Button from '../components/UI/Button';
 import Modal from '../components/UI/Modal';
 import TaskManager from '../components/TaskManager/TaskManager';
+import { maintenanceAPI } from '../services/api';
 
 import { 
-  Cpu, 
-  Wifi, 
-  Calendar, 
   CheckCircle, 
-  TrendingUp, 
   AlertTriangle,
   Clock,
   Settings,
-  Activity,
-  Zap,
-  Users,
   Shield,
-  BarChart3,
-  Bell,
   ArrowRight,
   Plus,
-  Eye,
-  CheckSquare,
-  Wrench
+  Eye
 } from 'lucide-react';
 
 export const DashboardSection: React.FC = () => {
@@ -36,13 +26,37 @@ export const DashboardSection: React.FC = () => {
   const navigate = useNavigate();
   const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
   const [showTaskManager, setShowTaskManager] = useState(false);
+  const [maintenanceTasks, setMaintenanceTasks] = useState<any[]>([]);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(true);
+
+  // Fetch maintenance tasks
+  useEffect(() => {
+    const fetchMaintenanceTasks = async () => {
+      try {
+        setMaintenanceLoading(true);
+        const response = await maintenanceAPI.getAll();
+        setMaintenanceTasks(response.data || []);
+      } catch (error) {
+        console.error('Failed to fetch maintenance tasks:', error);
+        setMaintenanceTasks([]);
+      } finally {
+        setMaintenanceLoading(false);
+      }
+    };
+
+    fetchMaintenanceTasks();
+    
+    // Poll for maintenance updates every 60 seconds (reduced from 30)
+    const interval = setInterval(fetchMaintenanceTasks, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Calculate metrics
   const metrics = useMemo(() => {
     const onlineDevices = devices.filter(d => d.status === 'ONLINE').length;
     const totalDevices = devices.length;
     
-    // Maintenance schedules (using notifications as proxy)
+    // Real maintenance data
     const now = new Date();
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
@@ -50,14 +64,13 @@ export const DashboardSection: React.FC = () => {
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 7);
 
-    const getNotifDate = (n: any) => new Date(n.createdAt || n.timestamp || Date.now());
-    const maintenanceThisWeek = notifications.filter(n =>
-      n.title?.toLowerCase().includes('maintenance') &&
-      getNotifDate(n) >= startOfWeek && getNotifDate(n) < endOfWeek
-    );
+    const maintenanceThisWeek = maintenanceTasks.filter(task => {
+      const taskDate = new Date(task.nextMaintenance);
+      return taskDate >= startOfWeek && taskDate < endOfWeek;
+    });
 
     const rulesCompletedThisWeek = rules.filter(r => 
-      r.lastTriggered && new Date(r.lastTriggered) >= startOfWeek && new Date(r.lastTriggered) < endOfWeek
+      r.createdAt && new Date(r.createdAt) >= startOfWeek && new Date(r.createdAt) < endOfWeek
     ).length;
 
     return {
@@ -66,24 +79,25 @@ export const DashboardSection: React.FC = () => {
       maintenanceThisWeek: maintenanceThisWeek.length,
       rulesCompletedThisWeek,
       totalRules: rules.length,
-      totalMaintenance: notifications.filter(n => n.title?.toLowerCase().includes('maintenance')).length
+      totalMaintenance: maintenanceTasks.length,
+      pendingMaintenance: maintenanceTasks.filter(task => task.status === 'pending').length,
+      completedMaintenance: maintenanceTasks.filter(task => task.status === 'completed').length
     };
-  }, [devices, notifications, rules]);
+  }, [devices, notifications, rules, maintenanceTasks]);
 
   // Upcoming maintenance
   const upcomingMaintenance = useMemo(() => {
-    return notifications
-      .filter(n => n.title?.toLowerCase().includes('maintenance'))
-      .map(n => ({
-        id: n.id as string,
-        title: n.title,
-        message: n.message,
-        timestamp: (n.createdAt || (n as any).timestamp || new Date().toISOString()) as string,
-        priority: derivePriority(n.createdAt || (n as any).timestamp)
+    return maintenanceTasks
+      .map(task => ({
+        id: task.id as string,
+        title: task.title,
+        message: task.description,
+        timestamp: new Date(task.nextMaintenance).toISOString(),
+        priority: task.priority
       }))
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
       .slice(0, 5);
-  }, [notifications]);
+  }, [maintenanceTasks]);
 
   function derivePriority(dateStr?: string) {
     const date = dateStr ? new Date(dateStr) : new Date();
@@ -107,8 +121,8 @@ export const DashboardSection: React.FC = () => {
     switch (priority) {
       case 'overdue': return <AlertTriangle className="w-4 h-4" />;
       case 'soon': return <Clock className="w-4 h-4" />;
-      case 'later': return <Calendar className="w-4 h-4" />;
-      default: return <Calendar className="w-4 h-4" />;
+      case 'later': return <Clock className="w-4 h-4" />;
+      default: return <Clock className="w-4 h-4" />;
     }
   };
 
@@ -162,7 +176,7 @@ export const DashboardSection: React.FC = () => {
           <Button
             variant="secondary"
             size="md"
-            leftIcon={<CheckSquare className="w-4 h-4" />}
+            leftIcon={<CheckCircle className="w-4 h-4" />}
             onClick={() => setShowTaskManager(true)}
             className="btn-warning"
           >
@@ -186,7 +200,7 @@ export const DashboardSection: React.FC = () => {
            title="Total Devices"
            value={metrics.totalDevices}
            subtitle={`${metrics.onlineDevices} online`}
-           icon={Cpu}
+           icon={Shield}
            color="blue"
            onClick={handleNavigateDevices}
            className="hover-lift animate-fade-in"
@@ -195,7 +209,7 @@ export const DashboardSection: React.FC = () => {
            title="Active Devices"
            value={metrics.onlineDevices}
            subtitle="Currently online"
-           icon={Wifi}
+           icon={Shield}
            color="green"
            onClick={handleShowActiveDevices}
            className="hover-lift animate-fade-in"
@@ -204,7 +218,7 @@ export const DashboardSection: React.FC = () => {
            title="Total Rules"
            value={metrics.totalRules}
            subtitle="Automation rules"
-           icon={Zap}
+           icon={Shield}
            color="purple"
            onClick={handleShowRules}
            className="hover-lift animate-fade-in"
@@ -213,7 +227,7 @@ export const DashboardSection: React.FC = () => {
            title="Total Maintenance"
            value={metrics.totalMaintenance}
            subtitle="Scheduled tasks"
-           icon={Wrench}
+           icon={Shield} // Changed from Wrench to Shield
            color="yellow"
            onClick={handleShowMaintenance}
            className="hover-lift animate-fade-in"
@@ -255,7 +269,7 @@ export const DashboardSection: React.FC = () => {
             <div className="h-80 flex items-center justify-center">
               <div className="text-center">
                                  <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                   <Activity className="w-8 h-8 text-primary-300" />
+                   <Shield className="w-8 h-8 text-primary-300" />
                  </div>
                 <h4 className="text-lg font-semibold text-primary mb-2">
                   Device Activity Monitor
@@ -280,7 +294,7 @@ export const DashboardSection: React.FC = () => {
                   Scheduled tasks and alerts
                 </p>
               </div>
-                             <Bell className="w-5 h-5 text-secondary" />
+                             <Shield className="w-5 h-5 text-secondary" />
             </div>
 
             <div className="space-y-4">
@@ -315,7 +329,7 @@ export const DashboardSection: React.FC = () => {
                 ))
               ) : (
                 <div className="text-center py-8">
-                  <Calendar className="w-12 h-12 text-secondary mx-auto mb-4" />
+                  <Clock className="w-12 h-12 text-secondary mx-auto mb-4" />
                   <p className="text-secondary text-sm">
                     No upcoming maintenance scheduled
                   </p>
@@ -342,7 +356,7 @@ export const DashboardSection: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                  <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/devices')}>
            <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center mx-auto mb-4">
-             <Cpu className="w-6 h-6 text-primary-300" />
+             <Shield className="w-6 h-6 text-primary-300" />
            </div>
           <h4 className="font-semibold text-primary mb-2">Manage Devices</h4>
           <p className="text-secondary text-sm">View and configure your IoT devices</p>
@@ -350,7 +364,7 @@ export const DashboardSection: React.FC = () => {
 
                  <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/rules')}>
            <div className="w-12 h-12 bg-warning-50 rounded-xl flex items-center justify-center mx-auto mb-4">
-             <Zap className="w-6 h-6 text-warning-200" />
+             <Shield className="w-6 h-6 text-warning-200" />
            </div>
           <h4 className="font-semibold text-primary mb-2">Automation Rules</h4>
           <p className="text-secondary text-sm">Create and manage automation workflows</p>
@@ -358,7 +372,7 @@ export const DashboardSection: React.FC = () => {
 
                  <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/analytics')}>
            <div className="w-12 h-12 bg-success-50 rounded-xl flex items-center justify-center mx-auto mb-4">
-             <BarChart3 className="w-6 h-6 text-success-400" />
+             <Shield className="w-6 h-6 text-success-400" />
            </div>
           <h4 className="font-semibold text-primary mb-2">Analytics</h4>
           <p className="text-secondary text-sm">View detailed performance insights</p>
@@ -366,7 +380,7 @@ export const DashboardSection: React.FC = () => {
 
                  <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => setShowTaskManager(true)}>
            <div className="w-12 h-12 bg-error-50 rounded-xl flex items-center justify-center mx-auto mb-4">
-             <CheckSquare className="w-6 h-6 text-error-400" />
+             <CheckCircle className="w-6 h-6 text-error-400" />
            </div>
           <h4 className="font-semibold text-primary mb-2">Task Manager</h4>
           <p className="text-secondary text-sm">Organize and track your tasks</p>

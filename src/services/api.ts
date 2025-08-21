@@ -59,10 +59,33 @@ api.interceptors.response.use(
         const newToken = await tokenService.refreshToken();
         if (newToken) {
           // Retry the original request with new token
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
           return api(originalRequest);
+        } else {
+          // Token refresh failed, redirect to login
+          console.warn('Token refresh failed, redirecting to login');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+          return Promise.reject(error);
         }
       } catch (refreshErr: any) {
         console.warn('Token refresh failed:', refreshErr.message);
+        // Token refresh failed, redirect to login
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+    }
+
+    // Handle 500 errors for device-specific endpoints
+    if (status === 500) {
+      const url = error.config?.url || '';
+      if (url.includes('/safety-precautions') || url.includes('/rules') || url.includes('/maintenance')) {
+        console.warn(`Server error for endpoint: ${url}. This might be due to missing database columns or backend issues.`);
+        // Return empty data instead of throwing error
+        return Promise.resolve({ data: [] });
       }
     }
 

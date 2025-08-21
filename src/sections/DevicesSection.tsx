@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, Filter, Search, Cpu, CheckCircle, X } from 'lucide-react';
+import { Plus, Filter, Search, CheckCircle } from 'lucide-react';
 import { DeviceCard } from '../components/Devices/DeviceCard';
 // import { DeviceOnboardingForm } from '../components/Devices/DeviceOnboardingForm';
 import { EnhancedDeviceOnboardingForm } from '../components/Devices/EnhancedDeviceOnboardingForm';
@@ -62,10 +62,16 @@ export const DevicesSection: React.FC = () => {
     setShowAddForm(true);
   };
 
-  const handleCancelAddDevice = () => {
+  const handleCancelAddDevice = useCallback(() => {
     console.log('Cancel button clicked, setting showAddForm to false');
     setShowAddForm(false);
-  };
+  }, []);
+
+  const handleDeviceSubmit = useCallback(async (deviceData: any, file: any) => {
+    setSuccessMessage(`Device "${deviceData.deviceName}" has been successfully added to the platform!`);
+    setTimeout(() => setSuccessMessage(''), 5000);
+    setShowAddForm(false);
+  }, []);
 
   const handleDeviceClick = (device: Device) => {
     navigate(`/devices/${device.id}`);
@@ -90,7 +96,7 @@ export const DevicesSection: React.FC = () => {
               onClick={() => setSuccessMessage('')}
               className="text-success-400 hover:text-success-300"
             >
-              <X className="w-4 h-4" />
+              <CheckCircle className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -188,7 +194,7 @@ export const DevicesSection: React.FC = () => {
       {filteredDevices.length === 0 && (
         <div className="text-center py-12 card">
           <div className="w-16 h-16 bg-secondary-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Cpu className="w-8 h-8 text-secondary-400" />
+            <Plus className="w-8 h-8 text-secondary-400" />
           </div>
           <h3 className="text-lg font-medium text-primary mb-2">No devices found</h3>
           <p className="text-secondary mb-6">
@@ -211,11 +217,7 @@ export const DevicesSection: React.FC = () => {
       {/* Device Onboarding Form Modal */}
       {showAddForm && (
         <EnhancedDeviceOnboardingForm
-          onSubmit={(result) => {
-            setSuccessMessage(`Device "${result.deviceName}" has been successfully added to the platform!`);
-            setTimeout(() => setSuccessMessage(''), 5000);
-            setShowAddForm(false);
-          }}
+          onSubmit={handleDeviceSubmit}
           onCancel={handleCancelAddDevice}
         />
       )}

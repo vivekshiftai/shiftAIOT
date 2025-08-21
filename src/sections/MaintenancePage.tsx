@@ -118,8 +118,8 @@ const MaintenancePage: React.FC = () => {
   useEffect(() => {
     fetchMaintenanceTasks();
     
-    // Poll for updates every 30 seconds
-    const interval = setInterval(fetchMaintenanceTasks, 30000);
+    // Poll for updates every 60 seconds (reduced from 30)
+    const interval = setInterval(fetchMaintenanceTasks, 60000);
     return () => clearInterval(interval);
   }, []);
 

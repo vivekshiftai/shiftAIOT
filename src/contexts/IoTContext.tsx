@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { deviceAPI, ruleAPI, notificationAPI } from '../services/api';
+import { deviceAPI, ruleAPI, notificationAPI, maintenanceAPI } from '../services/api';
 import { useAuth } from './AuthContext';
 import NotificationService from '../services/notificationService';
 import { Device, Rule, Notification, TelemetryData, Status } from '../types';
@@ -21,6 +21,7 @@ interface IoTContextType {
   markNotificationAsRead: (notificationId: string) => Promise<void>;
   refreshDevices: () => Promise<void>;
   refreshRules: () => Promise<void>;
+  refreshMaintenance: () => Promise<void>;
   addDevice: (device: Omit<Device, 'id'>) => Promise<void>;
   assignDevice: (deviceId: string, userId: string) => Promise<void>;
   evaluateRules: (deviceId: string, telemetryData: TelemetryData) => Promise<void>;
@@ -291,7 +292,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       const response = await ruleAPI.toggle(id);
       setRules(prev => 
         prev.map(rule => 
-          rule.id === id ? { ...rule, active: response.data.active } : rule
+          rule.id === id ? { ...rule, status: response.data.status } : rule
         )
       );
     } catch (error) {
@@ -334,6 +335,17 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       setRules(response.data);
     } catch (error) {
       console.error('Failed to refresh rules:', error);
+      throw error;
+    }
+  };
+
+  const refreshMaintenance = async () => {
+    try {
+      // This function can be used to refresh maintenance data
+      // For now, we'll just refresh devices which might include maintenance info
+      await refreshDevices();
+    } catch (error) {
+      console.error('Failed to refresh maintenance:', error);
       throw error;
     }
   };
@@ -428,6 +440,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       markNotificationAsRead,
       refreshDevices,
       refreshRules,
+      refreshMaintenance,
       addDevice,
       assignDevice,
       evaluateRules

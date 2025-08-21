@@ -10,20 +10,32 @@ export interface DeviceStats {
 
 export class DeviceStatsService {
   /**
-   * Get real-time statistics for a device
+   * Get real-time statistics for a device with robust error handling
    */
   static async getDeviceStats(deviceId: string): Promise<DeviceStats> {
+    // Initialize default response
+    const defaultStats: DeviceStats = {
+      deviceId,
+      rulesCount: 0,
+      maintenanceCount: 0,
+      safetyCount: 0,
+      totalItems: 0
+    };
+
     try {
-      // Fetch all data in parallel for better performance
-      const [rulesResponse, maintenanceResponse, safetyResponse] = await Promise.all([
-        ruleAPI.getByDevice(deviceId),
-        maintenanceAPI.getByDevice(deviceId),
-        deviceSafetyPrecautionsAPI.getByDevice(deviceId)
+      // Use Promise.allSettled to handle partial failures gracefully
+      const results = await Promise.allSettled([
+        this.fetchRulesCount(deviceId),
+        this.fetchMaintenanceCount(deviceId),
+        this.fetchSafetyCount(deviceId)
       ]);
 
-      const rulesCount = rulesResponse.data?.length || 0;
-      const maintenanceCount = maintenanceResponse.data?.length || 0;
-      const safetyCount = safetyResponse.data?.length || 0;
+      // Extract results, using 0 as fallback for failed requests
+      const [rulesResult, maintenanceResult, safetyResult] = results;
+
+      const rulesCount = rulesResult.status === 'fulfilled' ? rulesResult.value : 0;
+      const maintenanceCount = maintenanceResult.status === 'fulfilled' ? maintenanceResult.value : 0;
+      const safetyCount = safetyResult.status === 'fulfilled' ? safetyResult.value : 0;
 
       return {
         deviceId,
@@ -33,15 +45,70 @@ export class DeviceStatsService {
         totalItems: rulesCount + maintenanceCount + safetyCount
       };
     } catch (error) {
-      console.error('Failed to fetch device stats:', error);
-      // Return default values if API calls fail
-      return {
-        deviceId,
-        rulesCount: 0,
-        maintenanceCount: 0,
-        safetyCount: 0,
-        totalItems: 0
-      };
+      console.warn(`Failed to fetch device stats for ${deviceId}:`, error);
+      return defaultStats;
+    }
+  }
+
+  /**
+   * Fetch rules count with individual error handling
+   */
+  private static async fetchRulesCount(deviceId: string): Promise<number> {
+    try {
+      const response = await ruleAPI.getByDevice(deviceId);
+      return response.data?.length || 0;
+    } catch (error: any) {
+      const status = error.response?.status;
+      if (status === 401) {
+        console.warn(`Unauthorized access to rules for device ${deviceId}`);
+      } else if (status === 404) {
+        console.warn(`Rules endpoint not found for device ${deviceId}`);
+      } else {
+        console.warn(`Failed to fetch rules for device ${deviceId}:`, status || error.message);
+      }
+      return 0;
+    }
+  }
+
+  /**
+   * Fetch maintenance count with individual error handling
+   */
+  private static async fetchMaintenanceCount(deviceId: string): Promise<number> {
+    try {
+      const response = await maintenanceAPI.getByDevice(deviceId);
+      return response.data?.length || 0;
+    } catch (error: any) {
+      const status = error.response?.status;
+      if (status === 401) {
+        console.warn(`Unauthorized access to maintenance for device ${deviceId}`);
+      } else if (status === 404) {
+        console.warn(`Maintenance endpoint not found for device ${deviceId}`);
+      } else {
+        console.warn(`Failed to fetch maintenance for device ${deviceId}:`, status || error.message);
+      }
+      return 0;
+    }
+  }
+
+  /**
+   * Fetch safety count with individual error handling
+   */
+  private static async fetchSafetyCount(deviceId: string): Promise<number> {
+    try {
+      const response = await deviceSafetyPrecautionsAPI.getByDevice(deviceId);
+      return response.data?.length || 0;
+    } catch (error: any) {
+      const status = error.response?.status;
+      if (status === 401) {
+        console.warn(`Unauthorized access to safety precautions for device ${deviceId}`);
+      } else if (status === 404) {
+        console.warn(`Safety precautions endpoint not found for device ${deviceId}`);
+      } else if (status === 500) {
+        console.warn(`Server error fetching safety precautions for device ${deviceId}`);
+      } else {
+        console.warn(`Failed to fetch safety precautions for device ${deviceId}:`, status || error.message);
+      }
+      return 0;
     }
   }
 
@@ -65,8 +132,8 @@ export class DeviceStatsService {
     try {
       const response = await ruleAPI.getByDevice(deviceId);
       return response.data || [];
-    } catch (error) {
-      console.error('Failed to fetch device rules:', error);
+    } catch (error: any) {
+      console.warn(`Failed to fetch device rules for ${deviceId}:`, error.response?.status || error.message);
       return [];
     }
   }
@@ -78,8 +145,8 @@ export class DeviceStatsService {
     try {
       const response = await maintenanceAPI.getByDevice(deviceId);
       return response.data || [];
-    } catch (error) {
-      console.error('Failed to fetch device maintenance:', error);
+    } catch (error: any) {
+      console.warn(`Failed to fetch device maintenance for ${deviceId}:`, error.response?.status || error.message);
       return [];
     }
   }
@@ -91,8 +158,8 @@ export class DeviceStatsService {
     try {
       const response = await deviceSafetyPrecautionsAPI.getByDevice(deviceId);
       return response.data || [];
-    } catch (error) {
-      console.error('Failed to fetch device safety:', error);
+    } catch (error: any) {
+      console.warn(`Failed to fetch device safety for ${deviceId}:`, error.response?.status || error.message);
       return [];
     }
   }
