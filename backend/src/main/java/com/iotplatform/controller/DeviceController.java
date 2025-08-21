@@ -27,6 +27,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iotplatform.dto.DeviceCreateResponse;
 import com.iotplatform.dto.DeviceCreateWithFileRequest;
+import com.iotplatform.dto.DeviceCreateRequest;
 import com.iotplatform.dto.DeviceStatsResponse;
 import com.iotplatform.dto.TelemetryDataRequest;
 import com.iotplatform.model.Device;
@@ -157,6 +158,28 @@ public class DeviceController {
             return ResponseEntity.ok(createdDevice);
         } catch (Exception e) {
             logger.error("Failed to create device {}: {}", device.getName(), e.getMessage());
+            throw e;
+        }
+    }
+
+    @PostMapping("/simple")
+    public ResponseEntity<Device> createSimpleDevice(@Valid @RequestBody DeviceCreateRequest request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
+        
+        logger.info("User {} creating new simple device: {} with protocol: {}", userEmail, request.getName(), request.getProtocol());
+        
+        try {
+            Device createdDevice = deviceService.createDeviceFromRequest(request, organizationId);
+            logger.info("Simple device {} created successfully with ID: {}", request.getName(), createdDevice.getId());
+            return ResponseEntity.ok(createdDevice);
+        } catch (Exception e) {
+            logger.error("Failed to create simple device {}: {}", request.getName(), e.getMessage());
             throw e;
         }
     }

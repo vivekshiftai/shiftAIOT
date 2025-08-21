@@ -29,39 +29,58 @@ CREATE TABLE IF NOT EXISTS user_permissions (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Devices table
+-- Devices table - Simplified schema with nullable fields and connection-specific columns
 CREATE TABLE IF NOT EXISTS devices (
     id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL,
+    type VARCHAR(50) NOT NULL DEFAULT 'SENSOR',
     status VARCHAR(50) DEFAULT 'OFFLINE',
     protocol VARCHAR(50) DEFAULT 'HTTP',
     location VARCHAR(255) NOT NULL,
-    firmware VARCHAR(50),
+    organization_id VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Basic device info (nullable)
+    manufacturer VARCHAR(100),
+    model VARCHAR(100),
+    description TEXT,
+    
+    -- Connection details (nullable)
     ip_address VARCHAR(45),
     port INTEGER,
-    organization_id VARCHAR(255) NOT NULL,
+    
+    -- MQTT specific fields (nullable)
+    mqtt_broker VARCHAR(255),
+    mqtt_topic VARCHAR(255),
+    mqtt_username VARCHAR(100),
+    mqtt_password VARCHAR(255),
+    
+    -- HTTP specific fields (nullable)
+    http_endpoint VARCHAR(500),
+    http_method VARCHAR(10) DEFAULT 'GET',
+    http_headers TEXT, -- JSON string
+    
+    -- COAP specific fields (nullable)
+    coap_host VARCHAR(255),
+    coap_port INTEGER,
+    coap_path VARCHAR(255),
+    
+    -- Legacy fields (kept for backward compatibility, nullable)
+    firmware VARCHAR(50),
     last_seen TIMESTAMP,
     battery_level INTEGER,
     temperature DOUBLE PRECISION,
     humidity DOUBLE PRECISION,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    -- Additional device fields
-    manufacturer VARCHAR(100),
-    model VARCHAR(100),
     serial_number VARCHAR(100),
     mac_address VARCHAR(17),
     manual_url VARCHAR(500),
     datasheet_url VARCHAR(500),
     certificate_url VARCHAR(500),
-    description VARCHAR(1000),
-    installation_notes VARCHAR(2000),
+    installation_notes TEXT,
     maintenance_schedule VARCHAR(500),
     warranty_info VARCHAR(500),
     wifi_ssid VARCHAR(100),
-    mqtt_broker VARCHAR(100),
-    mqtt_topic VARCHAR(100),
     power_source VARCHAR(50),
     power_consumption DOUBLE PRECISION,
     operating_temperature_min DOUBLE PRECISION,

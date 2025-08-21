@@ -42,7 +42,7 @@ public class Device {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
-    private DeviceType type;
+    private DeviceType type = DeviceType.SENSOR;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
@@ -55,22 +55,7 @@ public class Device {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "protocol", nullable = false)
-    private Protocol protocol;
-
-    @Size(max = 50)
-    @Column(name = "firmware")
-    private String firmware;
-
-    @ElementCollection
-    @CollectionTable(name = "device_tags", joinColumns = @JoinColumn(name = "device_id"))
-    @Column(name = "tag")
-    private List<String> tags;
-
-    @ElementCollection
-    @CollectionTable(name = "device_config", joinColumns = @JoinColumn(name = "device_id"))
-    @MapKeyColumn(name = "config_key")
-    @Column(name = "config_value")
-    private Map<String, String> config;
+    private Protocol protocol = Protocol.HTTP;
 
     @Column(name = "organization_id", nullable = false)
     private String organizationId;
@@ -80,6 +65,72 @@ public class Device {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    // Basic device info (nullable)
+    @Size(max = 100)
+    @Column(name = "manufacturer")
+    private String manufacturer;
+
+    @Size(max = 100)
+    @Column(name = "model")
+    private String model;
+
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    // Connection details (nullable)
+    @Size(max = 45)
+    @Column(name = "ip_address")
+    private String ipAddress;
+
+    @Column(name = "port")
+    private Integer port;
+
+    // MQTT specific fields (nullable)
+    @Size(max = 255)
+    @Column(name = "mqtt_broker")
+    private String mqttBroker;
+
+    @Size(max = 255)
+    @Column(name = "mqtt_topic")
+    private String mqttTopic;
+
+    @Size(max = 100)
+    @Column(name = "mqtt_username")
+    private String mqttUsername;
+
+    @Size(max = 255)
+    @Column(name = "mqtt_password")
+    private String mqttPassword;
+
+    // HTTP specific fields (nullable)
+    @Size(max = 500)
+    @Column(name = "http_endpoint")
+    private String httpEndpoint;
+
+    @Size(max = 10)
+    @Column(name = "http_method")
+    private String httpMethod = "GET";
+
+    @Column(name = "http_headers", columnDefinition = "TEXT")
+    private String httpHeaders;
+
+    // COAP specific fields (nullable)
+    @Size(max = 255)
+    @Column(name = "coap_host")
+    private String coapHost;
+
+    @Column(name = "coap_port")
+    private Integer coapPort;
+
+    @Size(max = 255)
+    @Column(name = "coap_path")
+    private String coapPath;
+
+    // Legacy fields (kept for backward compatibility, nullable)
+    @Size(max = 50)
+    @Column(name = "firmware")
+    private String firmware;
 
     @Column(name = "last_seen")
     private LocalDateTime lastSeen;
@@ -93,15 +144,6 @@ public class Device {
     @Column(name = "humidity")
     private Double humidity;
 
-    // Device specifications
-    @Size(max = 100)
-    @Column(name = "manufacturer")
-    private String manufacturer;
-
-    @Size(max = 100)
-    @Column(name = "model")
-    private String model;
-
     @Size(max = 100)
     @Column(name = "serial_number")
     private String serialNumber;
@@ -110,14 +152,6 @@ public class Device {
     @Column(name = "mac_address")
     private String macAddress;
 
-    @Size(max = 45)
-    @Column(name = "ip_address")
-    private String ipAddress;
-
-    @Column(name = "port")
-    private Integer port;
-
-    // Documentation URLs
     @Size(max = 500)
     @Column(name = "manual_url")
     private String manualUrl;
@@ -130,13 +164,7 @@ public class Device {
     @Column(name = "certificate_url")
     private String certificateUrl;
 
-    // Additional metadata
-    @Size(max = 1000)
-    @Column(name = "description")
-    private String description;
-
-    @Size(max = 2000)
-    @Column(name = "installation_notes")
+    @Column(name = "installation_notes", columnDefinition = "TEXT")
     private String installationNotes;
 
     @Size(max = 500)
@@ -147,20 +175,10 @@ public class Device {
     @Column(name = "warranty_info")
     private String warrantyInfo;
 
-    // Connectivity details
     @Size(max = 100)
     @Column(name = "wifi_ssid")
     private String wifiSsid;
 
-    @Size(max = 100)
-    @Column(name = "mqtt_broker")
-    private String mqttBroker;
-
-    @Size(max = 100)
-    @Column(name = "mqtt_topic")
-    private String mqttTopic;
-
-    // Power and environmental
     @Size(max = 50)
     @Column(name = "power_source")
     private String powerSource;
@@ -179,6 +197,18 @@ public class Device {
 
     @Column(name = "operating_humidity_max")
     private Double operatingHumidityMax;
+
+    // Collections (nullable)
+    @ElementCollection
+    @CollectionTable(name = "device_tags", joinColumns = @JoinColumn(name = "device_id"))
+    @Column(name = "tag")
+    private List<String> tags;
+
+    @ElementCollection
+    @CollectionTable(name = "device_config", joinColumns = @JoinColumn(name = "device_id"))
+    @MapKeyColumn(name = "config_key")
+    @Column(name = "config_value")
+    private Map<String, String> config;
 
     public enum DeviceType {
         SENSOR, ACTUATOR, GATEWAY, CONTROLLER
@@ -233,15 +263,6 @@ public class Device {
     public Protocol getProtocol() { return protocol; }
     public void setProtocol(Protocol protocol) { this.protocol = protocol; }
 
-    public String getFirmware() { return firmware; }
-    public void setFirmware(String firmware) { this.firmware = firmware; }
-
-    public List<String> getTags() { return tags; }
-    public void setTags(List<String> tags) { this.tags = tags; }
-
-    public Map<String, String> getConfig() { return config; }
-    public void setConfig(Map<String, String> config) { this.config = config; }
-
     public String getOrganizationId() { return organizationId; }
     public void setOrganizationId(String organizationId) { this.organizationId = organizationId; }
 
@@ -250,6 +271,60 @@ public class Device {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    // Basic device info getters and setters
+    public String getManufacturer() { return manufacturer; }
+    public void setManufacturer(String manufacturer) { this.manufacturer = manufacturer; }
+
+    public String getModel() { return model; }
+    public void setModel(String model) { this.model = model; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    // Connection details getters and setters
+    public String getIpAddress() { return ipAddress; }
+    public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
+
+    public Integer getPort() { return port; }
+    public void setPort(Integer port) { this.port = port; }
+
+    // MQTT specific getters and setters
+    public String getMqttBroker() { return mqttBroker; }
+    public void setMqttBroker(String mqttBroker) { this.mqttBroker = mqttBroker; }
+
+    public String getMqttTopic() { return mqttTopic; }
+    public void setMqttTopic(String mqttTopic) { this.mqttTopic = mqttTopic; }
+
+    public String getMqttUsername() { return mqttUsername; }
+    public void setMqttUsername(String mqttUsername) { this.mqttUsername = mqttUsername; }
+
+    public String getMqttPassword() { return mqttPassword; }
+    public void setMqttPassword(String mqttPassword) { this.mqttPassword = mqttPassword; }
+
+    // HTTP specific getters and setters
+    public String getHttpEndpoint() { return httpEndpoint; }
+    public void setHttpEndpoint(String httpEndpoint) { this.httpEndpoint = httpEndpoint; }
+
+    public String getHttpMethod() { return httpMethod; }
+    public void setHttpMethod(String httpMethod) { this.httpMethod = httpMethod; }
+
+    public String getHttpHeaders() { return httpHeaders; }
+    public void setHttpHeaders(String httpHeaders) { this.httpHeaders = httpHeaders; }
+
+    // COAP specific getters and setters
+    public String getCoapHost() { return coapHost; }
+    public void setCoapHost(String coapHost) { this.coapHost = coapHost; }
+
+    public Integer getCoapPort() { return coapPort; }
+    public void setCoapPort(Integer coapPort) { this.coapPort = coapPort; }
+
+    public String getCoapPath() { return coapPath; }
+    public void setCoapPath(String coapPath) { this.coapPath = coapPath; }
+
+    // Legacy fields getters and setters
+    public String getFirmware() { return firmware; }
+    public void setFirmware(String firmware) { this.firmware = firmware; }
 
     public LocalDateTime getLastSeen() { return lastSeen; }
     public void setLastSeen(LocalDateTime lastSeen) { 
@@ -266,26 +341,12 @@ public class Device {
     public Double getHumidity() { return humidity; }
     public void setHumidity(Double humidity) { this.humidity = humidity; }
 
-    // Device specifications getters and setters
-    public String getManufacturer() { return manufacturer; }
-    public void setManufacturer(String manufacturer) { this.manufacturer = manufacturer; }
-
-    public String getModel() { return model; }
-    public void setModel(String model) { this.model = model; }
-
     public String getSerialNumber() { return serialNumber; }
     public void setSerialNumber(String serialNumber) { this.serialNumber = serialNumber; }
 
     public String getMacAddress() { return macAddress; }
     public void setMacAddress(String macAddress) { this.macAddress = macAddress; }
 
-    public String getIpAddress() { return ipAddress; }
-    public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
-
-    public Integer getPort() { return port; }
-    public void setPort(Integer port) { this.port = port; }
-
-    // Documentation getters and setters
     public String getManualUrl() { return manualUrl; }
     public void setManualUrl(String manualUrl) { this.manualUrl = manualUrl; }
 
@@ -294,10 +355,6 @@ public class Device {
 
     public String getCertificateUrl() { return certificateUrl; }
     public void setCertificateUrl(String certificateUrl) { this.certificateUrl = certificateUrl; }
-
-    // Additional metadata getters and setters
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
 
     public String getInstallationNotes() { return installationNotes; }
     public void setInstallationNotes(String installationNotes) { this.installationNotes = installationNotes; }
@@ -308,17 +365,9 @@ public class Device {
     public String getWarrantyInfo() { return warrantyInfo; }
     public void setWarrantyInfo(String warrantyInfo) { this.warrantyInfo = warrantyInfo; }
 
-    // Connectivity getters and setters
     public String getWifiSsid() { return wifiSsid; }
     public void setWifiSsid(String wifiSsid) { this.wifiSsid = wifiSsid; }
 
-    public String getMqttBroker() { return mqttBroker; }
-    public void setMqttBroker(String mqttBroker) { this.mqttBroker = mqttBroker; }
-
-    public String getMqttTopic() { return mqttTopic; }
-    public void setMqttTopic(String mqttTopic) { this.mqttTopic = mqttTopic; }
-
-    // Power and environmental getters and setters
     public String getPowerSource() { return powerSource; }
     public void setPowerSource(String powerSource) { this.powerSource = powerSource; }
 
@@ -336,4 +385,11 @@ public class Device {
 
     public Double getOperatingHumidityMax() { return operatingHumidityMax; }
     public void setOperatingHumidityMax(Double operatingHumidityMax) { this.operatingHumidityMax = operatingHumidityMax; }
+
+    // Collections getters and setters
+    public List<String> getTags() { return tags; }
+    public void setTags(List<String> tags) { this.tags = tags; }
+
+    public Map<String, String> getConfig() { return config; }
+    public void setConfig(Map<String, String> config) { this.config = config; }
 }

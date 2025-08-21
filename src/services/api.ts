@@ -94,6 +94,7 @@ export const deviceAPI = {
   getAll: () => api.get('/api/devices'),
   getById: (id: string) => api.get(`/api/devices/${id}`),
   create: (device: any) => api.post('/api/devices', device),
+  createSimple: (device: any) => api.post('/api/devices/simple', device),
   update: (id: string, device: any) => api.put(`/api/devices/${id}`, device),
   delete: (id: string) => api.delete(`/api/devices/${id}`),
   getByOrganization: (organizationId: string) => api.get(`/api/devices/organization/${organizationId}`),

@@ -1,8 +1,6 @@
 package com.iotplatform.dto;
 
-import java.util.List;
-import java.util.Map;
-
+import com.iotplatform.model.Device;
 import com.iotplatform.model.Device.DeviceType;
 import com.iotplatform.model.Device.Protocol;
 
@@ -17,56 +15,42 @@ public class DeviceCreateRequest {
     private String name;
     
     @NotNull(message = "Device type is required")
-    private DeviceType type;
+    private DeviceType type = DeviceType.SENSOR;
     
     @NotBlank(message = "Device location is required")
     @Size(max = 200, message = "Location must be less than 200 characters")
     private String location;
     
     @NotNull(message = "Communication protocol is required")
-    private Protocol protocol;
+    private Protocol protocol = Protocol.HTTP;
     
-    @Size(max = 50, message = "Firmware version must be less than 50 characters")
-    private String firmware;
-    
-    private List<String> tags;
-    
-    private Map<String, String> config;
-    
-    // Device specifications
+    // Basic device info (optional)
     private String manufacturer;
     private String model;
-    private String serialNumber;
-    private String macAddress;
+    private String description;
+    
+    // Connection details (optional)
     private String ipAddress;
     private Integer port;
     
-    // Documentation
-    private String manualUrl;
-    private String datasheetUrl;
-    private String certificateUrl;
-    
-    // Additional metadata
-    private String description;
-    private String installationNotes;
-    private String maintenanceSchedule;
-    private String warrantyInfo;
-    
-    // Connectivity details
-    private String wifiSsid;
-    private String wifiPassword;
+    // MQTT specific fields (optional)
     private String mqttBroker;
     private String mqttTopic;
     private String mqttUsername;
     private String mqttPassword;
     
-    // Power and environmental
-    private String powerSource;
-    private Double powerConsumption;
-    private Double operatingTemperatureMin;
-    private Double operatingTemperatureMax;
-    private Double operatingHumidityMin;
-    private Double operatingHumidityMax;
+    // HTTP specific fields (optional)
+    private String httpEndpoint;
+    private String httpMethod = "GET";
+    private String httpHeaders;
+    
+    // COAP specific fields (optional)
+    private String coapHost;
+    private Integer coapPort;
+    private String coapPath;
+    
+    // Status field (optional)
+    private Device.DeviceStatus status = Device.DeviceStatus.OFFLINE;
     
     // Getters and Setters
     public String getName() { return name; }
@@ -81,59 +65,20 @@ public class DeviceCreateRequest {
     public Protocol getProtocol() { return protocol; }
     public void setProtocol(Protocol protocol) { this.protocol = protocol; }
     
-    public String getFirmware() { return firmware; }
-    public void setFirmware(String firmware) { this.firmware = firmware; }
-    
-    public List<String> getTags() { return tags; }
-    public void setTags(List<String> tags) { this.tags = tags; }
-    
-    public Map<String, String> getConfig() { return config; }
-    public void setConfig(Map<String, String> config) { this.config = config; }
-    
     public String getManufacturer() { return manufacturer; }
     public void setManufacturer(String manufacturer) { this.manufacturer = manufacturer; }
     
     public String getModel() { return model; }
     public void setModel(String model) { this.model = model; }
     
-    public String getSerialNumber() { return serialNumber; }
-    public void setSerialNumber(String serialNumber) { this.serialNumber = serialNumber; }
-    
-    public String getMacAddress() { return macAddress; }
-    public void setMacAddress(String macAddress) { this.macAddress = macAddress; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
     
     public String getIpAddress() { return ipAddress; }
     public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
     
     public Integer getPort() { return port; }
     public void setPort(Integer port) { this.port = port; }
-    
-    public String getManualUrl() { return manualUrl; }
-    public void setManualUrl(String manualUrl) { this.manualUrl = manualUrl; }
-    
-    public String getDatasheetUrl() { return datasheetUrl; }
-    public void setDatasheetUrl(String datasheetUrl) { this.datasheetUrl = datasheetUrl; }
-    
-    public String getCertificateUrl() { return certificateUrl; }
-    public void setCertificateUrl(String certificateUrl) { this.certificateUrl = certificateUrl; }
-    
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    
-    public String getInstallationNotes() { return installationNotes; }
-    public void setInstallationNotes(String installationNotes) { this.installationNotes = installationNotes; }
-    
-    public String getMaintenanceSchedule() { return maintenanceSchedule; }
-    public void setMaintenanceSchedule(String maintenanceSchedule) { this.maintenanceSchedule = maintenanceSchedule; }
-    
-    public String getWarrantyInfo() { return warrantyInfo; }
-    public void setWarrantyInfo(String warrantyInfo) { this.warrantyInfo = warrantyInfo; }
-    
-    public String getWifiSsid() { return wifiSsid; }
-    public void setWifiSsid(String wifiSsid) { this.wifiSsid = wifiSsid; }
-    
-    public String getWifiPassword() { return wifiPassword; }
-    public void setWifiPassword(String wifiPassword) { this.wifiPassword = wifiPassword; }
     
     public String getMqttBroker() { return mqttBroker; }
     public void setMqttBroker(String mqttBroker) { this.mqttBroker = mqttBroker; }
@@ -147,21 +92,24 @@ public class DeviceCreateRequest {
     public String getMqttPassword() { return mqttPassword; }
     public void setMqttPassword(String mqttPassword) { this.mqttPassword = mqttPassword; }
     
-    public String getPowerSource() { return powerSource; }
-    public void setPowerSource(String powerSource) { this.powerSource = powerSource; }
+    public String getHttpEndpoint() { return httpEndpoint; }
+    public void setHttpEndpoint(String httpEndpoint) { this.httpEndpoint = httpEndpoint; }
     
-    public Double getPowerConsumption() { return powerConsumption; }
-    public void setPowerConsumption(Double powerConsumption) { this.powerConsumption = powerConsumption; }
+    public String getHttpMethod() { return httpMethod; }
+    public void setHttpMethod(String httpMethod) { this.httpMethod = httpMethod; }
     
-    public Double getOperatingTemperatureMin() { return operatingTemperatureMin; }
-    public void setOperatingTemperatureMin(Double operatingTemperatureMin) { this.operatingTemperatureMin = operatingTemperatureMin; }
+    public String getHttpHeaders() { return httpHeaders; }
+    public void setHttpHeaders(String httpHeaders) { this.httpHeaders = httpHeaders; }
     
-    public Double getOperatingTemperatureMax() { return operatingTemperatureMax; }
-    public void setOperatingTemperatureMax(Double operatingTemperatureMax) { this.operatingTemperatureMax = operatingTemperatureMax; }
+    public String getCoapHost() { return coapHost; }
+    public void setCoapHost(String coapHost) { this.coapHost = coapHost; }
     
-    public Double getOperatingHumidityMin() { return operatingHumidityMin; }
-    public void setOperatingHumidityMin(Double operatingHumidityMin) { this.operatingHumidityMin = operatingHumidityMin; }
+    public Integer getCoapPort() { return coapPort; }
+    public void setCoapPort(Integer coapPort) { this.coapPort = coapPort; }
     
-    public Double getOperatingHumidityMax() { return operatingHumidityMax; }
-    public void setOperatingHumidityMax(Double operatingHumidityMax) { this.operatingHumidityMax = operatingHumidityMax; }
+    public String getCoapPath() { return coapPath; }
+    public void setCoapPath(String coapPath) { this.coapPath = coapPath; }
+    
+    public Device.DeviceStatus getStatus() { return status; }
+    public void setStatus(Device.DeviceStatus status) { this.status = status; }
 }

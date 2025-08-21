@@ -17,7 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.iotplatform.dto.DeviceCreateResponse;
 import com.iotplatform.dto.DeviceCreateWithFileRequest;
 import com.iotplatform.dto.DeviceStatsResponse;
-import com.iotplatform.dto.TelemetryDataRequest;
+import com.iotplatform.dto.DeviceCreateRequest;
 import com.iotplatform.model.Device;
 import com.iotplatform.repository.DeviceRepository;
 
@@ -71,6 +71,50 @@ public class DeviceService {
         if (device.getStatus() == null) {
             device.setStatus(Device.DeviceStatus.ONLINE);
         }
+        return deviceRepository.save(device);
+    }
+
+    public Device createDeviceFromRequest(DeviceCreateRequest request, String organizationId) {
+        Device device = new Device();
+        device.setId(UUID.randomUUID().toString());
+        device.setOrganizationId(organizationId);
+        
+        // Set basic device information
+        device.setName(request.getName());
+        device.setType(request.getType());
+        device.setLocation(request.getLocation());
+        device.setProtocol(request.getProtocol());
+        device.setStatus(request.getStatus());
+        
+        // Set optional basic device info
+        device.setManufacturer(request.getManufacturer());
+        device.setModel(request.getModel());
+        device.setDescription(request.getDescription());
+        
+        // Set connection details
+        device.setIpAddress(request.getIpAddress());
+        device.setPort(request.getPort());
+        
+        // Set protocol-specific connection details
+        switch (request.getProtocol()) {
+            case MQTT:
+                device.setMqttBroker(request.getMqttBroker());
+                device.setMqttTopic(request.getMqttTopic());
+                device.setMqttUsername(request.getMqttUsername());
+                device.setMqttPassword(request.getMqttPassword());
+                break;
+            case HTTP:
+                device.setHttpEndpoint(request.getHttpEndpoint());
+                device.setHttpMethod(request.getHttpMethod());
+                device.setHttpHeaders(request.getHttpHeaders());
+                break;
+            case COAP:
+                device.setCoapHost(request.getCoapHost());
+                device.setCoapPort(request.getCoapPort());
+                device.setCoapPath(request.getCoapPath());
+                break;
+        }
+        
         return deviceRepository.save(device);
     }
 

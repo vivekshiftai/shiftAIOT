@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { X, Upload, FileText, Settings, Bot, CheckCircle, AlertTriangle, MessageSquare, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Trash2, Upload, FileText, Settings, Bot, CheckCircle, AlertTriangle, MessageSquare, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
 import { onboardingService, OnboardingProgress } from '../../services/onboardingService';
 import { deviceAPI, ruleAPI, knowledgeAPI } from '../../services/api';
 import EnhancedOnboardingLoader from '../Loading/EnhancedOnboardingLoader';
@@ -12,10 +12,22 @@ interface DeviceFormData {
   location: string;
   manufacturer: string;
   connectionType: 'MQTT' | 'HTTP' | 'COAP';
+  
+  // MQTT specific fields
   brokerUrl?: string;
   topic?: string;
   username?: string;
   password?: string;
+  
+  // HTTP specific fields
+  httpEndpoint?: string;
+  httpMethod?: string;
+  httpHeaders?: string;
+  
+  // COAP specific fields
+  coapHost?: string;
+  coapPort?: string;
+  coapPath?: string;
 }
 
 interface FileUpload {
@@ -44,7 +56,13 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     brokerUrl: '',
     topic: '',
     username: '',
-    password: ''
+    password: '',
+    httpEndpoint: '',
+    httpMethod: 'GET',
+    httpHeaders: '',
+    coapHost: '',
+    coapPort: '',
+    coapPath: ''
   });
 
   const [uploadedFile, setUploadedFile] = useState<FileUpload | null>(null);
@@ -81,6 +99,10 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       if (formData.connectionType === 'MQTT') {
         if (!formData.brokerUrl?.trim()) newErrors.brokerUrl = 'Broker URL is required';
         if (!formData.topic?.trim()) newErrors.topic = 'Topic is required';
+      } else if (formData.connectionType === 'HTTP') {
+        if (!formData.httpEndpoint?.trim()) newErrors.httpEndpoint = 'Endpoint URL is required';
+      } else if (formData.connectionType === 'COAP') {
+        if (!formData.coapHost?.trim()) newErrors.coapHost = 'Host is required';
       }
     }
 
@@ -356,6 +378,106 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             </div>
           </>
         )}
+
+        {formData.connectionType === 'HTTP' && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Endpoint URL *
+              </label>
+              <input
+                type="text"
+                value={formData.httpEndpoint}
+                onChange={(e) => handleInputChange('httpEndpoint', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+                  errors.httpEndpoint ? 'border-red-300' : 'border-slate-300'
+                }`}
+                placeholder="e.g., http://192.168.1.100:8080/api/data"
+              />
+              {errors.httpEndpoint && (
+                <p className="text-red-500 text-sm mt-1">{errors.httpEndpoint}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                HTTP Method
+              </label>
+              <select
+                value={formData.httpMethod}
+                onChange={(e) => handleInputChange('httpMethod', e.target.value)}
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              >
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="PATCH">PATCH</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Headers (JSON)
+              </label>
+              <textarea
+                value={formData.httpHeaders}
+                onChange={(e) => handleInputChange('httpHeaders', e.target.value)}
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                placeholder='{"Content-Type": "application/json", "Authorization": "Bearer token"}'
+                rows={3}
+              />
+            </div>
+          </>
+        )}
+
+        {formData.connectionType === 'COAP' && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Host *
+              </label>
+              <input
+                type="text"
+                value={formData.coapHost}
+                onChange={(e) => handleInputChange('coapHost', e.target.value)}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+                  errors.coapHost ? 'border-red-300' : 'border-slate-300'
+                }`}
+                placeholder="e.g., 192.168.1.100"
+              />
+              {errors.coapHost && (
+                <p className="text-red-500 text-sm mt-1">{errors.coapHost}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Port
+                </label>
+                <input
+                  type="number"
+                  value={formData.coapPort}
+                  onChange={(e) => handleInputChange('coapPort', e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  placeholder="5683"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Path
+                </label>
+                <input
+                  type="text"
+                  value={formData.coapPath}
+                  onChange={(e) => handleInputChange('coapPath', e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                  placeholder="e.g., sensors/temperature"
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -499,7 +621,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 onClick={onCancel}
                 className="p-2 hover:bg-white/10 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5" />
+                <Trash2 className="w-5 h-5" />
               </button>
             )}
           </div>

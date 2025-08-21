@@ -74,18 +74,29 @@ export class OnboardingService {
         model: formData.manufacturer,
         protocol: formData.connectionType,
         status: 'OFFLINE',
-        deviceType: 'SENSOR',
+        type: 'SENSOR',
         description: `Device onboarded via PDF: ${uploadedFile.name}`,
-        connectionDetails: {
-          type: formData.connectionType,
-          brokerUrl: formData.brokerUrl,
-          topic: formData.topic,
-          username: formData.username,
-          password: formData.password
-        }
+        
+        // Connection-specific fields based on protocol
+        ...(formData.connectionType === 'MQTT' && {
+          mqttBroker: formData.brokerUrl,
+          mqttTopic: formData.topic,
+          mqttUsername: formData.username,
+          mqttPassword: formData.password
+        }),
+        ...(formData.connectionType === 'HTTP' && {
+          httpEndpoint: formData.httpEndpoint,
+          httpMethod: formData.httpMethod || 'GET',
+          httpHeaders: formData.httpHeaders
+        }),
+        ...(formData.connectionType === 'COAP' && {
+          coapHost: formData.coapHost,
+          coapPort: formData.coapPort ? parseInt(formData.coapPort) : 5683,
+          coapPath: formData.coapPath
+        })
       };
 
-      const deviceResponse = await deviceAPI.create(deviceData);
+      const deviceResponse = await deviceAPI.createSimple(deviceData);
       const createdDevice = deviceResponse.data;
 
       if (!createdDevice || !createdDevice.id) {
