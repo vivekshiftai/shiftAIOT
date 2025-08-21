@@ -5,7 +5,7 @@ const USER_KEY = 'user';
 
 class TokenService {
   private static instance: TokenService;
-  private tokenRefreshPromise: Promise<string> | null = null;
+  private tokenRefreshPromise: Promise<string | null> | null = null;
 
   private constructor() {}
 
@@ -67,7 +67,7 @@ class TokenService {
       this.setAxiosAuthHeader(token);
       
       // Make a simple request to validate token
-      const response = await axios.get('/users/profile');
+      const response = await axios.get('/api/users/profile');
       return response.status === 200;
     } catch (error: any) {
       console.warn('Token validation failed:', error.message);

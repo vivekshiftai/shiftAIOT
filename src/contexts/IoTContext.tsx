@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext';
 import NotificationService from '../services/notificationService';
 import { Device, Rule, Notification, TelemetryData, Status } from '../types';
 import { getApiConfig } from '../config/api';
-import { ensureValidToken } from '../utils/authUtils';
+import { tokenService } from '../services/tokenService';
 
 interface IoTContextType {
   devices: Device[];
@@ -115,7 +115,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     // Validate token before making API calls
     const validateAndLoadData = async () => {
       try {
-        const isValid = await ensureValidToken();
+        const isValid = await tokenService.validateToken();
         
         if (!isValid) {
           console.warn('IoTContext - Token validation failed, but continuing with data load attempt');
