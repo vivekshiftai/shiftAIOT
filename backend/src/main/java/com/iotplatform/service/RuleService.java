@@ -2,6 +2,7 @@ package com.iotplatform.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,6 +13,7 @@ import com.iotplatform.controller.RuleController;
 import com.iotplatform.dto.TelemetryDataRequest;
 import com.iotplatform.model.Device;
 import com.iotplatform.model.Rule;
+import com.iotplatform.model.RuleAction;
 import com.iotplatform.model.RuleCondition;
 import com.iotplatform.repository.DeviceRepository;
 import com.iotplatform.repository.RuleRepository;
@@ -40,6 +42,76 @@ public class RuleService {
         rule.setId(UUID.randomUUID().toString());
         rule.setOrganizationId(organizationId);
         return ruleRepository.save(rule);
+    }
+
+    public List<Rule> createBulkRules(List<java.util.Map<String, Object>> rulesData, String organizationId) {
+        List<Rule> createdRules = new java.util.ArrayList<>();
+        
+        for (java.util.Map<String, Object> ruleData : rulesData) {
+            try {
+                Rule rule = new Rule();
+                rule.setId(UUID.randomUUID().toString());
+                rule.setName((String) ruleData.get("name"));
+                rule.setDescription((String) ruleData.get("description"));
+                rule.setActive(true);
+                rule.setOrganizationId(organizationId);
+                
+                // Create simple condition and action based on the data
+                if (ruleData.containsKey("condition") && ruleData.containsKey("action")) {
+                    List<RuleCondition> conditions = new java.util.ArrayList<>();
+                    List<RuleAction> actions = new java.util.ArrayList<>();
+                    
+                    // Create condition
+                    RuleCondition condition = new RuleCondition();
+                    condition.setId(UUID.randomUUID().toString());
+                    condition.setType(RuleCondition.ConditionType.TELEMETRY_THRESHOLD);
+                    condition.setMetric("condition");
+                    condition.setOperator(RuleCondition.Operator.EQUALS);
+                    condition.setValue((String) ruleData.get("condition"));
+                    condition.setLogicOperator(RuleCondition.LogicOperator.AND);
+                    condition.setRule(rule);
+                    
+                    // Set device ID if provided
+                    if (ruleData.containsKey("deviceId")) {
+                        condition.setDeviceId((String) ruleData.get("deviceId"));
+                    }
+                    
+                    conditions.add(condition);
+                    
+                    // Create action
+                    RuleAction action = new RuleAction();
+                    action.setId(UUID.randomUUID().toString());
+                    action.setType(RuleAction.ActionType.NOTIFICATION);
+                    
+                    // Set action config
+                    java.util.Map<String, String> config = new java.util.HashMap<>();
+                    config.put("message", (String) ruleData.get("action"));
+                    if (ruleData.containsKey("priority")) {
+                        config.put("priority", (String) ruleData.get("priority"));
+                    }
+                    if (ruleData.containsKey("category")) {
+                        config.put("category", (String) ruleData.get("category"));
+                    }
+                    action.setConfig(config);
+                    action.setRule(rule);
+                    
+                    actions.add(action);
+                    
+                    rule.setConditions(conditions);
+                    rule.setActions(actions);
+                }
+                
+                Rule savedRule = ruleRepository.save(rule);
+                createdRules.add(savedRule);
+                
+            } catch (Exception e) {
+                System.err.println("Failed to create rule: " + e.getMessage());
+                e.printStackTrace();
+                // Continue with other rules
+            }
+        }
+        
+        return createdRules;
     }
 
     public Rule updateRule(String id, Rule ruleDetails, String organizationId) {

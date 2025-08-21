@@ -212,25 +212,51 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, o
       console.log('=== DEBUGGING DATA RETRIEVAL ===');
       console.log('Device ID:', device.id);
       
+      // Test authentication first
+      console.log('🔐 Testing authentication...');
+      try {
+        const authResponse = await deviceAPI.testAuth();
+        console.log('✅ Auth test successful:', authResponse.data);
+      } catch (authError) {
+        console.error('❌ Auth test failed:', authError);
+        return; // Stop if auth fails
+      }
+      
       // Test rules retrieval
-      console.log('Testing rules retrieval...');
-      const rulesResponse = await ruleAPI.getByDevice(device.id);
-      console.log('Rules response:', rulesResponse.data);
+      console.log('📋 Testing rules retrieval...');
+      try {
+        const rulesResponse = await ruleAPI.getByDevice(device.id);
+        console.log('✅ Rules response:', rulesResponse.data);
+      } catch (error) {
+        console.error('❌ Rules retrieval failed:', error);
+      }
       
       // Test maintenance retrieval
-      console.log('Testing maintenance retrieval...');
-      const maintenanceResponse = await maintenanceAPI.getByDevice(device.id);
-      console.log('Maintenance response:', maintenanceResponse.data);
+      console.log('🔧 Testing maintenance retrieval...');
+      try {
+        const maintenanceResponse = await maintenanceAPI.getByDevice(device.id);
+        console.log('✅ Maintenance response:', maintenanceResponse.data);
+      } catch (error) {
+        console.error('❌ Maintenance retrieval failed:', error);
+      }
       
       // Test safety precautions retrieval
-      console.log('Testing safety precautions retrieval...');
-      const safetyResponse = await deviceSafetyPrecautionsAPI.getByDevice(device.id);
-      console.log('Safety response:', safetyResponse.data);
+      console.log('⚠️ Testing safety precautions retrieval...');
+      try {
+        const safetyResponse = await deviceSafetyPrecautionsAPI.getByDevice(device.id);
+        console.log('✅ Safety response:', safetyResponse.data);
+      } catch (error) {
+        console.error('❌ Safety precautions retrieval failed:', error);
+      }
       
       // Test debug endpoint
-      console.log('Testing debug endpoint...');
-      const debugResponse = await deviceAPI.getDebugData(device.id);
-      console.log('Debug response:', debugResponse.data);
+      console.log('🔍 Testing debug endpoint...');
+      try {
+        const debugResponse = await deviceAPI.getDebugData(device.id);
+        console.log('✅ Debug response:', debugResponse.data);
+      } catch (error) {
+        console.error('❌ Debug endpoint failed:', error);
+      }
       
       console.log('=== DEBUG COMPLETE ===');
     } catch (error) {

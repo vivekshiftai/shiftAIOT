@@ -651,20 +651,26 @@ public class DeviceController {
 
     @GetMapping("/{id}/debug-data")
     public ResponseEntity<?> getDeviceDebugData(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🔍 Debug endpoint called for device: {}, userDetails: {}", id, userDetails != null ? "present" : "null");
+        
         if (userDetails == null || userDetails.getUser() == null) {
-            return ResponseEntity.status(401).build();
+            logger.warn("❌ No user details found in debug endpoint");
+            return ResponseEntity.status(401).body(Map.of("error", "No user details found"));
         }
         User user = userDetails.getUser();
+        logger.info("✅ User authenticated: {} ({})", user.getEmail(), user.getOrganizationId());
         
         try {
             String organizationId = user.getOrganizationId();
             
             Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
             if (deviceOpt.isEmpty()) {
+                logger.warn("❌ Device not found: {}", id);
                 return ResponseEntity.notFound().build();
             }
             
             Device device = deviceOpt.get();
+            logger.info("✅ Device found: {} ({})", device.getName(), device.getOrganizationId());
             
             // Get all rules for the organization to see if any exist
             List<Rule> allRules = ruleRepository.findByOrganizationId(organizationId);
@@ -701,15 +707,38 @@ public class DeviceController {
             response.put("deviceMaintenance", deviceMaintenance);
             response.put("deviceSafety", deviceSafety);
             
-            logger.info("Debug data for device {}: {} total rules, {} device conditions, {} device maintenance, {} device safety", 
+            logger.info("✅ Debug data for device {}: {} total rules, {} device conditions, {} device maintenance, {} device safety", 
                        id, allRules.size(), deviceConditions.size(), deviceMaintenance.size(), deviceSafety.size());
             
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            logger.error("Error retrieving debug data for device: {}", id, e);
+            logger.error("❌ Error retrieving debug data for device: {}", id, e);
             return ResponseEntity.status(500).body(Map.of("error", "Failed to retrieve debug data", "exception", e.getMessage()));
         }
+    }
+
+    @GetMapping("/auth-test")
+    public ResponseEntity<?> testAuthentication(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🔍 Auth test endpoint called, userDetails: {}", userDetails != null ? "present" : "null");
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            logger.warn("❌ No user details found in auth test");
+            return ResponseEntity.status(401).body(Map.of("error", "No user details found"));
+        }
+        
+        User user = userDetails.getUser();
+        logger.info("✅ Auth test successful for user: {} ({})", user.getEmail(), user.getOrganizationId());
+        
+        return ResponseEntity.ok(Map.of(
+            "message", "Authentication successful",
+            "user", Map.of(
+                "id", user.getId(),
+                "email", user.getEmail(),
+                "organizationId", user.getOrganizationId(),
+                "role", user.getRole()
+            )
+        ));
     }
 
     // Helper methods

@@ -93,6 +93,18 @@ public class RuleController {
         return ResponseEntity.ok(createdRule);
     }
 
+    @PostMapping("/bulk")
+    @PreAuthorize("hasAuthority('RULE_WRITE')")
+    public ResponseEntity<List<Rule>> createBulkRules(@RequestBody List<Map<String, Object>> rulesData, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        List<Rule> createdRules = ruleService.createBulkRules(rulesData, user.getOrganizationId());
+        return ResponseEntity.ok(createdRules);
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('RULE_WRITE')")
     public ResponseEntity<Rule> updateRule(@PathVariable String id, @Valid @RequestBody RuleCreateRequest request, @AuthenticationPrincipal CustomUserDetails userDetails) {

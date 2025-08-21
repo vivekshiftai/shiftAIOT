@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getApiConfig } from '../config/api';
+import { tokenService } from './tokenService';
 
 const API_BASE_URL = getApiConfig().BACKEND_BASE_URL;
 
@@ -12,34 +13,23 @@ const api = axios.create({
   timeout: 10000, // 10 second timeout
 });
 
-let isRefreshing = false;
-let refreshPromise: Promise<string> | null = null;
-let failedQueue: Array<{ resolve: (value: string) => void; reject: (error: any) => void }> = [];
-
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach(({ resolve, reject }) => {
-    if (error) {
-      reject(error);
-    } else {
-      resolve(token!);
-    }
-  });
-  
-  failedQueue = [];
-};
+// Initialize token service
+tokenService.initializeToken();
 
 // Add request interceptor to include auth token
 api.interceptors.request.use(
   (config) => {
-    // Include authentication for all operations except PDF processing
-    const isPDFProcessing = config.url?.includes('/upload-pdf') ||
+    // Skip authentication for public endpoints
+    const isPublicEndpoint = config.url?.includes('/auth/') ||
+                           config.url?.includes('/upload-pdf') ||
                            config.url?.includes('/generate/') ||
                            config.url?.includes('/pdfs') ||
                            config.url?.includes('/query') ||
-                           config.url?.includes('/health');
+                           config.url?.includes('/health') ||
+                           config.url?.includes('/knowledge/');
     
-    if (!isPDFProcessing) {
-      const token = localStorage.getItem('token');
+    if (!isPublicEndpoint) {
+      const token = tokenService.getToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -51,55 +41,7 @@ api.interceptors.request.use(
   }
 );
 
-// Helper to safely extract bearer token from axios defaults
-const getTokenFromDefaults = (): string | null => {
-  try {
-    const hdr = (api.defaults.headers.common as any)?.Authorization as string | undefined;
-    if (hdr && hdr.startsWith('Bearer ')) return hdr.slice(7);
-    return null;
-  } catch {
-    return null;
-  }
-};
-
-// Helper to refresh token
-const refreshToken = async (): Promise<string> => {
-  if (isRefreshing && refreshPromise) {
-    return refreshPromise;
-  }
-  
-  isRefreshing = true;
-  refreshPromise = (async () => {
-    try {
-      let currentToken = localStorage.getItem('token');
-      if (!currentToken) {
-        const fromHeader = getTokenFromDefaults();
-        if (fromHeader) currentToken = fromHeader;
-      }
-      if (!currentToken) throw new Error('No token available for refresh');
-      
-      const res = await api.post('/auth/refresh', { token: currentToken });
-      const newToken = res.data?.token;
-      if (!newToken) throw new Error('No token in refresh response');
-      
-      localStorage.setItem('token', newToken);
-      api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
-      
-      processQueue(null, newToken);
-      return newToken;
-    } catch (error) {
-      processQueue(error, null);
-      throw error;
-    } finally {
-      isRefreshing = false;
-      refreshPromise = null;
-    }
-  })();
-  
-  return refreshPromise;
-};
-
-// Add response interceptor to handle auth errors and token refresh
+// Add response interceptor to handle auth errors
 api.interceptors.response.use(
   (response) => {
     return response;
@@ -107,36 +49,23 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config || {};
     const status = error.response?.status;
-    const url: string = originalRequest?.url || '';
 
-    // Only handle 401/403 auth errors
+    // Handle 401/403 auth errors
     if ((status === 401 || status === 403) && !originalRequest._retry) {
-      // Ignore refresh attempts for auth endpoints
-      const isAuthEndpoint = url.includes('/auth/signin') || url.includes('/auth/signup') || url.includes('/auth/refresh');
+      originalRequest._retry = true;
 
-      if (!isAuthEndpoint) {
-        originalRequest._retry = true;
-
-        // Queue this request
-        const retryOriginalRequest = new Promise<string>((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        });
-
-        try {
-          // Attempt token refresh
-          await refreshToken();
-          // Retry the original request
+      try {
+        // Attempt token refresh
+        const newToken = await tokenService.refreshToken();
+        if (newToken) {
+          // Retry the original request with new token
           return api(originalRequest);
-        } catch (refreshErr: any) {
-          console.warn('Token refresh failed:', refreshErr.message);
-          // Never automatically logout the user - let them manually logout if needed
-          // Just reject the request and let the UI handle it gracefully
-          return Promise.reject(error);
         }
+      } catch (refreshErr: any) {
+        console.warn('Token refresh failed:', refreshErr.message);
       }
     }
 
-    // For other errors just reject without logging out
     return Promise.reject(error);
   }
 );
@@ -144,7 +73,7 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   login: (credentials: { email: string; password: string }) => {
-    return api.post('/api/auth/signin', credentials);
+    return api.post('/auth/signin', credentials);
   },
   
   register: (userData: {
@@ -154,54 +83,26 @@ export const authAPI = {
     password: string;
     role: 'ADMIN' | 'USER';
   }) => {
-    return api.post('/api/auth/signup', userData);
+    return api.post('/auth/signup', userData);
   },
 
-  refresh: (token: string) => api.post('/api/auth/refresh', { token }),
+  refresh: (token: string) => api.post('/auth/refresh', { token }),
 };
 
 // Device API
 export const deviceAPI = {
-  getAll: (params?: { status?: string; type?: string; search?: string }) => {
-    console.log('deviceAPI.getAll called with params:', params);
-    console.log('API_BASE_URL:', API_BASE_URL);
-    console.log('Full URL will be:', `${API_BASE_URL}/api/devices`);
-    return api.get('/api/devices', { params });
-  },
-  
+  getAll: () => api.get('/api/devices'),
   getById: (id: string) => api.get(`/api/devices/${id}`),
-  
-  create: (device: any) => {
-    // Ensure device has proper enum values and handle null/undefined values
-    const processedDevice = {
-      ...device,
-      status: device.status?.toUpperCase() || 'ONLINE',
-      type: device.type?.toUpperCase() || 'SENSOR',
-      protocol: device.protocol?.toUpperCase() || 'MQTT',
-      // Ensure all required fields are present
-      name: device.name || '',
-      location: device.location || '',
-      manufacturer: device.manufacturer || '',
-      model: device.model || '',
-    };
-    return api.post('/api/devices', processedDevice);
-  },
-  
+  create: (device: any) => api.post('/api/devices', device),
   update: (id: string, device: any) => api.put(`/api/devices/${id}`, device),
-  
   delete: (id: string) => api.delete(`/api/devices/${id}`),
-  
+  getByOrganization: (organizationId: string) => api.get(`/api/devices/organization/${organizationId}`),
+  getStatus: (id: string) => api.get(`/api/devices/${id}/status`),
   updateStatus: (id: string, status: string) => api.patch(`/api/devices/${id}/status`, { status }),
-  
-  postTelemetry: (deviceId: string, data: any) => api.post(`/api/devices/${deviceId}/telemetry`, data),
-  
-  getDocumentation: (deviceId: string) => api.get(`/api/devices/${deviceId}/documentation`),
-  
-  downloadDocumentation: (deviceId: string, type: string) => 
-    api.get(`/api/devices/${deviceId}/documentation/${type}`, {
-      responseType: 'blob'
-    }),
+  getTelemetry: (id: string) => api.get(`/api/devices/${id}/telemetry`),
+  getDocumentation: (id: string) => api.get(`/api/devices/${id}/documentation`),
   getDebugData: (deviceId: string) => api.get(`/api/devices/${deviceId}/debug-data`),
+  testAuth: () => api.get('/api/devices/auth-test'),
 };
 
 // Rule API
@@ -209,42 +110,43 @@ export const ruleAPI = {
   getAll: () => api.get('/api/rules'),
   getById: (id: string) => api.get(`/api/rules/${id}`),
   create: (rule: any) => api.post('/api/rules', rule),
+  createBulk: (rules: any[]) => api.post('/api/rules/bulk', rules),
   update: (id: string, rule: any) => api.put(`/api/rules/${id}`, rule),
   delete: (id: string) => api.delete(`/api/rules/${id}`),
-  toggle: (id: string) => api.patch(`/api/rules/${id}/toggle`),
   getByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/rules`),
-  // Added new endpoint for rules generation
-  generateRules: (request: {
-    pdf_filename: string;
-    chunk_size?: number;
-    rule_types?: string[];
-  }) => api.post('/api/rules/generate-rules', request),
-  getStats: () => api.get('/api/rules/stats'),
+  getByOrganization: (organizationId: string) => api.get(`/api/rules/organization/${organizationId}`),
+  activate: (id: string) => api.patch(`/api/rules/${id}/activate`),
+  deactivate: (id: string) => api.patch(`/api/rules/${id}/deactivate`),
 };
 
 // Analytics API
 export const analyticsAPI = {
   getAll: () => api.get('/api/analytics'),
   getById: (id: string) => api.get(`/api/analytics/${id}`),
-  getByDevice: (deviceId: string, timeRange: string = '24h') => 
-    api.get(`/api/analytics/device/${deviceId}`, { params: { timeRange } }),
   create: (analytics: any) => api.post('/api/analytics', analytics),
   update: (id: string, analytics: any) => api.put(`/api/analytics/${id}`, analytics),
   delete: (id: string) => api.delete(`/api/analytics/${id}`),
-  getStats: () => api.get('/api/analytics/stats'),
+  getByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/analytics`),
+  getByOrganization: (organizationId: string) => api.get(`/api/analytics/organization/${organizationId}`),
+  getRealTime: (deviceId: string) => api.get(`/api/analytics/${deviceId}/realtime`),
+  getHistorical: (deviceId: string, startDate: string, endDate: string) => 
+    api.get(`/api/analytics/${deviceId}/historical`, { params: { startDate, endDate } }),
 };
 
-// Logs API
+// Log API
 export const logAPI = {
-  getAll: (params?: { level?: string; category?: string; page?: number; size?: number }) => 
-    api.get('/api/logs', { params }),
+  getAll: () => api.get('/api/logs'),
   getById: (id: string) => api.get(`/api/logs/${id}`),
-  getByDevice: (deviceId: string, params?: { level?: string; category?: string; page?: number; size?: number }) => 
-    api.get(`/api/logs/device/${deviceId}`, { params }),
   create: (log: any) => api.post('/api/logs', log),
   update: (id: string, log: any) => api.put(`/api/logs/${id}`, log),
   delete: (id: string) => api.delete(`/api/logs/${id}`),
-  getStats: () => api.get('/api/logs/stats'),
+  getByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/logs`),
+  getByOrganization: (organizationId: string) => api.get(`/api/logs/organization/${organizationId}`),
+  getByLevel: (level: string) => api.get(`/api/logs/level/${level}`),
+  getByDateRange: (startDate: string, endDate: string) => 
+    api.get('/api/logs/date-range', { params: { startDate, endDate } }),
+  export: (deviceId: string, format: string = 'csv') => 
+    api.get(`/api/logs/${deviceId}/export`, { params: { format }, responseType: 'blob' }),
 };
 
 // Maintenance API
@@ -252,6 +154,7 @@ export const maintenanceAPI = {
   getAll: () => api.get('/api/maintenance'),
   getById: (id: string) => api.get(`/api/maintenance/${id}`),
   create: (item: any) => api.post('/api/maintenance', item),
+  createBulk: (items: any[]) => api.post('/api/maintenance/bulk', items),
   update: (id: string, item: any) => api.put(`/api/maintenance/${id}`, item),
   delete: (id: string) => api.delete(`/api/maintenance/${id}`),
   getByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/maintenance`),
@@ -260,6 +163,7 @@ export const maintenanceAPI = {
 // Device Safety Precautions API
 export const deviceSafetyPrecautionsAPI = {
   getAllByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/safety-precautions`),
+  getByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/safety-precautions`),
   getActiveByDevice: (deviceId: string) => api.get(`/api/device-safety-precautions/device/${deviceId}/active`),
   getById: (id: string) => api.get(`/api/device-safety-precautions/${id}`),
   create: (safetyPrecaution: any) => api.post('/api/device-safety-precautions', safetyPrecaution),
@@ -333,63 +237,45 @@ export const knowledgeAPI = {
 // Notification API
 export const notificationAPI = {
   getAll: () => api.get('/api/notifications'),
-  
   create: (notification: any) => api.post('/api/notifications', notification),
-  
   markAsRead: (id: string) => api.patch(`/api/notifications/${id}/read`),
-  
   markAllAsRead: () => api.patch('/api/notifications/read-all'),
-  
   getUnreadCount: () => api.get('/api/notifications/unread-count'),
 };
 
 // Conversation Config API
 export const conversationConfigAPI = {
-  getAll: () => api.get('/conversation-configs'),
-  getById: (id: string) => api.get(`/conversation-configs/${id}`),
-  create: (config: any) => api.post('/conversation-configs', config),
-  update: (id: string, config: any) => api.put(`/conversation-configs/${id}`, config),
-  delete: (id: string) => api.delete(`/conversation-configs/${id}`),
-  getActive: () => api.get('/conversation-configs/active'),
-  getByPlatformType: (platformType: string) => api.get(`/conversation-configs/platform/${platformType}`),
+  getAll: () => api.get('/api/conversation-configs'),
+  getById: (id: string) => api.get(`/api/conversation-configs/${id}`),
+  create: (config: any) => api.post('/api/conversation-configs', config),
+  update: (id: string, config: any) => api.put(`/api/conversation-configs/${id}`, config),
+  delete: (id: string) => api.delete(`/api/conversation-configs/${id}`),
+  getActive: () => api.get('/api/conversation-configs/active'),
+  getByPlatformType: (platformType: string) => api.get(`/api/conversation-configs/platform/${platformType}`),
 };
 
 // Device Connection API
 export const deviceConnectionAPI = {
-  getAll: () => api.get('/device-connections'),
-  
-  getById: (deviceId: string) => api.get(`/device-connections/${deviceId}`),
-  
-  create: (connection: any) => api.post('/device-connections', connection),
-  
-  update: (deviceId: string, connection: any) => api.put(`/device-connections/${deviceId}`, connection),
-  
-  delete: (deviceId: string) => api.delete(`/device-connections/${deviceId}`),
-  
-  connect: (deviceId: string) => api.post(`/device-connections/${deviceId}/connect`),
-  
-  disconnect: (deviceId: string) => api.post(`/device-connections/${deviceId}/disconnect`),
-  
-  getActive: () => api.get('/device-connections/active'),
-  
-  getStats: () => api.get('/device-connections/stats'),
+  getAll: () => api.get('/api/device-connections'),
+  getById: (deviceId: string) => api.get(`/api/device-connections/${deviceId}`),
+  create: (connection: any) => api.post('/api/device-connections', connection),
+  update: (deviceId: string, connection: any) => api.put(`/api/device-connections/${deviceId}`, connection),
+  delete: (deviceId: string) => api.delete(`/api/device-connections/${deviceId}`),
+  connect: (deviceId: string) => api.post(`/api/device-connections/${deviceId}/connect`),
+  disconnect: (deviceId: string) => api.post(`/api/device-connections/${deviceId}/disconnect`),
+  getActive: () => api.get('/api/device-connections/active'),
+  getStats: () => api.get('/api/device-connections/stats'),
 };
 
 // User API
 export const userAPI = {
   getAll: () => api.get('/users'),
-  
   getById: (id: string) => api.get(`/users/${id}`),
-  
   update: (id: string, user: any) => api.put(`/users/${id}`, user),
-  
   delete: (id: string) => api.delete(`/users/${id}`),
-  
   getProfile: () => api.get('/users/profile'),
-  
   changePassword: (payload: { currentPassword: string; newPassword: string; confirmPassword: string }) => 
     api.post('/users/change-password', payload),
-  
   // Preferences
   getPreferences: () => api.get('/user-preferences'),
   savePreferences: (prefs: any) => api.post('/user-preferences', prefs),
@@ -440,64 +326,74 @@ export const pdfAPI = {
       timeout: 10000,
     });
     
-    const params = new URLSearchParams({
-      page: page.toString(),
-      limit: limit.toString()
-    });
-    if (deviceId) params.append('deviceId', deviceId);
+    const params: any = { page, limit };
+    if (deviceId) params.deviceId = deviceId;
     
-    return pdfApi.get(`/pdfs?${params.toString()}`);
+    return pdfApi.get('/pdfs', { params });
+  },
+
+  // Download processed PDF
+  downloadPDF: async (pdfName: string) => {
+    // Create a separate axios instance without authentication for PDF downloads
+    const pdfApi = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: 30000,
+      responseType: 'blob',
+    });
+    
+    return pdfApi.get(`/pdfs/${pdfName}/download`);
   },
 
   // Get PDF processing status
-  getPDFStatus: async (pdfId: string) => {
+  getPDFStatus: async (pdfName: string) => {
     // Create a separate axios instance without authentication for PDF status
     const pdfApi = axios.create({
       baseURL: API_BASE_URL,
       timeout: 10000,
     });
     
-    return pdfApi.get(`/knowledge/documents/${pdfId}/status`);
+    return pdfApi.get(`/pdfs/${pdfName}/status`);
   },
 
-  // Generate IoT monitoring rules from technical documentation
-  generateRules: async (pdfName: string, deviceId: string) => {
+  // Generate rules from PDF
+  generateRules: async (pdfName: string, deviceId?: string) => {
+    // Create a separate axios instance without authentication for rule generation
     const pdfApi = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 30000,
+      timeout: 60000, // 1 minute timeout for rule generation
     });
     
-    return pdfApi.post('/generate/rules', {
-      pdf_name: pdfName,
-      device_id: deviceId
-    });
+    const payload: any = { pdf_name: pdfName };
+    if (deviceId) payload.deviceId = deviceId;
+    
+    return pdfApi.post('/generate-rules', payload);
   },
 
-  // Generate maintenance schedules and tasks
-  generateMaintenance: async (pdfName: string, deviceId: string) => {
+  // Generate maintenance schedule from PDF
+  generateMaintenance: async (pdfName: string, deviceId?: string) => {
+    // Create a separate axios instance without authentication for maintenance generation
     const pdfApi = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 30000,
+      timeout: 60000, // 1 minute timeout for maintenance generation
     });
     
-    return pdfApi.post('/generate/maintenance', {
-      pdf_name: pdfName,
-      device_id: deviceId
-    });
+    const payload: any = { pdf_name: pdfName };
+    if (deviceId) payload.deviceId = deviceId;
+    
+    return pdfApi.post('/generate-maintenance', payload);
   },
 
-  // Extract safety information and procedures
-  generateSafety: async (pdfName: string, deviceId: string) => {
+  // Generate safety precautions from PDF
+  generateSafety: async (pdfName: string, deviceId?: string) => {
+    // Create a separate axios instance without authentication for safety generation
     const pdfApi = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 30000,
+      timeout: 60000, // 1 minute timeout for safety generation
     });
     
-    return pdfApi.post('/generate/safety', {
-      pdf_name: pdfName,
-      device_id: deviceId
-    });
-  }
+    const payload: any = { pdf_name: pdfName };
+    if (deviceId) payload.deviceId = deviceId;
+    
+    return pdfApi.post('/generate-safety', payload);
+  },
 };
-
-export default api;

@@ -34,15 +34,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
-            // Skip authentication for device endpoints
+            // Skip authentication for public endpoints only
             String requestURI = request.getRequestURI();
-            if (requestURI.startsWith("/api/devices/") || requestURI.startsWith("/devices/")) {
-                logger.debug("Skipping JWT authentication for device endpoint: {}", requestURI);
+            if (requestURI.startsWith("/api/auth/") || 
+                requestURI.startsWith("/auth/") ||
+                requestURI.startsWith("/api/health") ||
+                requestURI.startsWith("/health")) {
+                logger.debug("Skipping JWT authentication for public endpoint: {}", requestURI);
                 filterChain.doFilter(request, response);
                 return;
             }
 
             String jwt = getJwtFromRequest(request);
+            logger.info("🔐 JWT Filter - URI: {}, JWT present: {}", requestURI, StringUtils.hasText(jwt));
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
                 String username = tokenProvider.getUsernameFromToken(jwt);
@@ -53,9 +57,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                logger.info("✅ Authentication successful for user: {} on endpoint: {}", username, requestURI);
+            } else {
+                logger.warn("❌ JWT authentication failed for endpoint: {} - JWT present: {}, Valid: {}", 
+                           requestURI, StringUtils.hasText(jwt), 
+                           StringUtils.hasText(jwt) ? tokenProvider.validateToken(jwt) : false);
             }
         } catch (Exception ex) {
-            logger.error("Could not set user authentication in security context", ex);
+            logger.error("❌ Could not set user authentication in security context", ex);
             // Don't block the request, just log the error
         }
 

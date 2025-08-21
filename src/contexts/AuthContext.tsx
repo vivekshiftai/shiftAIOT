@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import api, { authAPI, userAPI } from '../services/api';
+import { authAPI, userAPI } from '../services/api';
 import { User } from '../types';
-import { validateToken } from '../utils/authUtils';
+import { tokenService } from '../services/tokenService';
 
 interface AuthContextType {
   user: User | null;
@@ -34,14 +34,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Validate token and load user profile
-  const validateTokenAndLoadProfile = async (token: string): Promise<boolean> => {
+  const validateTokenAndLoadProfile = async (): Promise<boolean> => {
     console.log('AuthContext - validateTokenAndLoadProfile called');
     try {
-      const result = await validateToken();
-      console.log('AuthContext - validateToken result:', result);
+      const isValid = await tokenService.validateToken();
+      console.log('AuthContext - Token validation result:', isValid);
       
-      if (result.isValid && result.user) {
-        const profileData = result.user;
+      if (isValid) {
+        // Get user profile
+        const response = await userAPI.getProfile();
+        const profileData = response.data;
         console.log('AuthContext - Profile data received:', profileData);
         
         const userData: User = {
@@ -59,16 +61,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         console.log('AuthContext - Setting user data:', userData);
         setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
+        tokenService.setUser(userData);
         return true;
       } else {
-        console.warn('AuthContext - Token validation failed:', result.error);
-        // Never logout user automatically - keep existing session
+        console.warn('AuthContext - Token validation failed');
         return false;
       }
     } catch (error: unknown) {
       console.warn('AuthContext - Token validation failed:', error instanceof Error ? error.message : 'Unknown error');
-      // Never logout user on validation errors - keep existing session
       return false;
     }
   };

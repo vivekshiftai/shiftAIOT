@@ -20,6 +20,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { userAPI } from '../services/api';
 import { ConversationConfigTab } from '../components/Settings/ConversationConfigTab';
 import { handleAuthError } from '../utils/authUtils';
+import { AuthDebugger } from '../components/Debug/AuthDebugger';
 
 interface UserProfile {
   id?: string;
@@ -73,7 +74,7 @@ export const SettingsSection: React.FC = () => {
     firstName: '',
     lastName: '',
     email: '',
-    phone: '',
+                phone: undefined,
     role: '',
     organization: '',
     location: '',
@@ -177,7 +178,7 @@ export const SettingsSection: React.FC = () => {
             firstName: user.firstName || '',
             lastName: user.lastName || '',
             email: user.email || '',
-            phone: '',
+            phone: undefined,
             role: user.role,
             organization: user.organizationId || '',
             location: '',
@@ -243,7 +244,8 @@ export const SettingsSection: React.FC = () => {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'conversation', label: 'Conversation Configuration', icon: MessageSquare },
-    { id: 'security', label: 'Security', icon: Shield }
+    { id: 'security', label: 'Security', icon: Shield },
+    { id: 'debug', label: 'Debug', icon: Info }
   ];
 
   const handleSaveProfile = async () => {
@@ -368,7 +370,7 @@ export const SettingsSection: React.FC = () => {
             <label className="block text-sm font-medium text-slate-700 mb-2">Phone</label>
             <input
               type="tel"
-              value={userProfile.phone || ''}
+              value={userProfile.phone ?? ''}
               onChange={(e) => setUserProfile(prev => ({ ...prev, phone: e.target.value }))}
               disabled={!isEditing}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
@@ -649,6 +651,7 @@ export const SettingsSection: React.FC = () => {
           {activeTab === 'dashboard' && renderDashboardTab()}
           {activeTab === 'conversation' && renderConversationTab()}
           {activeTab === 'security' && renderSecurityTab()}
+          {activeTab === 'debug' && <AuthDebugger />}
         </div>
       </div>
     </div>

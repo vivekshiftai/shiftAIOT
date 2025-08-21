@@ -127,7 +127,7 @@ export class OnboardingService {
           }));
 
           await ruleAPI.createBulk(rulesToSave);
-          console.log('Rules saved to backend successfully');
+          console.log('Rules saved to backend successfully:', rulesToSave.length, 'rules');
         } catch (error) {
           console.error('Failed to save rules to backend:', error);
           // Don't throw error, continue with onboarding
@@ -171,7 +171,7 @@ export class OnboardingService {
           }));
 
           await maintenanceAPI.createBulk(maintenanceToSave);
-          console.log('Maintenance tasks saved to backend successfully');
+          console.log('Maintenance tasks saved to backend successfully:', maintenanceToSave.length, 'tasks');
         } catch (error) {
           console.error('Failed to save maintenance tasks to backend:', error);
           // Don't throw error, continue with onboarding
@@ -213,7 +213,7 @@ export class OnboardingService {
           }));
 
           await deviceSafetyPrecautionsAPI.createBulk(safetyPrecautions);
-          console.log('Safety precautions saved to backend successfully');
+          console.log('Safety precautions saved to backend successfully:', safetyPrecautions.length, 'precautions');
         } catch (error) {
           console.error('Failed to save safety precautions to backend:', error);
           // Don't throw error, continue with onboarding

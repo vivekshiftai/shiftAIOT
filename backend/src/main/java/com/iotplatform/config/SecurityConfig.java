@@ -71,7 +71,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        logger.info("Configuring Security Filter Chain - NO AUTHENTICATION REQUIRED");
+        logger.info("Configuring Security Filter Chain with proper authentication");
         
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -81,7 +81,9 @@ public class SecurityConfig {
             .sessionManagement(sessionManagement -> 
                 sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
+                // Public endpoints (no authentication required)
                 .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/knowledge/**").permitAll()
                 .requestMatchers("/upload-pdf").permitAll()
                 .requestMatchers("/query").permitAll()
@@ -92,16 +94,31 @@ public class SecurityConfig {
                 .requestMatchers("/generate-safety/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/websocket/**").permitAll()
-                .requestMatchers("/devices/**").permitAll()
-                .requestMatchers("/notifications/**").permitAll()
-                .requestMatchers("/rules/**").permitAll()
-                .requestMatchers("/maintenance/**").permitAll()
-                .anyRequest().permitAll()
+                .requestMatchers("/health/**").permitAll()
+                .requestMatchers("/api/health/**").permitAll()
+                
+                // Protected endpoints (authentication required)
+                .requestMatchers("/api/devices/**").authenticated()
+                .requestMatchers("/api/notifications/**").authenticated()
+                .requestMatchers("/api/rules/**").authenticated()
+                .requestMatchers("/api/maintenance/**").authenticated()
+                .requestMatchers("/api/users/**").authenticated()
+                .requestMatchers("/api/analytics/**").authenticated()
+                .requestMatchers("/api/logs/**").authenticated()
+                
+                // Legacy endpoints (for backward compatibility)
+                .requestMatchers("/devices/**").authenticated()
+                .requestMatchers("/notifications/**").authenticated()
+                .requestMatchers("/rules/**").authenticated()
+                .requestMatchers("/maintenance/**").authenticated()
+                
+                // All other requests require authentication
+                .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthenticationFilter(tokenProvider, userDetailsService), UsernamePasswordAuthenticationFilter.class);
 
-        logger.info("Security configuration completed - NO AUTHENTICATION REQUIRED");
+        logger.info("Security configuration completed with proper authentication");
         return http.build();
     }
 

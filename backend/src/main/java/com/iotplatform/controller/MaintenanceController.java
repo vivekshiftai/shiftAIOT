@@ -66,6 +66,30 @@ public class MaintenanceController {
         return ResponseEntity.ok(createdTask);
     }
 
+    @PostMapping("/bulk")
+    @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
+    public ResponseEntity<List<MaintenanceSchedule>> createBulk(@RequestBody List<MaintenanceSchedule> tasks, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        List<MaintenanceSchedule> createdTasks = tasks.stream()
+            .map(task -> {
+                task.setOrganizationId(user.getOrganizationId());
+                if (task.getStatus() == null || task.getStatus().isBlank()) {
+                    task.setStatus("pending");
+                }
+                if (task.getPriority() == null || task.getPriority().isBlank()) {
+                    task.setPriority("medium");
+                }
+                return maintenanceRepository.save(task);
+            })
+            .toList();
+        
+        return ResponseEntity.ok(createdTasks);
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
     public ResponseEntity<MaintenanceSchedule> update(@PathVariable String id, @Valid @RequestBody MaintenanceSchedule updates, @AuthenticationPrincipal CustomUserDetails userDetails) {
