@@ -1,0 +1,74 @@
+/* Knowledge Section Layout Styles */
+.knowledge-section {
+  height: 100vh !important;
+  overflow: hidden !important;
+  position: relative;
+}
+
+.knowledge-section * {
+  box-sizing: border-box;
+}
+
+.knowledge-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+.knowledge-chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.knowledge-chat-messages::-webkit-scrollbar-track {
+  background: #f7fafc;
+}
+
+.knowledge-chat-messages::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.knowledge-chat-messages::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+.knowledge-documents-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+.knowledge-documents-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.knowledge-documents-list::-webkit-scrollbar-track {
+  background: #f7fafc;
+}
+
+.knowledge-documents-list::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.knowledge-documents-list::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+.knowledge-fixed-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: white;
+}
+
+.knowledge-fixed-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background: white;
+}

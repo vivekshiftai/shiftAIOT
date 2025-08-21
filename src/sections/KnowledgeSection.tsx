@@ -19,6 +19,7 @@ import {
 import { deviceAPI } from '../services/api';
 import { pdfProcessingService, PDFListResponse, PDFImage } from '../services/pdfprocess';
 import { logError, logInfo } from '../utils/logger';
+import '../styles/knowledge.css';
 
 // Updated interface to match PDF API response
 interface KnowledgeDocument {
@@ -397,9 +398,9 @@ export const KnowledgeSection: React.FC = () => {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Main Header */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
+    <div className="knowledge-section h-screen flex flex-col bg-gray-50 -m-8">
+      {/* Fixed Header */}
+      <div className="knowledge-fixed-header flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="p-2 bg-blue-500 rounded-lg">
@@ -427,14 +428,14 @@ export const KnowledgeSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* Main Content Area - Fixed height, no overflow */}
+      <div className="flex-1 flex min-h-0">
         {/* Left Panel - Chat Interface */}
-        <div className="flex-1 flex flex-col bg-white">
-          {/* Chat Messages Area - Scrollable */}
+        <div className="flex-1 flex flex-col bg-white min-h-0">
+          {/* Chat Messages Area - Scrollable content only */}
           <div 
             ref={chatMessagesRef}
-            className="flex-1 overflow-y-auto p-6 space-y-6"
+            className="knowledge-chat-messages p-6 space-y-6"
           >
             {chatMessages.map((message) => (
               <div
@@ -572,7 +573,7 @@ export const KnowledgeSection: React.FC = () => {
           </div>
 
           {/* Chat Input Footer - Fixed at bottom */}
-          <div className="flex-shrink-0 bg-white border-t border-gray-200 p-4">
+          <div className="knowledge-fixed-footer flex-shrink-0 bg-white border-t border-gray-200 p-4">
             <div className="space-y-3">
               {/* Quick Actions */}
               <div className="flex gap-2">
@@ -619,10 +620,10 @@ export const KnowledgeSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Panel - PDF Document Library */}
-        <div className="w-80 flex flex-col bg-white border-l border-gray-200">
-          {/* PDF Library Header */}
-          <div className="flex-shrink-0 p-4 border-b border-gray-200">
+        {/* Right Panel - PDF Document Library - Fixed width */}
+        <div className="w-80 flex flex-col bg-white border-l border-gray-200 min-h-0">
+          {/* PDF Library Header - Fixed */}
+          <div className="knowledge-fixed-header flex-shrink-0 p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">PDF Library</h2>
               <label className="cursor-pointer">
@@ -674,10 +675,10 @@ export const KnowledgeSection: React.FC = () => {
             </div>
           </div>
 
-          {/* PDF Documents List - Scrollable */}
+          {/* PDF Documents List - Scrollable content only */}
           <div 
             ref={documentsListRef}
-            className="flex-1 overflow-y-auto"
+            className="knowledge-documents-list"
           >
             {loading ? (
               <div className="p-4 text-center">
@@ -748,8 +749,8 @@ export const KnowledgeSection: React.FC = () => {
             )}
           </div>
 
-          {/* PDF Library Footer */}
-          <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50">
+          {/* PDF Library Footer - Fixed at bottom */}
+          <div className="knowledge-fixed-footer flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between text-sm text-gray-600">
               <span>{documents.length} PDF documents</span>
               <span>{documents.filter(d => d.vectorized).length} AI ready</span>
