@@ -18,6 +18,7 @@ import com.iotplatform.dto.DeviceCreateResponse;
 import com.iotplatform.dto.DeviceCreateWithFileRequest;
 import com.iotplatform.dto.DeviceStatsResponse;
 import com.iotplatform.dto.DeviceCreateRequest;
+import com.iotplatform.dto.TelemetryDataRequest;
 import com.iotplatform.model.Device;
 import com.iotplatform.repository.DeviceRepository;
 
