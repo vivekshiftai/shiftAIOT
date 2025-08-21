@@ -90,7 +90,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       // Set token in API headers
-      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      tokenService.setAxiosAuthHeader(token);
       console.log('AuthContext - Token set in API headers');
 
       if (savedUser) {
@@ -113,7 +113,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               if (newToken) {
                 console.log('AuthContext - Token refresh successful');
                 localStorage.setItem('token', newToken);
-                api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+                tokenService.setAxiosAuthHeader(newToken);
                 
                 // Try to validate with new token
                 const newTokenValid = await validateTokenAndLoadProfile(newToken);
@@ -157,9 +157,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const token = localStorage.getItem('token');
       
       if (token) {
-        api.defaults.headers.common.Authorization = `Bearer ${token}`;
+        tokenService.setAxiosAuthHeader(token);
       } else {
-        delete api.defaults.headers.common.Authorization;
+        tokenService.removeToken();
       }
 
       if (savedUser && token) {
@@ -204,7 +204,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
-      api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      tokenService.setAxiosAuthHeader(token);
 
       window.dispatchEvent(new Event('storageChange'));
       setUser(user);
@@ -224,7 +224,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    delete api.defaults.headers.common.Authorization;
+    tokenService.removeToken();
     setUser(null);
     window.dispatchEvent(new Event('storageChange'));
   };
