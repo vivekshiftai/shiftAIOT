@@ -33,6 +33,200 @@ public class MaintenanceController {
     private final MaintenanceScheduleService maintenanceScheduleService;
 
     /**
+     * Get all maintenance tasks for the organization.
+     */
+    @Operation(
+        summary = "Get All Maintenance Tasks",
+        description = "Get all maintenance tasks for the current user's organization"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Maintenance tasks retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    @GetMapping
+    @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
+    public ResponseEntity<List<DeviceMaintenance>> getAllMaintenance(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            log.info("Fetching all maintenance tasks for organization: {} by user: {}", 
+                    userDetails.getUser().getOrganizationId(), userDetails.getUsername());
+
+            String organizationId = userDetails.getUser().getOrganizationId();
+            List<DeviceMaintenance> allMaintenance = maintenanceScheduleService.getAllMaintenanceByOrganization(organizationId);
+
+            return ResponseEntity.ok(allMaintenance);
+
+        } catch (Exception e) {
+            log.error("Error fetching all maintenance tasks", e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    /**
+     * Get a maintenance task by ID.
+     */
+    @Operation(
+        summary = "Get Maintenance Task by ID",
+        description = "Get a specific maintenance task by its ID"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Maintenance task retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "404", description = "Maintenance task not found")
+    })
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
+    public ResponseEntity<DeviceMaintenance> getMaintenanceById(
+            @Parameter(description = "Maintenance task ID")
+            @PathVariable String id,
+            
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            log.info("Fetching maintenance task: {} by user: {}", id, userDetails.getUsername());
+
+            DeviceMaintenance maintenance = maintenanceScheduleService.getMaintenanceById(id)
+                    .orElse(null);
+
+            if (maintenance == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok(maintenance);
+
+        } catch (Exception e) {
+            log.error("Error fetching maintenance task: {}", id, e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    /**
+     * Create a new maintenance task.
+     */
+    @Operation(
+        summary = "Create Maintenance Task",
+        description = "Create a new maintenance task"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "Maintenance task created successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    @PostMapping
+    @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
+    public ResponseEntity<DeviceMaintenance> createMaintenance(
+            @RequestBody DeviceMaintenance maintenance,
+            
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            log.info("Creating maintenance task by user: {}", userDetails.getUsername());
+
+            maintenance.setOrganizationId(userDetails.getUser().getOrganizationId());
+            DeviceMaintenance createdMaintenance = maintenanceScheduleService.createMaintenance(maintenance);
+
+            return ResponseEntity.status(201).body(createdMaintenance);
+
+        } catch (Exception e) {
+            log.error("Error creating maintenance task", e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    /**
+     * Update a maintenance task.
+     */
+    @Operation(
+        summary = "Update Maintenance Task",
+        description = "Update an existing maintenance task"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Maintenance task updated successfully"),
+        @ApiResponse(responseCode = "400", description = "Invalid request"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "404", description = "Maintenance task not found")
+    })
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
+    public ResponseEntity<DeviceMaintenance> updateMaintenance(
+            @Parameter(description = "Maintenance task ID")
+            @PathVariable String id,
+            
+            @RequestBody DeviceMaintenance maintenance,
+            
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            log.info("Updating maintenance task: {} by user: {}", id, userDetails.getUsername());
+
+            maintenance.setId(id);
+            maintenance.setOrganizationId(userDetails.getUser().getOrganizationId());
+            DeviceMaintenance updatedMaintenance = maintenanceScheduleService.updateMaintenance(maintenance);
+
+            return ResponseEntity.ok(updatedMaintenance);
+
+        } catch (Exception e) {
+            log.error("Error updating maintenance task: {}", id, e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    /**
+     * Delete a maintenance task.
+     */
+    @Operation(
+        summary = "Delete Maintenance Task",
+        description = "Delete a maintenance task"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "204", description = "Maintenance task deleted successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "404", description = "Maintenance task not found")
+    })
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
+    public ResponseEntity<Void> deleteMaintenance(
+            @Parameter(description = "Maintenance task ID")
+            @PathVariable String id,
+            
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            log.info("Deleting maintenance task: {} by user: {}", id, userDetails.getUsername());
+
+            maintenanceScheduleService.deleteMaintenance(id);
+
+            return ResponseEntity.noContent().build();
+
+        } catch (Exception e) {
+            log.error("Error deleting maintenance task: {}", id, e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    /**
      * Complete a maintenance task and calculate next maintenance date.
      */
     @Operation(

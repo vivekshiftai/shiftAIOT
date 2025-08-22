@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.iotplatform.dto.DeviceCreateResponse;
 import com.iotplatform.dto.DeviceCreateWithFileRequest;
@@ -368,21 +369,7 @@ public class DeviceService {
     
 
 
-    public Device updateDevice(String id, Device deviceDetails, String organizationId) {
-        Device device = deviceRepository.findByIdAndOrganizationId(id, organizationId)
-                .orElseThrow(() -> new RuntimeException("Device not found"));
-
-        device.setName(deviceDetails.getName());
-        device.setType(deviceDetails.getType());
-        device.setLocation(deviceDetails.getLocation());
-        device.setProtocol(deviceDetails.getProtocol());
-        device.setFirmware(deviceDetails.getFirmware());
-        device.setTags(deviceDetails.getTags());
-        device.setConfig(deviceDetails.getConfig());
-
-        return deviceRepository.save(device);
-    }
-
+    @Transactional
     public void deleteDevice(String id, String organizationId) {
         Device device = deviceRepository.findByIdAndOrganizationId(id, organizationId)
                 .orElseThrow(() -> new RuntimeException("Device not found"));
@@ -419,17 +406,54 @@ public class DeviceService {
             // 4. Delete device rules and rule conditions
             try {
                 List<Rule> deviceRules = ruleRepository.findByDeviceId(id);
+                logger.info("Found {} rules to delete for device: {}", deviceRules.size(), id);
+                
                 for (Rule rule : deviceRules) {
+                    logger.info("Deleting rule: {} (ID: {}) for device: {}", rule.getName(), rule.getId(), id);
+                    
                     // Delete rule conditions first
-                    ruleConditionRepository.deleteByRuleId(rule.getId());
+                    try {
+                        ruleConditionRepository.deleteByRuleId(rule.getId());
+                        logger.info("Deleted rule conditions for rule: {}", rule.getId());
+                    } catch (Exception e) {
+                        logger.warn("Failed to delete rule conditions for rule: {} - {}", rule.getId(), e.getMessage());
+                    }
+                    
                     // Delete rule actions
-                    ruleActionRepository.deleteByRuleId(rule.getId());
+                    try {
+                        ruleActionRepository.deleteByRuleId(rule.getId());
+                        logger.info("Deleted rule actions for rule: {}", rule.getId());
+                    } catch (Exception e) {
+                        logger.warn("Failed to delete rule actions for rule: {} - {}", rule.getId(), e.getMessage());
+                    }
                 }
+                
                 // Delete the rules
-                ruleRepository.deleteByDeviceId(id);
-                logger.info("Deleted {} rules and related data for device: {}", deviceRules.size(), id);
+                try {
+                    ruleRepository.deleteByDeviceId(id);
+                    logger.info("Deleted {} rules for device: {}", deviceRules.size(), id);
+                } catch (Exception e) {
+                    logger.warn("Failed to delete rules for device: {} - {}", id, e.getMessage());
+                }
+                
+                logger.info("Successfully deleted {} rules and related data for device: {}", deviceRules.size(), id);
+                
+                // Verify deletion
+                try {
+                    List<Rule> remainingRules = ruleRepository.findByDeviceId(id);
+                    if (remainingRules.isEmpty()) {
+                        logger.info("✅ Verification: All rules successfully deleted for device: {}", id);
+                    } else {
+                        logger.warn("⚠️ Verification: {} rules still remain for device: {}", remainingRules.size(), id);
+                        for (Rule remainingRule : remainingRules) {
+                            logger.warn("Remaining rule: {} (ID: {})", remainingRule.getName(), remainingRule.getId());
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.warn("Failed to verify rule deletion for device: {} - {}", id, e.getMessage());
+                }
             } catch (Exception e) {
-                logger.warn("Failed to delete rules for device: {} - {}", id, e.getMessage());
+                logger.error("Failed to delete rules for device: {} - {}", id, e.getMessage(), e);
             }
             
             // 5. Delete device documentation

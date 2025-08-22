@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -507,9 +508,24 @@ public class DeviceController {
         
         logger.info("User {} starting unified AI-powered device onboarding", userEmail);
         
+        // Log file information for debugging
+        if (manualFile != null) {
+            logger.info("Manual file received: name={}, size={} bytes, content-type={}", 
+                manualFile.getOriginalFilename(), manualFile.getSize(), manualFile.getContentType());
+        }
+        if (datasheetFile != null) {
+            logger.info("Datasheet file received: name={}, size={} bytes, content-type={}", 
+                datasheetFile.getOriginalFilename(), datasheetFile.getSize(), datasheetFile.getContentType());
+        }
+        if (certificateFile != null) {
+            logger.info("Certificate file received: name={}, size={} bytes, content-type={}", 
+                certificateFile.getOriginalFilename(), certificateFile.getSize(), certificateFile.getContentType());
+        }
+        
         try {
             // Parse device data
             DeviceCreateWithFileRequest deviceRequest = objectMapper.readValue(deviceData, DeviceCreateWithFileRequest.class);
+            logger.info("Device data parsed successfully: name={}, type={}", deviceRequest.getName(), deviceRequest.getType());
             
             // Use unified onboarding service for sequential workflow
             DeviceCreateResponse response = unifiedOnboardingService.completeUnifiedOnboarding(
@@ -528,7 +544,7 @@ public class DeviceController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            logger.error("Failed to onboard device with AI: {}", e.getMessage());
+            logger.error("Failed to onboard device with AI: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().build();
         }
     }
@@ -772,6 +788,15 @@ public class DeviceController {
                 "role", user.getRole()
             )
         ));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, String>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e) {
+        logger.error("File upload size exceeded: {}", e.getMessage());
+        Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("error", "File size too large");
+        errorResponse.put("message", "The uploaded file exceeds the maximum allowed size of 500MB. Please try with a smaller file.");
+        return ResponseEntity.status(413).body(errorResponse);
     }
 
     // Helper methods

@@ -106,6 +106,13 @@ public class PDFProcessingConfig {
         log.info("Max Retries: {}", maxRetries);
         log.info("Async Core Pool Size: {}", async.getCorePoolSize());
         log.info("Async Max Pool Size: {}", async.getMaxPoolSize());
+        
+        // Log authentication status
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            log.info("No API key configured - using unauthenticated access");
+        } else {
+            log.info("API key configured - using authenticated access");
+        }
 
         // Validate configuration
         if (baseUrl == null || baseUrl.trim().isEmpty()) {

@@ -772,6 +772,9 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
         // Add authentication if configured
         if (config.getApiKey() != null && !config.getApiKey().isEmpty()) {
             headers.set("Authorization", "Bearer " + config.getApiKey());
+            log.debug("Added authentication header for PDF processing request");
+        } else {
+            log.debug("No authentication header added - using unauthenticated access");
         }
         
         return headers;

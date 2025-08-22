@@ -97,6 +97,78 @@ public class MaintenanceScheduleService {
         log.info("Fetching maintenance tasks for device: {}", deviceId);
         return deviceMaintenanceRepository.findByDeviceId(deviceId);
     }
+
+    /**
+     * Get a maintenance task by ID.
+     */
+    public Optional<DeviceMaintenance> getMaintenanceById(String id) {
+        log.info("Fetching maintenance task by ID: {}", id);
+        return deviceMaintenanceRepository.findById(id);
+    }
+
+    /**
+     * Create a new maintenance task.
+     */
+    public DeviceMaintenance createMaintenance(DeviceMaintenance maintenance) {
+        log.info("Creating maintenance task for device: {}", maintenance.getDeviceId());
+        return deviceMaintenanceRepository.save(maintenance);
+    }
+
+    /**
+     * Update a maintenance task.
+     */
+    public DeviceMaintenance updateMaintenance(DeviceMaintenance maintenance) {
+        log.info("Updating maintenance task: {}", maintenance.getId());
+        return deviceMaintenanceRepository.save(maintenance);
+    }
+
+    /**
+     * Delete a maintenance task.
+     */
+    public void deleteMaintenance(String id) {
+        log.info("Deleting maintenance task: {}", id);
+        deviceMaintenanceRepository.deleteById(id);
+    }
+
+    /**
+     * Get all maintenance tasks for an organization.
+     */
+    public List<DeviceMaintenance> getAllMaintenanceByOrganization(String organizationId) {
+        log.info("Fetching all maintenance tasks for organization: {}", organizationId);
+        return deviceMaintenanceRepository.findByOrganizationId(organizationId);
+    }
+
+    /**
+     * Get overdue maintenance tasks for an organization.
+     */
+    public List<DeviceMaintenance> getOverdueMaintenanceByOrganization(String organizationId) {
+        log.info("Fetching overdue maintenance tasks for organization: {}", organizationId);
+        // Get all maintenance for organization and filter for overdue ones
+        List<DeviceMaintenance> allMaintenance = deviceMaintenanceRepository.findByOrganizationId(organizationId);
+        LocalDate today = LocalDate.now();
+        return allMaintenance.stream()
+                .filter(maintenance -> maintenance.getNextMaintenance() != null && 
+                        maintenance.getNextMaintenance().isBefore(today) && 
+                        maintenance.getStatus() == DeviceMaintenance.Status.ACTIVE)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Get upcoming maintenance tasks for an organization.
+     */
+    public List<DeviceMaintenance> getUpcomingMaintenanceByOrganization(String organizationId) {
+        log.info("Fetching upcoming maintenance tasks for organization: {}", organizationId);
+        // Get all maintenance for organization and filter for upcoming ones (next 30 days)
+        List<DeviceMaintenance> allMaintenance = deviceMaintenanceRepository.findByOrganizationId(organizationId);
+        LocalDate today = LocalDate.now();
+        LocalDate thirtyDaysFromNow = today.plusDays(30);
+        return allMaintenance.stream()
+                .filter(maintenance -> maintenance.getNextMaintenance() != null && 
+                        !maintenance.getNextMaintenance().isBefore(today) && 
+                        !maintenance.getNextMaintenance().isAfter(thirtyDaysFromNow) && 
+                        maintenance.getStatus() == DeviceMaintenance.Status.ACTIVE)
+                .collect(java.util.stream.Collectors.toList());
+    }
     
     /**
      * Create maintenance tasks from PDF with proper date calculations.
