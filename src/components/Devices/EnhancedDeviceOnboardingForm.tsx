@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Upload, FileText, Settings, Bot, CheckCircle, AlertTriangle, MessageSquare, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
-import { onboardingService, OnboardingProgress } from '../../services/onboardingService';
+import { unifiedOnboardingService, UnifiedOnboardingProgress } from '../../services/unifiedOnboardingService';
 import { deviceAPI, ruleAPI, knowledgeAPI } from '../../services/api';
 import EnhancedOnboardingLoader from '../Loading/EnhancedOnboardingLoader';
 import { DeviceChatInterface } from './DeviceChatInterface';
@@ -81,6 +81,27 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const [progress, setProgress] = useState(0);
   const [currentSubStage, setCurrentSubStage] = useState('');
   const [onboardingStartTime, setOnboardingStartTime] = useState<number>(0);
+  const [stepDetails, setStepDetails] = useState<{
+    currentStep: number;
+    totalSteps: number;
+    stepName: string;
+  } | undefined>(undefined);
+
+  // Add dummy data for skipped connection settings
+  const getDummyConnectionData = useCallback(() => {
+    return {
+      brokerUrl: 'mqtt://localhost:1883',
+      topic: 'device/default/data',
+      username: 'default_user',
+      password: 'default_password',
+      httpEndpoint: 'https://api.example.com/device/data',
+      httpMethod: 'POST',
+      httpHeaders: '{"Content-Type": "application/json"}',
+      coapHost: 'coap://localhost',
+      coapPort: '5683',
+      coapPath: '/device/data'
+    };
+  }, []);
 
   const handleInputChange = useCallback((field: keyof DeviceFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -106,13 +127,14 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     }
 
     if (step === 2) {
+      // Only validate if user has provided data (not skipped)
       if (formData.connectionType === 'MQTT') {
-        if (!formData.brokerUrl?.trim()) newErrors.brokerUrl = 'Broker URL is required';
-        if (!formData.topic?.trim()) newErrors.topic = 'Topic is required';
+        if (formData.brokerUrl?.trim() && !formData.topic?.trim()) newErrors.topic = 'Topic is required when broker URL is provided';
+        if (formData.topic?.trim() && !formData.brokerUrl?.trim()) newErrors.brokerUrl = 'Broker URL is required when topic is provided';
       } else if (formData.connectionType === 'HTTP') {
-        if (!formData.httpEndpoint?.trim()) newErrors.httpEndpoint = 'Endpoint URL is required';
+        if (formData.httpEndpoint?.trim() && !formData.httpEndpoint?.trim()) newErrors.httpEndpoint = 'Endpoint URL is required';
       } else if (formData.connectionType === 'COAP') {
-        if (!formData.coapHost?.trim()) newErrors.coapHost = 'Host is required';
+        if (formData.coapHost?.trim() && !formData.coapHost?.trim()) newErrors.coapHost = 'Host is required';
       }
     }
 
@@ -134,6 +156,34 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     }
   }, [currentStep]);
 
+  // Add skip functionality for step 2
+  const handleSkipStep2 = useCallback(() => {
+    const dummyData = getDummyConnectionData();
+    
+    // Fill in any empty required fields with dummy data
+    const updatedFormData = {
+      ...formData,
+      brokerUrl: formData.brokerUrl || dummyData.brokerUrl,
+      topic: formData.topic || dummyData.topic,
+      username: formData.username || dummyData.username,
+      password: formData.password || dummyData.password,
+      httpEndpoint: formData.httpEndpoint || dummyData.httpEndpoint,
+      httpMethod: formData.httpMethod || dummyData.httpMethod,
+      httpHeaders: formData.httpHeaders || dummyData.httpHeaders,
+      coapHost: formData.coapHost || dummyData.coapHost,
+      coapPort: formData.coapPort || dummyData.coapPort,
+      coapPath: formData.coapPath || dummyData.coapPath
+    };
+    
+    setFormData(updatedFormData);
+    setCurrentStep(3);
+    
+    logInfo('EnhancedDeviceOnboardingForm', 'Step 2 skipped, using dummy connection data', {
+      deviceName: formData.deviceName,
+      connectionType: formData.connectionType
+    });
+  }, [formData, getDummyConnectionData]);
+
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -153,46 +203,75 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     setCurrentProcess('pdf');
 
     try {
-      // Use the new onboarding service
-      const result = await onboardingService.completeOnboarding(
+      logInfo('EnhancedDeviceOnboardingForm', 'Starting unified onboarding process', {
+        deviceName: formData.deviceName,
+        fileName: uploadedFile.file.name,
+        fileSize: uploadedFile.file.size
+      });
+
+      // Use the new unified onboarding service with detailed progress tracking
+      const result = await unifiedOnboardingService.completeUnifiedOnboarding(
         formData,
         uploadedFile.file,
-        (progress: OnboardingProgress) => {
+        (progress: UnifiedOnboardingProgress) => {
           setProgress(progress.progress);
           setCurrentSubStage(progress.message);
+          
           if (progress.subMessage) {
             logInfo('Onboarding', progress.subMessage);
           }
           
-          // Update current process based on stage
+          // Update current process based on stage with detailed step information
           switch (progress.stage) {
             case 'upload':
               setCurrentProcess('pdf');
+              logInfo('Onboarding', 'Processing upload stage', { progress: progress.progress });
               break;
             case 'device':
               setCurrentProcess('rules');
+              logInfo('Onboarding', 'Processing device creation stage', { progress: progress.progress });
               break;
             case 'rules':
               setCurrentProcess('rules');
+              logInfo('Onboarding', 'Processing rules generation stage', { progress: progress.progress });
               break;
             case 'maintenance':
               setCurrentProcess('rules');
+              logInfo('Onboarding', 'Processing maintenance schedule stage with date formatting', { progress: progress.progress });
               break;
             case 'safety':
               setCurrentProcess('rules');
-              break;
-            case 'knowledge':
-              setCurrentProcess('knowledgebase');
+              logInfo('Onboarding', 'Processing safety precautions stage', { progress: progress.progress });
               break;
             case 'complete':
               setCurrentProcess('knowledgebase');
+              logInfo('Onboarding', 'Processing completion stage', { progress: progress.progress });
               break;
+          }
+          
+          // Log detailed step information
+          if (progress.stepDetails) {
+            setStepDetails(progress.stepDetails);
+            logInfo('Onboarding', `Step ${progress.stepDetails.currentStep}/${progress.stepDetails.totalSteps}: ${progress.stepDetails.stepName} - ${progress.message}`);
           }
         }
       );
 
-      // Set success result
-      setOnboardingResult(result);
+      // Set success result with processing time
+      const finalProcessingTime = result.processingTime || (Date.now() - onboardingStartTime);
+      setOnboardingResult({
+        ...result,
+        processingTime: finalProcessingTime
+      });
+
+      logInfo('EnhancedDeviceOnboardingForm', 'Onboarding process completed successfully', {
+        deviceId: result.deviceId,
+        deviceName: result.deviceName,
+        processingTime: finalProcessingTime,
+        rulesGenerated: result.rulesGenerated,
+        maintenanceItems: result.maintenanceItems,
+        safetyPrecautions: result.safetyPrecautions
+      });
 
       setTimeout(() => {
         setShowOnboardingLoader(false);
@@ -200,13 +279,13 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       }, 1000);
 
     } catch (error) {
-      logError('Onboarding', 'Onboarding process failed', error instanceof Error ? error : new Error('Unknown error'));
+      logError('EnhancedDeviceOnboardingForm', 'Onboarding process failed', error instanceof Error ? error : new Error('Unknown error'));
       setShowOnboardingLoader(false);
       
       // Show error message to user
       alert(`Onboarding failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }, [uploadedFile, formData]);
+  }, [uploadedFile, formData, onboardingStartTime]);
 
   const handleSubmit = useCallback(async () => {
     if (!validateStep(currentStep)) return;
@@ -333,6 +412,15 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       <div className="text-center">
         <h3 className="text-2xl font-bold text-gray-800 mb-2">Connection Settings</h3>
         <p className="text-gray-600">Configure how your device will communicate</p>
+        <div className="mt-4">
+          <button
+            onClick={handleSkipStep2}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-all duration-300 hover:bg-gray-100 rounded-lg border border-gray-300"
+          >
+            <span>⏭️</span>
+            Skip this step
+          </button>
+        </div>
       </div>
 
       {/* Input Fields */}
@@ -627,7 +715,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         )}
       </div>
     </div>
-  ), [formData.connectionType, formData.brokerUrl, formData.topic, formData.username, formData.password, formData.httpEndpoint, formData.httpMethod, formData.httpHeaders, formData.coapHost, formData.coapPort, formData.coapPath, errors, handleInputChange]);
+  ), [formData.connectionType, formData.brokerUrl, formData.topic, formData.username, formData.password, formData.httpEndpoint, formData.httpMethod, formData.httpHeaders, formData.coapHost, formData.coapPort, formData.coapPath, errors, handleInputChange, handleSkipStep2]);
 
   const renderStep3 = useCallback(() => (
     <div className="w-full max-w-4xl mx-auto space-y-8">
@@ -705,6 +793,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         onComplete={() => {}}
         pdfFileName={uploadedFile?.file.name}
         currentSubStage={currentSubStage}
+        stepDetails={stepDetails}
       />
     </div>
   ), [currentProcess, progress, uploadedFile?.file.name, currentSubStage]);
@@ -730,7 +819,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           </div>
           <div>
             <span className="text-green-600 font-medium">Processing Time:</span>
-            <p className="text-green-800 font-semibold">{onboardingStartTime ? Math.round((Date.now() - onboardingStartTime) / 1000) : 0}s</p>
+            <p className="text-green-800 font-semibold">{onboardingResult?.processingTime ? Math.round(onboardingResult.processingTime / 1000) : 0}s</p>
           </div>
           <div>
             <span className="text-green-600 font-medium">AI Rules:</span>
@@ -761,35 +850,33 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     <>
       <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
         <div className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col border border-white/30">
-          {/* Header */}
-          <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 text-white flex-shrink-0 rounded-t-3xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-3xl font-bold drop-shadow-lg">
-                  {showOnboardingLoader ? 'Processing Device...' : 
-                   showSuccessMessage ? 'Onboarding Complete!' :
-                   'Device Onboarding'}
-                </h2>
-                <p className="text-white/90 mt-2 text-lg">
-                  {showOnboardingLoader 
-                    ? 'Please wait while we process your device documentation' 
-                    : showSuccessMessage
-                    ? 'Your device has been successfully onboarded'
-                    : 'Enter basic device information and specifications'
-                  }
-                </p>
+          {/* Header - Hidden during loading */}
+          {!showOnboardingLoader && (
+            <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 text-white flex-shrink-0 rounded-t-3xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-bold drop-shadow-lg">
+                    {showSuccessMessage ? 'Onboarding Complete!' : 'Device Onboarding'}
+                  </h2>
+                  <p className="text-white/90 mt-2 text-lg">
+                    {showSuccessMessage
+                      ? 'Your device has been successfully onboarded'
+                      : 'Enter basic device information and specifications'
+                    }
+                  </p>
+                </div>
+                {!showSuccessMessage && (
+                  <button
+                    onClick={onCancel}
+                    className="p-3 hover:bg-white/20 rounded-xl transition-all duration-300 hover:scale-110"
+                  >
+                    <span className="text-2xl font-bold">×</span>
+                  </button>
+                )}
               </div>
-              {!showOnboardingLoader && !showSuccessMessage && (
-                <button
-                  onClick={onCancel}
-                  className="p-3 hover:bg-white/20 rounded-xl transition-all duration-300 hover:scale-110"
-                >
-                  <span className="text-2xl font-bold">×</span>
-                </button>
-              )}
+              {renderProgressBar()}
             </div>
-            {renderProgressBar()}
-          </div>
+          )}
 
           {/* Content - Scrollable */}
           <div className="flex-1 overflow-y-auto p-8 min-h-0 bg-gradient-to-br from-gray-50/50 to-white/30">

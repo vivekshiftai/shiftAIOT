@@ -9,13 +9,14 @@ import {
   ArrowRight as ArrowRightIcon,
   ArrowLeft as ArrowLeftIcon,
   Brain,
-  Sparkles,
-  Loader2,
-  FileSearch,
+  Zap,
+  Loader,
+  Search,
   Bot
 } from 'lucide-react';
 
-import { pdfProcessingService } from '../../services/pdfprocess';
+import { unifiedOnboardingService, UnifiedOnboardingProgress } from '../../services/unifiedOnboardingService';
+import { logInfo, logError } from '../../utils/logger';
 
 interface DeviceFormData {
   name: string;
@@ -217,58 +218,51 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
     setIsProcessingPDF(true);
     setProcessingProgress(0);
 
-    // Start progress simulation
-    const progressInterval = setInterval(() => {
-      setProcessingProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(progressInterval);
-          return 90; // Stop at 90% until API call completes
-        }
-        return prev + 10;
-      });
-    }, 200);
-
     try {
-      // Step 1: Upload the first PDF file
+      // Check if we have files to process
       if (fileUploads.length === 0) {
         throw new Error('No PDF files to process');
       }
 
       const firstFile = fileUploads[0].file;
-      console.log('Uploading PDF:', firstFile.name);
+      logInfo('AddDeviceForm', 'Starting unified onboarding process with PDF', { 
+        fileName: firstFile.name,
+        fileSize: firstFile.size,
+        deviceName: formData.name
+      });
       
-      // Upload PDF directly to PDF processing service
-      const uploadResult = await pdfProcessingService.uploadPDF(firstFile);
-      console.log('PDF uploaded successfully:', uploadResult);
-      const pdfFilename = uploadResult.pdf_name || firstFile.name;
-
-      // Step 2: Generate IoT Rules from the uploaded PDF
-      console.log('Generating IoT rules...');
-      const rulesResult = await pdfProcessingService.generateRules(pdfFilename);
-      console.log('IoT rules generated:', rulesResult);
-
-      // Step 3: Generate Maintenance Schedule
-      console.log('Generating maintenance schedule...');
-      const maintenanceResult = await pdfProcessingService.generateMaintenance(pdfFilename);
-      console.log('Maintenance schedule generated:', maintenanceResult);
-
-      // Step 4: Generate Safety Information
-      console.log('Generating safety information...');
-      const safetyResult = await pdfProcessingService.generateSafety(pdfFilename);
-      console.log('Safety information generated:', safetyResult);
+      // Use the unified onboarding service
+      const result = await unifiedOnboardingService.completeUnifiedOnboarding(
+        formData,
+        firstFile,
+        (progress: UnifiedOnboardingProgress) => {
+          setProcessingProgress(progress.progress);
+          logInfo('AddDeviceForm', 'Onboarding progress update', { 
+            stage: progress.stage, 
+            message: progress.message,
+            progress: progress.progress 
+          });
+        }
+      );
       
-      // Update progress to 100%
-      setProcessingProgress(100);
+      logInfo('AddDeviceForm', 'Unified onboarding completed successfully', {
+        deviceId: result.deviceId,
+        deviceName: result.deviceName,
+        processingTime: result.processingTime,
+        rulesGenerated: result.rulesGenerated,
+        maintenanceItems: result.maintenanceItems,
+        safetyPrecautions: result.safetyPrecautions
+      });
 
-      // Convert API responses to AIGeneratedRule format
-      const apiRules: AIGeneratedRule[] = rulesResult.rules.map((rule, index) => ({
+      // Convert the result to AIGeneratedRule format for display
+      const apiRules: AIGeneratedRule[] = (result.pdfData.rulesData || []).map((rule: any, index: number) => ({
         id: `rule_${index}`,
-        name: `${rule.category} Rule`,
-        description: `AI-generated ${rule.category} rule based on device documentation`,
-        condition: rule.condition,
-        action: rule.action,
-        priority: rule.priority.toUpperCase() as 'LOW' | 'MEDIUM' | 'HIGH',
-        isSelected: true // Default to selected
+        name: rule.name || `${rule.metric} Rule`,
+        description: rule.description || `AI-generated rule for ${rule.metric}`,
+        condition: `${rule.metric} ${rule.threshold}`,
+        action: rule.consequence || 'Send notification',
+        priority: 'MEDIUM' as 'LOW' | 'MEDIUM' | 'HIGH',
+        isSelected: true
       }));
 
       setAiGeneratedRules(apiRules);
@@ -276,6 +270,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
       setCurrentStep(5);
 
     } catch (error) {
+      logError('AddDeviceForm', 'Error processing PDF with unified service', error instanceof Error ? error : new Error('Unknown error'));
       console.error('Error processing PDF with external API:', error);
       
       // Fallback to mock rules if API fails

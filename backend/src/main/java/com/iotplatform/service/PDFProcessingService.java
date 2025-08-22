@@ -1,255 +1,110 @@
 package com.iotplatform.service;
 
-import java.time.LocalDate;
+import com.iotplatform.dto.*;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.stream.Collectors;
-import java.util.Comparator;
+import java.util.concurrent.CompletableFuture;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import com.iotplatform.model.Device;
-import com.iotplatform.model.DeviceMaintenance;
-import com.iotplatform.model.DeviceSafetyPrecaution;
-import com.iotplatform.model.Rule;
-import com.iotplatform.model.RuleCondition;
-import com.iotplatform.model.RuleAction;
-import com.iotplatform.repository.DeviceMaintenanceRepository;
-import com.iotplatform.repository.DeviceSafetyPrecautionRepository;
-import com.iotplatform.repository.RuleRepository;
-import com.iotplatform.repository.RuleConditionRepository;
-import com.iotplatform.repository.RuleActionRepository;
-import com.iotplatform.dto.DeviceCreateWithFileRequest;
-
-@Service
-public class PDFProcessingService {
-    
-    private static final Logger logger = LoggerFactory.getLogger(PDFProcessingService.class);
-    
-    @Autowired
-    private RuleRepository ruleRepository;
-    
-    @Autowired
-    private RuleConditionRepository ruleConditionRepository;
-    
-    @Autowired
-    private RuleActionRepository ruleActionRepository;
-    
-    @Autowired
-    private DeviceMaintenanceRepository deviceMaintenanceRepository;
-    
-    @Autowired
-    private DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository;
+/**
+ * Service interface for PDF processing operations.
+ * Handles all interactions with the external MinerU PDF processing service.
+ * 
+ * @author IoT Platform Team
+ * @version 1.0
+ */
+public interface PDFProcessingService {
     
     /**
-     * Save all PDF processing results to the database
+     * Uploads a PDF file to the processing service and stores metadata.
+     * 
+     * @param file The PDF file to upload
+     * @param organizationId The organization ID for data isolation
+     * @return PDF upload response with processing details
+     * @throws PDFProcessingException if upload fails
      */
-    @Transactional
-    public void savePDFProcessingResults(Device device, DeviceCreateWithFileRequest.PDFResults pdfResults) {
-        logger.info("Saving PDF processing results for device: {}", device.getId());
-        
-        try {
-            // Save IoT Rules
-            if (pdfResults.getIotRules() != null && !pdfResults.getIotRules().isEmpty()) {
-                saveIoTRules(device, pdfResults.getIotRules());
-            }
-            
-            // Save Maintenance Data
-            if (pdfResults.getMaintenanceData() != null && !pdfResults.getMaintenanceData().isEmpty()) {
-                saveMaintenanceData(device, pdfResults.getMaintenanceData());
-            }
-            
-            // Save Safety Precautions
-            if (pdfResults.getSafetyPrecautions() != null && !pdfResults.getSafetyPrecautions().isEmpty()) {
-                saveSafetyPrecautions(device, pdfResults.getSafetyPrecautions());
-            }
-            
-            logger.info("Successfully saved PDF processing results for device: {}", device.getId());
-            
-        } catch (Exception e) {
-            logger.error("Error saving PDF processing results for device: {}", device.getId(), e);
-            throw new RuntimeException("Failed to save PDF processing results", e);
-        }
-    }
+    PDFUploadResponse uploadPDF(MultipartFile file, String organizationId) throws PDFProcessingException;
     
     /**
-     * Save IoT Rules from PDF processing
+     * Queries a PDF document with natural language and stores the interaction.
+     * 
+     * @param request The query request containing PDF name and query text
+     * @param userId The user ID for audit trail
+     * @param organizationId The organization ID for data isolation
+     * @return Query response with AI-generated answer
+     * @throws PDFProcessingException if query fails
      */
-    private void saveIoTRules(Device device, List<DeviceCreateWithFileRequest.IoTRule> iotRules) {
-        logger.info("Saving {} IoT rules for device: {}", iotRules.size(), device.getId());
-        
-        for (DeviceCreateWithFileRequest.IoTRule ruleData : iotRules) {
-            Rule rule = new Rule();
-            rule.setName(ruleData.getDeviceName() + " - " + ruleData.getRuleType() + " Rule");
-            rule.setDescription(ruleData.getDescription());
-            rule.setActive(true);
-            rule.setOrganizationId(device.getOrganizationId());
-            
-            Rule savedRule = ruleRepository.save(rule);
-            
-            // Create rule condition
-            RuleCondition condition = new RuleCondition();
-            condition.setRule(savedRule);
-            condition.setDeviceId(device.getId());
-            condition.setMetric("condition");
-            condition.setValue(ruleData.getCondition());
-            condition.setType(RuleCondition.ConditionType.TELEMETRY_THRESHOLD);
-            condition.setOperator(RuleCondition.Operator.EQUALS);
-            
-            ruleConditionRepository.save(condition);
-            
-            // Create rule action
-            RuleAction action = new RuleAction();
-            action.setRule(savedRule);
-            action.setType(RuleAction.ActionType.NOTIFICATION);
-            // Note: Using config map instead of actionData string
-            action.setConfig(Map.of("message", ruleData.getAction(), "priority", ruleData.getPriority()));
-            
-            ruleActionRepository.save(action);
-            
-            logger.info("Created rule with condition and action: {} for device: {}", savedRule.getName(), device.getId());
-        }
-    }
+    PDFQueryResponse queryPDF(PDFQueryRequest request, Long userId, String organizationId) throws PDFProcessingException;
     
     /**
-     * Save Maintenance Data from PDF processing
+     * Lists all PDF documents for an organization with pagination.
+     * 
+     * @param organizationId The organization ID for data isolation
+     * @param page Page number (0-based)
+     * @param size Page size
+     * @return Paginated list of PDF documents
+     * @throws PDFProcessingException if listing fails
      */
-    private void saveMaintenanceData(Device device, List<DeviceCreateWithFileRequest.MaintenanceData> maintenanceData) {
-        logger.info("Saving {} maintenance items for device: {}", maintenanceData.size(), device.getId());
-        
-        for (DeviceCreateWithFileRequest.MaintenanceData maintenanceItem : maintenanceData) {
-            DeviceMaintenance maintenance = new DeviceMaintenance();
-            maintenance.setTaskName(maintenanceItem.getComponentName());
-            maintenance.setDevice(device);
-            maintenance.setDeviceName(device.getName());
-            maintenance.setComponentName(maintenanceItem.getComponentName());
-            maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.PREVENTIVE);
-            maintenance.setFrequency(maintenanceItem.getFrequency());
-            maintenance.setDescription(maintenanceItem.getDescription());
-            maintenance.setPriority(DeviceMaintenance.Priority.MEDIUM);
-            maintenance.setStatus(DeviceMaintenance.Status.ACTIVE);
-            maintenance.setOrganizationId(device.getOrganizationId());
-            
-            // Set next maintenance date based on frequency
-            maintenance.setNextMaintenance(calculateNextMaintenanceDate(maintenanceItem.getFrequency()));
-            
-            deviceMaintenanceRepository.save(maintenance);
-        }
-    }
+    PDFListResponse listPDFs(String organizationId, int page, int size) throws PDFProcessingException;
     
     /**
-     * Save Safety Precautions from PDF processing
+     * Generates IoT rules from a PDF document asynchronously.
+     * 
+     * @param pdfName The name of the PDF to process
+     * @param deviceId The device ID to associate rules with
+     * @param organizationId The organization ID for data isolation
+     * @return CompletableFuture for async processing
+     * @throws PDFProcessingException if generation fails
      */
-    private void saveSafetyPrecautions(Device device, List<DeviceCreateWithFileRequest.SafetyPrecaution> safetyPrecautions) {
-        logger.info("Saving {} safety precautions for device: {}", safetyPrecautions.size(), device.getId());
-        
-        for (DeviceCreateWithFileRequest.SafetyPrecaution safetyItem : safetyPrecautions) {
-            DeviceSafetyPrecaution safety = new DeviceSafetyPrecaution();
-            safety.setDeviceId(device.getId());
-            safety.setTitle(safetyItem.getTitle());
-            safety.setDescription(safetyItem.getDescription());
-            safety.setSeverity(safetyItem.getSeverity().toUpperCase());
-            safety.setCategory(safetyItem.getCategory());
-            safety.setRecommendedAction(safetyItem.getRecommendedAction());
-            safety.setIsActive(true);
-            safety.setOrganizationId(device.getOrganizationId());
-            
-            deviceSafetyPrecautionRepository.save(safety);
-        }
-    }
+    CompletableFuture<RulesGenerationResponse> generateRulesAsync(String pdfName, String deviceId, String organizationId) throws PDFProcessingException;
     
     /**
-     * Calculate next maintenance date based on frequency
+     * Generates maintenance schedule from a PDF document asynchronously.
+     * 
+     * @param pdfName The name of the PDF to process
+     * @param deviceId The device ID to associate maintenance with
+     * @param organizationId The organization ID for data isolation
+     * @return CompletableFuture for async processing
+     * @throws PDFProcessingException if generation fails
      */
-    private LocalDate calculateNextMaintenanceDate(String frequency) {
-        LocalDate today = LocalDate.now();
-        
-        switch (frequency.toLowerCase()) {
-            case "daily":
-                return today.plusDays(1);
-            case "weekly":
-                return today.plusWeeks(1);
-            case "monthly":
-                return today.plusMonths(1);
-            case "quarterly":
-                return today.plusMonths(3);
-            case "semi-annually":
-                return today.plusMonths(6);
-            case "annually":
-            case "yearly":
-                return today.plusYears(1);
-            default:
-                return today.plusMonths(1); // Default to monthly
-        }
-    }
+    CompletableFuture<MaintenanceGenerationResponse> generateMaintenanceAsync(String pdfName, String deviceId, String organizationId) throws PDFProcessingException;
     
     /**
-     * Get upcoming maintenance items for dashboard (top 3 due soon)
+     * Generates safety information from a PDF document asynchronously.
+     * 
+     * @param pdfName The name of the PDF to process
+     * @param deviceId The device ID to associate safety info with
+     * @param organizationId The organization ID for data isolation
+     * @return CompletableFuture for async processing
+     * @throws PDFProcessingException if generation fails
      */
-    public List<DeviceMaintenance> getUpcomingMaintenance(String organizationId) {
-        LocalDate tomorrow = LocalDate.now().plusDays(1);
-        LocalDate nextWeek = LocalDate.now().plusDays(7);
-        
-        List<DeviceMaintenance> allMaintenance = deviceMaintenanceRepository.findByOrganizationId(organizationId);
-        
-        // Filter for upcoming maintenance and sort by next maintenance date
-        List<DeviceMaintenance> upcomingMaintenance = allMaintenance.stream()
-            .filter(maint -> maint.getNextMaintenance() != null && 
-                           maint.getNextMaintenance().isAfter(LocalDate.now().minusDays(1)) &&
-                           maint.getStatus() == DeviceMaintenance.Status.ACTIVE)
-            .sorted(Comparator.comparing(DeviceMaintenance::getNextMaintenance))
-            .limit(3)
-            .collect(Collectors.toList());
-        
-        logger.info("Found {} upcoming maintenance items for organization: {}", upcomingMaintenance.size(), organizationId);
-        return upcomingMaintenance;
-    }
+    CompletableFuture<SafetyGenerationResponse> generateSafetyAsync(String pdfName, String deviceId, String organizationId) throws PDFProcessingException;
     
     /**
-     * Get maintenance count for dashboard
+     * Deletes a PDF document from both external service and local database.
+     * 
+     * @param pdfName The name of the PDF to delete
+     * @param organizationId The organization ID for data isolation
+     * @return Deletion confirmation response
+     * @throws PDFProcessingException if deletion fails
      */
-    public long getMaintenanceCount(String organizationId) {
-        return deviceMaintenanceRepository.findByOrganizationId(organizationId).stream()
-            .filter(maint -> maint.getStatus() == DeviceMaintenance.Status.ACTIVE)
-            .count();
-    }
+    PDFDeleteResponse deletePDF(String pdfName, String organizationId) throws PDFProcessingException;
     
     /**
-     * Get all maintenance items for a device
+     * Checks the health status of the external PDF processing service.
+     * 
+     * @return Health check response with service status
+     * @throws PDFProcessingException if health check fails
      */
-    public List<DeviceMaintenance> getDeviceMaintenance(String deviceId) {
-        List<DeviceMaintenance> maintenance = deviceMaintenanceRepository.findByDeviceId(deviceId);
-        logger.info("Found {} maintenance items for device: {}", maintenance.size(), deviceId);
-        return maintenance;
-    }
+    HealthCheckResponse healthCheck() throws PDFProcessingException;
     
     /**
-     * Get all safety precautions for a device
+     * Gets processing status for async operations.
+     * 
+     * @param operationId The operation ID to check
+     * @param organizationId The organization ID for data isolation
+     * @return Processing status response
+     * @throws PDFProcessingException if status check fails
      */
-    public List<DeviceSafetyPrecaution> getDeviceSafetyPrecautions(String deviceId) {
-        // Return all safety precautions for the device (both active and inactive)
-        List<DeviceSafetyPrecaution> precautions = deviceSafetyPrecautionRepository.findByDeviceId(deviceId);
-        logger.info("Found {} safety precautions for device: {}", precautions.size(), deviceId);
-        return precautions;
-    }
-    
-    /**
-     * Get all rules for a device
-     */
-    public List<Rule> getDeviceRules(String deviceId) {
-        try {
-            // Use a more direct approach to avoid lazy loading issues
-            List<Rule> rules = ruleRepository.findByDeviceId(deviceId);
-            logger.info("Found {} rules for device: {}", rules.size(), deviceId);
-            return rules;
-        } catch (Exception e) {
-            logger.error("Error fetching rules for device: {}", deviceId, e);
-            return new ArrayList<>();
-        }
-    }
+    ProcessingStatusResponse getProcessingStatus(String operationId, String organizationId) throws PDFProcessingException;
 }

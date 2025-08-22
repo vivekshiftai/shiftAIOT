@@ -283,6 +283,53 @@ CREATE TABLE IF NOT EXISTS conversation_configs (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- PDF Documents Table
+CREATE TABLE IF NOT EXISTS pdf_documents (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    original_filename VARCHAR(255) NOT NULL,
+    file_size BIGINT NOT NULL,
+    chunks_processed INTEGER,
+    processing_time VARCHAR(100),
+    collection_name VARCHAR(255),
+    status VARCHAR(50) NOT NULL DEFAULT 'UPLOADING',
+    organization_id VARCHAR(255) NOT NULL,
+    uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    
+    INDEX idx_pdf_org_id (organization_id),
+    INDEX idx_pdf_name_org (name, organization_id),
+    INDEX idx_pdf_uploaded_at (uploaded_at),
+    INDEX idx_pdf_status (status),
+    INDEX idx_pdf_deleted (deleted)
+);
+
+-- PDF Queries Table
+CREATE TABLE IF NOT EXISTS pdf_queries (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    pdf_document_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    user_query TEXT NOT NULL,
+    ai_response TEXT NOT NULL,
+    chunks_used TEXT,
+    processing_time VARCHAR(100),
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    error_message TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
+    
+    FOREIGN KEY (pdf_document_id) REFERENCES pdf_documents(id),
+    INDEX idx_pdf_query_doc_id (pdf_document_id),
+    INDEX idx_pdf_query_user_id (user_id),
+    INDEX idx_pdf_query_created_at (created_at),
+    INDEX idx_pdf_query_status (status),
+    INDEX idx_pdf_query_deleted (deleted)
+);
+
 -- Create all indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_organization ON users(organization_id);

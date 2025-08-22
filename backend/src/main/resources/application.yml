@@ -94,7 +94,19 @@ file:
 # PDF Processing Configuration
 pdf:
   processing:
-    url: ${PDF_PROCESSING_URL:http://20.57.36.66:8000}
+    base-url: http://20.57.36.66:8000
+    api-key: ${PDF_API_KEY:}
+    max-file-size: 52428800  # 50MB in bytes
+    connection-timeout: 30000  # 30 seconds
+    read-timeout: 60000  # 60 seconds
+    max-retries: 3
+    retry-delay: 1000  # 1 second
+    async:
+      core-pool-size: 5
+      max-pool-size: 10
+      queue-capacity: 25
+      thread-name-prefix: pdf-processing-
+      keep-alive-seconds: 60
 
 # Logging
 logging:

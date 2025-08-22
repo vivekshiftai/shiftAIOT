@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Shield, AlertCircle, Info, Plus, Edit, Trash2, Filter, Search } from 'lucide-react';
 import { deviceSafetyPrecautionsAPI } from '../../services/api';
+import { unifiedOnboardingService } from '../../services/unifiedOnboardingService';
 import Button from '../UI/Button';
+import { logInfo, logError, logWarn } from '../../utils/logger';
 
 interface DeviceSafetyPrecaution {
   id: string;
@@ -42,10 +44,39 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
   const loadSafetyPrecautions = async () => {
     try {
       setLoading(true);
-      const response = await deviceSafetyPrecautionsAPI.getAllByDevice(deviceId);
-      setSafetyPrecautions(response.data || []);
+      logInfo('DeviceSafetyInfo', 'Loading safety precautions for device', { deviceId });
+      
+      // Use unified service to get safety precautions
+      const safetyData = await unifiedOnboardingService.getDeviceSafetyPrecautions(deviceId);
+      
+      // Transform the data to match the expected format
+      const transformedPrecautions: DeviceSafetyPrecaution[] = safetyData.map((precaution: any) => ({
+        id: precaution.id || precaution.safety_id || `safety_${Math.random()}`,
+        deviceId: deviceId,
+        title: precaution.title || 'Unnamed Safety Precaution',
+        description: precaution.description || 'No description available',
+        type: precaution.type || 'warning',
+        category: precaution.category || 'general',
+        severity: precaution.severity || 'MEDIUM',
+        recommendedAction: precaution.recommendedAction || precaution.recommended_action,
+        aboutReaction: precaution.aboutReaction || precaution.about_reaction,
+        causes: precaution.causes,
+        howToAvoid: precaution.howToAvoid || precaution.how_to_avoid,
+        safetyInfo: precaution.safetyInfo || precaution.safety_info,
+        isActive: precaution.isActive !== false, // Default to true
+        createdAt: precaution.createdAt || precaution.created_at || new Date().toISOString(),
+        updatedAt: precaution.updatedAt || precaution.updated_at || new Date().toISOString()
+      }));
+      
+      setSafetyPrecautions(transformedPrecautions);
       setError(null);
+      
+      logInfo('DeviceSafetyInfo', 'Safety precautions loaded successfully', { 
+        deviceId, 
+        precautionsCount: transformedPrecautions.length 
+      });
     } catch (err) {
+      logError('DeviceSafetyInfo', 'Error loading safety precautions', err instanceof Error ? err : new Error('Unknown error'));
       console.error('Error loading safety precautions:', err);
       setError('Failed to load safety precautions');
       setSafetyPrecautions([]);

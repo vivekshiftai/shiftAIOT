@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, AlertTriangle, CheckCircle, Clock, Filter, Search, Plus, Edit, Trash2 } from 'lucide-react';
+import { unifiedOnboardingService } from '../../services/unifiedOnboardingService';
 import { ruleAPI } from '../../services/api';
 import { RuleForm } from '../Forms';
 import Modal from '../UI/Modal';
 import Button from '../UI/Button';
+import { logInfo, logError, logWarn } from '../../utils/logger';
 
 interface IoTRule {
   id: string;
@@ -45,10 +47,39 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
   const loadRules = async () => {
     try {
       setLoading(true);
-      const response = await ruleAPI.getByDevice(deviceId);
-      setRules(response.data || []);
+      logInfo('DeviceRulesDisplay', 'Loading rules for device', { deviceId });
+      
+      // Use unified service to get rules
+      const rulesData = await unifiedOnboardingService.getDeviceRules(deviceId);
+      
+      // Transform the data to match the expected format
+      const transformedRules: IoTRule[] = rulesData.map((rule: any) => ({
+        id: rule.id || rule.rule_id || `rule_${Math.random()}`,
+        name: rule.name || rule.rule_name || 'Unnamed Rule',
+        description: rule.description || 'No description available',
+        metric: rule.metric,
+        metricValue: rule.metric_value,
+        threshold: rule.threshold,
+        consequence: rule.consequence,
+        condition: rule.condition || `${rule.metric} ${rule.threshold}`,
+        action: rule.action || rule.consequence || 'Send notification',
+        priority: rule.priority || 'MEDIUM',
+        status: rule.status || 'ACTIVE',
+        category: rule.category || 'General',
+        deviceId: deviceId,
+        createdAt: rule.createdAt || rule.created_at || new Date().toISOString(),
+        updatedAt: rule.updatedAt || rule.updated_at || new Date().toISOString()
+      }));
+      
+      setRules(transformedRules);
       setError(null);
+      
+      logInfo('DeviceRulesDisplay', 'Rules loaded successfully', { 
+        deviceId, 
+        rulesCount: transformedRules.length 
+      });
     } catch (err) {
+      logError('DeviceRulesDisplay', 'Error loading rules', err instanceof Error ? err : new Error('Unknown error'));
       console.error('Error loading rules:', err);
       setError('Failed to load IoT rules');
       setRules([]);
@@ -104,43 +135,62 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
     setShowEditModal(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this rule?')) {
-      try {
-        await ruleAPI.delete(id);
-        await loadRules();
-      } catch (err) {
-        console.error('Error deleting rule:', err);
-        setError('Failed to delete rule');
-      }
+  const handleDeleteRule = async (id: string) => {
+    try {
+      logInfo('DeviceRulesDisplay', 'Deleting rule', { ruleId: id, deviceId });
+      
+      // Use direct API call for delete operation as it's not part of the unified service
+      await ruleAPI.delete(id);
+      
+      logInfo('DeviceRulesDisplay', 'Rule deleted successfully', { ruleId: id });
+      
+      // Reload rules to get updated list
+      await loadRules();
+    } catch (err) {
+      logError('DeviceRulesDisplay', 'Error deleting rule', err instanceof Error ? err : new Error('Unknown error'));
+      console.error('Error deleting rule:', err);
+      alert('Failed to delete rule');
     }
   };
 
   const handleToggleStatus = async (rule: IoTRule) => {
     try {
+      logInfo('DeviceRulesDisplay', 'Toggling rule status', { ruleId: rule.id, deviceId, newStatus: rule.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' });
       await ruleAPI.update(rule.id, {
         ...rule,
         status: rule.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
       });
+      logInfo('DeviceRulesDisplay', 'Rule status toggled successfully', { ruleId: rule.id });
       await loadRules();
     } catch (err) {
+      logError('DeviceRulesDisplay', 'Error updating rule status', err instanceof Error ? err : new Error('Unknown error'));
       console.error('Error updating rule:', err);
       setError('Failed to update rule');
     }
   };
 
-  const handleRuleSubmit = async (ruleData: any) => {
+  const handleSaveRule = async (ruleData: any) => {
     try {
+      logInfo('DeviceRulesDisplay', 'Saving rule', { ruleData, deviceId });
+      
       if (editingRule) {
+        // Update existing rule
         await ruleAPI.update(editingRule.id, { ...ruleData, deviceId });
+        logInfo('DeviceRulesDisplay', 'Rule updated successfully', { ruleId: editingRule.id });
       } else {
+        // Create new rule
         await ruleAPI.create({ ...ruleData, deviceId });
+        logInfo('DeviceRulesDisplay', 'Rule created successfully');
       }
-      await loadRules();
+      
       setShowAddModal(false);
       setShowEditModal(false);
       setEditingRule(null);
+      
+      // Reload rules to get updated list
+      await loadRules();
     } catch (err) {
+      logError('DeviceRulesDisplay', 'Error saving rule', err instanceof Error ? err : new Error('Unknown error'));
       console.error('Error saving rule:', err);
       setError('Failed to save rule');
     }
@@ -344,7 +394,7 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
                     <Edit className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(rule.id)}
+                    onClick={() => handleDeleteRule(rule.id)}
                     className="p-1 text-red-600 hover:bg-red-100 rounded"
                     title="Delete"
                   >
@@ -376,7 +426,7 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
           }}
           rule={editingRule || undefined}
           deviceId={deviceId}
-          onSubmit={handleRuleSubmit}
+          onSubmit={handleSaveRule}
         />
       </Modal>
     </div>

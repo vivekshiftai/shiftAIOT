@@ -613,8 +613,8 @@ export const KnowledgeSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Panel - PDF Document Library - 20% width */}
-        <div className="w-1/5 flex flex-col bg-white border-l border-gray-200 min-h-0">
+        {/* Right Panel - PDF Document Library - 33% width */}
+        <div className="w-1/3 flex flex-col bg-white border-l border-gray-200 min-h-0">
           {/* PDF Library Header - Fixed */}
           <div className="knowledge-fixed-header flex-shrink-0 p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-4">

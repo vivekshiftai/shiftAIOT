@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from 'react';
 
+interface StepDetails {
+  currentStep: number;
+  totalSteps: number;
+  stepName: string;
+}
+
 interface EnhancedOnboardingLoaderProps {
   isProcessing: boolean;
   currentProcess: 'pdf' | 'rules' | 'knowledgebase';
@@ -7,6 +13,7 @@ interface EnhancedOnboardingLoaderProps {
   onComplete: () => void;
   pdfFileName?: string;
   currentSubStage?: string;
+  stepDetails?: StepDetails;
 }
 
 const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
@@ -15,9 +22,9 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
   progress,
   onComplete,
   pdfFileName,
-  currentSubStage
+  currentSubStage,
+  stepDetails
 }) => {
-
 
   const getStepInfo = () => {
     switch (currentProcess) {
@@ -55,7 +62,6 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center bg-white overflow-hidden">
 
-
       {/* Main Content Container */}
       <div className="flex flex-col items-center justify-center space-y-8 px-6 max-w-md w-full">
         
@@ -64,6 +70,19 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#20C997] to-transparent rounded-full animate-pulse opacity-30"></div>
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#20C997] to-transparent rounded-full animate-ping opacity-20" style={{ animationDelay: '0.5s' }}></div>
         </div>
+
+        {/* Detailed Step Progress */}
+        {stepDetails && (
+          <div className="text-center space-y-2">
+            <div className="flex items-center justify-center space-x-2">
+              <span className="text-sm font-medium text-gray-600">Step</span>
+              <span className="text-lg font-bold text-[#20C997]">{stepDetails.currentStep}</span>
+              <span className="text-sm text-gray-400">of</span>
+              <span className="text-lg font-bold text-gray-800">{stepDetails.totalSteps}</span>
+            </div>
+            <div className="text-sm font-semibold text-gray-800">{stepDetails.stepName}</div>
+          </div>
+        )}
 
         {/* Step Indicators */}
         <div className="flex items-center justify-center space-x-6">

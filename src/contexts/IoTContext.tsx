@@ -1,53 +1,55 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { deviceAPI, ruleAPI, notificationAPI, maintenanceAPI } from '../services/api';
-import { useAuth } from './AuthContext';
-import NotificationService from '../services/notificationService';
-import { Device, Rule, Notification, TelemetryData, Status } from '../types';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { deviceAPI, ruleAPI, notificationAPI } from '../services/api';
+import { unifiedOnboardingService } from '../services/unifiedOnboardingService';
 import { getApiConfig } from '../config/api';
+import { logInfo, logError, logWarn } from '../utils/logger';
+import { Device, Rule, Notification, TelemetryData, Status } from '../types';
 import { tokenService } from '../services/tokenService';
-import { logInfo, logWarn, logError, logComponentMount, logComponentError } from '../utils/logger';
+import NotificationService from '../services/notificationService';
+import { useAuth } from './AuthContext';
 
 interface IoTContextType {
   devices: Device[];
-  telemetryData: TelemetryData[];
   rules: Rule[];
   notifications: Notification[];
+  telemetryData: TelemetryData[];
   loading: boolean;
-  updateDeviceStatus: (deviceId: string, status: Status) => Promise<void>;
+  error: string | null;
+  updateDeviceStatus: (deviceId: string, status: Status) => void;
+  addNotification: (notification: Notification) => void;
   addTelemetryData: (data: TelemetryData) => Promise<void>;
-  createRule: (rule: Omit<Rule, 'id' | 'createdAt'>) => Promise<void>;
-  updateRule: (id: string, rule: Partial<Rule>) => Promise<void>;
+  createRule: (rule: Partial<Rule>) => Promise<void>;
+  updateRule: (id: string, ruleUpdates: Partial<Rule>) => Promise<void>;
   deleteRule: (id: string) => Promise<void>;
   toggleRule: (id: string) => Promise<void>;
-  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  refreshData: () => Promise<void>;
   refreshDevices: () => Promise<void>;
   refreshRules: () => Promise<void>;
-  refreshMaintenance: () => Promise<void>;
-  addDevice: (device: Omit<Device, 'id'>) => Promise<void>;
-  assignDevice: (deviceId: string, userId: string) => Promise<void>;
-  evaluateRules: (deviceId: string, telemetryData: TelemetryData) => Promise<void>;
+  createDevice: (device: Partial<Device>) => Promise<void>;
+  assignDeviceToUser: (deviceId: string, userId: string) => Promise<void>;
 }
 
 const IoTContext = createContext<IoTContextType | undefined>(undefined);
 
 export const useIoT = () => {
   const context = useContext(IoTContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useIoT must be used within an IoTProvider');
   }
   return context;
 };
 
 interface IoTProviderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   const [devices, setDevices] = useState<Device[]>([]);
-  const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const { user, isLoading: authLoading } = useAuth();
   const notificationService = user ? NotificationService.getInstance() : null;
@@ -144,9 +146,10 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   }, [user, authLoading]); // Add authLoading dependency to wait for AuthContext
 
   const loadData = async () => {
-    logInfo('IoT', 'Loading data from backend');
+    logInfo('IoT', 'Starting data loading process');
     setLoading(true);
-    
+    setError(null);
+
     // Add a timeout to prevent getting stuck in loading state
     const timeoutId = setTimeout(() => {
       logInfo('IoT', 'Loading timeout, setting loading to false');
@@ -228,6 +231,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   // Note: Removed periodic device refresh to prevent interference with database data
 
   const updateDeviceStatus = (deviceId: string, status: Status) => {
+    logInfo('IoT', 'Updating device status', { deviceId, status });
     setDevices((prev: Device[]) => 
       prev.map((device: Device) => 
         device.id === deviceId ? { ...device, status } : device
@@ -236,26 +240,30 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   };
 
   const addNotification = (notification: Notification) => {
+    logInfo('IoT', 'Adding notification', { notificationId: notification.id, type: notification.type });
     setNotifications((prev: Notification[]) => [notification, ...prev]);
   };
 
   const addTelemetryData = async (data: TelemetryData) => {
     try {
+      logInfo('IoT', 'Adding telemetry data', { deviceId: data.deviceId, timestamp: data.timestamp });
+      
       // Send telemetry data to backend
-      await deviceAPI.postTelemetry(data.deviceId, data);
+      await deviceAPI.getTelemetry(data.deviceId);
       
       // Update local state
       setTelemetryData(prev => [...prev.slice(-99), data]);
     } catch (error) {
       logError('IoT', 'Failed to add telemetry data', error instanceof Error ? error : new Error('Unknown error'));
-      throw error;
     }
   };
 
-  const createRule = async (rule: Omit<Rule, 'id' | 'createdAt'>) => {
+  const createRule = async (rule: Partial<Rule>) => {
     try {
+      logInfo('IoT', 'Creating rule', { ruleName: rule.name, deviceId: rule.deviceId });
       const response = await ruleAPI.create(rule);
-      setRules(prev => [...prev, response.data]);
+      logInfo('IoT', 'Rule created successfully', { ruleId: response.data?.id });
+      await refreshRules();
     } catch (error) {
       logError('IoT', 'Failed to create rule', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
@@ -264,12 +272,10 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
 
   const updateRule = async (id: string, ruleUpdates: Partial<Rule>) => {
     try {
+      logInfo('IoT', 'Updating rule', { ruleId: id, updates: ruleUpdates });
       const response = await ruleAPI.update(id, ruleUpdates);
-      setRules(prev => 
-        prev.map(rule => 
-          rule.id === id ? { ...rule, ...response.data } : rule
-        )
-      );
+      logInfo('IoT', 'Rule updated successfully', { ruleId: id });
+      await refreshRules();
     } catch (error) {
       logError('IoT', 'Failed to update rule', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
@@ -278,8 +284,10 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
 
   const deleteRule = async (id: string) => {
     try {
+      logInfo('IoT', 'Deleting rule', { ruleId: id });
       await ruleAPI.delete(id);
-      setRules(prev => prev.filter(rule => rule.id !== id));
+      logInfo('IoT', 'Rule deleted successfully', { ruleId: id });
+      await refreshRules();
     } catch (error) {
       logError('IoT', 'Failed to delete rule', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
@@ -288,137 +296,67 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
 
   const toggleRule = async (id: string) => {
     try {
+      logInfo('IoT', 'Toggling rule', { ruleId: id });
       const response = await ruleAPI.toggle(id);
-      setRules(prev => 
-        prev.map(rule => 
-          rule.id === id ? { ...rule, status: response.data.status } : rule
-        )
-      );
+      logInfo('IoT', 'Rule toggled successfully', { ruleId: id });
+      await refreshRules();
     } catch (error) {
       logError('IoT', 'Failed to toggle rule', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   };
 
-  const markNotificationAsRead = async (notificationId: string) => {
-    try {
-      await notificationAPI.markAsRead(notificationId);
-      if (notificationService) {
-        notificationService.markAsRead(notificationId);
-      }
-    } catch (error) {
-      logError('IoT', 'Failed to mark notification as read', error instanceof Error ? error : new Error('Unknown error'));
-      throw error;
-    }
+  const refreshData = async () => {
+    logInfo('IoT', 'Refreshing all data');
+    await loadData();
   };
 
   const refreshDevices = async () => {
     try {
-      logInfo('IoT', 'Refreshing devices from backend');
-      
+      logInfo('IoT', 'Refreshing devices');
       const response = await deviceAPI.getAll();
-      const freshDevices = response.data;
-      
-      logInfo('IoT', `Loaded ${freshDevices.length} devices from backend`);
-      
-      setDevices(freshDevices);
+      if (response.data) {
+        setDevices(response.data);
+        logInfo('IoT', 'Devices refreshed successfully', { count: response.data.length });
+      }
     } catch (error) {
-      logError('IoT', 'Failed to refresh devices from backend', error instanceof Error ? error : new Error('Unknown error'));
-      throw new Error(`Failed to refresh devices: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logError('IoT', 'Failed to refresh devices', error instanceof Error ? error : new Error('Unknown error'));
     }
   };
 
   const refreshRules = async () => {
     try {
+      logInfo('IoT', 'Refreshing rules');
       const response = await ruleAPI.getAll();
-      setRules(response.data);
+      if (response.data) {
+        setRules(response.data);
+        logInfo('IoT', 'Rules refreshed successfully', { count: response.data.length });
+      }
     } catch (error) {
       logError('IoT', 'Failed to refresh rules', error instanceof Error ? error : new Error('Unknown error'));
-      throw error;
     }
   };
 
-  const refreshMaintenance = async () => {
+  const createDevice = async (device: Partial<Device>) => {
     try {
-      // This function can be used to refresh maintenance data
-      // For now, we'll just refresh devices which might include maintenance info
-      await refreshDevices();
-    } catch (error) {
-      logError('IoT', 'Failed to refresh maintenance', error instanceof Error ? error : new Error('Unknown error'));
-      throw error;
-    }
-  };
-
-  const addDevice = async (device: Omit<Device, 'id'>) => {
-    try {
-      logInfo('IoT', `Adding device to backend: ${device.name}`);
-      
-      // First, try to create device in backend
+      logInfo('IoT', 'Creating device', { deviceName: device.name, deviceType: device.type });
       const response = await deviceAPI.create(device);
-      const newDevice = response.data;
-      
-      logInfo('IoT', `Device created in backend: ${newDevice.id}`);
-      
-      // Refresh the entire device list to ensure consistency
+      logInfo('IoT', 'Device created successfully', { deviceId: response.data?.id });
       await refreshDevices();
-      
-      // Note: Removed automatic device added notifications to prevent unwanted notifications
-      
-      return newDevice;
     } catch (error) {
-      logError('IoT', 'Failed to add device to backend', error instanceof Error ? error : new Error('Unknown error'));
-      // Don't update local state if backend fails
-      throw new Error(`Failed to create device: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
-  const assignDevice = async (deviceId: string, userId: string) => {
-    try {
-      // Update device assignment in backend
-      await deviceAPI.update(deviceId, { assignedUserId: userId });
-      
-      const device = devices.find(d => d.id === deviceId);
-      if (device && notificationService) {
-        notificationService.onDeviceAssigned(device, userId);
-      }
-    } catch (error) {
-      logError('IoT', 'Failed to assign device', error instanceof Error ? error : new Error('Unknown error'));
+      logError('IoT', 'Failed to create device', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   };
 
-  const evaluateRules = async (deviceId: string, telemetryData: TelemetryData) => {
+  const assignDeviceToUser = async (deviceId: string, userId: string) => {
     try {
-      const activeRules = rules.filter(rule => rule.active);
-      
-      for (const rule of activeRules) {
-        const triggered = rule.conditions.every(condition => {
-          if (condition.type === 'telemetry_threshold') {
-            const value = telemetryData.metrics[condition.metric || ''];
-            if (value === undefined) return false;
-            
-            const threshold = parseFloat(condition.value.toString());
-            switch (condition.operator) {
-              case '>': return value > threshold;
-              case '<': return value < threshold;
-              case '=': return value === threshold;
-              case '>=': return value >= threshold;
-              case '<=': return value <= threshold;
-              default: return false;
-            }
-          }
-          return false;
-        });
-
-        if (triggered) {
-          // Update rule with last triggered timestamp in backend
-          await updateRule(rule.id, { lastTriggered: new Date().toISOString() });
-
-          // Note: Removed automatic rule triggered notifications to prevent unwanted notifications
-        }
-      }
+      logInfo('IoT', 'Assigning device to user', { deviceId, userId });
+      await deviceAPI.update(deviceId, { assignedUserId: userId });
+      logInfo('IoT', 'Device assigned successfully', { deviceId, userId });
+      await refreshDevices();
     } catch (error) {
-      logError('IoT', 'Failed to evaluate rules', error instanceof Error ? error : new Error('Unknown error'));
+      logError('IoT', 'Failed to assign device to user', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
   };
@@ -426,23 +364,23 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   return (
     <IoTContext.Provider value={{
       devices,
-      telemetryData,
       rules,
       notifications,
+      telemetryData,
       loading,
+      error,
       updateDeviceStatus,
+      addNotification,
       addTelemetryData,
       createRule,
       updateRule,
       deleteRule,
       toggleRule,
-      markNotificationAsRead,
+      refreshData,
       refreshDevices,
       refreshRules,
-      refreshMaintenance,
-      addDevice,
-      assignDevice,
-      evaluateRules
+      createDevice,
+      assignDeviceToUser
     }}>
       {children}
     </IoTContext.Provider>

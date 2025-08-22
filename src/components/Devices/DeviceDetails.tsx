@@ -2,694 +2,462 @@ import React, { useState, useEffect } from 'react';
 import { 
   Download, 
   FileText, 
-  Settings, 
+  AlertTriangle, 
   CheckCircle, 
-  AlertCircle,
-  Info,
+  X,
   Clock,
-  MessageSquare,
-  AlertTriangle,
+  Settings,
   BarChart3,
-  Wifi,
-  Database,
-  Activity,
-  Tag,
-  Zap,
-  Wrench
+  HardDrive,
+  Shield,
+  Wrench,
+  Eye
 } from 'lucide-react';
-import { Device } from '../../types';
-import { deviceAPI, ruleAPI, maintenanceAPI, deviceSafetyPrecautionsAPI } from '../../services/api';
-import { DeviceRulesManager } from './DeviceRulesManager';
-import DeviceRulesDisplay from './DeviceRulesDisplay';
-import DeviceAnalyticsDisplay from './DeviceAnalyticsDisplay';
-import DeviceLogsDisplay from './DeviceLogsDisplay';
-import DeviceMaintenanceDisplay from './DeviceMaintenanceDisplay';
-import DeviceSafetyInfo from './DeviceSafetyInfo';
-import { DeviceStatsService } from '../../services/deviceStatsService';
+import { unifiedDeviceService, DeviceDocumentation, DeviceRules, DeviceMaintenance, DeviceSafetyPrecaution } from '../../services/unifiedDeviceService';
 import { logError, logInfo } from '../../utils/logger';
+
+interface Device {
+  id: string;
+  name: string;
+  type: string;
+  location: string;
+  status: string;
+  manufacturer?: string;
+  model?: string;
+  serialNumber?: string;
+  description?: string;
+  tags?: string[];
+  config?: any;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 interface DeviceDetailsProps {
   device: Device;
   onClose: () => void;
-  onStatusChange: (deviceId: string, status: Device['status']) => void;
 }
 
-interface DocumentationInfo {
-  deviceId: string;
-  deviceName: string;
-  files: {
-    manual: { available: boolean; url?: string; size?: number };
-    datasheet: { available: boolean; url?: string; size?: number };
-    certificate: { available: boolean; url?: string; size?: number };
-  };
-}
-
-interface ChatMessage {
-  id: string;
-  type: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
-
-const statusConfig = {
-  ONLINE: { 
-    color: 'text-green-600', 
-    bg: 'bg-green-50',
-    label: 'Online'
-  },
-  OFFLINE: { 
-    color: 'text-slate-600', 
-    bg: 'bg-slate-50',
-    label: 'Offline'
-  },
-  WARNING: { 
-    color: 'text-yellow-600', 
-    bg: 'bg-yellow-50',
-    label: 'Warning'
-  },
-  ERROR: { 
-    color: 'text-red-600', 
-    bg: 'bg-red-50',
-    label: 'Error'
-  }
-};
-
-const deviceTypeConfig = {
-  SENSOR: { icon: 'Thermometer', label: 'Sensor' },
-  ACTUATOR: { icon: 'Cpu', label: 'Actuator' },
-  GATEWAY: { icon: 'Wifi', label: 'Gateway' },
-  CONTROLLER: { icon: 'Cpu', label: 'Controller' }
-};
-
-const tabs = [
-  { id: 'profile', label: 'Profile & Specifications', icon: Info },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'rules', label: 'Rules', icon: Zap },
-  { id: 'logs', label: 'Logs', icon: FileText },
-  { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-  { id: 'safety', label: 'Safety', icon: AlertTriangle },
-  { id: 'chat', label: 'Chat History', icon: MessageSquare }
-];
-
-export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose, onStatusChange }) => {
-  const [documentationInfo, setDocumentationInfo] = useState<DocumentationInfo | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [downloading, setDownloading] = useState<string | null>(null);
-  const [showRules, setShowRules] = useState(false);
-  const [activeTab, setActiveTab] = useState('profile');
-  const [isTabLoading, setIsTabLoading] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      type: 'assistant',
-      content: 'Hello! I\'m here to help you with information about this device. What would you like to know?',
-      timestamp: new Date()
-    }
-  ]);
-  const [newMessage, setNewMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-
-  const statusInfo = statusConfig[device.status];
-  const deviceTypeInfo = deviceTypeConfig[device.type];
-
-  const handleTabChange = (tabId: string) => {
-    setIsTabLoading(true);
-    setActiveTab(tabId);
-    // Simulate loading for better UX
-    setTimeout(() => setIsTabLoading(false), 100);
-  };
+export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose }) => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'documentation' | 'rules' | 'maintenance' | 'safety' | 'debug'>('overview');
+  const [documentation, setDocumentation] = useState<DeviceDocumentation[]>([]);
+  const [rules, setRules] = useState<DeviceRules[]>([]);
+  const [maintenance, setMaintenance] = useState<DeviceMaintenance[]>([]);
+  const [safetyPrecautions, setSafetyPrecautions] = useState<DeviceSafetyPrecaution[]>([]);
+  const [debugData, setDebugData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [authStatus, setAuthStatus] = useState<'checking' | 'success' | 'failed'>('checking');
 
   useEffect(() => {
-    fetchDocumentationInfo();
-  }, [device.id]);
+    loadTabData(activeTab);
+  }, [activeTab, device.id]);
 
-  const fetchDocumentationInfo = async () => {
+  const loadTabData = async (tab: string) => {
+    setIsLoading(true);
     try {
-      setLoading(true);
-      const response = await deviceAPI.getDocumentation(device.id);
-      setDocumentationInfo(response.data);
+      switch (tab) {
+        case 'documentation':
+          const docs = await unifiedDeviceService.getDeviceDocumentation(device.id);
+          setDocumentation(docs);
+          break;
+        case 'rules':
+          const deviceRules = await unifiedDeviceService.getDeviceRules(device.id);
+          setRules(deviceRules);
+          break;
+        case 'maintenance':
+          const deviceMaintenance = await unifiedDeviceService.getDeviceMaintenance(device.id);
+          setMaintenance(deviceMaintenance);
+          break;
+        case 'safety':
+          const deviceSafety = await unifiedDeviceService.getDeviceSafetyPrecautions(device.id);
+          setSafetyPrecautions(deviceSafety);
+          break;
+        case 'debug':
+          const debug = await unifiedDeviceService.getDeviceDebugData(device.id);
+          setDebugData(debug);
+          break;
+      }
     } catch (error) {
-      logError('DeviceDetails', 'Failed to fetch documentation info', error instanceof Error ? error : new Error('Unknown error'));
+      logError('DeviceDetails', `Error loading ${tab} data`, error instanceof Error ? error : new Error('Unknown error'));
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const downloadDocumentation = async (type: 'manual' | 'datasheet' | 'certificate') => {
-    if (!documentationInfo?.files[type].available) return;
-
+  const testAuthentication = async () => {
+    setAuthStatus('checking');
     try {
-      setDownloading(type);
-      const response = await deviceAPI.downloadDocumentation(device.id, type);
-      
-      const blob = response.data;
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${device.name}_${type}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const isAuthenticated = await unifiedDeviceService.testDeviceAuth();
+      setAuthStatus(isAuthenticated ? 'success' : 'failed');
+      logInfo('DeviceDetails', `Authentication test result: ${isAuthenticated ? 'success' : 'failed'}`);
     } catch (error) {
-      logError('DeviceDetails', `Failed to download ${type}`, error instanceof Error ? error : new Error('Unknown error'));
-    } finally {
-      setDownloading(null);
+      setAuthStatus('failed');
+      logError('DeviceDetails', 'Authentication test failed', error instanceof Error ? error : new Error('Unknown error'));
     }
   };
 
-  const formatLastSeen = (timestamp: string) => {
-    const diff = Date.now() - new Date(timestamp).getTime();
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  const sendMessage = async () => {
-    if (!newMessage.trim()) return;
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: newMessage,
-      timestamp: new Date()
-    };
-
-    setChatMessages(prev => [...prev, userMessage]);
-    setNewMessage('');
-    setIsTyping(true);
-
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: `I understand you're asking about "${userMessage.content}". Based on the device information, I can help you with that. What specific aspect would you like me to elaborate on?`,
-        timestamp: new Date()
-      };
-      setChatMessages(prev => [...prev, aiResponse]);
-      setIsTyping(false);
-    }, 1500);
-  };
-
-  const debugDataRetrieval = async () => {
+  const downloadDocumentation = async (doc: DeviceDocumentation) => {
     try {
-      logInfo('DeviceDetails', '=== DEBUGGING DATA RETRIEVAL ===');
-      logInfo('DeviceDetails', `Device ID: ${device.id}`);
+      const response = await fetch(doc.fileUrl, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
       
-      // Test authentication first
-      logInfo('DeviceDetails', '🔐 Testing authentication...');
-      try {
-        const authResponse = await deviceAPI.testAuth();
-        logInfo('DeviceDetails', '✅ Auth test successful', authResponse.data);
-      } catch (authError) {
-        logError('DeviceDetails', '❌ Auth test failed', authError instanceof Error ? authError : new Error('Unknown error'));
-        return; // Stop if auth fails
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = doc.fileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        logInfo('DeviceDetails', `Downloaded documentation: ${doc.fileName}`);
       }
-      
-      // Test rules retrieval
-      logInfo('DeviceDetails', '📋 Testing rules retrieval...');
-      try {
-        const rulesResponse = await ruleAPI.getByDevice(device.id);
-        logInfo('DeviceDetails', '✅ Rules response', rulesResponse.data);
-      } catch (error) {
-        logError('DeviceDetails', '❌ Rules retrieval failed', error instanceof Error ? error : new Error('Unknown error'));
-      }
-      
-      // Test maintenance retrieval
-      logInfo('DeviceDetails', '🔧 Testing maintenance retrieval...');
-      try {
-        const maintenanceResponse = await maintenanceAPI.getByDevice(device.id);
-        logInfo('DeviceDetails', '✅ Maintenance response', maintenanceResponse.data);
-      } catch (error) {
-        logError('DeviceDetails', '❌ Maintenance retrieval failed', error instanceof Error ? error : new Error('Unknown error'));
-      }
-      
-      // Test safety precautions retrieval
-      logInfo('DeviceDetails', '⚠️ Testing safety precautions retrieval...');
-      try {
-        const safetyResponse = await deviceSafetyPrecautionsAPI.getByDevice(device.id);
-        logInfo('DeviceDetails', '✅ Safety response', safetyResponse.data);
-      } catch (error) {
-        logError('DeviceDetails', '❌ Safety precautions retrieval failed', error instanceof Error ? error : new Error('Unknown error'));
-      }
-      
-      // Test debug endpoint
-      logInfo('DeviceDetails', '🔍 Testing debug endpoint...');
-      try {
-        const debugResponse = await deviceAPI.getDebugData(device.id);
-        logInfo('DeviceDetails', '✅ Debug response', debugResponse.data);
-      } catch (error) {
-        logError('DeviceDetails', '❌ Debug endpoint failed', error instanceof Error ? error : new Error('Unknown error'));
-      }
-      
-      logInfo('DeviceDetails', '=== DEBUG COMPLETE ===');
     } catch (error) {
-      logError('DeviceDetails', 'Debug error', error instanceof Error ? error : new Error('Unknown error'));
+      logError('DeviceDetails', 'Error downloading documentation', error instanceof Error ? error : new Error('Unknown error'));
     }
   };
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'profile':
-        return (
-          <div className="space-y-8">
-            {/* Status and Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
-                <div className={`p-2 rounded-lg ${statusInfo.bg}`}>
-                  <div className={`w-4 h-4 rounded-full ${statusInfo.color.replace('text-', 'bg-')}`}></div>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-600">Status</p>
-                  <p className={`font-semibold ${statusInfo.color}`}>{statusInfo.label}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
-                <Clock className="w-5 h-5 text-slate-500" />
-                <div>
-                  <p className="text-sm text-slate-600">Last Seen</p>
-                  <p className="font-semibold text-slate-800">{formatLastSeen(device.lastSeen)}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
-                <Wifi className="w-5 h-5 text-slate-500" />
-                <div>
-                  <p className="text-sm text-slate-600">Protocol</p>
-                  <p className="font-semibold text-slate-800">{device.protocol}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Device Information */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <Database className="w-5 h-5" />
-                  Device Information
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Manufacturer</label>
-                    <p className="text-slate-800">{device.manufacturer || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Model</label>
-                    <p className="text-slate-800">{device.model || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Serial Number</label>
-                    <p className="text-slate-800">{device.serialNumber || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Firmware</label>
-                    <p className="text-slate-800">{device.firmware || 'Not specified'}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <Activity className="w-5 h-5" />
-                  Power & Environment
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Power Source</label>
-                    <p className="text-slate-800">{device.powerSource || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Power Consumption</label>
-                    <p className="text-slate-800">{device.powerConsumption ? `${device.powerConsumption}W` : 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Operating Temperature</label>
-                    <p className="text-slate-800">
-                      {device.operatingTemperatureMin && device.operatingTemperatureMax 
-                        ? `${device.operatingTemperatureMin}°C to ${device.operatingTemperatureMax}°C`
-                        : 'Not specified'
-                      }
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Operating Humidity</label>
-                    <p className="text-slate-800">
-                      {device.operatingHumidityMin && device.operatingHumidityMax 
-                        ? `${device.operatingHumidityMin}% to ${device.operatingHumidityMax}%`
-                        : 'Not specified'
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Tags */}
-            {device.tags && device.tags.length > 0 && (
-              <div className="border-t border-slate-200 pt-6">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                  <Tag className="w-5 h-5" />
-                  Tags
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {device.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm font-medium"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Documentation */}
-            <div className="border-t border-slate-200 pt-6">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                Documentation
-              </h3>
-              
-              {loading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                  <p className="text-slate-600 mt-2">Loading documentation...</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {['manual', 'datasheet', 'certificate'].map((type) => {
-                    const fileInfo = documentationInfo?.files[type as keyof typeof documentationInfo.files];
-                    const isAvailable = fileInfo?.available;
-                    const isDownloading = downloading === type;
-                    
-                    return (
-                      <div
-                        key={type}
-                        className={`p-4 rounded-xl border-2 ${
-                          isAvailable 
-                            ? 'border-green-200 bg-green-50 hover:bg-green-100 cursor-pointer' 
-                            : 'border-slate-200 bg-slate-50'
-                        } transition-colors`}
-                        onClick={() => isAvailable && downloadDocumentation(type as any)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${
-                            isAvailable ? 'bg-green-100' : 'bg-slate-200'
-                          }`}>
-                            {type === 'manual' && <FileText className="w-4 h-4 text-green-600" />}
-                            {type === 'datasheet' && <Settings className="w-4 h-4 text-green-600" />}
-                            {type === 'certificate' && <CheckCircle className="w-4 h-4 text-green-600" />}
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-slate-800 capitalize">{type}</p>
-                            {isAvailable ? (
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm text-slate-600">
-                                  {fileInfo.size ? formatFileSize(fileInfo.size) : 'Available'}
-                                </p>
-                                {isDownloading ? (
-                                  <div className="animate-spin rounded-full h-3 w-3 border-b border-green-600"></div>
-                                ) : (
-                                  <Download className="w-3 h-3 text-green-600" />
-                                )}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-slate-500">Not available</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Connection Details */}
-            <div className="border-t border-slate-200 pt-6">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <Wifi className="w-5 h-5" />
-                Connection Details
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h4 className="text-md font-semibold text-slate-700">Network Configuration</h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium text-slate-600">WiFi SSID</label>
-                      <p className="text-slate-800">{device.wifiSsid || 'Not specified'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-slate-600">IP Address</label>
-                      <p className="text-slate-800">{device.ipAddress || 'Not specified'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-slate-600">MAC Address</label>
-                      <p className="text-slate-800">{device.macAddress || 'Not specified'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-slate-600">Port</label>
-                      <p className="text-slate-800">{device.port || 'Not specified'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h4 className="text-md font-semibold text-slate-700">MQTT Configuration</h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-sm font-medium text-slate-600">MQTT Broker</label>
-                      <p className="text-slate-800">{device.mqttBroker || 'Not specified'}</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-slate-600">MQTT Topic</label>
-                      <p className="text-slate-800">{device.mqttTopic || 'Not specified'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'maintenance':
-        return <DeviceMaintenanceDisplay deviceId={device.id} />;
-
-      case 'safety':
-        return <DeviceSafetyInfo deviceId={device.id} />;
-
-      case 'analytics':
-        return <DeviceAnalyticsDisplay deviceId={device.id} />;
-
-      case 'rules':
-        return <DeviceRulesDisplay deviceId={device.id} />;
-
-      case 'logs':
-        return <DeviceLogsDisplay deviceId={device.id} />;
-
-
-
-      case 'chat':
-        return (
-          <div className="flex flex-col h-96">
-            <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-slate-50 rounded-lg">
-              {chatMessages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.type === 'user'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-white text-slate-800 border border-slate-200'
-                    }`}
-                  >
-                    <p className="text-sm">{message.content}</p>
-                    <p className={`text-xs mt-1 ${
-                      message.type === 'user' ? 'text-blue-100' : 'text-slate-500'
-                    }`}>
-                      {message.timestamp.toLocaleTimeString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {isTyping && (
-                <div className="flex justify-start">
-                  <div className="bg-white text-slate-800 border border-slate-200 px-4 py-2 rounded-lg">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2 mt-4">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                placeholder="Ask about this device..."
-                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <button
-                onClick={sendMessage}
-                disabled={!newMessage.trim()}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Send
-              </button>
-            </div>
-          </div>
-        );
-
-
-
+  const getStatusColor = (status: string) => {
+    switch (status.toUpperCase()) {
+      case 'ONLINE':
+        return 'text-green-600 bg-green-100';
+      case 'OFFLINE':
+        return 'text-red-600 bg-red-100';
+      case 'WARNING':
+        return 'text-yellow-600 bg-yellow-100';
+      case 'ERROR':
+        return 'text-red-600 bg-red-100';
       default:
-        return null;
+        return 'text-gray-600 bg-gray-100';
     }
   };
+
+  const getStatusIcon = (status: string) => {
+    switch (status.toUpperCase()) {
+      case 'ONLINE':
+        return <CheckCircle className="w-4 h-4" />;
+      case 'OFFLINE':
+        return <X className="w-4 h-4" />;
+      case 'WARNING':
+        return <AlertTriangle className="w-4 h-4" />;
+      case 'ERROR':
+        return <X className="w-4 h-4" />;
+      default:
+        return <Clock className="w-4 h-4" />;
+    }
+  };
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: <BarChart3 className="w-4 h-4" /> },
+    { id: 'documentation', label: 'Documentation', icon: <FileText className="w-4 h-4" /> },
+    { id: 'rules', label: 'Rules', icon: <Shield className="w-4 h-4" /> },
+    { id: 'maintenance', label: 'Maintenance', icon: <Settings className="w-4 h-4" /> },
+    { id: 'safety', label: 'Safety', icon: <AlertTriangle className="w-4 h-4" /> },
+    { id: 'debug', label: 'Debug', icon: <HardDrive className="w-4 h-4" /> }
+  ];
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className={`${statusInfo.bg} p-3 rounded-xl shadow-sm`}>
-                {React.createElement(deviceTypeInfo.icon, { 
-                  className: `w-6 h-6 ${statusInfo.color}` 
-                })}
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-800">{device.name}</h2>
-                <p className="text-slate-600">{deviceTypeInfo.label} • {device.location}</p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <span className="text-xl font-bold text-slate-600">×</span>
-            </button>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">{device.name}</h2>
+            <p className="text-gray-600">{device.type} • {device.location}</p>
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-6 h-6 text-gray-500" />
+          </button>
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-slate-200 bg-white">
-          <div className="flex overflow-x-auto scrollbar-hide relative">
-            {tabs.map((tab) => (
-                              <button
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleTabChange(tab.id);
-                    }
-                  }}
-                  role="tab"
-                  aria-selected={activeTab === tab.id}
-                  aria-controls={`tabpanel-${tab.id}`}
-                  className={`flex items-center gap-3 px-6 py-4 border-b-2 font-medium whitespace-nowrap transition-all duration-300 hover:bg-slate-50 relative focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600 bg-blue-50 shadow-sm'
-                      : 'border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300'
-                  }`}
-                >
-                <tab.icon className={`w-5 h-5 transition-colors duration-200 ${activeTab === tab.id ? 'text-blue-600' : 'text-slate-500'}`} />
-                <span className="font-semibold">{tab.label}</span>
-                {activeTab === tab.id && (
-                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-blue-500 rounded-t-full"></div>
-                )}
-              </button>
-            ))}
-          </div>
+        <div className="flex border-b border-gray-200">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-6 py-3 border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto bg-white">
-          <div 
-            className="h-full"
-            role="tabpanel"
-            id={`tabpanel-${activeTab}`}
-            aria-labelledby={`tab-${activeTab}`}
-          >
-            {isTabLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="flex items-center gap-3">
-                  <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="text-slate-600 font-medium">Loading...</span>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+            </div>
+          ) : (
+            <>
+              {activeTab === 'overview' && (
+                <div className="space-y-6">
+                  {/* Device Status */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="bg-white p-6 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className={`p-2 rounded-lg ${getStatusColor(device.status)}`}>
+                          {getStatusIcon(device.status)}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-800">Status</h3>
+                          <p className="text-sm text-gray-600">Device connection</p>
+                        </div>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-800">{device.status}</div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+                          <Settings className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-800">Type</h3>
+                          <p className="text-sm text-gray-600">Device category</p>
+                        </div>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-800">{device.type}</div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 rounded-lg bg-green-100 text-green-600">
+                          <Eye className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-800">Location</h3>
+                          <p className="text-sm text-gray-600">Physical location</p>
+                        </div>
+                      </div>
+                      <div className="text-lg font-semibold text-gray-800">{device.location}</div>
+                    </div>
+                  </div>
+
+                  {/* Device Information */}
+                  <div className="bg-white p-6 rounded-lg border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Device Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Manufacturer</label>
+                        <p className="text-gray-800">{device.manufacturer || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Model</label>
+                        <p className="text-gray-800">{device.model || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Serial Number</label>
+                        <p className="text-gray-800">{device.serialNumber || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-600">Description</label>
+                        <p className="text-gray-800">{device.description || 'No description available'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Authentication Test */}
+                  <div className="bg-white p-6 rounded-lg border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Authentication Test</h3>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={testAuthentication}
+                        disabled={authStatus === 'checking'}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                      >
+                        {authStatus === 'checking' ? 'Testing...' : 'Test Authentication'}
+                      </button>
+                      <div className="flex items-center gap-2">
+                        {authStatus === 'checking' && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-500"></div>}
+                        {authStatus === 'success' && <CheckCircle className="w-4 h-4 text-green-600" />}
+                                                 {authStatus === 'failed' && <X className="w-4 h-4 text-red-600" />}
+                        <span className="text-sm text-gray-600">
+                          {authStatus === 'checking' && 'Testing connection...'}
+                          {authStatus === 'success' && 'Authentication successful'}
+                          {authStatus === 'failed' && 'Authentication failed'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="p-6">
-                {renderTabContent()}
-              </div>
-            )}
-          </div>
+              )}
+
+              {activeTab === 'documentation' && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Device Documentation</h3>
+                  {documentation.length === 0 ? (
+                    <p className="text-gray-600">No documentation available for this device.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {documentation.map((doc) => (
+                        <div key={doc.id} className="bg-white p-4 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-3 mb-3">
+                            <FileText className="w-5 h-5 text-blue-600" />
+                            <div className="flex-1">
+                              <h4 className="font-medium text-gray-800">{doc.fileName}</h4>
+                              <p className="text-sm text-gray-600">{doc.type}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => downloadDocumentation(doc)}
+                            className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            <Download className="w-4 h-4 inline mr-2" />
+                            Download
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'rules' && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Device Rules</h3>
+                  {rules.length === 0 ? (
+                    <p className="text-gray-600">No rules configured for this device.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {rules.map((rule) => (
+                        <div key={rule.id} className="bg-white p-4 rounded-lg border border-gray-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium text-gray-800">{rule.name}</h4>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              rule.status === 'ACTIVE' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {rule.status}
+                            </span>
+                          </div>
+                          <p className="text-gray-600 mb-2">{rule.description}</p>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium text-gray-600">Metric:</span>
+                              <p className="text-gray-800">{rule.metric}</p>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-600">Threshold:</span>
+                              <p className="text-gray-800">{rule.threshold}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'maintenance' && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Maintenance Schedule</h3>
+                  {maintenance.length === 0 ? (
+                    <p className="text-gray-600">No maintenance schedule available for this device.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {maintenance.map((item) => (
+                        <div key={item.id} className="bg-white p-4 rounded-lg border border-gray-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium text-gray-800">{item.taskName}</h4>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              item.status === 'ACTIVE' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {item.status}
+                            </span>
+                          </div>
+                          <p className="text-gray-600 mb-2">{item.description}</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium text-gray-600">Component:</span>
+                              <p className="text-gray-800">{item.componentName}</p>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-600">Frequency:</span>
+                              <p className="text-gray-800">{item.frequency}</p>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-600">Priority:</span>
+                              <p className="text-gray-800">{item.priority}</p>
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-600">Next Due:</span>
+                              <p className="text-gray-800">{item.nextMaintenance || 'Not scheduled'}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'safety' && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Safety Precautions</h3>
+                  {safetyPrecautions.length === 0 ? (
+                    <p className="text-gray-600">No safety precautions available for this device.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {safetyPrecautions.map((precaution) => (
+                        <div key={precaution.id} className="bg-white p-4 rounded-lg border border-gray-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium text-gray-800">{precaution.title}</h4>
+                            <span className={`px-2 py-1 rounded-full text-xs ${
+                              precaution.severity === 'HIGH' 
+                                ? 'bg-red-100 text-red-800'
+                                : precaution.severity === 'MEDIUM'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-green-100 text-green-800'
+                            }`}>
+                              {precaution.severity}
+                            </span>
+                          </div>
+                          <p className="text-gray-600 mb-2">{precaution.description}</p>
+                          <div className="text-sm">
+                            <span className="font-medium text-gray-600">Category:</span>
+                            <span className="text-gray-800 ml-2">{precaution.category}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'debug' && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Debug Information</h3>
+                  {debugData ? (
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <pre className="text-sm text-gray-800 overflow-x-auto">
+                        {JSON.stringify(debugData, null, 2)}
+                      </pre>
+                    </div>
+                  ) : (
+                    <p className="text-gray-600">No debug information available for this device.</p>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
-
-                 {/* Footer Actions */}
-         <div className="p-6 border-t border-slate-200 bg-slate-50">
-           <div className="flex items-center justify-between">
-             <div className="flex items-center gap-4">
-               <label className="text-sm font-medium text-slate-700">Status:</label>
-               <select
-                 value={device.status}
-                 onChange={(e) => onStatusChange(device.id, e.target.value as Device['status'])}
-                 className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-               >
-                 <option value="ONLINE">Online</option>
-                 <option value="OFFLINE">Offline</option>
-                 <option value="WARNING">Warning</option>
-                 <option value="ERROR">Error</option>
-               </select>
-               
-               <button
-                 onClick={debugDataRetrieval}
-                 className="px-3 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm"
-               >
-                 Debug Data
-               </button>
-             </div>
-             
-             <button
-               onClick={onClose}
-               className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
-             >
-               Close
-             </button>
-           </div>
-         </div>
       </div>
-
-      {/* Device Rules Modal */}
-      {showRules && (
-        <DeviceRulesManager
-          deviceId={device.id}
-          deviceName={device.name}
-          onClose={() => setShowRules(false)}
-        />
-      )}
     </div>
   );
 };

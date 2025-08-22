@@ -36,6 +36,7 @@ import com.iotplatform.model.User;
 import com.iotplatform.service.DeviceService;
 import com.iotplatform.service.FileStorageService;
 import com.iotplatform.service.TelemetryService;
+import com.iotplatform.service.UnifiedOnboardingService;
 import com.iotplatform.model.Rule;
 import com.iotplatform.model.DeviceMaintenance;
 import com.iotplatform.model.DeviceSafetyPrecaution;
@@ -65,16 +66,18 @@ public class DeviceController {
     private final TelemetryService telemetryService;
     private final FileStorageService fileStorageService;
     private final PDFProcessingService pdfProcessingService;
+    private final UnifiedOnboardingService unifiedOnboardingService;
     private final RuleRepository ruleRepository;
     private final RuleConditionRepository ruleConditionRepository;
     private final DeviceMaintenanceRepository deviceMaintenanceRepository;
     private final DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository;
 
-    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository) {
+    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.fileStorageService = fileStorageService;
         this.pdfProcessingService = pdfProcessingService;
+        this.unifiedOnboardingService = unifiedOnboardingService;
         this.ruleRepository = ruleRepository;
         this.ruleConditionRepository = ruleConditionRepository;
         this.deviceMaintenanceRepository = deviceMaintenanceRepository;
@@ -498,24 +501,26 @@ public class DeviceController {
         String userEmail = user.getEmail();
         String organizationId = user.getOrganizationId();
         
-        logger.info("User {} starting AI-powered device onboarding", userEmail);
+        logger.info("User {} starting unified AI-powered device onboarding", userEmail);
         
         try {
             // Parse device data
             DeviceCreateWithFileRequest deviceRequest = objectMapper.readValue(deviceData, DeviceCreateWithFileRequest.class);
             
-            // Create device with files
-            DeviceCreateResponse response = deviceService.createDeviceWithFiles(deviceRequest, manualFile, datasheetFile, certificateFile, organizationId);
+            // Use unified onboarding service for sequential workflow
+            DeviceCreateResponse response = unifiedOnboardingService.completeUnifiedOnboarding(
+                deviceRequest, manualFile, datasheetFile, certificateFile, organizationId
+            );
             
             // Log the device creation with maintenance details
-            logger.info("Device created with ID: {} and maintenance schedule: {}", response.getId(), deviceRequest.getMaintenanceSchedule());
+            logger.info("Unified onboarding completed for device: {} with ID: {}", deviceRequest.getName(), response.getId());
             
-            // Process AI-generated rules if provided
+            // Process additional AI-generated rules if provided
             if (aiRulesJson != null && !aiRulesJson.trim().isEmpty()) {
                 processAIRules(aiRulesJson, response.getId());
             }
             
-            logger.info("AI-powered device onboarding completed for device: {}", response.getId());
+            logger.info("AI-powered device onboarding completed successfully for device: {}", response.getId());
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {

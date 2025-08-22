@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Wrench, 
+  Settings, 
   AlertTriangle, 
   Clock, 
   Filter, 
   Search, 
   Plus, 
   Edit, 
-  Trash2,
-  Calendar
+  Trash2
 } from 'lucide-react';
 import { maintenanceAPI, userAPI } from '../../services/api';
+import { unifiedOnboardingService } from '../../services/unifiedOnboardingService';
 import Modal from '../UI/Modal';
 import Button from '../UI/Button';
 import { logError, logInfo, logComponentMount, logComponentError } from '../../utils/logger';
@@ -101,17 +101,43 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
   const loadMaintenanceTasks = async () => {
     try {
       setLoading(true);
-      logInfo('DeviceMaintenanceDisplay', 'Loading maintenance tasks', { deviceId });
-      const response = await maintenanceAPI.getByDevice(deviceId);
-      setMaintenanceTasks(response.data || []);
+      logInfo('DeviceMaintenanceDisplay', 'Loading maintenance tasks for device', { deviceId });
+      
+      // Use unified service to get maintenance tasks
+      const maintenanceData = await unifiedOnboardingService.getDeviceMaintenance(deviceId);
+      
+      // Transform the data to match the expected format
+      const transformedTasks: DeviceMaintenance[] = maintenanceData.map((task: any) => ({
+        id: task.id || task.maintenance_id || `maintenance_${Math.random()}`,
+        deviceId: deviceId,
+        title: task.taskName || task.title || 'Unnamed Task',
+        description: task.description || 'No description available',
+        type: task.maintenanceType || task.type || 'preventive',
+        status: task.status || 'scheduled',
+        priority: task.priority || 'MEDIUM',
+        scheduledDate: task.nextMaintenance || task.scheduledDate || new Date().toISOString(),
+        completedDate: task.lastMaintenance || task.completedDate,
+        assignedTo: task.assignedTo || '',
+        estimatedDuration: task.estimatedDuration || task.estimated_duration || '',
+        actualDuration: task.actualDuration || task.actual_duration,
+        cost: task.estimatedCost || task.estimated_cost,
+        notes: task.notes || '',
+        requiredTools: task.requiredTools || task.required_tools || '',
+        safetyNotes: task.safetyNotes || task.safety_notes || '',
+        createdAt: task.createdAt || task.created_at || new Date().toISOString(),
+        updatedAt: task.updatedAt || task.updated_at || new Date().toISOString()
+      }));
+      
+      setMaintenanceTasks(transformedTasks);
       setError(null);
+      
       logInfo('DeviceMaintenanceDisplay', 'Maintenance tasks loaded successfully', { 
         deviceId, 
-        taskCount: response.data?.length || 0 
+        tasksCount: transformedTasks.length 
       });
     } catch (err) {
-      const error = err as Error;
-      logError('DeviceMaintenanceDisplay', 'Failed to load maintenance tasks', error, { deviceId });
+      logError('DeviceMaintenanceDisplay', 'Error loading maintenance tasks', err instanceof Error ? err : new Error('Unknown error'));
+      console.error('Error loading maintenance tasks:', err);
       setError('Failed to load maintenance tasks');
       setMaintenanceTasks([]);
     } finally {
