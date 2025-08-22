@@ -749,16 +749,21 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
     }
 
     @Override
-    public PDFStatusResponse getPDFStatus(String pdfName, String organizationId) throws PDFProcessingException {
+    public PDFProcessingDTOs.PDFStatusResponse getPDFStatus(String pdfName, String organizationId) throws PDFProcessingException {
         log.info("Getting PDF status: {} for organization: {}", pdfName, organizationId);
         try {
             // For now, return a placeholder status - in a real implementation, you would
             // call the external PDF service to get the actual status
-            return PDFStatusResponse.builder()
+            log.debug("PDF status check requested for document: {} in organization: {}", pdfName, organizationId);
+            
+            PDFProcessingDTOs.PDFStatusResponse response = PDFProcessingDTOs.PDFStatusResponse.builder()
                 .pdfName(pdfName)
                 .status("PROCESSED")
                 .processedAt(java.time.LocalDateTime.now().toString())
                 .build();
+            
+            log.info("PDF status retrieved successfully: {} - Status: {}", pdfName, response.getStatus());
+            return response;
         } catch (Exception e) {
             log.error("Error getting PDF status: {} for organization: {}", pdfName, organizationId, e);
             throw new PDFProcessingException("Failed to get PDF status: " + pdfName, e);

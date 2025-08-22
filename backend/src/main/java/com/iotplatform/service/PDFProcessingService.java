@@ -257,5 +257,5 @@ public interface PDFProcessingService {
      * @return PDF processing status response
      * @throws PDFProcessingException if status check fails
      */
-    PDFStatusResponse getPDFStatus(String pdfName, String organizationId) throws PDFProcessingException;
+    PDFProcessingDTOs.PDFStatusResponse getPDFStatus(String pdfName, String organizationId) throws PDFProcessingException;
 }
