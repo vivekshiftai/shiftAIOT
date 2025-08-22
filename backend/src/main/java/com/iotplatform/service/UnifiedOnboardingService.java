@@ -65,29 +65,35 @@ public class UnifiedOnboardingService {
         
         log.info("Starting unified onboarding workflow for device: {}", deviceRequest.getName());
         
-        // Step 1: Upload data and create device
-        log.info("Step 1: Uploading data and creating device...");
-        DeviceCreateResponse deviceResponse = deviceService.createDeviceWithFiles(
-            deviceRequest, manualFile, datasheetFile, certificateFile, organizationId
-        );
-        
-        log.info("Device created successfully with ID: {}", deviceResponse.getId());
-        
-        // Step 2: Process rules and store
-        log.info("Step 2: Processing rules...");
-        processAndStoreRules(deviceResponse.getId(), organizationId);
-        
-        // Step 3: Process maintenance and store (with proper date formatting)
-        log.info("Step 3: Processing maintenance schedule...");
-        processAndStoreMaintenance(deviceResponse.getId(), organizationId);
-        
-        // Step 4: Process safety and store
-        log.info("Step 4: Processing safety precautions...");
-        processAndStoreSafety(deviceResponse.getId(), organizationId);
-        
-        log.info("Unified onboarding workflow completed successfully for device: {}", deviceResponse.getId());
-        
-        return deviceResponse;
+        try {
+            // Step 1: Upload data and create device
+            log.info("Step 1: Uploading data and creating device...");
+            DeviceCreateResponse deviceResponse = deviceService.createDeviceWithFiles(
+                deviceRequest, manualFile, datasheetFile, certificateFile, organizationId
+            );
+            
+            log.info("Device created successfully with ID: {}", deviceResponse.getId());
+            
+            // Step 2: Process rules and store
+            log.info("Step 2: Processing rules...");
+            processAndStoreRules(deviceResponse.getId(), organizationId);
+            
+            // Step 3: Process maintenance and store (with proper date formatting)
+            log.info("Step 3: Processing maintenance schedule...");
+            processAndStoreMaintenance(deviceResponse.getId(), organizationId);
+            
+            // Step 4: Process safety and store
+            log.info("Step 4: Processing safety precautions...");
+            processAndStoreSafety(deviceResponse.getId(), organizationId);
+            
+            log.info("Unified onboarding workflow completed successfully for device: {}", deviceResponse.getId());
+            
+            return deviceResponse;
+            
+        } catch (Exception e) {
+            log.error("Unified onboarding workflow failed for device: {}", deviceRequest.getName(), e);
+            throw new PDFProcessingException("Unified onboarding failed: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -117,6 +123,8 @@ public class UnifiedOnboardingService {
                 return;
             }
             
+            log.info("Generating rules for device: {} using PDF: {}", deviceId, pdfFilename);
+            
             // Generate rules using PDF processing service
             var rulesResponse = pdfProcessingService.generateRules(pdfFilename, deviceId, organizationId);
             
@@ -126,7 +134,7 @@ public class UnifiedOnboardingService {
             }
             
             // Store rules in database
-            if (rulesResponse.getRules() != null) {
+            if (rulesResponse.getRules() != null && !rulesResponse.getRules().isEmpty()) {
                 List<Rule> rulesToSave = new ArrayList<>();
                 
                 for (var ruleData : rulesResponse.getRules()) {
@@ -149,11 +157,14 @@ public class UnifiedOnboardingService {
                 
                 ruleRepository.saveAll(rulesToSave);
                 log.info("Successfully stored {} rules for device: {}", rulesToSave.size(), deviceId);
+            } else {
+                log.warn("No rules generated for device: {}", deviceId);
             }
             
         } catch (Exception e) {
             log.error("Error processing rules for device: {}", deviceId, e);
-            throw new PDFProcessingException("Failed to process rules: " + e.getMessage());
+            // Don't throw exception to allow other steps to continue
+            log.warn("Rule processing failed, continuing with other steps");
         }
     }
 
@@ -184,6 +195,8 @@ public class UnifiedOnboardingService {
                 return;
             }
             
+            log.info("Generating maintenance schedule for device: {} using PDF: {}", deviceId, pdfFilename);
+            
             // Generate maintenance using PDF processing service
             var maintenanceResponse = pdfProcessingService.generateMaintenance(pdfFilename, deviceId, organizationId);
             
@@ -193,7 +206,7 @@ public class UnifiedOnboardingService {
             }
             
             // Store maintenance tasks in database with proper date formatting
-            if (maintenanceResponse.getMaintenanceTasks() != null) {
+            if (maintenanceResponse.getMaintenanceTasks() != null && !maintenanceResponse.getMaintenanceTasks().isEmpty()) {
                 List<DeviceMaintenance> maintenanceToSave = new ArrayList<>();
                 
                 for (var maintenanceData : maintenanceResponse.getMaintenanceTasks()) {
@@ -220,11 +233,14 @@ public class UnifiedOnboardingService {
                 
                 maintenanceRepository.saveAll(maintenanceToSave);
                 log.info("Successfully stored {} maintenance tasks for device: {}", maintenanceToSave.size(), deviceId);
+            } else {
+                log.warn("No maintenance tasks generated for device: {}", deviceId);
             }
             
         } catch (Exception e) {
             log.error("Error processing maintenance for device: {}", deviceId, e);
-            throw new PDFProcessingException("Failed to process maintenance: " + e.getMessage());
+            // Don't throw exception to allow other steps to continue
+            log.warn("Maintenance processing failed, continuing with other steps");
         }
     }
 
@@ -255,6 +271,8 @@ public class UnifiedOnboardingService {
                 return;
             }
             
+            log.info("Generating safety precautions for device: {} using PDF: {}", deviceId, pdfFilename);
+            
             // Generate safety precautions using PDF processing service
             var safetyResponse = pdfProcessingService.generateSafety(pdfFilename, deviceId, organizationId);
             
@@ -264,7 +282,7 @@ public class UnifiedOnboardingService {
             }
             
             // Store safety precautions in database
-            if (safetyResponse.getSafetyPrecautions() != null) {
+            if (safetyResponse.getSafetyPrecautions() != null && !safetyResponse.getSafetyPrecautions().isEmpty()) {
                 List<DeviceSafetyPrecaution> safetyToSave = new ArrayList<>();
                 
                 for (var safetyData : safetyResponse.getSafetyPrecautions()) {
@@ -284,34 +302,50 @@ public class UnifiedOnboardingService {
                 
                 safetyRepository.saveAll(safetyToSave);
                 log.info("Successfully stored {} safety precautions for device: {}", safetyToSave.size(), deviceId);
+            } else {
+                log.warn("No safety precautions generated for device: {}", deviceId);
             }
             
         } catch (Exception e) {
             log.error("Error processing safety precautions for device: {}", deviceId, e);
-            throw new PDFProcessingException("Failed to process safety precautions: " + e.getMessage());
+            // Don't throw exception to allow other steps to continue
+            log.warn("Safety processing failed, continuing with other steps");
         }
     }
 
     /**
-     * Extract PDF filename from file path
+     * Extract PDF filename from file path with improved handling
      */
     private String extractPdfFilename(String filePath) {
         if (filePath == null || filePath.isEmpty()) {
             return null;
         }
         
-        // Extract filename from path
-        String filename = filePath.substring(filePath.lastIndexOf('/') + 1);
-        if (filename.contains("\\")) {
-            filename = filename.substring(filename.lastIndexOf('\\') + 1);
+        try {
+            // Handle different path separators
+            String normalizedPath = filePath.replace('\\', '/');
+            
+            // Extract filename from path
+            String filename = normalizedPath.substring(normalizedPath.lastIndexOf('/') + 1);
+            
+            // Remove file extension if present
+            if (filename.contains(".")) {
+                filename = filename.substring(0, filename.lastIndexOf('.'));
+            }
+            
+            // Validate filename
+            if (filename.trim().isEmpty()) {
+                log.warn("Extracted filename is empty from path: {}", filePath);
+                return null;
+            }
+            
+            log.debug("Extracted PDF filename: {} from path: {}", filename, filePath);
+            return filename;
+            
+        } catch (Exception e) {
+            log.error("Error extracting PDF filename from path: {}", filePath, e);
+            return null;
         }
-        
-        // Remove file extension if present
-        if (filename.contains(".")) {
-            filename = filename.substring(0, filename.lastIndexOf('.'));
-        }
-        
-        return filename;
     }
 
     /**

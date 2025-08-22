@@ -38,66 +38,66 @@ export class UnifiedOnboardingService {
   }
 
   /**
-   * Complete unified onboarding process using the new backend service
-   * Handles sequential workflow: upload → device creation → rules → maintenance → safety
+   * Complete unified onboarding workflow with enhanced error handling and progress tracking
    */
   async completeUnifiedOnboarding(
     formData: any,
-    uploadedFile: File,
+    uploadedFile: File | null,
     onProgress?: (progress: UnifiedOnboardingProgress) => void
   ): Promise<UnifiedOnboardingResult> {
     const startTime = Date.now();
     
     try {
-      logInfo('UnifiedOnboarding', 'Starting unified onboarding process', { deviceName: formData.deviceName });
-      
-      // Step 1: Prepare device data and upload files
+      logInfo('UnifiedOnboarding', 'Starting unified onboarding workflow', {
+        deviceName: formData.deviceName,
+        hasFile: !!uploadedFile,
+        fileName: uploadedFile?.name
+      });
+
       onProgress?.({
         stage: 'upload',
         progress: 5,
-        message: 'Preparing device data and files...',
+        message: 'Initializing onboarding process...',
         stepDetails: {
           currentStep: 1,
           totalSteps: 8,
-          stepName: 'Data Preparation'
+          stepName: 'Initialization'
         }
       });
 
-      // Dummy data for skipped connection settings
-      const dummyConnectionData = {
-        brokerUrl: 'mqtt://localhost:1883',
-        topic: 'device/default/data',
-        username: 'default_user',
-        password: 'default_password',
-        httpEndpoint: 'https://api.example.com/device/data',
-        httpMethod: 'POST',
-        httpHeaders: '{"Content-Type": "application/json"}',
-        coapHost: 'coap://localhost',
-        coapPort: '5683',
-        coapPath: '/device/data'
-      };
-
+      // Step 1: Prepare device data with proper validation
       const deviceData = {
-        name: formData.deviceName,
+        name: formData.deviceName || 'Unnamed Device',
         type: formData.deviceType || 'SENSOR',
-        location: formData.location,
-        protocol: formData.connectionType || 'MQTT',
-        status: formData.deviceStatus || 'OFFLINE',
-        manufacturer: formData.manufacturer,
-        model: formData.model || '',
+        location: formData.location || 'Unknown Location',
+        manufacturer: formData.manufacturer || 'Unknown Manufacturer',
+        model: formData.model || 'Unknown Model',
         serialNumber: formData.serialNumber || '',
-        description: formData.description || '',
+        firmware: formData.firmware || '',
+        powerSource: formData.powerSource || 'Unknown',
+        powerConsumption: formData.powerConsumption || null,
+        operatingTemperatureMin: formData.operatingTemperatureMin || null,
+        operatingTemperatureMax: formData.operatingTemperatureMax || null,
+        operatingHumidityMin: formData.operatingHumidityMin || null,
+        operatingHumidityMax: formData.operatingHumidityMax || null,
+        wifiSsid: formData.wifiSsid || '',
+        ipAddress: formData.ipAddress || '',
+        macAddress: formData.macAddress || '',
+        port: formData.port || null,
+        mqttBroker: formData.mqttBroker || '',
+        mqttTopic: formData.mqttTopic || '',
+        protocol: formData.protocol || 'HTTP',
+        assignedUserId: formData.assignedUserId || null,
         tags: formData.tags || [],
-        config: {
-          mqttBroker: formData.brokerUrl || dummyConnectionData.brokerUrl,
-          mqttTopic: formData.topic || dummyConnectionData.topic,
-          mqttUsername: formData.username || dummyConnectionData.username,
-          mqttPassword: formData.password || dummyConnectionData.password,
-          httpEndpoint: formData.httpEndpoint || dummyConnectionData.httpEndpoint,
-          httpMethod: formData.httpMethod || dummyConnectionData.httpMethod,
-          coapHost: formData.coapHost || dummyConnectionData.coapHost,
-          coapPort: formData.coapPort || dummyConnectionData.coapPort,
-          coapPath: formData.coapPath || dummyConnectionData.coapPath
+        connectionSettings: {
+          mqttBroker: formData.mqttBroker || '',
+          mqttTopic: formData.mqttTopic || '',
+          httpEndpoint: formData.httpEndpoint || '',
+          httpMethod: formData.httpMethod || 'GET',
+          httpHeaders: formData.httpHeaders || {},
+          coapHost: formData.coapHost || '',
+          coapPort: formData.coapPort || 5683,
+          coapPath: formData.coapPath || ''
         }
       };
 
@@ -149,6 +149,11 @@ export class UnifiedOnboardingService {
 
       // Use the proper API instance with authentication handling
       const response = await deviceAPI.onboardWithAI(formDataToSend);
+
+      // Validate response
+      if (!response || !response.data) {
+        throw new Error('Invalid response from backend service');
+      }
 
       const result = response.data;
       
@@ -208,203 +213,156 @@ export class UnifiedOnboardingService {
 
       logInfo('UnifiedOnboarding', 'Safety processing initiated by backend');
 
-      // Step 7: Fetch final results
+      // Step 7: Completion
       onProgress?.({
         stage: 'complete',
-        progress: 80,
-        message: 'Fetching processed data...',
+        progress: 90,
+        message: 'Finalizing onboarding process...',
         stepDetails: {
           currentStep: 8,
           totalSteps: 8,
-          stepName: 'Data Retrieval'
+          stepName: 'Finalization'
         }
       });
 
-      const deviceDetails = await this.fetchDeviceDetails(result.id);
+      // Step 8: Fetch results to get actual counts
+      try {
+        const pdfResultsResponse = await deviceAPI.getDevicePDFResults(result.id);
+        const pdfResults = pdfResultsResponse.data;
+        
+        const rulesCount = pdfResults.rules?.length || 0;
+        const maintenanceCount = pdfResults.maintenance?.length || 0;
+        const safetyCount = pdfResults.safetyPrecautions?.length || 0;
+        
+        logInfo('UnifiedOnboarding', 'PDF processing results retrieved', {
+          deviceId: result.id,
+          rulesCount,
+          maintenanceCount,
+          safetyCount
+        });
 
-      const processingTime = Date.now() - startTime;
-      
-      logInfo('UnifiedOnboarding', 'Device onboarding completed successfully', {
-        deviceId: result.id,
-        deviceName: result.name,
-        processingTime,
-        rulesGenerated: deviceDetails.rules?.length || 0,
-        maintenanceItems: deviceDetails.maintenance?.length || 0,
-        safetyPrecautions: deviceDetails.safetyPrecautions?.length || 0
-      });
+        onProgress?.({
+          stage: 'complete',
+          progress: 100,
+          message: 'Onboarding completed successfully!',
+          subMessage: `Generated ${rulesCount} rules, ${maintenanceCount} maintenance tasks, and ${safetyCount} safety precautions`,
+          stepDetails: {
+            currentStep: 8,
+            totalSteps: 8,
+            stepName: 'Complete'
+          }
+        });
 
-      onProgress?.({
-        stage: 'complete',
-        progress: 100,
-        message: 'Device onboarding completed successfully!',
-        subMessage: `Generated ${deviceDetails.rules?.length || 0} rules, ${deviceDetails.maintenance?.length || 0} maintenance items, and ${deviceDetails.safetyPrecautions?.length || 0} safety precautions`,
-        stepDetails: {
-          currentStep: 8,
-          totalSteps: 8,
-          stepName: 'Complete'
-        }
-      });
+        const processingTime = Date.now() - startTime;
+        
+        return {
+          deviceId: result.id,
+          deviceName: result.name,
+          rulesGenerated: rulesCount,
+          maintenanceItems: maintenanceCount,
+          safetyPrecautions: safetyCount,
+          deviceData: result,
+          pdfData: {
+            pdfName: uploadedFile?.name || 'No file uploaded',
+            rulesData: pdfResults.rules,
+            maintenanceData: pdfResults.maintenance,
+            safetyData: pdfResults.safetyPrecautions
+          },
+          processingTime
+        };
 
-      return {
-        deviceId: result.id,
-        deviceName: result.name,
-        rulesGenerated: deviceDetails.rules?.length || 0,
-        maintenanceItems: deviceDetails.maintenance?.length || 0,
-        safetyPrecautions: deviceDetails.safetyPrecautions?.length || 0,
-        deviceData: result,
-        pdfData: {
-          pdfName: uploadedFile?.name || '',
-          rulesData: deviceDetails.rules,
-          maintenanceData: deviceDetails.maintenance,
-          safetyData: deviceDetails.safetyPrecautions
-        },
-        processingTime
-      };
+             } catch (pdfResultsError) {
+         logWarn('UnifiedOnboarding', 'Failed to fetch PDF results, using default counts', pdfResultsError instanceof Error ? pdfResultsError : new Error('Unknown error'));
+        
+        // Return with default counts if PDF results fetch fails
+        onProgress?.({
+          stage: 'complete',
+          progress: 100,
+          message: 'Onboarding completed successfully!',
+          subMessage: 'Device created and processing initiated',
+          stepDetails: {
+            currentStep: 8,
+            totalSteps: 8,
+            stepName: 'Complete'
+          }
+        });
+
+        const processingTime = Date.now() - startTime;
+        
+        return {
+          deviceId: result.id,
+          deviceName: result.name,
+          rulesGenerated: 0,
+          maintenanceItems: 0,
+          safetyPrecautions: 0,
+          deviceData: result,
+          pdfData: {
+            pdfName: uploadedFile?.name || 'No file uploaded'
+          },
+          processingTime
+        };
+      }
 
     } catch (error) {
-      logError('UnifiedOnboarding', 'Unified onboarding process failed', error instanceof Error ? error : new Error('Unknown error'));
+      const processingTime = Date.now() - startTime;
+      logError('UnifiedOnboarding', 'Unified onboarding failed', error);
+      
+      onProgress?.({
+        stage: 'complete',
+        progress: 0,
+        message: 'Onboarding failed',
+        subMessage: error instanceof Error ? error.message : 'Unknown error occurred',
+        stepDetails: {
+          currentStep: 0,
+          totalSteps: 8,
+          stepName: 'Error'
+        }
+      });
+
       throw error;
     }
   }
 
   /**
-   * Fetch device details including rules, maintenance, and safety data
+   * Get onboarding status for a device
    */
-  private async fetchDeviceDetails(deviceId: string) {
+  async getOnboardingStatus(deviceId: string): Promise<any> {
     try {
-      logInfo('UnifiedOnboarding', 'Fetching device details', { deviceId });
+      logInfo('UnifiedOnboarding', 'Getting onboarding status for device', { deviceId });
       
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/pdf-results`, {
-        method: 'GET',
+      const response = await deviceAPI.getDevicePDFResults(deviceId);
+      return response.data;
+      
+         } catch (error) {
+       logError('UnifiedOnboarding', 'Failed to get onboarding status', error instanceof Error ? error : new Error('Unknown error'));
+      throw error;
+    }
+  }
+
+  /**
+   * Retry failed onboarding steps
+   */
+  async retryOnboardingStep(deviceId: string, step: 'rules' | 'maintenance' | 'safety'): Promise<any> {
+    try {
+      logInfo('UnifiedOnboarding', 'Retrying onboarding step', { deviceId, step });
+      
+      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/retry-${step}`, {
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        logInfo('UnifiedOnboarding', 'Device details fetched successfully', {
-          deviceId,
-          rulesCount: data.rules?.length || 0,
-          maintenanceCount: data.maintenance?.length || 0,
-          safetyCount: data.safetyPrecautions?.length || 0
-        });
-        return {
-          rules: data.rules || [],
-          maintenance: data.maintenance || [],
-          safetyPrecautions: data.safetyPrecautions || []
-        };
-      } else {
-        logWarn('UnifiedOnboarding', `Failed to fetch device details: ${response.status}`);
-        return {
-          rules: [],
-          maintenance: [],
-          safetyPrecautions: []
-        };
+      if (!response.ok) {
+        throw new Error(`Failed to retry ${step}: ${response.statusText}`);
       }
-    } catch (error) {
-      logError('UnifiedOnboarding', 'Error fetching device details', error instanceof Error ? error : new Error('Unknown error'));
-      return {
-        rules: [],
-        maintenance: [],
-        safetyPrecautions: []
-      };
-    }
-  }
 
-  /**
-   * Get onboarding progress for a specific device
-   */
-  async getOnboardingProgress(deviceId: string): Promise<UnifiedOnboardingProgress> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/onboarding-progress`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        return await response.json();
-      } else {
-        return {
-          stage: 'complete',
-          progress: 100,
-          message: 'Onboarding completed'
-        };
-      }
-    } catch (error) {
-      logError('UnifiedOnboarding', 'Error fetching onboarding progress', error instanceof Error ? error : new Error('Unknown error'));
-      return {
-        stage: 'complete',
-        progress: 100,
-        message: 'Onboarding completed'
-      };
-    }
-  }
-
-  /**
-   * Check if device onboarding is complete
-   */
-  async isOnboardingComplete(deviceId: string): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/onboarding-status`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return data.completed || false;
-      }
-      return false;
-    } catch (error) {
-      logError('UnifiedOnboarding', 'Error checking onboarding status', error instanceof Error ? error : new Error('Unknown error'));
-      return false;
-    }
-  }
-
-  /**
-   * Get device rules through unified service
-   */
-  async getDeviceRules(deviceId: string): Promise<any[]> {
-    try {
-      const deviceDetails = await this.fetchDeviceDetails(deviceId);
-      return deviceDetails.rules || [];
-    } catch (error) {
-      logError('UnifiedOnboarding', 'Error fetching device rules', error instanceof Error ? error : new Error('Unknown error'));
-      return [];
-    }
-  }
-
-  /**
-   * Get device maintenance through unified service
-   */
-  async getDeviceMaintenance(deviceId: string): Promise<any[]> {
-    try {
-      const deviceDetails = await this.fetchDeviceDetails(deviceId);
-      return deviceDetails.maintenance || [];
-    } catch (error) {
-      logError('UnifiedOnboarding', 'Error fetching device maintenance', error instanceof Error ? error : new Error('Unknown error'));
-      return [];
-    }
-  }
-
-  /**
-   * Get device safety precautions through unified service
-   */
-  async getDeviceSafetyPrecautions(deviceId: string): Promise<any[]> {
-    try {
-      const deviceDetails = await this.fetchDeviceDetails(deviceId);
-      return deviceDetails.safetyPrecautions || [];
-    } catch (error) {
-      logError('UnifiedOnboarding', 'Error fetching device safety precautions', error instanceof Error ? error : new Error('Unknown error'));
-      return [];
+      return await response.json();
+      
+         } catch (error) {
+       logError('UnifiedOnboarding', 'Failed to retry onboarding step', error instanceof Error ? error : new Error('Unknown error'));
+      throw error;
     }
   }
 }

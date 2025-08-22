@@ -19,24 +19,23 @@ import {
   Filter,
   Eye,
   EyeOff,
-  ArrowLeft,
-  Bell,
-  X,
-  Check,
-  Info
+  ArrowLeft
 } from 'lucide-react';
 import { useIoT } from '../contexts/IoTContext';
+import { useAuth } from '../contexts/AuthContext';
 import { DeviceCard } from '../components/Devices/DeviceCard';
 import { DeviceDetails } from '../components/Devices/DeviceDetails';
-import { DeviceAnalyticsDisplay } from '../components/Devices/DeviceAnalyticsDisplay';
-import { DeviceLogsDisplay } from '../components/Devices/DeviceLogsDisplay';
-import { DeviceMaintenanceDisplay } from '../components/Devices/DeviceMaintenanceDisplay';
-import { DeviceRulesDisplay } from '../components/Devices/DeviceRulesDisplay';
+import DeviceAnalyticsDisplay from '../components/Devices/DeviceAnalyticsDisplay';
+import DeviceLogsDisplay from '../components/Devices/DeviceLogsDisplay';
+import DeviceMaintenanceDisplay from '../components/Devices/DeviceMaintenanceDisplay';
+import DeviceRulesDisplay from '../components/Devices/DeviceRulesDisplay';
 import { DevicePDFResults } from '../components/Devices/DevicePDFResults';
 import { DeviceChatInterface } from '../components/Devices/DeviceChatInterface';
-import { DeviceSafetyInfo } from '../components/Devices/DeviceSafetyInfo';
+import DeviceSafetyInfo from '../components/Devices/DeviceSafetyInfo';
+import { DeviceRules } from '../components/Devices/DeviceRules';
+import { DeviceConnectionManager } from '../components/Devices/DeviceConnectionManager';
 import { deviceAPI } from '../services/api';
-import { pdfAPI } from '../services/api'; // Fixed import path
+import { pdfAPI } from '../services/api';
 import { pdfProcessingService, PDFListResponse } from '../services/pdfprocess';
 import { DeviceStatsService, DeviceStats } from '../services/deviceStatsService';
 import { logInfo, logError } from '../utils/logger';
@@ -221,7 +220,7 @@ export const DeviceDetailsSection: React.FC = () => {
           deviceId: device.id,
           deviceName: device.name
         }))
-        .filter(pdf => {
+        .filter((pdf: any) => {
           const pdfNameLower = pdf.name.toLowerCase();
           // Check if PDF name contains device name, device type, or common device-related terms
           return pdfNameLower.includes(deviceNameLower) ||

@@ -33,6 +33,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 
 /**
  * Implementation of PDF processing service with external MinerU integration.
@@ -507,23 +509,42 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
             
+            // Use consistent endpoint format
+            String endpoint = config.getBaseUrl() + "/generate-rules";
+            log.debug("Calling external service endpoint: {}", endpoint);
+            
             ResponseEntity<RulesGenerationResponse> response = restTemplate.exchange(
-                config.getBaseUrl() + "/generate-rules",
+                endpoint,
                 HttpMethod.POST,
                 requestEntity,
                 RulesGenerationResponse.class
             );
 
             if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                log.error("Rules generation failed: Invalid response from external service - Status: {}", response.getStatusCode());
                 throw new PDFProcessingException("Failed to generate rules: Invalid response from external service");
             }
 
             RulesGenerationResponse rulesResponse = response.getBody();
+            
+            // Validate response
+            if (rulesResponse == null) {
+                throw new PDFProcessingException("Rules generation failed: Null response from external service");
+            }
+            
             log.info("Rules generated successfully for device: {}, rules count: {}", 
                 deviceId, rulesResponse.getRules() != null ? rulesResponse.getRules().size() : 0);
             
             return rulesResponse;
 
+        } catch (HttpClientErrorException e) {
+            log.error("HTTP client error during rules generation for device: {} - Status: {}, Body: {}", 
+                deviceId, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new PDFProcessingException("Rules generation failed: HTTP client error - " + e.getMessage(), e);
+        } catch (HttpServerErrorException e) {
+            log.error("HTTP server error during rules generation for device: {} - Status: {}, Body: {}", 
+                deviceId, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new PDFProcessingException("Rules generation failed: HTTP server error - " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("Rules generation failed for device: {}", deviceId, e);
             throw new PDFProcessingException("Rules generation failed: " + e.getMessage(), e);
@@ -546,23 +567,42 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
             
+            // Use consistent endpoint format
+            String endpoint = config.getBaseUrl() + "/generate-maintenance";
+            log.debug("Calling external service endpoint: {}", endpoint);
+            
             ResponseEntity<MaintenanceGenerationResponse> response = restTemplate.exchange(
-                config.getBaseUrl() + "/generate-maintenance",
+                endpoint,
                 HttpMethod.POST,
                 requestEntity,
                 MaintenanceGenerationResponse.class
             );
 
             if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                log.error("Maintenance generation failed: Invalid response from external service - Status: {}", response.getStatusCode());
                 throw new PDFProcessingException("Failed to generate maintenance: Invalid response from external service");
             }
 
             MaintenanceGenerationResponse maintenanceResponse = response.getBody();
+            
+            // Validate response
+            if (maintenanceResponse == null) {
+                throw new PDFProcessingException("Maintenance generation failed: Null response from external service");
+            }
+            
             log.info("Maintenance schedule generated successfully for device: {}, tasks count: {}", 
                 deviceId, maintenanceResponse.getMaintenanceTasks() != null ? maintenanceResponse.getMaintenanceTasks().size() : 0);
             
             return maintenanceResponse;
 
+        } catch (HttpClientErrorException e) {
+            log.error("HTTP client error during maintenance generation for device: {} - Status: {}, Body: {}", 
+                deviceId, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new PDFProcessingException("Maintenance generation failed: HTTP client error - " + e.getMessage(), e);
+        } catch (HttpServerErrorException e) {
+            log.error("HTTP server error during maintenance generation for device: {} - Status: {}, Body: {}", 
+                deviceId, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new PDFProcessingException("Maintenance generation failed: HTTP server error - " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("Maintenance generation failed for device: {}", deviceId, e);
             throw new PDFProcessingException("Maintenance generation failed: " + e.getMessage(), e);
@@ -585,23 +625,42 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
             
+            // Use consistent endpoint format
+            String endpoint = config.getBaseUrl() + "/generate-safety";
+            log.debug("Calling external service endpoint: {}", endpoint);
+            
             ResponseEntity<SafetyGenerationResponse> response = restTemplate.exchange(
-                config.getBaseUrl() + "/generate-safety",
+                endpoint,
                 HttpMethod.POST,
                 requestEntity,
                 SafetyGenerationResponse.class
             );
 
             if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                log.error("Safety generation failed: Invalid response from external service - Status: {}", response.getStatusCode());
                 throw new PDFProcessingException("Failed to generate safety precautions: Invalid response from external service");
             }
 
             SafetyGenerationResponse safetyResponse = response.getBody();
+            
+            // Validate response
+            if (safetyResponse == null) {
+                throw new PDFProcessingException("Safety generation failed: Null response from external service");
+            }
+            
             log.info("Safety precautions generated successfully for device: {}, precautions count: {}", 
                 deviceId, safetyResponse.getSafetyPrecautions() != null ? safetyResponse.getSafetyPrecautions().size() : 0);
             
             return safetyResponse;
 
+        } catch (HttpClientErrorException e) {
+            log.error("HTTP client error during safety generation for device: {} - Status: {}, Body: {}", 
+                deviceId, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new PDFProcessingException("Safety generation failed: HTTP client error - " + e.getMessage(), e);
+        } catch (HttpServerErrorException e) {
+            log.error("HTTP server error during safety generation for device: {} - Status: {}, Body: {}", 
+                deviceId, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new PDFProcessingException("Safety generation failed: HTTP server error - " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("Safety generation failed for device: {}", deviceId, e);
             throw new PDFProcessingException("Safety generation failed: " + e.getMessage(), e);

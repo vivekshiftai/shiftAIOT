@@ -170,6 +170,7 @@ export const deviceAPI = {
     },
     timeout: 300000, // 5 minutes timeout for large files
   }),
+  getDevicePDFResults: (deviceId: string) => api.get(`/api/devices/${deviceId}/pdf-results`),
 };
 
 // Rule API
