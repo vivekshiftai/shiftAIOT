@@ -41,4 +41,6 @@ public interface DeviceMaintenanceRepository extends JpaRepository<DeviceMainten
     long countByDeviceIdAndStatus(String deviceId, DeviceMaintenance.Status status);
     
     long countByOrganizationIdAndStatus(String organizationId, DeviceMaintenance.Status status);
+    
+    void deleteByDeviceId(String deviceId);
 }

@@ -10,4 +10,5 @@ import java.util.List;
 public interface RuleActionRepository extends JpaRepository<RuleAction, String> {
     List<RuleAction> findByRuleId(String ruleId);
     List<RuleAction> findByType(RuleAction.ActionType type);
+    void deleteByRuleId(String ruleId);
 }

@@ -20,4 +20,6 @@ public interface RuleRepository extends JpaRepository<Rule, String> {
     List<Rule> findByDeviceId(@Param("deviceId") String deviceId);
     
     List<Rule> findByDeviceIdAndOrganizationId(String deviceId, String organizationId);
+    
+    void deleteByDeviceId(String deviceId);
 }

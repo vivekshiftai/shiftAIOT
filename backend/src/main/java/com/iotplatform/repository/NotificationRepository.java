@@ -24,4 +24,6 @@ public interface NotificationRepository extends JpaRepository<Notification, Stri
            "n.read = false AND (n.userId IS NULL OR n.userId = :userId)")
     long countUnreadByOrganizationIdAndUserId(@Param("organizationId") String organizationId, 
                                               @Param("userId") String userId);
+    
+    void deleteByDeviceId(String deviceId);
 }

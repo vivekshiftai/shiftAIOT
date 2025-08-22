@@ -3,25 +3,28 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Settings, 
-  Zap, 
   FileText, 
-  Info, 
-  Wifi, 
-  Cpu, 
-  Thermometer, 
-  Battery, 
+  Shield, 
+  AlertTriangle, 
+  CheckCircle, 
   Clock, 
-  Tag, 
-  MessageSquare,
-  Wrench,
-  Activity,
-  AlertTriangle,
-  CheckCircle,
+  Trash2,
+  Eye,
+  Edit,
+  Plus,
+  Search,
+  Filter,
   Download,
-  Send,
-  Bot,
-  User,
-  Shield
+  Upload,
+  Wrench,
+  Zap,
+  Activity,
+  Battery,
+  Cpu,
+  Thermometer,
+  Wifi,
+  Tag,
+  Send
 } from 'lucide-react';
 import { useIoT } from '../contexts/IoTContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -66,11 +69,11 @@ interface KnowledgeDocument {
 }
 
 const tabs = [
-  { id: 'device-info', label: 'Device Information', icon: Info },
-  { id: 'maintenance', label: 'Maintenance Details', icon: Wrench },
-  { id: 'rules', label: 'Rules', icon: Zap },
+  { id: 'device-info', label: 'Device Information', icon: Shield },
+  { id: 'maintenance', label: 'Maintenance Details', icon: Settings },
+  { id: 'rules', label: 'Rules', icon: FileText },
   { id: 'safety', label: 'Safety Info', icon: Shield },
-  { id: 'chat', label: 'Chat History', icon: MessageSquare }
+  { id: 'chat', label: 'Chat History', icon: Settings }
 ];
 
 export const DeviceDetailsSection: React.FC = () => {
@@ -136,7 +139,9 @@ export const DeviceDetailsSection: React.FC = () => {
       console.log('📊 Device stats:', stats);
       setDeviceStats(stats);
       
-      // Fetch detailed data
+      // Fetch detailed data with better error handling
+      logInfo('DeviceDetails', 'Fetching rules, maintenance, and safety data...');
+      
       const [rules, maintenance, safety] = await Promise.allSettled([
         DeviceStatsService.getDeviceRules(device.id),
         DeviceStatsService.getDeviceMaintenance(device.id),
@@ -162,7 +167,11 @@ export const DeviceDetailsSection: React.FC = () => {
       // Update last seen timestamp
       setLastSeen(new Date().toISOString());
       
-      logInfo('DeviceDetails', `✅ Real-time data fetched successfully for ${device.name}`);
+      logInfo('DeviceDetails', `✅ Real-time data fetched successfully for ${device.name}`, {
+        rulesCount: rulesData.length,
+        maintenanceCount: maintenanceData.length,
+        safetyCount: safetyData.length
+      });
     } catch (error) {
       logError('DeviceDetails', 'Failed to fetch real-time data', error instanceof Error ? error : new Error('Unknown error'));
     } finally {
@@ -285,7 +294,7 @@ export const DeviceDetailsSection: React.FC = () => {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Cpu className="w-8 h-8 text-slate-400" />
+                            <Settings className="w-8 h-8 text-slate-400" />
           </div>
           <h3 className="text-lg font-medium text-slate-800 mb-2">Device not found</h3>
           <p className="text-slate-600 mb-6">
@@ -463,7 +472,7 @@ export const DeviceDetailsSection: React.FC = () => {
               {/* Device Information */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <Info className="w-5 h-5" />
+                  <Shield className="w-5 h-5" />
                   Device Information
                 </h3>
                 <div className="space-y-3">

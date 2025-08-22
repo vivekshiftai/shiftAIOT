@@ -13,7 +13,7 @@ import { logInfo } from '../utils/logger';
 export const DevicesSection: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { devices, updateDeviceStatus, loading } = useIoT();
+  const { devices, updateDeviceStatus, loading, deleteDevice } = useIoT();
   const { isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -74,6 +74,19 @@ export const DevicesSection: React.FC = () => {
   const handleDeviceClick = (device: Device) => {
     navigate(`/devices/${device.id}`);
   };
+
+  const handleDeleteDevice = useCallback(async (deviceId: string, deviceName: string) => {
+    if (window.confirm(`Are you sure you want to delete the device "${deviceName}"? This will permanently remove the device and all its associated data including rules, maintenance schedules, safety precautions, and PDF documents.`)) {
+      try {
+        await deleteDevice(deviceId);
+        setSuccessMessage(`Device "${deviceName}" has been successfully deleted!`);
+        setTimeout(() => setSuccessMessage(''), 5000);
+      } catch (error) {
+        console.error('Failed to delete device:', error);
+        alert('Failed to delete device. Please try again.');
+      }
+    }
+  }, [deleteDevice]);
 
   // Show loading screen while data is being fetched
   if (loading) {
@@ -184,6 +197,7 @@ export const DevicesSection: React.FC = () => {
             <DeviceCard
               device={device}
               onStatusChange={updateDeviceStatus}
+              onDelete={handleDeleteDevice}
             />
           </div>
         ))}

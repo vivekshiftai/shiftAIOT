@@ -261,4 +261,13 @@ public interface PDFQueryRepository extends JpaRepository<PDFQuery, Long> {
      * Find queries by device ID (active only)
      */
     List<PDFQuery> findByDeviceIdAndDeletedFalseOrderByCreatedAtDesc(String deviceId);
+    
+    /**
+     * Delete queries by device ID
+     */
+    @Query("UPDATE PDFQuery q SET q.deleted = true, q.deletedAt = :deletedAt " +
+           "WHERE q.deviceId = :deviceId AND q.deleted = false")
+    int deleteByDeviceId(
+        @Param("deviceId") String deviceId,
+        @Param("deletedAt") LocalDateTime deletedAt);
 }

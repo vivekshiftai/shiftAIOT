@@ -65,4 +65,7 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
         AND m.status != 'completed'
         """, nativeQuery = true)
     List<Object[]> findTodaysMaintenanceTasksWithDetails(@Param("organizationId") String organizationId);
+    
+    // Delete by device ID
+    void deleteByDeviceId(String deviceId);
 }

@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 interface DeviceCardProps {
   device: Device;
   onStatusChange?: (deviceId: string, status: Device['status']) => void;
+  onDelete?: (deviceId: string, deviceName: string) => Promise<void>;
   isOnboarding?: boolean;
   pdfProcessingStatus?: 'pending' | 'processing' | 'completed' | 'error';
   pdfFileName?: string;
@@ -116,7 +117,8 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   isOnboarding = false,
   pdfProcessingStatus,
   pdfFileName,
-  startTime
+  startTime,
+  onDelete
 }) => {
   const { user } = useAuth();
 
@@ -315,7 +317,20 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         {/* Status Icon and Chevron */}
         <div className="flex items-center gap-3 flex-shrink-0">
           <StatusIcon className={`w-5 h-5 ${statusInfo.color}`} />
-          {/* Removed chevron icon - not available in type definitions */}
+          
+          {/* Delete Button - Only show if onDelete prop is provided and not onboarding */}
+          {onDelete && !isOnboarding && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(device.id, device.name);
+              }}
+              className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+              title="Delete Device"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

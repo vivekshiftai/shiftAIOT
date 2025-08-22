@@ -21,6 +21,25 @@ import com.iotplatform.dto.DeviceCreateRequest;
 import com.iotplatform.dto.TelemetryDataRequest;
 import com.iotplatform.model.Device;
 import com.iotplatform.repository.DeviceRepository;
+import com.iotplatform.model.Rule;
+import com.iotplatform.repository.RuleRepository;
+import com.iotplatform.model.RuleCondition;
+import com.iotplatform.repository.RuleConditionRepository;
+import com.iotplatform.model.RuleAction;
+import com.iotplatform.repository.RuleActionRepository;
+import com.iotplatform.service.DeviceConnectionService;
+import com.iotplatform.model.DeviceDocumentation;
+import com.iotplatform.repository.DeviceDocumentationRepository;
+import com.iotplatform.model.PDFQuery;
+import com.iotplatform.repository.PDFQueryRepository;
+import com.iotplatform.model.Notification;
+import com.iotplatform.repository.NotificationRepository;
+import com.iotplatform.model.MaintenanceSchedule;
+import com.iotplatform.repository.MaintenanceScheduleRepository;
+import com.iotplatform.service.DeviceSafetyPrecautionService;
+import com.iotplatform.model.DeviceMaintenance;
+import com.iotplatform.repository.DeviceMaintenanceRepository;
+
 
 @Service
 public class DeviceService {
@@ -41,6 +60,37 @@ public class DeviceService {
 
     @Autowired
     private PDFProcessingService pdfProcessingService;
+
+    @Autowired
+    private DeviceConnectionService deviceConnectionService;
+
+    @Autowired
+    private DeviceSafetyPrecautionService deviceSafetyPrecautionService;
+
+    @Autowired
+    private DeviceMaintenanceRepository deviceMaintenanceRepository;
+
+    @Autowired
+    private RuleRepository ruleRepository;
+
+    @Autowired
+    private RuleConditionRepository ruleConditionRepository;
+
+    @Autowired
+    private RuleActionRepository ruleActionRepository;
+
+    @Autowired
+    private DeviceDocumentationRepository deviceDocumentationRepository;
+
+    @Autowired
+    private PDFQueryRepository pdfQueryRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private MaintenanceScheduleRepository maintenanceScheduleRepository;
+
 
     public List<Device> getAllDevices(String organizationId) {
         logger.info("DeviceService.getAllDevices called with organizationId: {}", organizationId);
@@ -336,7 +386,92 @@ public class DeviceService {
     public void deleteDevice(String id, String organizationId) {
         Device device = deviceRepository.findByIdAndOrganizationId(id, organizationId)
                 .orElseThrow(() -> new RuntimeException("Device not found"));
-        deviceRepository.delete(device);
+        
+        logger.info("Starting comprehensive deletion of device: {} and all related data", id);
+        
+        try {
+            // Delete device-related data in the correct order to avoid foreign key constraints
+            
+            // 1. Delete device connections
+            try {
+                deviceConnectionService.deleteConnection(id, organizationId);
+                logger.info("Deleted device connections for device: {}", id);
+            } catch (Exception e) {
+                logger.warn("Failed to delete device connections for device: {} - {}", id, e.getMessage());
+            }
+            
+            // 2. Delete device safety precautions
+            try {
+                deviceSafetyPrecautionService.deleteSafetyPrecautionsByDevice(id, organizationId);
+                logger.info("Deleted safety precautions for device: {}", id);
+            } catch (Exception e) {
+                logger.warn("Failed to delete safety precautions for device: {} - {}", id, e.getMessage());
+            }
+            
+            // 3. Delete device maintenance tasks
+            try {
+                deviceMaintenanceRepository.deleteByDeviceId(id);
+                logger.info("Deleted maintenance tasks for device: {}", id);
+            } catch (Exception e) {
+                logger.warn("Failed to delete maintenance tasks for device: {} - {}", id, e.getMessage());
+            }
+            
+            // 4. Delete device rules and rule conditions
+            try {
+                List<Rule> deviceRules = ruleRepository.findByDeviceId(id);
+                for (Rule rule : deviceRules) {
+                    // Delete rule conditions first
+                    ruleConditionRepository.deleteByRuleId(rule.getId());
+                    // Delete rule actions
+                    ruleActionRepository.deleteByRuleId(rule.getId());
+                }
+                // Delete the rules
+                ruleRepository.deleteByDeviceId(id);
+                logger.info("Deleted {} rules and related data for device: {}", deviceRules.size(), id);
+            } catch (Exception e) {
+                logger.warn("Failed to delete rules for device: {} - {}", id, e.getMessage());
+            }
+            
+            // 5. Delete device documentation
+            try {
+                deviceDocumentationRepository.deleteByDeviceId(id);
+                logger.info("Deleted device documentation for device: {}", id);
+            } catch (Exception e) {
+                logger.warn("Failed to delete device documentation for device: {} - {}", id, e.getMessage());
+            }
+            
+            // 6. Delete PDF queries related to this device
+            try {
+                int deletedQueries = pdfQueryRepository.deleteByDeviceId(id, LocalDateTime.now());
+                logger.info("Deleted {} PDF queries for device: {}", deletedQueries, id);
+            } catch (Exception e) {
+                logger.warn("Failed to delete PDF queries for device: {} - {}", id, e.getMessage());
+            }
+            
+            // 7. Delete notifications related to this device
+            try {
+                notificationRepository.deleteByDeviceId(id);
+                logger.info("Deleted notifications for device: {}", id);
+            } catch (Exception e) {
+                logger.warn("Failed to delete notifications for device: {} - {}", id, e.getMessage());
+            }
+            
+            // 8. Delete maintenance schedules related to this device
+            try {
+                maintenanceScheduleRepository.deleteByDeviceId(id);
+                logger.info("Deleted maintenance schedules for device: {}", id);
+            } catch (Exception e) {
+                logger.warn("Failed to delete maintenance schedules for device: {} - {}", id, e.getMessage());
+            }
+            
+            // 9. Finally, delete the device itself
+            deviceRepository.delete(device);
+            logger.info("Successfully deleted device: {} and all related data", id);
+            
+        } catch (Exception e) {
+            logger.error("Error during comprehensive device deletion for device: {}", id, e);
+            throw new RuntimeException("Failed to delete device and related data: " + e.getMessage(), e);
+        }
     }
 
     public Device updateDeviceStatus(String id, Device.DeviceStatus status, String organizationId) {

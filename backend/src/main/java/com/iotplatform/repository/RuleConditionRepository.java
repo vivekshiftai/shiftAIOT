@@ -10,4 +10,5 @@ import java.util.List;
 public interface RuleConditionRepository extends JpaRepository<RuleCondition, String> {
     List<RuleCondition> findByRuleId(String ruleId);
     List<RuleCondition> findByDeviceId(String deviceId);
+    void deleteByRuleId(String ruleId);
 }

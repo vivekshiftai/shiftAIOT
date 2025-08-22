@@ -27,6 +27,7 @@ interface IoTContextType {
   refreshRules: () => Promise<void>;
   createDevice: (device: Partial<Device>) => Promise<void>;
   assignDeviceToUser: (deviceId: string, userId: string) => Promise<void>;
+  deleteDevice: (deviceId: string) => Promise<void>;
 }
 
 const IoTContext = createContext<IoTContextType | undefined>(undefined);
@@ -361,6 +362,18 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     }
   };
 
+  const deleteDevice = async (deviceId: string) => {
+    try {
+      logInfo('IoT', 'Deleting device', { deviceId });
+      await deviceAPI.delete(deviceId);
+      logInfo('IoT', 'Device deleted successfully', { deviceId });
+      await refreshDevices();
+    } catch (error) {
+      logError('IoT', 'Failed to delete device', error instanceof Error ? error : new Error('Unknown error'));
+      throw error;
+    }
+  };
+
   return (
     <IoTContext.Provider value={{
       devices,
@@ -380,7 +393,8 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       refreshDevices,
       refreshRules,
       createDevice,
-      assignDeviceToUser
+      assignDeviceToUser,
+      deleteDevice
     }}>
       {children}
     </IoTContext.Provider>
