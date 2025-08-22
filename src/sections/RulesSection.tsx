@@ -132,7 +132,7 @@ export const RulesSection: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 min-h-screen p-4 sm:p-6">
+    <div className="space-y-4 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 min-h-screen p-2 sm:p-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -239,7 +239,109 @@ export const RulesSection: React.FC = () => {
       )}
 
       {/* Rules Table */}
-      {filteredRules.length === 0 ? (
+      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/60 overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50/80 border-b border-slate-200/60">
+              <tr>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Rule
+                </th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Category
+                </th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Condition
+                </th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Action
+                </th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Priority
+                </th>
+                <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white/60 divide-y divide-slate-200/60">
+              {filteredRules.map((rule) => (
+                <tr key={rule.id} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${
+                        rule.status === 'ACTIVE' ? 'bg-green-50/80' : 'bg-slate-100/80'
+                      }`}>
+                        {getRuleIcon(rule)}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-slate-800">{rule.name}</div>
+                        {rule.description && (
+                          <div className="text-sm text-slate-500 truncate max-w-xs">{rule.description}</div>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-slate-700">{rule.category || 'General'}</div>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4">
+                    <div className="text-sm text-slate-700 max-w-xs truncate" title={rule.condition || 'No condition specified'}>
+                      {rule.condition || 'No condition specified'}
+                    </div>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4">
+                    <div className="text-sm text-slate-700 max-w-xs truncate" title={rule.action || 'No action specified'}>
+                      {rule.action || 'No action specified'}
+                    </div>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      rule.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {rule.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      rule.priority === 'HIGH' ? 'bg-red-100 text-red-800' :
+                      rule.priority === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {rule.priority}
+                    </span>
+                  </td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditRule(rule)}
+                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteRule(rule.id)}
+                        className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {filteredRules.length === 0 && !loading && (
         <div className="text-center py-12">
           <Info className="w-16 h-16 text-slate-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-slate-800 mb-2">
@@ -259,123 +361,6 @@ export const RulesSection: React.FC = () => {
               Create First Rule
             </Button>
           )}
-        </div>
-      ) : (
-        <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-slate-200/60 overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50/80 border-b border-slate-200/60">
-                <tr>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Rule
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Priority
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Condition
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Action
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white/60 divide-y divide-slate-200/60">
-                {filteredRules.map((rule) => (
-                  <tr key={rule.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${
-                          rule.status === 'ACTIVE' ? 'bg-green-50/80' : 'bg-slate-100/80'
-                        }`}>
-                          {getRuleIcon(rule)}
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-slate-800">{rule.name}</div>
-                          <div className="text-sm text-slate-500">{rule.description}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRuleBadge(rule)}`}>
-                        {rule.status === 'ACTIVE' ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        rule.priority === 'HIGH' ? 'bg-red-100/80 text-red-800' :
-                        rule.priority === 'MEDIUM' ? 'bg-yellow-100/80 text-yellow-800' :
-                        'bg-green-100/80 text-green-800'
-                      }`}>
-                        {rule.priority}
-                      </span>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4">
-                      <div className="text-sm text-slate-600 max-w-xs truncate">
-                        {rule.condition}
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-slate-600">
-                        {rule.action}
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-slate-500">
-                        {rule.category}
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditRule(rule)}
-                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                          title="Edit rule"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleRule(rule.id)}
-                          className={`${
-                            rule.status === 'ACTIVE' 
-                              ? 'text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50' 
-                              : 'text-green-600 hover:text-green-800 hover:bg-green-50'
-                          }`}
-                          title={rule.status === 'ACTIVE' ? 'Deactivate rule' : 'Activate rule'}
-                        >
-                          {rule.status === 'ACTIVE' ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-                        </Button>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteRule(rule.id)}
-                          className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                          title="Delete rule"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
       )}
 

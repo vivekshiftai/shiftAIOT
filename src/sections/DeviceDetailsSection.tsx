@@ -9,15 +9,11 @@ import {
   Wifi, 
   Cpu, 
   Thermometer, 
-  Droplets, 
   Battery, 
   Clock, 
   Tag, 
-  MapPin, 
-  WifiOff,
   MessageSquare,
   Wrench,
-  Database,
   Activity,
   AlertTriangle,
   CheckCircle,
@@ -35,7 +31,8 @@ import { DeviceConnectionManager } from '../components/Devices/DeviceConnectionM
 import DeviceSafetyInfo from '../components/Devices/DeviceSafetyInfo';
 import { deviceAPI } from '../services/api';
 import { pdfProcessingService, PDFListResponse } from '../services/pdfprocess';
-import { logError } from '../utils/logger';
+import { DeviceStatsService, DeviceStats } from '../services/deviceStatsService';
+import { logError, logInfo } from '../utils/logger';
 
 interface DocumentationInfo {
   deviceId: string;
@@ -100,6 +97,14 @@ export const DeviceDetailsSection: React.FC = () => {
   ]);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  
+  // Real-time data states
+  const [deviceStats, setDeviceStats] = useState<DeviceStats | null>(null);
+  const [maintenanceHistory, setMaintenanceHistory] = useState<any[]>([]);
+  const [deviceRules, setDeviceRules] = useState<any[]>([]);
+  const [safetyPrecautions, setSafetyPrecautions] = useState<any[]>([]);
+  const [lastSeen, setLastSeen] = useState<string>('');
+  const [isRealTimeLoading, setIsRealTimeLoading] = useState(false);
 
   const device = devices.find(d => d.id === deviceId);
 
@@ -114,7 +119,53 @@ export const DeviceDetailsSection: React.FC = () => {
     if (device) {
       fetchDocumentationInfo();
       loadDevicePDFs();
+      fetchRealTimeData();
     }
+  }, [device?.id]);
+
+  // Real-time data fetching
+  const fetchRealTimeData = async () => {
+    if (!device) return;
+    
+    setIsRealTimeLoading(true);
+    try {
+      logInfo('DeviceDetails', `🔄 Fetching real-time data for device: ${device.name} (${device.id})`);
+      
+      // Fetch device statistics
+      const stats = await DeviceStatsService.getDeviceStats(device.id);
+      setDeviceStats(stats);
+      
+      // Fetch detailed data
+      const [rules, maintenance, safety] = await Promise.allSettled([
+        DeviceStatsService.getDeviceRules(device.id),
+        DeviceStatsService.getDeviceMaintenance(device.id),
+        DeviceStatsService.getDeviceSafety(device.id)
+      ]);
+      
+      setDeviceRules(rules.status === 'fulfilled' ? rules.value : []);
+      setMaintenanceHistory(maintenance.status === 'fulfilled' ? maintenance.value : []);
+      setSafetyPrecautions(safety.status === 'fulfilled' ? safety.value : []);
+      
+      // Update last seen timestamp
+      setLastSeen(new Date().toISOString());
+      
+      logInfo('DeviceDetails', `✅ Real-time data fetched successfully for ${device.name}`);
+    } catch (error) {
+      logError('DeviceDetails', 'Failed to fetch real-time data', error instanceof Error ? error : new Error('Unknown error'));
+    } finally {
+      setIsRealTimeLoading(false);
+    }
+  };
+
+  // Auto-refresh real-time data every 30 seconds
+  useEffect(() => {
+    if (!device) return;
+    
+    const interval = setInterval(() => {
+      fetchRealTimeData();
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval);
   }, [device?.id]);
 
   const loadDevicePDFs = async () => {
@@ -205,17 +256,10 @@ export const DeviceDetailsSection: React.FC = () => {
 
     try {
       setDownloading(type);
-      const response = await deviceAPI.downloadDocumentation(device.id, type);
-      
-      const blob = response.data;
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${device.name}_${type}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // Note: downloadDocumentation method is not implemented in the API
+      // This is a placeholder for future implementation
+      logInfo('DeviceDetails', `Download ${type} requested for device: ${device.name}`);
+      alert(`Download functionality for ${type} is not yet implemented.`);
     } catch (error) {
       logError('DeviceDetails', `Failed to download ${type}`, error instanceof Error ? error : new Error('Unknown error'));
     } finally {
@@ -383,7 +427,12 @@ export const DeviceDetailsSection: React.FC = () => {
                 <Clock className="w-5 h-5 text-slate-500" />
                 <div>
                   <p className="text-sm text-slate-600">Last Seen</p>
-                  <p className="font-semibold text-slate-800">{formatLastSeen(device.lastSeen)}</p>
+                  <p className="font-semibold text-slate-800">
+                    {lastSeen ? formatLastSeen(lastSeen) : formatLastSeen(device.lastSeen)}
+                    {isRealTimeLoading && (
+                      <span className="ml-2 inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                    )}
+                  </p>
                 </div>
               </div>
 
@@ -593,6 +642,56 @@ export const DeviceDetailsSection: React.FC = () => {
       case 'maintenance':
         return (
           <div className="space-y-6">
+            {/* Real-time Status */}
+            {isRealTimeLoading && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-blue-800 font-medium">Updating real-time data...</span>
+                </div>
+              </div>
+            )}
+
+            {/* Device Statistics */}
+            {deviceStats && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <Wrench className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Maintenance Tasks</p>
+                      <p className="text-2xl font-bold text-slate-800">{deviceStats.maintenanceCount}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-50 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Safety Precautions</p>
+                      <p className="text-2xl font-bold text-slate-800">{deviceStats.safetyCount}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-50 rounded-lg">
+                      <Zap className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Active Rules</p>
+                      <p className="text-2xl font-bold text-slate-800">{deviceStats.rulesCount}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Maintenance Schedule */}
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <AlertTriangle className="w-5 h-5 text-yellow-600" />
@@ -602,26 +701,41 @@ export const DeviceDetailsSection: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Real-time Maintenance History */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800">Maintenance History</h3>
-                <div className="space-y-3">
-                  <div className="p-3 bg-slate-50 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-800">Last Maintenance</span>
-                      <span className="text-sm text-slate-600">2 weeks ago</span>
-                    </div>
-                    <p className="text-sm text-slate-600 mt-1">Routine calibration check</p>
+                {maintenanceHistory.length > 0 ? (
+                  <div className="space-y-3">
+                    {maintenanceHistory.slice(0, 3).map((maintenance, index) => (
+                      <div key={index} className="p-3 bg-slate-50 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-slate-800">{maintenance.title || 'Maintenance Task'}</span>
+                          <span className="text-sm text-slate-600">
+                            {maintenance.scheduledDate ? new Date(maintenance.scheduledDate).toLocaleDateString() : 'Scheduled'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-600 mt-1">{maintenance.description || 'Maintenance task'}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            maintenance.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                            maintenance.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {maintenance.status || 'PENDING'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="p-3 bg-slate-50 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-slate-800">Next Scheduled</span>
-                      <span className="text-sm text-slate-600">In 2 weeks</span>
-                    </div>
-                    <p className="text-sm text-slate-600 mt-1">Full system inspection</p>
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    <Wrench className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                    <p>No maintenance history available</p>
                   </div>
-                </div>
+                )}
               </div>
 
+              {/* Warranty Information */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800">Warranty Information</h3>
                 <div className="p-4 bg-green-50 rounded-lg">
@@ -631,6 +745,13 @@ export const DeviceDetailsSection: React.FC = () => {
                   </div>
                   <p className="text-green-700">{device.warrantyInfo || 'Standard warranty coverage'}</p>
                 </div>
+                
+                {/* Last Updated */}
+                {lastSeen && (
+                  <div className="text-xs text-slate-500 mt-2">
+                    Last updated: {new Date(lastSeen).toLocaleString()}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -649,10 +770,53 @@ export const DeviceDetailsSection: React.FC = () => {
                 Manage Rules
               </button>
             </div>
-            <div className="text-center py-8 text-slate-600">
-              <Zap className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-              <p>Click "Manage Rules" to configure automation rules for this device.</p>
-            </div>
+            
+            {/* Real-time Rules Status */}
+            {deviceRules.length > 0 ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {deviceRules.slice(0, 6).map((rule, index) => (
+                    <div key={index} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-slate-800 truncate">{rule.name || `Rule ${index + 1}`}</h4>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          rule.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {rule.active ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-600 mb-3 line-clamp-2">
+                        {rule.description || 'Automation rule for device control'}
+                      </p>
+                      <div className="flex items-center justify-between text-xs text-slate-500">
+                        <span>Type: {rule.type || 'Condition'}</span>
+                        {rule.lastTriggered && (
+                          <span>Last: {new Date(rule.lastTriggered).toLocaleDateString()}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {deviceRules.length > 6 && (
+                  <div className="text-center text-slate-500 text-sm">
+                    Showing 6 of {deviceRules.length} rules
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-600">
+                <Zap className="w-12 h-12 mx-auto mb-4 text-slate-400" />
+                <p>No rules configured for this device.</p>
+                <p className="text-sm text-slate-500 mt-2">Click "Manage Rules" to configure automation rules.</p>
+              </div>
+            )}
+            
+            {/* Last Updated */}
+            {lastSeen && (
+              <div className="text-xs text-slate-500 text-center">
+                Last updated: {new Date(lastSeen).toLocaleString()}
+              </div>
+            )}
           </div>
         );
 
@@ -661,7 +825,97 @@ export const DeviceDetailsSection: React.FC = () => {
       case 'safety':
         return (
           <div className="space-y-6">
-            <DeviceSafetyInfo deviceId={device.id} />
+            {/* Real-time Status */}
+            {isRealTimeLoading && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-blue-800 font-medium">Updating real-time safety data...</span>
+                </div>
+              </div>
+            )}
+
+            {/* Safety Statistics */}
+            {deviceStats && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-50 rounded-lg">
+                      <Shield className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Safety Precautions</p>
+                      <p className="text-2xl font-bold text-slate-800">{deviceStats.safetyCount}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 rounded-lg">
+                      <Wrench className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Maintenance Tasks</p>
+                      <p className="text-2xl font-bold text-slate-800">{deviceStats.maintenanceCount}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-50 rounded-lg">
+                      <Zap className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Active Rules</p>
+                      <p className="text-2xl font-bold text-slate-800">{deviceStats.rulesCount}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Real-time Safety Precautions */}
+            {safetyPrecautions.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-800">Safety Precautions</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {safetyPrecautions.slice(0, 4).map((precaution, index) => (
+                    <div key={index} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-red-50 rounded-lg">
+                          <AlertTriangle className="w-5 h-5 text-red-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-slate-800 mb-2">{precaution.title || `Safety Precaution ${index + 1}`}</h4>
+                          <p className="text-sm text-slate-600 mb-3">{precaution.description || 'Safety precaution for device operation'}</p>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              precaution.severity === 'HIGH' ? 'bg-red-100 text-red-800' :
+                              precaution.severity === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {precaution.severity || 'MEDIUM'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Device Safety Info Component */}
+            <div className="border-t border-slate-200 pt-6">
+              <DeviceSafetyInfo deviceId={device.id} />
+            </div>
+
+            {/* Last Updated */}
+            {lastSeen && (
+              <div className="text-xs text-slate-500 text-center">
+                Last updated: {new Date(lastSeen).toLocaleString()}
+              </div>
+            )}
           </div>
         );
 

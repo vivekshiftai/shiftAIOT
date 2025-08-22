@@ -418,13 +418,6 @@ export const KnowledgeSection: React.FC = () => {
               </p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-3">
-            <button className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-              <Settings className="w-4 h-4 inline mr-2" />
-              Settings
-            </button>
-          </div>
         </div>
       </div>
 
@@ -620,8 +613,8 @@ export const KnowledgeSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Panel - PDF Document Library - Fixed width */}
-        <div className="w-80 flex flex-col bg-white border-l border-gray-200 min-h-0">
+        {/* Right Panel - PDF Document Library - 20% width */}
+        <div className="w-1/5 flex flex-col bg-white border-l border-gray-200 min-h-0">
           {/* PDF Library Header - Fixed */}
           <div className="knowledge-fixed-header flex-shrink-0 p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-4">

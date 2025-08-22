@@ -264,7 +264,7 @@ const MaintenancePage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 min-h-screen p-4 sm:p-6">
+    <div className="space-y-4 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 min-h-screen p-2 sm:p-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

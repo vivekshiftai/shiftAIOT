@@ -127,7 +127,7 @@ const MainAppLayout: React.FC = () => {
           onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         
-        <main className="flex-1 p-8 overflow-auto">
+        <main className="flex-1 p-4 overflow-auto">
           {error && (
             <div className="mb-6 p-4 bg-error-50 border border-error-200 rounded-xl">
               <div className="flex items-center">
