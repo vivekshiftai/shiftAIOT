@@ -1,6 +1,7 @@
 package com.iotplatform.controller;
 
 import com.iotplatform.dto.*;
+import com.iotplatform.dto.PDFProcessingDTOs.PDFStatusResponse;
 import com.iotplatform.exception.PDFProcessingException;
 import com.iotplatform.service.PDFProcessingService;
 import com.iotplatform.security.CustomUserDetails;
@@ -412,6 +413,103 @@ public class PDFProcessingController {
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             log.error("Unexpected error during PDF deletion for user: {}", userDetails.getUsername(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Download a PDF document.
+     * 
+     * @param pdfName The name of the PDF to download
+     * @param userDetails The authenticated user details
+     * @return PDF file as byte array
+     */
+    @Operation(
+        summary = "Download PDF Document",
+        description = "Download a PDF document from the processing service"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "PDF downloaded successfully",
+            content = @Content(mediaType = "application/pdf")),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "404", description = "PDF document not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping("/download/{pdfName}")
+    public ResponseEntity<byte[]> downloadPDF(
+            @Parameter(description = "Name of the PDF to download", required = true)
+            @PathVariable String pdfName,
+            
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        log.info("PDF download request received from user: {} for document: {}", 
+            userDetails.getUsername(), pdfName);
+        
+        try {
+            byte[] pdfContent = pdfProcessingService.downloadPDF(
+                pdfName, 
+                userDetails.getUser().getOrganizationId()
+            );
+            
+            log.info("PDF downloaded successfully: {} by user: {}", pdfName, userDetails.getUsername());
+            
+            return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=\"" + pdfName + "\"")
+                .header("Content-Type", "application/pdf")
+                .body(pdfContent);
+            
+        } catch (PDFProcessingException e) {
+            log.error("PDF download failed for user: {} - {}", userDetails.getUsername(), e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("Unexpected error during PDF download for user: {}", userDetails.getUsername(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get the processing status of a PDF document.
+     * 
+     * @param pdfName The name of the PDF to check status
+     * @param userDetails The authenticated user details
+     * @return PDF processing status
+     */
+    @Operation(
+        summary = "Get PDF Processing Status",
+        description = "Get the current processing status of a PDF document"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Status retrieved successfully",
+            content = @Content(schema = @Schema(implementation = PDFStatusResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "404", description = "PDF document not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping("/status/{pdfName}")
+    public ResponseEntity<PDFStatusResponse> getPDFStatus(
+            @Parameter(description = "Name of the PDF to check status", required = true)
+            @PathVariable String pdfName,
+            
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        log.info("PDF status request received from user: {} for document: {}", 
+            userDetails.getUsername(), pdfName);
+        
+        try {
+            PDFStatusResponse response = pdfProcessingService.getPDFStatus(
+                pdfName, 
+                userDetails.getUser().getOrganizationId()
+            );
+            
+            log.info("PDF status retrieved successfully: {} by user: {}", pdfName, userDetails.getUsername());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (PDFProcessingException e) {
+            log.error("PDF status retrieval failed for user: {} - {}", userDetails.getUsername(), e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("Unexpected error during PDF status retrieval for user: {}", userDetails.getUsername(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

@@ -734,6 +734,37 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
         }
     }
 
+    @Override
+    public byte[] downloadPDF(String pdfName, String organizationId) throws PDFProcessingException {
+        log.info("Downloading PDF: {} for organization: {}", pdfName, organizationId);
+        try {
+            // For now, return a placeholder - in a real implementation, you would
+            // call the external PDF service to download the file
+            log.warn("PDF download not implemented - returning placeholder");
+            return "PDF download not yet implemented".getBytes();
+        } catch (Exception e) {
+            log.error("Error downloading PDF: {} for organization: {}", pdfName, organizationId, e);
+            throw new PDFProcessingException("Failed to download PDF: " + pdfName, e);
+        }
+    }
+
+    @Override
+    public PDFStatusResponse getPDFStatus(String pdfName, String organizationId) throws PDFProcessingException {
+        log.info("Getting PDF status: {} for organization: {}", pdfName, organizationId);
+        try {
+            // For now, return a placeholder status - in a real implementation, you would
+            // call the external PDF service to get the actual status
+            return PDFStatusResponse.builder()
+                .pdfName(pdfName)
+                .status("PROCESSED")
+                .processedAt(java.time.LocalDateTime.now().toString())
+                .build();
+        } catch (Exception e) {
+            log.error("Error getting PDF status: {} for organization: {}", pdfName, organizationId, e);
+            throw new PDFProcessingException("Failed to get PDF status: " + pdfName, e);
+        }
+    }
+
     // Private helper methods
 
     private void validatePDFFile(MultipartFile file) throws PDFProcessingException {

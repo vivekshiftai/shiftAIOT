@@ -130,4 +130,24 @@ public class PDFProcessingDTOs {
         private String severity;
         private String mitigation;
     }
+
+    /**
+     * PDF processing status response.
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PDFStatusResponse {
+        @JsonProperty("pdf_name")
+        private String pdfName;
+        
+        private String status;
+        
+        @JsonProperty("processed_at")
+        private String processedAt;
+        
+        @JsonProperty("error_message")
+        private String errorMessage;
+    }
 }

@@ -499,7 +499,11 @@ public class DeviceController {
             @RequestParam(value = "aiRules", required = false) String aiRulesJson,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
+        logger.info("onboardDeviceWithAI called - userDetails: {}, user: {}", 
+                   userDetails != null, userDetails != null ? userDetails.getUser() != null : false);
+        
         if (userDetails == null || userDetails.getUser() == null) {
+            logger.error("Authentication failed: userDetails is null or user is null");
             return ResponseEntity.status(401).build();
         }
         User user = userDetails.getUser();
@@ -984,6 +988,86 @@ public class DeviceController {
             logger.info("AI rules processed for device: {}", deviceId);
         } catch (Exception e) {
             logger.warn("Failed to process AI rules for device {}: {}", deviceId, e.getMessage());
+        }
+    }
+
+    /**
+     * Get device onboarding progress
+     */
+    @GetMapping("/{id}/onboarding-progress")
+    @PreAuthorize("hasAuthority('DEVICE_READ')")
+    public ResponseEntity<?> getOnboardingProgress(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        try {
+            String organizationId = user.getOrganizationId();
+            
+            Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
+            if (deviceOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Check if device has been processed with PDF
+            List<Rule> rules = pdfProcessingService.getDeviceRules(id);
+            List<DeviceMaintenance> maintenance = pdfProcessingService.getDeviceMaintenance(id);
+            List<DeviceSafetyPrecaution> safetyPrecautions = pdfProcessingService.getDeviceSafetyPrecautions(id);
+            
+            Map<String, Object> progress = new HashMap<>();
+            progress.put("stage", "complete");
+            progress.put("progress", 100);
+            progress.put("message", "Onboarding completed");
+            progress.put("rulesCount", rules.size());
+            progress.put("maintenanceCount", maintenance.size());
+            progress.put("safetyCount", safetyPrecautions.size());
+            
+            return ResponseEntity.ok(progress);
+            
+        } catch (Exception e) {
+            logger.error("Error retrieving onboarding progress for device: {}", id, e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to retrieve onboarding progress"));
+        }
+    }
+
+    /**
+     * Check if device onboarding is complete
+     */
+    @GetMapping("/{id}/onboarding-status")
+    @PreAuthorize("hasAuthority('DEVICE_READ')")
+    public ResponseEntity<?> getOnboardingStatus(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        try {
+            String organizationId = user.getOrganizationId();
+            
+            Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
+            if (deviceOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Check if device has been processed with PDF
+            List<Rule> rules = pdfProcessingService.getDeviceRules(id);
+            List<DeviceMaintenance> maintenance = pdfProcessingService.getDeviceMaintenance(id);
+            List<DeviceSafetyPrecaution> safetyPrecautions = pdfProcessingService.getDeviceSafetyPrecautions(id);
+            
+            boolean completed = !rules.isEmpty() || !maintenance.isEmpty() || !safetyPrecautions.isEmpty();
+            
+            Map<String, Object> status = new HashMap<>();
+            status.put("completed", completed);
+            status.put("rulesCount", rules.size());
+            status.put("maintenanceCount", maintenance.size());
+            status.put("safetyCount", safetyPrecautions.size());
+            
+            return ResponseEntity.ok(status);
+            
+        } catch (Exception e) {
+            logger.error("Error checking onboarding status for device: {}", id, e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to check onboarding status"));
         }
     }
 

@@ -238,4 +238,24 @@ public interface PDFProcessingService {
      * @return Count of maintenance tasks
      */
     long getMaintenanceCount(String deviceId);
+
+    /**
+     * Downloads a PDF document from the processing service.
+     * 
+     * @param pdfName The name of the PDF to download
+     * @param organizationId The organization ID for data isolation
+     * @return PDF file as byte array
+     * @throws PDFProcessingException if download fails
+     */
+    byte[] downloadPDF(String pdfName, String organizationId) throws PDFProcessingException;
+
+    /**
+     * Gets the processing status of a PDF document.
+     * 
+     * @param pdfName The name of the PDF to check status
+     * @param organizationId The organization ID for data isolation
+     * @return PDF processing status response
+     * @throws PDFProcessingException if status check fails
+     */
+    PDFStatusResponse getPDFStatus(String pdfName, String organizationId) throws PDFProcessingException;
 }

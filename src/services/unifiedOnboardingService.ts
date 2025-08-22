@@ -137,6 +137,16 @@ export class UnifiedOnboardingService {
 
       logInfo('UnifiedOnboarding', 'Calling unified backend service', { endpoint: '/api/devices/onboard-with-ai' });
 
+      // Debug: Check token status before making the request
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      logInfo('UnifiedOnboarding', 'Token status before request', { 
+        hasToken: !!token, 
+        tokenLength: token?.length || 0,
+        hasUser: !!user,
+        userData: user ? JSON.parse(user) : null
+      });
+
       // Use the proper API instance with authentication handling
       const response = await deviceAPI.onboardWithAI(formDataToSend);
 
