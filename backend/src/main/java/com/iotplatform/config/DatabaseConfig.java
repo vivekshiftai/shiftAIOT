@@ -13,7 +13,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
-import org.springframework.web.client.RestTemplate;
 
 @Configuration
 @EnableJpaAuditing
@@ -42,10 +41,5 @@ public class DatabaseConfig {
             logger.error("❌ Failed to connect to PostgreSQL database: {}", e.getMessage());
             throw new RuntimeException("Database connection failed", e);
         }
-    }
-    
-    @Bean
-    public RestTemplate restTemplate() {
-        return new RestTemplate();
     }
 }
