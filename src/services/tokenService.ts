@@ -130,32 +130,6 @@ class TokenService {
       this.setAxiosAuthHeader(token);
     }
   }
-
-  // Check authentication status with detailed information
-  public getAuthStatus(): {
-    isAuthenticated: boolean;
-    hasToken: boolean;
-    tokenLength: number;
-    hasUser: boolean;
-    userInfo: any | null;
-  } {
-    const token = this.getToken();
-    const user = this.getUser();
-    
-    return {
-      isAuthenticated: !!(token && user),
-      hasToken: !!token,
-      tokenLength: token?.length || 0,
-      hasUser: !!user,
-      userInfo: user
-    };
-  }
-
-  // Log authentication status for debugging
-  public logAuthStatus(): void {
-    const status = this.getAuthStatus();
-    console.log('🔐 Authentication Status:', status);
-  }
 }
 
 export const tokenService = TokenService.getInstance();
