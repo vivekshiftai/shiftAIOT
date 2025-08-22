@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Date;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +52,7 @@ import com.iotplatform.repository.RuleConditionRepository;
 import com.iotplatform.repository.DeviceMaintenanceRepository;
 import com.iotplatform.repository.DeviceSafetyPrecautionRepository;
 import com.iotplatform.repository.DeviceRepository;
+import com.iotplatform.repository.UserRepository;
 
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -76,8 +78,9 @@ public class DeviceController {
     private final DeviceMaintenanceRepository deviceMaintenanceRepository;
     private final DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository;
     private final DeviceRepository deviceRepository;
+    private final UserRepository userRepository;
 
-    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository) {
+    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.fileStorageService = fileStorageService;
@@ -88,6 +91,7 @@ public class DeviceController {
         this.deviceMaintenanceRepository = deviceMaintenanceRepository;
         this.deviceSafetyPrecautionRepository = deviceSafetyPrecautionRepository;
         this.deviceRepository = deviceRepository;
+        this.userRepository = userRepository;
     }
 
     @GetMapping
@@ -488,6 +492,95 @@ public class DeviceController {
             logger.error("Failed to get device documentation info: device={}, error={}", id, e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    @GetMapping("/debug-db")
+    public ResponseEntity<?> debugDatabase(@RequestParam String email) {
+        logger.info("🔍 Debug database endpoint called for email: {}", email);
+        
+        try {
+            // Check if user exists in database
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                logger.info("✅ User found in database: {}", user.getEmail());
+                
+                return ResponseEntity.ok(Map.of(
+                    "status", "found",
+                    "user", Map.of(
+                        "id", user.getId(),
+                        "email", user.getEmail(),
+                        "firstName", user.getFirstName(),
+                        "lastName", user.getLastName(),
+                        "role", user.getRole(),
+                        "organizationId", user.getOrganizationId(),
+                        "enabled", user.isEnabled(),
+                        "createdAt", user.getCreatedAt(),
+                        "updatedAt", user.getUpdatedAt()
+                    ),
+                    "timestamp", new Date()
+                ));
+            } else {
+                logger.warn("❌ User not found in database for email: {}", email);
+                return ResponseEntity.status(404).body(Map.of(
+                    "status", "not_found",
+                    "message", "User not found in database",
+                    "email", email,
+                    "timestamp", new Date()
+                ));
+            }
+        } catch (Exception e) {
+            logger.error("❌ Database check failed for email: {}", email, e);
+            return ResponseEntity.status(500).body(Map.of(
+                "status", "error",
+                "message", "Database check failed: " + e.getMessage(),
+                "timestamp", new Date()
+            ));
+        }
+    }
+
+    @GetMapping("/debug-auth")
+    public ResponseEntity<?> debugAuthentication(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🔍 Debug authentication endpoint called");
+        
+        if (userDetails == null) {
+            logger.warn("❌ userDetails is null");
+            return ResponseEntity.status(401).body(Map.of(
+                "status", "unauthenticated",
+                "message", "No user details found",
+                "timestamp", new Date()
+            ));
+        }
+        
+        if (userDetails.getUser() == null) {
+            logger.warn("❌ userDetails.getUser() is null");
+            return ResponseEntity.status(401).body(Map.of(
+                "status", "unauthenticated",
+                "message", "User object is null",
+                "timestamp", new Date()
+            ));
+        }
+        
+        User user = userDetails.getUser();
+        logger.info("✅ User authenticated successfully: {}", user.getEmail());
+        
+        return ResponseEntity.ok(Map.of(
+            "status", "authenticated",
+            "user", Map.of(
+                "id", user.getId(),
+                "email", user.getEmail(),
+                "firstName", user.getFirstName(),
+                "lastName", user.getLastName(),
+                "role", user.getRole(),
+                "organizationId", user.getOrganizationId(),
+                "enabled", user.isEnabled()
+            ),
+            "authorities", userDetails.getAuthorities().stream()
+                .map(Object::toString)
+                .collect(java.util.stream.Collectors.toList()),
+            "timestamp", new Date()
+        ));
     }
 
     @PostMapping("/onboard-with-ai")

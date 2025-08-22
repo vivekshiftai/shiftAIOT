@@ -2,8 +2,8 @@
 // Update these endpoints to match your external services
 
 export const API_CONFIG = {
-  // Backend API (your Spring Boot application)
-  BACKEND_BASE_URL: 'http://20.57.36.66:8100',
+  // Backend API (your Spring Boot application) - should be localhost for development
+  BACKEND_BASE_URL: 'http://localhost:8100',
   
   // PDF Processing is handled by the backend, no direct frontend calls needed
   
@@ -27,10 +27,12 @@ export const getApiConfig = () => {
     case 'production':
       return {
         ...API_CONFIG,
+        BACKEND_BASE_URL: 'http://20.57.36.66:8100', // Production backend URL
       };
     case 'development':
       return {
         ...API_CONFIG,
+        BACKEND_BASE_URL: 'http://localhost:8100', // Local development backend URL
       };
     default:
       return API_CONFIG;

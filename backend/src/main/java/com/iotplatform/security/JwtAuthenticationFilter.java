@@ -46,22 +46,43 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
             String jwt = getJwtFromRequest(request);
-            logger.info("🔐 JWT Filter - URI: {}, JWT present: {}", requestURI, StringUtils.hasText(jwt));
+            logger.info("🔐 JWT Filter - URI: {}, JWT present: {}, JWT length: {}", 
+                       requestURI, StringUtils.hasText(jwt), jwt != null ? jwt.length() : 0);
 
-            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-                String username = tokenProvider.getUsernameFromToken(jwt);
+            if (StringUtils.hasText(jwt)) {
+                boolean isValid = tokenProvider.validateToken(jwt);
+                logger.info("🔐 JWT validation result: {}", isValid);
+                
+                if (isValid) {
+                    String username = tokenProvider.getUsernameFromToken(jwt);
+                    logger.info("🔐 Username extracted from token: {}", username);
+                    
+                    if (username != null) {
+                        try {
+                            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                            logger.info("🔐 User details loaded successfully for: {}", username);
+                            
+                            UsernamePasswordAuthenticationToken authentication = 
+                                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                UsernamePasswordAuthenticationToken authentication = 
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                logger.info("✅ Authentication successful for user: {} on endpoint: {}", username, requestURI);
+                            SecurityContextHolder.getContext().setAuthentication(authentication);
+                            logger.info("✅ Authentication successful for user: {} on endpoint: {}", username, requestURI);
+                        } catch (Exception userLoadError) {
+                            logger.error("❌ Failed to load user details for username: {}", username, userLoadError);
+                        }
+                    } else {
+                        logger.error("❌ Could not extract username from valid JWT token");
+                    }
+                } else {
+                    logger.warn("❌ JWT token validation failed for endpoint: {}", requestURI);
+                    // Log a sample of the token for debugging (first 50 chars)
+                    if (jwt != null && jwt.length() > 50) {
+                        logger.debug("❌ JWT token sample: {}...", jwt.substring(0, 50));
+                    }
+                }
             } else {
-                logger.warn("❌ JWT authentication failed for endpoint: {} - JWT present: {}, Valid: {}", 
-                           requestURI, StringUtils.hasText(jwt), 
-                           StringUtils.hasText(jwt) ? tokenProvider.validateToken(jwt) : false);
+                logger.warn("❌ No JWT token found in request for endpoint: {}", requestURI);
             }
         } catch (Exception ex) {
             logger.error("❌ Could not set user authentication in security context", ex);

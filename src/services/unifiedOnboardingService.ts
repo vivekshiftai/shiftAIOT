@@ -147,6 +147,73 @@ export class UnifiedOnboardingService {
         userData: user ? JSON.parse(user) : null
       });
 
+      // Validate authentication before proceeding
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+
+      // Test authentication with a simple API call
+      try {
+        logInfo('UnifiedOnboarding', 'Testing authentication before onboarding...');
+        
+        // Get user email from localStorage
+        const userData = user ? JSON.parse(user) : null;
+        const userEmail = userData?.email;
+        
+        if (userEmail) {
+          // Check if user exists in database
+          const dbCheckResponse = await fetch(`${this.baseUrl}/api/devices/debug-db?email=${encodeURIComponent(userEmail)}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (dbCheckResponse.ok) {
+            const dbData = await dbCheckResponse.json();
+            logInfo('UnifiedOnboarding', 'Database check successful', dbData);
+          } else {
+            logWarn('UnifiedOnboarding', `Database check failed: ${dbCheckResponse.status} ${dbCheckResponse.statusText}`);
+          }
+        }
+        
+        // First, test the debug endpoint
+        const debugResponse = await fetch(`${this.baseUrl}/api/devices/debug-auth`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (debugResponse.ok) {
+          const debugData = await debugResponse.json();
+          logInfo('UnifiedOnboarding', 'Debug authentication successful', debugData);
+        } else {
+          logError('UnifiedOnboarding', `Debug authentication failed: ${debugResponse.status} ${debugResponse.statusText}`);
+        }
+
+        // Then test the profile endpoint
+        const authTestResponse = await fetch(`${this.baseUrl}/api/users/profile`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!authTestResponse.ok) {
+          logError('UnifiedOnboarding', `Authentication test failed: ${authTestResponse.status} ${authTestResponse.statusText}`);
+          throw new Error(`Authentication failed: ${authTestResponse.status} ${authTestResponse.statusText}`);
+        }
+
+        logInfo('UnifiedOnboarding', 'Authentication test successful');
+      } catch (authError) {
+        logError('UnifiedOnboarding', 'Authentication validation failed', authError instanceof Error ? authError : new Error('Unknown error'));
+        throw new Error('Authentication validation failed. Please log in again.');
+      }
+
       // Use the proper API instance with authentication handling
       const response = await deviceAPI.onboardWithAI(formDataToSend);
 
