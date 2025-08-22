@@ -5,8 +5,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { StatsCard } from '../components/Dashboard/StatsCard';
 import Skeleton, { SkeletonCard } from '../components/UI/Skeleton';
 import Button from '../components/UI/Button';
-import Modal from '../components/UI/Modal';
-import TaskManager from '../components/TaskManager/TaskManager';
+
 import { maintenanceAPI } from '../services/api';
 import { logError } from '../utils/logger';
 
@@ -26,7 +25,6 @@ export const DashboardSection: React.FC = () => {
   const { theme } = useTheme();
   const navigate = useNavigate();
   const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
-  const [showTaskManager, setShowTaskManager] = useState(false);
   const [upcomingMaintenance, setUpcomingMaintenance] = useState<any[]>([]);
   const [maintenanceCount, setMaintenanceCount] = useState(0);
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
@@ -146,7 +144,7 @@ export const DashboardSection: React.FC = () => {
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
+        {/* <div className="flex items-center gap-3">
           <Button
             variant="outline"
             size="md"
@@ -156,15 +154,7 @@ export const DashboardSection: React.FC = () => {
           >
             Add Device
           </Button>
-          <Button
-            variant="secondary"
-            size="md"
-            leftIcon={<CheckCircle className="w-4 h-4" />}
-            onClick={() => setShowTaskManager(true)}
-            className="btn-warning"
-          >
-            Task Manager
-          </Button>
+
           <Button
             variant="primary"
             size="md"
@@ -175,7 +165,7 @@ export const DashboardSection: React.FC = () => {
             View Analytics
           </Button>
         </div>
-      </div>
+      </div> */}
 
       {/* Top Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -366,13 +356,7 @@ export const DashboardSection: React.FC = () => {
           <p className="text-secondary text-sm">View detailed performance insights</p>
         </div>
 
-                 <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => setShowTaskManager(true)}>
-           <div className="w-12 h-12 bg-error-50 rounded-xl flex items-center justify-center mx-auto mb-4">
-             <CheckCircle className="w-6 h-6 text-error-400" />
-           </div>
-          <h4 className="font-semibold text-primary mb-2">Task Manager</h4>
-          <p className="text-secondary text-sm">Organize and track your tasks</p>
-        </div>
+
 
                  <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/settings')}>
            <div className="w-12 h-12 bg-secondary-50 rounded-xl flex items-center justify-center mx-auto mb-4">
@@ -383,16 +367,7 @@ export const DashboardSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Task Manager Modal */}
-      <Modal
-        isOpen={showTaskManager}
-        onClose={() => setShowTaskManager(false)}
-        title="Task Manager"
-        size="full"
-        className="max-w-7xl"
-      >
-        <TaskManager />
-      </Modal>
+
 
       
     </div>

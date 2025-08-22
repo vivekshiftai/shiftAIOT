@@ -50,6 +50,7 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config || {};
     const status = error.response?.status;
+    const url = error.config?.url || '';
 
     // Handle 401/403 auth errors
     if ((status === 401 || status === 403) && !originalRequest._retry) {
@@ -63,8 +64,16 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
           return api(originalRequest);
         } else {
-          // Token refresh failed, redirect to login
-          logWarn('API', 'Token refresh failed, redirecting to login');
+          // Token refresh failed
+          logWarn('API', 'Token refresh failed');
+          
+          // For /users endpoint during onboarding, don't redirect to login
+          if (url.includes('/users')) {
+            logWarn('API', 'Authentication failed for /users endpoint - this is expected during onboarding if user is not fully authenticated');
+            return Promise.reject(error);
+          }
+          
+          // For other endpoints, redirect to login
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           window.location.href = '/login';
@@ -72,7 +81,14 @@ api.interceptors.response.use(
         }
       } catch (refreshErr: any) {
         logWarn('API', 'Token refresh failed', undefined, refreshErr);
-        // Token refresh failed, redirect to login
+        
+        // For /users endpoint during onboarding, don't redirect to login
+        if (url.includes('/users')) {
+          logWarn('API', 'Authentication failed for /users endpoint - this is expected during onboarding if user is not fully authenticated');
+          return Promise.reject(error);
+        }
+        
+        // For other endpoints, redirect to login
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';
@@ -308,137 +324,85 @@ export const userAPI = {
   savePreferences: (prefs: any) => api.post('/user-preferences', prefs),
 };
 
-// PDF Processing API
+// PDF Processing API - All calls go through backend
 export const pdfAPI = {
-  // Upload and process PDF files with MinerU extraction
+  // Upload and process PDF files through backend
   uploadPDF: async (file: File, deviceId?: string, deviceName?: string) => {
     const formData = new FormData();
     formData.append('file', file);
     if (deviceId) formData.append('deviceId', deviceId);
     if (deviceName) formData.append('deviceName', deviceName);
     
-    // Create a separate axios instance without authentication for PDF uploads
-    const pdfApi = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: 300000, // 5 minutes timeout for large files
-    });
-    
-    return pdfApi.post('/upload-pdf', formData, {
+    return api.post('/api/pdf/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 300000, // 5 minutes timeout for large files
     });
   },
 
-  // Query PDF content with intelligent responses and context
+  // Query PDF content through backend
   queryPDF: async (query: string, pdfName?: string, topK: number = 5) => {
-    // Create a separate axios instance without authentication for PDF queries
-    const pdfApi = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: 30000,
-    });
-    
-    return pdfApi.post('/query', {
+    return api.post('/api/pdf/query', {
       query,
       pdf_name: pdfName,
       top_k: topK
     });
   },
 
-  // List all processed PDFs with pagination
+  // List all processed PDFs through backend
   listPDFs: async (page: number = 1, limit: number = 10, deviceId?: string) => {
-    // Create a separate axios instance without authentication for PDF listing
-    const pdfApi = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: 10000,
-    });
-    
     const params: any = { page, limit };
     if (deviceId) params.deviceId = deviceId;
     
-    return pdfApi.get('/pdfs', { params });
+    return api.get('/api/pdf/list', { params });
   },
 
-  // Download processed PDF
+  // Download processed PDF through backend
   downloadPDF: async (pdfName: string) => {
-    // Create a separate axios instance without authentication for PDF downloads
-    const pdfApi = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: 30000,
+    return api.get(`/api/pdf/download/${pdfName}`, {
       responseType: 'blob',
+      timeout: 30000,
     });
-    
-    return pdfApi.get(`/pdfs/${pdfName}/download`);
   },
 
-  // Get PDF processing status
+  // Get PDF processing status through backend
   getPDFStatus: async (pdfName: string) => {
-    // Create a separate axios instance without authentication for PDF status
-    const pdfApi = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: 10000,
-    });
-    
-    return pdfApi.get(`/pdfs/${pdfName}/status`);
+    return api.get(`/api/pdf/status/${pdfName}`);
   },
 
-  // Generate rules from PDF
+  // Generate rules from PDF through backend
   generateRules: async (pdfName: string, deviceId?: string) => {
-    // Create a separate axios instance without authentication for rule generation
-    const pdfApi = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: 60000, // 1 minute timeout for rule generation
-    });
-    
     const payload: any = { pdf_name: pdfName };
     if (deviceId) payload.deviceId = deviceId;
     
-    return pdfApi.post('/generate-rules', payload);
+    return api.post('/api/pdf/generate-rules', payload);
   },
 
-  // Generate maintenance schedule from PDF
+  // Generate maintenance schedule from PDF through backend
   generateMaintenance: async (pdfName: string, deviceId?: string) => {
-    // Create a separate axios instance without authentication for maintenance generation
-    const pdfApi = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: 60000, // 1 minute timeout for maintenance generation
-    });
-    
     const payload: any = { pdf_name: pdfName };
     if (deviceId) payload.deviceId = deviceId;
     
-    return pdfApi.post('/generate-maintenance', payload);
+    return api.post('/api/pdf/generate-maintenance', payload);
   },
 
-  // Generate safety precautions from PDF
+  // Generate safety precautions from PDF through backend
   generateSafety: async (pdfName: string, deviceId?: string) => {
-    // Create a separate axios instance without authentication for safety generation
-    const pdfApi = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: 60000, // 1 minute timeout for safety generation
-    });
-    
     const payload: any = { pdf_name: pdfName };
     if (deviceId) payload.deviceId = deviceId;
     
-    return pdfApi.post('/generate-safety', payload);
+    return api.post('/api/pdf/generate-safety', payload);
   },
 
-  // Delete PDF from external processing service
+  // Delete PDF through backend
   deletePDF: async (pdfName: string) => {
-    console.log(`🗑️ [API] Starting PDF deletion via main API service: "${pdfName}"`);
-    console.log(`🌐 [API] DELETE request to: ${API_BASE_URL}/pdfs/${pdfName}`);
+    console.log(`🗑️ [API] Starting PDF deletion via backend: "${pdfName}"`);
     
     const startTime = Date.now();
     
-    // Create a separate axios instance without authentication for PDF deletion
-    const pdfApi = axios.create({
-      baseURL: API_BASE_URL,
-      timeout: 30000,
-    });
-    
     try {
-      const response = await pdfApi.delete(`/pdfs/${pdfName}`);
+      const response = await api.delete(`/api/pdf/delete/${pdfName}`);
       const endTime = Date.now();
       const duration = endTime - startTime;
       
@@ -455,8 +419,7 @@ export const pdfAPI = {
       
       console.error(`❌ [API] PDF deletion failed: "${pdfName}"`, {
         error: error instanceof Error ? error.message : 'Unknown error',
-        duration: `${duration}ms`,
-        url: `${API_BASE_URL}/pdfs/${pdfName}`
+        duration: `${duration}ms`
       });
       
       throw error;

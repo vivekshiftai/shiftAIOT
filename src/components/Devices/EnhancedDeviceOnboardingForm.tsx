@@ -6,7 +6,8 @@ import EnhancedOnboardingLoader from '../Loading/EnhancedOnboardingLoader';
 import { DeviceChatInterface } from './DeviceChatInterface';
 import { OnboardingSuccess } from './OnboardingSuccess';
 import { getApiConfig } from '../../config/api';
-import { logInfo, logError } from '../../utils/logger';
+import { logInfo, logError, logWarn } from '../../utils/logger';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface DeviceFormData {
   deviceName: string;
@@ -49,6 +50,17 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   onSubmit, 
   onCancel 
 }) => {
+  const { user: currentUser } = useAuth();
+  
+  // Log authentication state for debugging
+  useEffect(() => {
+    logInfo('EnhancedDeviceOnboardingForm', 'Authentication state', { 
+      hasCurrentUser: !!currentUser,
+      currentUserId: currentUser?.id,
+      currentUserEmail: currentUser?.email
+    });
+  }, [currentUser]);
+  
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [formData, setFormData] = useState<DeviceFormData>({
     deviceName: '',
@@ -96,17 +108,26 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     const fetchUsers = async () => {
       setLoadingUsers(true);
       try {
+        logInfo('EnhancedDeviceOnboardingForm', 'Attempting to fetch users for device assignment');
         const response = await userAPI.getAll();
         setUsers(response.data);
         logInfo('EnhancedDeviceOnboardingForm', 'Users fetched successfully', { count: response.data.length });
-      } catch (error) {
+      } catch (error: any) {
         logError('EnhancedDeviceOnboardingForm', 'Failed to fetch users', error instanceof Error ? error : new Error('Unknown error'));
+        
+        // Check if it's an authentication error
+        if (error.response?.status === 401) {
+          logWarn('EnhancedDeviceOnboardingForm', 'Authentication error when fetching users - user may not be logged in or token expired');
+        }
+        
         // Set some dummy users as fallback
-        setUsers([
+        const fallbackUsers = [
           { id: 'user1', firstName: 'John', lastName: 'Doe', role: 'ADMIN' },
           { id: 'user2', firstName: 'Jane', lastName: 'Smith', role: 'USER' },
           { id: 'user3', firstName: 'Bob', lastName: 'Johnson', role: 'USER' }
-        ]);
+        ];
+        setUsers(fallbackUsers);
+        logInfo('EnhancedDeviceOnboardingForm', 'Using fallback users due to fetch failure', { count: fallbackUsers.length });
       } finally {
         setLoadingUsers(false);
       }
@@ -114,6 +135,17 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
     fetchUsers();
   }, []);
+
+  // Auto-assign current user if available and no user is currently assigned
+  useEffect(() => {
+    if (currentUser && !formData.assignedUserId) {
+      logInfo('EnhancedDeviceOnboardingForm', 'Auto-assigning device to current user', { 
+        userId: currentUser.id, 
+        userName: `${currentUser.firstName} ${currentUser.lastName}` 
+      });
+      setFormData(prev => ({ ...prev, assignedUserId: currentUser.id }));
+    }
+  }, [currentUser, formData.assignedUserId]);
 
   // Add dummy data for skipped connection settings
   const getDummyConnectionData = useCallback(() => {
@@ -151,7 +183,12 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       if (!formData.deviceName.trim()) newErrors.deviceName = 'Device name is required';
       if (!formData.location.trim()) newErrors.location = 'Location is required';
       if (!formData.manufacturer.trim()) newErrors.manufacturer = 'Manufacturer is required';
-      if (!formData.assignedUserId) newErrors.assignedUserId = 'Please assign the device to a user';
+      
+      // Make user assignment optional - if no user is selected, auto-assign to current user
+      if (!formData.assignedUserId && currentUser) {
+        logInfo('EnhancedDeviceOnboardingForm', 'No user assigned, auto-assigning to current user', { userId: currentUser.id });
+        formData.assignedUserId = currentUser.id;
+      }
     }
 
     if (step === 2) {
@@ -168,7 +205,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData.deviceName, formData.location, formData.manufacturer, formData.connectionType, formData.brokerUrl, formData.topic, formData.httpEndpoint, formData.coapHost]); // Specific dependencies instead of entire formData object
+  }, [formData.deviceName, formData.location, formData.manufacturer, formData.connectionType, formData.brokerUrl, formData.topic, formData.httpEndpoint, formData.coapHost, currentUser]); // Specific dependencies instead of entire formData object
 
   const nextStep = useCallback(() => {
     if (validateStep(currentStep)) {
@@ -224,6 +261,13 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
   const startOnboardingProcess = useCallback(async () => {
     if (!uploadedFile?.file) return;
+
+    logInfo('EnhancedDeviceOnboardingForm', 'Starting onboarding process', {
+      deviceName: formData.deviceName,
+      assignedUserId: formData.assignedUserId,
+      currentUserId: currentUser?.id,
+      hasFile: !!uploadedFile?.file
+    });
 
     setShowOnboardingLoader(true);
     setOnboardingStartTime(Date.now());
@@ -313,7 +357,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       // Show error message to user
       alert(`Onboarding failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }, [uploadedFile, formData, onboardingStartTime]);
+  }, [uploadedFile, formData, onboardingStartTime, currentUser]);
 
   const handleSubmit = useCallback(async () => {
     if (!validateStep(currentStep)) return;
@@ -411,7 +455,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-gray-700">
-              Assign to User *
+              Assign to User {currentUser && !formData.assignedUserId && (
+                <span className="text-xs text-indigo-600 font-normal">(will auto-assign to you)</span>
+              )}
             </label>
             <select
               value={formData.assignedUserId || ''}
@@ -424,12 +470,24 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               <option value="" className="bg-white text-gray-800">
                 {loadingUsers ? 'Loading users...' : 'Select a user...'}
               </option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id} className="bg-white text-gray-800">
-                  👤 {user.firstName} {user.lastName} ({user.role})
+              {users.length > 0 ? (
+                users.map((user) => (
+                  <option key={user.id} value={user.id} className="bg-white text-gray-800">
+                    👤 {user.firstName} {user.lastName} ({user.role})
+                    {currentUser && user.id === currentUser.id ? ' (You)' : ''}
+                  </option>
+                ))
+              ) : (
+                <option value="" className="bg-white text-gray-800" disabled>
+                  No users available
                 </option>
-              ))}
+              )}
             </select>
+            {currentUser && !formData.assignedUserId && (
+              <p className="text-indigo-600 text-sm mt-1">
+                💡 Device will be automatically assigned to you ({currentUser.firstName} {currentUser.lastName})
+              </p>
+            )}
             {errors.assignedUserId && (
               <p className="text-red-600 text-sm mt-1">{errors.assignedUserId}</p>
             )}
@@ -437,7 +495,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         </div>
       </div>
     </div>
-  ), [formData.deviceName, formData.location, formData.manufacturer, formData.assignedUserId, errors.deviceName, errors.location, errors.manufacturer, errors.assignedUserId, handleInputChange]);
+  ), [formData.deviceName, formData.location, formData.manufacturer, formData.assignedUserId, errors.deviceName, errors.location, errors.manufacturer, errors.assignedUserId, handleInputChange, currentUser]);
 
     const renderStep2 = useCallback(() => (
     <div className="w-full max-w-4xl mx-auto space-y-8">

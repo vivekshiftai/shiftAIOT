@@ -277,7 +277,7 @@ export const KnowledgeSection: React.FC = () => {
       const deviceName = deviceId ? devices.find((d: Device) => d.id === deviceId)?.name : undefined;
       
       // Upload directly to PDF processing service (like in Device section)
-      const uploadResponse = await pdfProcessingService.uploadPDF(file);
+      const uploadResponse = await pdfProcessingService.uploadPDF(file, 'public');
       
       // Create a new document entry
       const newDocument: KnowledgeDocument = {
