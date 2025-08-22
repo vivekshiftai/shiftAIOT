@@ -515,14 +515,11 @@ public class DeviceService {
         if (deviceDetails.getModel() != null) {
             device.setModel(deviceDetails.getModel());
         }
-        if (deviceDetails.getConnectionType() != null) {
-            device.setConnectionType(deviceDetails.getConnectionType());
+        if (deviceDetails.getMqttBroker() != null) {
+            device.setMqttBroker(deviceDetails.getMqttBroker());
         }
-        if (deviceDetails.getBrokerUrl() != null) {
-            device.setBrokerUrl(deviceDetails.getBrokerUrl());
-        }
-        if (deviceDetails.getTopic() != null) {
-            device.setTopic(deviceDetails.getTopic());
+        if (deviceDetails.getMqttTopic() != null) {
+            device.setMqttTopic(deviceDetails.getMqttTopic());
         }
         if (deviceDetails.getHttpEndpoint() != null) {
             device.setHttpEndpoint(deviceDetails.getHttpEndpoint());
