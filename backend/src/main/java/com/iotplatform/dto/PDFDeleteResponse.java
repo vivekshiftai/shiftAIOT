@@ -7,28 +7,22 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Response from PDF upload operation.
+ * Response for PDF deletion operation.
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PDFUploadResponse {
+public class PDFDeleteResponse {
     @JsonProperty("success")
     private boolean success;
     
     @JsonProperty("message")
     private String message;
     
-    @JsonProperty("pdf_name")
-    private String pdfName;
-    
-    @JsonProperty("chunks_processed")
-    private Integer chunksProcessed;
+    @JsonProperty("deleted_pdf")
+    private String deletedPdf;
     
     @JsonProperty("processing_time")
     private String processingTime;
-    
-    @JsonProperty("collection_name")
-    private String collectionName;
 }

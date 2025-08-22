@@ -836,6 +836,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-96">
         <DeviceChatInterface
           deviceName={formData.deviceName}
+          deviceId={onboardingResult?.deviceId || 'unknown'}
           pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
           onClose={handleSuccessClose}
           onContinue={handleSuccessClose}

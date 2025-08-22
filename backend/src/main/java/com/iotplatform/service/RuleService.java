@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.iotplatform.controller.RuleController;
 import com.iotplatform.dto.TelemetryDataRequest;
+import com.iotplatform.dto.RulesGenerationResponse;
 import com.iotplatform.model.Device;
 import com.iotplatform.model.Rule;
 import com.iotplatform.model.RuleAction;
@@ -267,5 +268,31 @@ public class RuleService {
         } catch (Exception e) {
             System.err.println("Failed to create notification: " + e.getMessage());
         }
+    }
+    
+    public List<Rule> getRulesByDeviceId(String deviceId) {
+        return ruleRepository.findByDeviceId(deviceId);
+    }
+    
+    public void createRulesFromPDF(List<RulesGenerationResponse.Rule> rules, String deviceId, String organizationId) {
+        System.out.println("Creating rules from PDF for device: " + deviceId);
+        for (RulesGenerationResponse.Rule ruleData : rules) {
+            Rule rule = new Rule();
+            rule.setId(UUID.randomUUID().toString());
+            rule.setName(ruleData.getName());
+            rule.setDescription(ruleData.getDescription());
+            rule.setMetric(ruleData.getMetric());
+            rule.setMetricValue(ruleData.getMetricValue());
+            rule.setThreshold(ruleData.getThreshold());
+            rule.setConsequence(ruleData.getConsequence());
+            rule.setActive(true);
+            rule.setDeviceId(deviceId);
+            rule.setOrganizationId(organizationId);
+            rule.setCreatedAt(LocalDateTime.now());
+            rule.setUpdatedAt(LocalDateTime.now());
+            
+            ruleRepository.save(rule);
+        }
+        System.out.println("Created " + rules.size() + " rules from PDF for device: " + deviceId);
     }
 }

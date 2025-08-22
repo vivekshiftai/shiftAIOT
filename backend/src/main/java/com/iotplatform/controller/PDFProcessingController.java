@@ -1,6 +1,6 @@
 package com.iotplatform.controller;
 
-import com.iotplatform.dto.PDFProcessingDTOs.*;
+import com.iotplatform.dto.*;
 import com.iotplatform.exception.PDFProcessingException;
 import com.iotplatform.service.PDFProcessingService;
 import com.iotplatform.security.CustomUserDetails;
@@ -128,8 +128,8 @@ public class PDFProcessingController {
         try {
             PDFQueryResponse response = pdfProcessingService.queryPDF(
                 request, 
-                userDetails.getId(), 
-                userDetails.getOrganizationId()
+                Long.parseLong(userDetails.getUser().getId()), 
+                userDetails.getUser().getOrganizationId()
             );
             
             log.info("PDF query completed successfully for user: {} on document: {}", 
@@ -179,7 +179,7 @@ public class PDFProcessingController {
         
         try {
             PDFListResponse response = pdfProcessingService.listPDFs(
-                userDetails.getOrganizationId(), 
+                userDetails.getUser().getOrganizationId(), 
                 page, 
                 size
             );
@@ -400,7 +400,7 @@ public class PDFProcessingController {
         try {
             PDFDeleteResponse response = pdfProcessingService.deletePDF(
                 pdfName, 
-                userDetails.getOrganizationId()
+                userDetails.getUser().getOrganizationId()
             );
             
             log.info("PDF deleted successfully: {} by user: {}", pdfName, userDetails.getUsername());

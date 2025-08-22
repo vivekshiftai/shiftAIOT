@@ -7,28 +7,31 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Response from PDF upload operation.
+ * Response for processing status operation.
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PDFUploadResponse {
+public class ProcessingStatusResponse {
     @JsonProperty("success")
     private boolean success;
     
     @JsonProperty("message")
     private String message;
     
-    @JsonProperty("pdf_name")
-    private String pdfName;
+    @JsonProperty("operation_id")
+    private String operationId;
     
-    @JsonProperty("chunks_processed")
-    private Integer chunksProcessed;
+    @JsonProperty("status")
+    private String status;
     
-    @JsonProperty("processing_time")
-    private String processingTime;
+    @JsonProperty("progress")
+    private int progress;
     
-    @JsonProperty("collection_name")
-    private String collectionName;
+    @JsonProperty("result")
+    private Object result;
+    
+    @JsonProperty("error")
+    private String error;
 }

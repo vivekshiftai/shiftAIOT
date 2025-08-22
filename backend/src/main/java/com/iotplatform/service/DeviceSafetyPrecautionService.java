@@ -1,5 +1,6 @@
 package com.iotplatform.service;
 
+import com.iotplatform.dto.SafetyGenerationResponse;
 import com.iotplatform.model.DeviceSafetyPrecaution;
 import com.iotplatform.repository.DeviceSafetyPrecautionRepository;
 import org.slf4j.Logger;
@@ -137,5 +138,33 @@ public class DeviceSafetyPrecautionService {
     public List<DeviceSafetyPrecaution> getAllSafetyPrecautionsByOrganization(String organizationId) {
         logger.info("Fetching all safety precautions for organization: {}", organizationId);
         return deviceSafetyPrecautionRepository.findByOrganizationId(organizationId);
+    }
+    
+    public List<DeviceSafetyPrecaution> getSafetyPrecautionsByDeviceId(String deviceId) {
+        logger.info("Fetching safety precautions for device: {}", deviceId);
+        return deviceSafetyPrecautionRepository.findByDeviceId(deviceId);
+    }
+    
+    public void createSafetyFromPDF(List<SafetyGenerationResponse.SafetyPrecaution> safetyPrecautions, String deviceId, String organizationId) {
+        logger.info("Creating safety precautions from PDF for device: {} in organization: {}", deviceId, organizationId);
+        
+        for (SafetyGenerationResponse.SafetyPrecaution safetyData : safetyPrecautions) {
+            DeviceSafetyPrecaution safety = new DeviceSafetyPrecaution();
+            safety.setId(UUID.randomUUID().toString());
+            safety.setDeviceId(deviceId);
+            safety.setOrganizationId(organizationId);
+            safety.setTitle(safetyData.getTitle());
+            safety.setDescription(safetyData.getDescription());
+            safety.setCategory(safetyData.getCategory());
+            safety.setSeverity(safetyData.getSeverity());
+            safety.setType("PDF_GENERATED");
+            safety.setIsActive(true);
+            safety.setCreatedAt(LocalDateTime.now());
+            safety.setUpdatedAt(LocalDateTime.now());
+            
+            deviceSafetyPrecautionRepository.save(safety);
+        }
+        
+        logger.info("Successfully created {} safety precautions from PDF for device: {}", safetyPrecautions.size(), deviceId);
     }
 }

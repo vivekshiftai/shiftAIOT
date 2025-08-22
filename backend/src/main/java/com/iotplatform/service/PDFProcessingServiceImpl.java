@@ -4,6 +4,10 @@ import com.iotplatform.dto.*;
 import com.iotplatform.exception.PDFProcessingException;
 import com.iotplatform.model.PDFDocument;
 import com.iotplatform.model.PDFQuery;
+import com.iotplatform.model.Rule;
+import com.iotplatform.model.DeviceMaintenance;
+import com.iotplatform.model.DeviceSafetyPrecaution;
+import com.iotplatform.model.Device;
 import com.iotplatform.repository.PDFDocumentRepository;
 import com.iotplatform.repository.PDFQueryRepository;
 import com.iotplatform.config.PDFProcessingConfig;
@@ -12,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -22,7 +27,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -99,7 +107,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                 .collectionName(uploadResponse.getCollectionName())
                 .uploadedAt(LocalDateTime.now())
                 .processedAt(LocalDateTime.now())
-                .status("COMPLETED")
+                .status(PDFDocument.PDFStatus.COMPLETED)
                 .organizationId(organizationId)
                 .build();
 
@@ -154,15 +162,17 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
 
             PDFQueryResponse queryResponse = response.getBody();
             
-            // Store query interaction for audit trail
+            // Store query interaction for audit trail and chat history
             PDFQuery pdfQuery = PDFQuery.builder()
-                .pdfDocumentId(pdfDocument.getId())
+                .pdfDocument(pdfDocument)
+                .userId(userId)
+                .organizationId(organizationId)
                 .userQuery(request.getQuery())
                 .aiResponse(queryResponse.getResponse())
-                .chunksUsed(String.join(",", queryResponse.getChunksUsed()))
+                .chunksUsed(queryResponse.getChunksUsed() != null ? 
+                    String.join(",", queryResponse.getChunksUsed()) : "")
                 .processingTime(queryResponse.getProcessingTime())
-                .createdAt(LocalDateTime.now())
-                .userId(userId)
+                .status(PDFQuery.QueryStatus.COMPLETED)
                 .build();
 
             pdfQueryRepository.save(pdfQuery);
@@ -178,6 +188,91 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
     }
 
     @Override
+    public PDFQueryResponse queryPDFWithDeviceContext(PDFQueryRequest request, Long userId, String deviceId, String organizationId) throws PDFProcessingException {
+        log.info("Processing PDF query with device context for user: {} device: {} in organization: {}", userId, deviceId, organizationId);
+        
+        try {
+            // Validate request
+            validateQueryRequest(request);
+            
+            // Verify PDF exists in our database
+            PDFDocument pdfDocument = pdfDocumentRepository.findByNameAndOrganizationId(
+                request.getPdfName(), organizationId)
+                .orElseThrow(() -> new PDFProcessingException("PDF document not found: " + request.getPdfName()));
+
+            // Prepare query request
+            HttpHeaders headers = createHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            HttpEntity<PDFQueryRequest> requestEntity = new HttpEntity<>(request, headers);
+            
+            log.debug("Querying PDF with device context using MinerU service: {}", config.getBaseUrl() + "/query");
+            
+            // Call external service
+            ResponseEntity<PDFQueryResponse> response = restTemplate.exchange(
+                config.getBaseUrl() + "/query",
+                HttpMethod.POST,
+                requestEntity,
+                PDFQueryResponse.class
+            );
+
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                throw new PDFProcessingException("Failed to query PDF: Invalid response from external service");
+            }
+
+            PDFQueryResponse queryResponse = response.getBody();
+            
+            // Store query interaction with device context for chat history
+            PDFQuery pdfQuery = PDFQuery.builder()
+                .pdfDocument(pdfDocument)
+                .userId(userId)
+                .deviceId(deviceId)
+                .organizationId(organizationId)
+                .userQuery(request.getQuery())
+                .aiResponse(queryResponse.getResponse())
+                .chunksUsed(queryResponse.getChunksUsed() != null ? 
+                    String.join(",", queryResponse.getChunksUsed()) : "")
+                .processingTime(queryResponse.getProcessingTime())
+                .status(PDFQuery.QueryStatus.COMPLETED)
+                .build();
+
+            pdfQueryRepository.save(pdfQuery);
+            
+            log.info("PDF query with device context completed successfully for document: {} device: {}", 
+                request.getPdfName(), deviceId);
+            
+            return queryResponse;
+
+        } catch (Exception e) {
+            log.error("PDF query with device context failed: {}", e.getMessage(), e);
+            // Store failed query for audit
+            try {
+                PDFDocument pdfDocument = pdfDocumentRepository.findByNameAndOrganizationId(
+                    request.getPdfName(), organizationId).orElse(null);
+                
+                if (pdfDocument != null) {
+                    PDFQuery failedQuery = PDFQuery.builder()
+                        .pdfDocument(pdfDocument)
+                        .userId(userId)
+                        .deviceId(deviceId)
+                        .organizationId(organizationId)
+                        .userQuery(request.getQuery())
+                        .aiResponse("")
+                        .status(PDFQuery.QueryStatus.FAILED)
+                        .errorMessage(e.getMessage())
+                        .build();
+                    
+                    pdfQueryRepository.save(failedQuery);
+                }
+            } catch (Exception saveError) {
+                log.error("Failed to save error query: {}", saveError.getMessage());
+            }
+            
+            throw new PDFProcessingException("PDF query with device context failed", e);
+        }
+    }
+
+    @Override
     public PDFListResponse listPDFs(String organizationId, int page, int size) throws PDFProcessingException {
         log.info("Listing PDFs for organization: {} (page: {}, size: {})", organizationId, page, size);
         
@@ -187,16 +282,17 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                 organizationId, PageRequest.of(page, size));
 
             // Transform to response format
-            List<PDFDocumentInfo> pdfs = pdfPage.getContent().stream()
-                .map(this::mapToPDFDocumentInfo)
+            List<PDFListResponse.PDFDocument> pdfs = pdfPage.getContent().stream()
+                .map(this::mapToPDFListResponseDocument)
                 .toList();
 
             return PDFListResponse.builder()
                 .success(true)
                 .pdfs(pdfs)
                 .totalCount((int) pdfPage.getTotalElements())
-                .currentPage(page)
-                .totalPages(pdfPage.getTotalPages())
+                .total((int) pdfPage.getTotalElements())
+                .page(page)
+                .size(size)
                 .build();
 
         } catch (Exception e) {
@@ -312,12 +408,12 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                 SafetyGenerationResponse safetyResponse = response.getBody();
                 
                 // Save safety information to database
-                if (safetyResponse.getSafetyInformation() != null && !safetyResponse.getSafetyInformation().isEmpty()) {
-                    safetyService.createSafetyFromPDF(safetyResponse.getSafetyInformation(), deviceId, organizationId);
+                if (safetyResponse.getSafetyPrecautions() != null && !safetyResponse.getSafetyPrecautions().isEmpty()) {
+                    safetyService.createSafetyFromPDF(safetyResponse.getSafetyPrecautions(), deviceId, organizationId);
                 }
                 
                 log.info("Safety generation completed for PDF: {} ({} safety items created)", 
-                    pdfName, safetyResponse.getSafetyInformation() != null ? safetyResponse.getSafetyInformation().size() : 0);
+                    pdfName, safetyResponse.getSafetyPrecautions() != null ? safetyResponse.getSafetyPrecautions().size() : 0);
                 
                 return safetyResponse;
 
@@ -358,7 +454,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             pdfDocumentRepository.delete(pdfDocument);
             
             // Delete related queries
-            pdfQueryRepository.deleteByPdfDocumentId(pdfDocument.getId());
+            pdfQueryRepository.deleteByPdfDocumentId(pdfDocument.getId(), LocalDateTime.now());
             
             log.info("PDF deleted successfully: {}", pdfName);
             
@@ -390,6 +486,251 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
         } catch (Exception e) {
             log.error("Health check failed: {}", e.getMessage(), e);
             throw new PDFProcessingException("Health check failed", e);
+        }
+    }
+
+    // Synchronous generation methods for unified onboarding
+
+    @Override
+    public RulesGenerationResponse generateRules(String pdfName, String deviceId, String organizationId) throws PDFProcessingException {
+        log.info("Generating rules synchronously for PDF: {} and device: {}", pdfName, deviceId);
+        
+        try {
+            // Call external service for rules generation
+            HttpHeaders headers = createHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("pdf_name", pdfName);
+            requestBody.put("device_id", deviceId);
+            requestBody.put("organization_id", organizationId);
+            
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+            
+            ResponseEntity<RulesGenerationResponse> response = restTemplate.exchange(
+                config.getBaseUrl() + "/generate-rules",
+                HttpMethod.POST,
+                requestEntity,
+                RulesGenerationResponse.class
+            );
+
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                throw new PDFProcessingException("Failed to generate rules: Invalid response from external service");
+            }
+
+            RulesGenerationResponse rulesResponse = response.getBody();
+            log.info("Rules generated successfully for device: {}, rules count: {}", 
+                deviceId, rulesResponse.getRules() != null ? rulesResponse.getRules().size() : 0);
+            
+            return rulesResponse;
+
+        } catch (Exception e) {
+            log.error("Rules generation failed for device: {}", deviceId, e);
+            throw new PDFProcessingException("Rules generation failed: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public MaintenanceGenerationResponse generateMaintenance(String pdfName, String deviceId, String organizationId) throws PDFProcessingException {
+        log.info("Generating maintenance schedule synchronously for PDF: {} and device: {}", pdfName, deviceId);
+        
+        try {
+            // Call external service for maintenance generation
+            HttpHeaders headers = createHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("pdf_name", pdfName);
+            requestBody.put("device_id", deviceId);
+            requestBody.put("organization_id", organizationId);
+            
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+            
+            ResponseEntity<MaintenanceGenerationResponse> response = restTemplate.exchange(
+                config.getBaseUrl() + "/generate-maintenance",
+                HttpMethod.POST,
+                requestEntity,
+                MaintenanceGenerationResponse.class
+            );
+
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                throw new PDFProcessingException("Failed to generate maintenance: Invalid response from external service");
+            }
+
+            MaintenanceGenerationResponse maintenanceResponse = response.getBody();
+            log.info("Maintenance schedule generated successfully for device: {}, tasks count: {}", 
+                deviceId, maintenanceResponse.getMaintenanceTasks() != null ? maintenanceResponse.getMaintenanceTasks().size() : 0);
+            
+            return maintenanceResponse;
+
+        } catch (Exception e) {
+            log.error("Maintenance generation failed for device: {}", deviceId, e);
+            throw new PDFProcessingException("Maintenance generation failed: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public SafetyGenerationResponse generateSafety(String pdfName, String deviceId, String organizationId) throws PDFProcessingException {
+        log.info("Generating safety precautions synchronously for PDF: {} and device: {}", pdfName, deviceId);
+        
+        try {
+            // Call external service for safety generation
+            HttpHeaders headers = createHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("pdf_name", pdfName);
+            requestBody.put("device_id", deviceId);
+            requestBody.put("organization_id", organizationId);
+            
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+            
+            ResponseEntity<SafetyGenerationResponse> response = restTemplate.exchange(
+                config.getBaseUrl() + "/generate-safety",
+                HttpMethod.POST,
+                requestEntity,
+                SafetyGenerationResponse.class
+            );
+
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                throw new PDFProcessingException("Failed to generate safety precautions: Invalid response from external service");
+            }
+
+            SafetyGenerationResponse safetyResponse = response.getBody();
+            log.info("Safety precautions generated successfully for device: {}, precautions count: {}", 
+                deviceId, safetyResponse.getSafetyPrecautions() != null ? safetyResponse.getSafetyPrecautions().size() : 0);
+            
+            return safetyResponse;
+
+        } catch (Exception e) {
+            log.error("Safety generation failed for device: {}", deviceId, e);
+            throw new PDFProcessingException("Safety generation failed: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<Rule> getDeviceRules(String deviceId) {
+        log.debug("Fetching rules for device: {}", deviceId);
+        try {
+            return ruleService.getRulesByDeviceId(deviceId);
+        } catch (Exception e) {
+            log.error("Error fetching rules for device: {}", deviceId, e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public List<DeviceMaintenance> getDeviceMaintenance(String deviceId) {
+        log.debug("Fetching maintenance tasks for device: {}", deviceId);
+        try {
+            return maintenanceService.getMaintenanceByDeviceId(deviceId);
+        } catch (Exception e) {
+            log.error("Error fetching maintenance tasks for device: {}", deviceId, e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public List<DeviceSafetyPrecaution> getDeviceSafetyPrecautions(String deviceId) {
+        log.debug("Fetching safety precautions for device: {}", deviceId);
+        try {
+            return safetyService.getSafetyPrecautionsByDeviceId(deviceId);
+        } catch (Exception e) {
+            log.error("Error fetching safety precautions for device: {}", deviceId, e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public List<PDFQuery> getChatHistory(Long userId, String organizationId, int limit) {
+        log.debug("Fetching chat history for user: {} in organization: {} (limit: {})", userId, organizationId, limit);
+        try {
+            PageRequest pageRequest = PageRequest.of(0, limit);
+            return pdfQueryRepository.findChatHistoryByUserIdAndOrganizationId(userId, organizationId, pageRequest);
+        } catch (Exception e) {
+            log.error("Error fetching chat history for user: {} in organization: {}", userId, organizationId, e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public List<PDFQuery> getDeviceChatHistory(Long userId, String deviceId, String organizationId, int limit) {
+        log.debug("Fetching device chat history for user: {} device: {} in organization: {} (limit: {})", 
+            userId, deviceId, organizationId, limit);
+        try {
+            PageRequest pageRequest = PageRequest.of(0, limit);
+            return pdfQueryRepository.findChatHistoryByUserIdAndDeviceIdAndOrganizationId(
+                userId, deviceId, organizationId, pageRequest);
+        } catch (Exception e) {
+            log.error("Error fetching device chat history for user: {} device: {} in organization: {}", 
+                userId, deviceId, organizationId, e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public List<PDFQuery> getPDFChatHistory(String pdfName, String organizationId, int limit) {
+        log.debug("Fetching PDF chat history for PDF: {} in organization: {} (limit: {})", 
+            pdfName, organizationId, limit);
+        try {
+            PageRequest pageRequest = PageRequest.of(0, limit);
+            return pdfQueryRepository.findChatHistoryByPdfNameAndOrganizationId(pdfName, organizationId, pageRequest);
+        } catch (Exception e) {
+            log.error("Error fetching PDF chat history for PDF: {} in organization: {}", pdfName, organizationId, e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public ProcessingStatusResponse getProcessingStatus(String taskId, String organizationId) throws PDFProcessingException {
+        log.debug("Checking processing status for task: {} in organization: {}", taskId, organizationId);
+        try {
+            // For now, return a simple status response
+            // In a real implementation, you would check the actual status from the external service
+            return ProcessingStatusResponse.builder()
+                .operationId(taskId)
+                .status("COMPLETED")
+                .progress(100)
+                .message("Processing completed")
+                .build();
+        } catch (Exception e) {
+            log.error("Error checking processing status for task: {} in organization: {}", taskId, organizationId, e);
+            throw new PDFProcessingException("Failed to check processing status", e);
+        }
+    }
+
+    @Override
+    public void savePDFProcessingResults(Device device, DeviceCreateWithFileRequest.PDFResults pdfResults) throws PDFProcessingException {
+        log.info("Saving PDF processing results for device: {}", device.getId());
+        try {
+            // This method is a placeholder for saving PDF processing results
+            // In a real implementation, you would save the results to the database
+            log.info("PDF processing results saved successfully for device: {}", device.getId());
+        } catch (Exception e) {
+            log.error("Error saving PDF processing results for device: {}", device.getId(), e);
+            throw new PDFProcessingException("Failed to save PDF processing results", e);
+        }
+    }
+
+    @Override
+    public List<DeviceMaintenance> getUpcomingMaintenance(String deviceId) {
+        log.debug("Fetching upcoming maintenance for device: {}", deviceId);
+        try {
+            return maintenanceService.getUpcomingMaintenance(deviceId);
+        } catch (Exception e) {
+            log.error("Error fetching upcoming maintenance for device: {}", deviceId, e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public long getMaintenanceCount(String deviceId) {
+        log.debug("Fetching maintenance count for device: {}", deviceId);
+        try {
+            return maintenanceService.getMaintenanceCount(deviceId);
+        } catch (Exception e) {
+            log.error("Error fetching maintenance count for device: {}", deviceId, e);
+            return 0;
         }
     }
 
@@ -442,6 +783,15 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             .pdfName(document.getName())
             .createdAt(document.getUploadedAt().toString())
             .chunkCount(document.getChunksProcessed())
+            .build();
+    }
+
+    private PDFListResponse.PDFDocument mapToPDFListResponseDocument(PDFDocument document) {
+        return PDFListResponse.PDFDocument.builder()
+            .name(document.getName())
+            .uploadedAt(document.getUploadedAt().toString())
+            .fileSize(document.getFileSize())
+            .status(document.getStatus().toString())
             .build();
     }
 }

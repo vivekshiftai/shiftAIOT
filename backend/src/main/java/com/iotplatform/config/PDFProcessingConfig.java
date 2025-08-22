@@ -191,7 +191,7 @@ public class PDFProcessingConfig {
     private static class LoggingInterceptor implements org.springframework.http.client.ClientHttpRequestInterceptor {
         
         @Override
-        public org.springframework.http.HttpOutputMessage intercept(
+        public org.springframework.http.client.ClientHttpResponse intercept(
             org.springframework.http.HttpRequest request, 
             byte[] body, 
             org.springframework.http.client.ClientHttpRequestExecution execution) throws java.io.IOException {

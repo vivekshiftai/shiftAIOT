@@ -21,6 +21,9 @@ import java.time.LocalDateTime;
 @Table(name = "pdf_queries", indexes = {
     @Index(name = "idx_pdf_query_doc_id", columnList = "pdf_document_id"),
     @Index(name = "idx_pdf_query_user_id", columnList = "user_id"),
+    @Index(name = "idx_pdf_query_device_id", columnList = "device_id"),
+    @Index(name = "idx_pdf_query_org_id", columnList = "organization_id"),
+    @Index(name = "idx_pdf_query_user_device", columnList = "user_id,device_id"),
     @Index(name = "idx_pdf_query_created_at", columnList = "created_at")
 })
 @Data
@@ -46,6 +49,18 @@ public class PDFQuery {
      */
     @Column(name = "user_id", nullable = false)
     private Long userId;
+
+    /**
+     * ID of the device associated with this query (optional)
+     */
+    @Column(name = "device_id", length = 255)
+    private String deviceId;
+
+    /**
+     * Organization ID for data isolation
+     */
+    @Column(name = "organization_id", nullable = false, length = 255)
+    private String organizationId;
 
     /**
      * The user's query text

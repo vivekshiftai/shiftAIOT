@@ -43,6 +43,8 @@ public interface PDFDocumentRepository extends JpaRepository<PDFDocument, Long> 
      */
     List<PDFDocument> findByOrganizationIdAndDeletedFalseOrderByUploadedAtDesc(String organizationId);
 
+
+
     /**
      * Find PDF documents by status and organization
      */
@@ -97,6 +99,11 @@ public interface PDFDocumentRepository extends JpaRepository<PDFDocument, Long> 
            "ORDER BY p.uploadedAt DESC")
     List<PDFDocument> findProcessingDocumentsByOrganization(
         @Param("organizationId") String organizationId);
+
+    /**
+     * Find all PDF documents for an organization with pagination
+     */
+    Page<PDFDocument> findByOrganizationIdOrderByUploadedAtDesc(String organizationId, Pageable pageable);
 
     /**
      * Find PDF documents by collection name

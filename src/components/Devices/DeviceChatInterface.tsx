@@ -10,18 +10,12 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react';
-import { pdfProcessingService } from '../../services/pdfprocess';
-
-interface ChatMessage {
-  id: string;
-  type: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  isLoading?: boolean;
-}
+import { chatService, ChatMessage } from '../../services/chatService';
+import { logInfo, logError } from '../../utils/logger';
 
 interface DeviceChatInterfaceProps {
   deviceName: string;
+  deviceId: string;
   pdfFileName: string;
   onClose: () => void;
   onContinue: () => void;
@@ -29,22 +23,14 @@ interface DeviceChatInterfaceProps {
 
 export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
   deviceName,
+  deviceId,
   pdfFileName,
   onClose,
   onContinue
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      type: 'assistant',
-      content: `Hello! I'm your AI assistant for ${deviceName}. I've analyzed the documentation you uploaded (${pdfFileName}) and I'm ready to help you with any questions about your device. You can ask me about setup, maintenance, troubleshooting, technical specifications, or any other aspects of your device. What would you like to know?`,
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [particles, setParticles] = useState<Array<{id: number, x: number, y: number, vx: number, vy: number, color: string, size: number}>>([]);
-  const [floatingIcons, setFloatingIcons] = useState<Array<{id: number, icon: any, x: number, y: number, delay: number, rotation: number}>>([]);
   const [aiStatus, setAiStatus] = useState<'idle' | 'thinking' | 'responding'>('idle');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -95,6 +81,50 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Load chat history on component mount
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      try {
+        logInfo('DeviceChatInterface', 'Loading device chat history', { deviceId, deviceName });
+        
+        const history = await chatService.getDeviceChatHistory(deviceId, 20);
+        
+        if (history.messages.length > 0) {
+          setMessages(history.messages);
+          logInfo('DeviceChatInterface', 'Chat history loaded successfully', { 
+            messageCount: history.messages.length 
+          });
+        } else {
+          // Show welcome message if no history
+          const welcomeMessage: ChatMessage = {
+            id: 'welcome_' + Date.now(),
+            type: 'assistant',
+            content: `Hello! I'm your AI assistant for ${deviceName}. I've analyzed the documentation you uploaded (${pdfFileName}) and I'm ready to help you with any questions about your device. You can ask me about setup, maintenance, troubleshooting, technical specifications, or any other aspects of your device. What would you like to know?`,
+            timestamp: new Date(),
+            pdfName: pdfFileName,
+            deviceId: deviceId
+          };
+          setMessages([welcomeMessage]);
+        }
+      } catch (error) {
+        logError('DeviceChatInterface', 'Failed to load chat history', error instanceof Error ? error : new Error('Unknown error'));
+        
+        // Show welcome message on error
+        const welcomeMessage: ChatMessage = {
+          id: 'welcome_' + Date.now(),
+          type: 'assistant',
+          content: `Hello! I'm your AI assistant for ${deviceName}. I'm ready to help you with any questions about your device.`,
+          timestamp: new Date(),
+          pdfName: pdfFileName,
+          deviceId: deviceId
+        };
+        setMessages([welcomeMessage]);
+      }
+    };
+
+    loadChatHistory();
+  }, [deviceId, deviceName, pdfFileName]);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -102,87 +132,59 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: inputValue.trim(),
-      timestamp: new Date()
-    };
-
-    const assistantMessage: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      type: 'assistant',
-      content: '',
-      timestamp: new Date(),
-      isLoading: true
-    };
-
-    setMessages(prev => [...prev, userMessage, assistantMessage]);
+    const query = inputValue.trim();
     setInputValue('');
     setIsLoading(true);
     setAiStatus('thinking');
 
     try {
-      // Get device info from localStorage
-      const lastCreatedDevice = localStorage.getItem('lastCreatedDevice');
-      let deviceInfo = null;
-      
-      if (lastCreatedDevice) {
-        try {
-          deviceInfo = JSON.parse(lastCreatedDevice);
-        } catch (e) {
-          console.warn('Failed to parse lastCreatedDevice:', e);
-        }
-      }
+      logInfo('DeviceChatInterface', 'Sending message to AI', { 
+        deviceId, 
+        pdfName: pdfFileName,
+        queryLength: query.length 
+      });
 
       setAiStatus('responding');
 
-      // Use the real PDF processing service to query the uploaded PDF
-      const queryResponse = await pdfProcessingService.queryPDF({
+      // Use the clean chat service - stores conversation automatically in backend
+      const queryResponse = await chatService.queryPDF({
         pdf_name: pdfFileName,
-        query: inputValue.trim(),
+        query: query,
         top_k: 5
+      }, deviceId);
+      
+      // Reload chat history to get the updated conversation from backend
+      const history = await chatService.getDeviceChatHistory(deviceId, 50);
+      setMessages(history.messages);
+      
+      logInfo('DeviceChatInterface', 'Message sent and chat history updated', {
+        deviceId,
+        responseLength: queryResponse.response?.length || 0,
+        totalMessages: history.messages.length
       });
-      
-      let responseContent = queryResponse.response || 'I apologize, but I couldn\'t find a specific answer to your question in the device documentation. Please try rephrasing your question or ask about a different aspect of the device.';
-      
-      // Add context about generated rules and maintenance if available
-      if (deviceInfo && (inputValue.toLowerCase().includes('rule') || inputValue.toLowerCase().includes('maintenance'))) {
-        responseContent += '\n\n💡 **AI-Generated Insights Available:** I\'ve analyzed your device documentation and generated monitoring rules and maintenance schedules. You can view these in the device details section.';
-      }
-      
-      setMessages(prev => prev.map(msg => 
-        msg.id === assistantMessage.id 
-          ? { ...msg, content: responseContent, isLoading: false }
-          : msg
-      ));
+
     } catch (error) {
-      console.error('PDF query failed:', error);
+      logError('DeviceChatInterface', 'Failed to send message', error instanceof Error ? error : new Error('Unknown error'));
       
-      // Provide user-friendly error message instead of fallback data
-      let errorMessage = 'I apologize, but I\'m having trouble accessing the device documentation right now. ';
+      // Show error message to user
+      const errorMessage: ChatMessage = {
+        id: 'error_' + Date.now(),
+        type: 'assistant',
+        content: `I apologize, but I'm having trouble processing your request right now. ${error instanceof Error ? error.message : 'Please try again later.'}`,
+        timestamp: new Date(),
+        pdfName: pdfFileName,
+        deviceId: deviceId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
       
-      if (error instanceof Error) {
-        if (error.message.includes('Network Error') || error.message.includes('Failed to fetch')) {
-          errorMessage += 'The PDF processing service appears to be unavailable. Please check your internet connection and try again.';
-        } else if (error.message.includes('404') || error.message.includes('not found')) {
-          errorMessage += 'The device documentation could not be found. Please ensure the PDF was uploaded successfully during device onboarding.';
-        } else if (error.message.includes('500') || error.message.includes('server error')) {
-          errorMessage += 'The PDF processing service is experiencing issues. Please try again in a few moments.';
-        } else {
-          errorMessage += 'An unexpected error occurred while processing your question. Please try again.';
-        }
-      } else {
-        errorMessage += 'An unexpected error occurred. Please try again.';
-      }
-      
-      errorMessage += '\n\n**Error Details:** ' + (error instanceof Error ? error.message : 'Unknown error');
-      
-      setMessages(prev => prev.map(msg => 
-        msg.id === assistantMessage.id 
-          ? { ...msg, content: errorMessage, isLoading: false }
-          : msg
-      ));
+      setMessages(prev => [...prev, {
+        id: 'user_' + Date.now(),
+        type: 'user',
+        content: query,
+        timestamp: new Date(),
+        pdfName: pdfFileName,
+        deviceId: deviceId
+      }, errorMessage]);
     } finally {
       setIsLoading(false);
       setAiStatus('idle');
@@ -245,20 +247,23 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
                   </div>
                 )}
                 <div className="flex-1">
-                  {message.isLoading ? (
-                    <div className="flex items-center gap-3">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                    {message.content}
+                    
+                    {/* Show additional metadata for assistant messages */}
+                    {message.type === 'assistant' && message.processingTime && (
+                      <div className="text-xs text-gray-500 mt-2 italic">
+                        Processing time: {message.processingTime}
                       </div>
-                      <span className="text-sm text-gray-600">AI is thinking...</span>
-                    </div>
-                  ) : (
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                      {message.content}
-                    </div>
-                  )}
+                    )}
+                    
+                    {/* Show error information if available */}
+                    {message.error && (
+                      <div className="text-xs text-red-500 mt-2 p-2 bg-red-50 rounded border-l-2 border-red-300">
+                        Error: {message.error}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {message.type === 'user' && (
                   <div className="flex-shrink-0 w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">

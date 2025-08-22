@@ -1,5 +1,6 @@
 package com.iotplatform.controller;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +48,7 @@ import com.iotplatform.repository.RuleRepository;
 import com.iotplatform.repository.RuleConditionRepository;
 import com.iotplatform.repository.DeviceMaintenanceRepository;
 import com.iotplatform.repository.DeviceSafetyPrecautionRepository;
+import com.iotplatform.repository.DeviceRepository;
 
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -71,8 +73,9 @@ public class DeviceController {
     private final RuleConditionRepository ruleConditionRepository;
     private final DeviceMaintenanceRepository deviceMaintenanceRepository;
     private final DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository;
+    private final DeviceRepository deviceRepository;
 
-    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository) {
+    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.fileStorageService = fileStorageService;
@@ -82,6 +85,7 @@ public class DeviceController {
         this.ruleConditionRepository = ruleConditionRepository;
         this.deviceMaintenanceRepository = deviceMaintenanceRepository;
         this.deviceSafetyPrecautionRepository = deviceSafetyPrecautionRepository;
+        this.deviceRepository = deviceRepository;
     }
 
     @GetMapping
@@ -970,11 +974,21 @@ public class DeviceController {
         
         try {
             String organizationId = user.getOrganizationId();
-            List<DeviceMaintenance> upcomingMaintenance = pdfProcessingService.getUpcomingMaintenance(organizationId);
+            // For now, we'll get maintenance for all devices in the organization
+            // In a real implementation, you might want to get maintenance for specific devices
+            List<DeviceMaintenance> upcomingMaintenance = new ArrayList<>();
+            long totalCount = 0;
+            
+            // Get all devices for the organization and collect their maintenance
+            List<Device> devices = deviceRepository.findByOrganizationId(organizationId);
+            for (Device device : devices) {
+                upcomingMaintenance.addAll(pdfProcessingService.getUpcomingMaintenance(device.getId()));
+                totalCount += pdfProcessingService.getMaintenanceCount(device.getId());
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("upcomingMaintenance", upcomingMaintenance);
-            response.put("totalCount", pdfProcessingService.getMaintenanceCount(organizationId));
+            response.put("totalCount", totalCount);
             
             return ResponseEntity.ok(response);
             

@@ -133,6 +133,7 @@ export const DeviceDetailsSection: React.FC = () => {
       
       // Fetch device statistics
       const stats = await DeviceStatsService.getDeviceStats(device.id);
+      console.log('📊 Device stats:', stats);
       setDeviceStats(stats);
       
       // Fetch detailed data
@@ -142,9 +143,21 @@ export const DeviceDetailsSection: React.FC = () => {
         DeviceStatsService.getDeviceSafety(device.id)
       ]);
       
-      setDeviceRules(rules.status === 'fulfilled' ? rules.value : []);
-      setMaintenanceHistory(maintenance.status === 'fulfilled' ? maintenance.value : []);
-      setSafetyPrecautions(safety.status === 'fulfilled' ? safety.value : []);
+      console.log('📋 Rules result:', rules);
+      console.log('🔧 Maintenance result:', maintenance);
+      console.log('🛡️ Safety result:', safety);
+      
+      const rulesData = rules.status === 'fulfilled' ? rules.value : [];
+      const maintenanceData = maintenance.status === 'fulfilled' ? maintenance.value : [];
+      const safetyData = safety.status === 'fulfilled' ? safety.value : [];
+      
+      console.log('📋 Rules data:', rulesData);
+      console.log('🔧 Maintenance data:', maintenanceData);
+      console.log('🛡️ Safety data:', safetyData);
+      
+      setDeviceRules(rulesData);
+      setMaintenanceHistory(maintenanceData);
+      setSafetyPrecautions(safetyData);
       
       // Update last seen timestamp
       setLastSeen(new Date().toISOString());
@@ -762,13 +775,35 @@ export const DeviceDetailsSection: React.FC = () => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-slate-800">Device Rules</h3>
-              <button
-                onClick={() => setShowRules(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all"
-              >
-                <Zap className="w-4 h-4" />
-                Manage Rules
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch(`/api/devices/${deviceId}/debug-data`, {
+                        headers: {
+                          'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        }
+                      });
+                      const data = await response.json();
+                      console.log('🔍 Debug data:', data);
+                      alert(`Debug data: ${JSON.stringify(data, null, 2)}`);
+                    } catch (error) {
+                      console.error('Debug error:', error);
+                      alert('Debug error: ' + error);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all"
+                >
+                  Debug
+                </button>
+                <button
+                  onClick={() => setShowRules(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all"
+                >
+                  <Zap className="w-4 h-4" />
+                  Manage Rules
+                </button>
+              </div>
             </div>
             
             {/* Real-time Rules Status */}

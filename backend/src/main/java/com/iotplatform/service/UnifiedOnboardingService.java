@@ -2,6 +2,7 @@ package com.iotplatform.service;
 
 import com.iotplatform.dto.DeviceCreateWithFileRequest;
 import com.iotplatform.dto.DeviceCreateResponse;
+import com.iotplatform.dto.MaintenanceGenerationResponse;
 import com.iotplatform.exception.PDFProcessingException;
 import com.iotplatform.model.*;
 import com.iotplatform.repository.*;
@@ -14,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -118,29 +120,29 @@ public class UnifiedOnboardingService {
             // Generate rules using PDF processing service
             var rulesResponse = pdfProcessingService.generateRules(pdfFilename, deviceId, organizationId);
             
-            if (rulesResponse.getStatus() != "PENDING") {
-                log.error("Rule generation failed for device: {}", deviceId);
+            if (!rulesResponse.isSuccess()) {
+                log.error("Rule generation failed for device: {} - {}", deviceId, rulesResponse.getMessage());
                 return;
             }
             
             // Store rules in database
-            if (rulesResponse.getResult() != null && rulesResponse.getResult().getRules() != null) {
+            if (rulesResponse.getRules() != null) {
                 List<Rule> rulesToSave = new ArrayList<>();
                 
-                for (var ruleData : rulesResponse.getResult().getRules()) {
+                for (var ruleData : rulesResponse.getRules()) {
                     Rule rule = new Rule();
                     rule.setId(UUID.randomUUID().toString());
-                    rule.setName(ruleData.getRule_name());
+                    rule.setName(ruleData.getName());
                     rule.setDescription(ruleData.getDescription());
                     rule.setMetric(ruleData.getMetric());
-                    rule.setMetricValue(ruleData.getMetric_value());
+                    rule.setMetricValue(ruleData.getMetricValue());
                     rule.setThreshold(ruleData.getThreshold());
                     rule.setConsequence(ruleData.getConsequence());
-                    rule.setStatus(Rule.RuleStatus.ACTIVE);
+                    rule.setActive(true);
                     rule.setDeviceId(deviceId);
                     rule.setOrganizationId(organizationId);
-                    rule.setCreatedAt(new Date());
-                    rule.setUpdatedAt(new Date());
+                    rule.setCreatedAt(LocalDateTime.now());
+                    rule.setUpdatedAt(LocalDateTime.now());
                     
                     rulesToSave.add(rule);
                 }
@@ -185,34 +187,30 @@ public class UnifiedOnboardingService {
             // Generate maintenance using PDF processing service
             var maintenanceResponse = pdfProcessingService.generateMaintenance(pdfFilename, deviceId, organizationId);
             
-            if (maintenanceResponse.getStatus() != "PENDING") {
-                log.error("Maintenance generation failed for device: {}", deviceId);
+            if (!maintenanceResponse.isSuccess()) {
+                log.error("Maintenance generation failed for device: {} - {}", deviceId, maintenanceResponse.getMessage());
                 return;
             }
             
             // Store maintenance tasks in database with proper date formatting
-            if (maintenanceResponse.getResult() != null && maintenanceResponse.getResult().getMaintenance() != null) {
+            if (maintenanceResponse.getMaintenanceTasks() != null) {
                 List<DeviceMaintenance> maintenanceToSave = new ArrayList<>();
                 
-                for (var maintenanceData : maintenanceResponse.getResult().getMaintenance()) {
+                for (var maintenanceData : maintenanceResponse.getMaintenanceTasks()) {
                     DeviceMaintenance maintenance = new DeviceMaintenance();
                     maintenance.setId(UUID.randomUUID().toString());
-                    maintenance.setTaskName(maintenanceData.getTask_name());
-                    maintenance.setDeviceId(deviceId);
+                    maintenance.setTaskName(maintenanceData.getTaskName());
+                    maintenance.setDevice(device);
                     maintenance.setDeviceName(device.getName());
-                    maintenance.setComponentName(maintenanceData.getComponent_name());
-                    maintenance.setMaintenanceType(maintenanceData.getMaintenance_type());
-                    maintenance.setFrequency(maintenanceData.getFrequency());
                     maintenance.setDescription(maintenanceData.getDescription());
-                    maintenance.setPriority(maintenanceData.getPriority());
-                    maintenance.setEstimatedCost(maintenanceData.getEstimated_cost());
-                    maintenance.setEstimatedDuration(maintenanceData.getEstimated_duration());
-                    maintenance.setRequiredTools(maintenanceData.getRequired_tools());
-                    maintenance.setSafetyNotes(maintenanceData.getSafety_notes());
-                    maintenance.setStatus(DeviceMaintenance.MaintenanceStatus.ACTIVE);
+                    maintenance.setFrequency(maintenanceData.getFrequency());
+                    maintenance.setPriority(DeviceMaintenance.Priority.valueOf(maintenanceData.getPriority().toUpperCase()));
+                    maintenance.setEstimatedDuration(maintenanceData.getEstimatedDuration());
+                    maintenance.setRequiredTools(maintenanceData.getRequiredTools());
+                    maintenance.setStatus(DeviceMaintenance.Status.ACTIVE);
                     maintenance.setOrganizationId(organizationId);
-                    maintenance.setCreatedAt(new Date());
-                    maintenance.setUpdatedAt(new Date());
+                    maintenance.setCreatedAt(LocalDateTime.now());
+                    maintenance.setUpdatedAt(LocalDateTime.now());
                     
                     // Format dates properly and calculate next maintenance date
                     formatAndCalculateMaintenanceDates(maintenance, maintenanceData);
@@ -260,16 +258,16 @@ public class UnifiedOnboardingService {
             // Generate safety precautions using PDF processing service
             var safetyResponse = pdfProcessingService.generateSafety(pdfFilename, deviceId, organizationId);
             
-            if (safetyResponse.getStatus() != "PENDING") {
-                log.error("Safety generation failed for device: {}", deviceId);
+            if (!safetyResponse.isSuccess()) {
+                log.error("Safety generation failed for device: {} - {}", deviceId, safetyResponse.getMessage());
                 return;
             }
             
             // Store safety precautions in database
-            if (safetyResponse.getResult() != null && safetyResponse.getResult().getSafety_precautions() != null) {
+            if (safetyResponse.getSafetyPrecautions() != null) {
                 List<DeviceSafetyPrecaution> safetyToSave = new ArrayList<>();
                 
-                for (var safetyData : safetyResponse.getResult().getSafety_precautions()) {
+                for (var safetyData : safetyResponse.getSafetyPrecautions()) {
                     DeviceSafetyPrecaution safety = new DeviceSafetyPrecaution();
                     safety.setId(UUID.randomUUID().toString());
                     safety.setTitle(safetyData.getTitle());
@@ -277,10 +275,9 @@ public class UnifiedOnboardingService {
                     safety.setCategory(safetyData.getCategory());
                     safety.setSeverity(safetyData.getSeverity());
                     safety.setDeviceId(deviceId);
-                    safety.setDeviceName(device.getName());
                     safety.setOrganizationId(organizationId);
-                    safety.setCreatedAt(new Date());
-                    safety.setUpdatedAt(new Date());
+                    safety.setCreatedAt(LocalDateTime.now());
+                    safety.setUpdatedAt(LocalDateTime.now());
                     
                     safetyToSave.add(safety);
                 }
@@ -320,41 +317,15 @@ public class UnifiedOnboardingService {
     /**
      * Format dates properly and calculate next maintenance date based on frequency
      */
-    private void formatAndCalculateMaintenanceDates(DeviceMaintenance maintenance, Object maintenanceData) {
+    private void formatAndCalculateMaintenanceDates(DeviceMaintenance maintenance, MaintenanceGenerationResponse.MaintenanceTask maintenanceData) {
         try {
-            // Parse last maintenance date if provided
-            LocalDate lastMaintenance = null;
-            if (maintenanceData.getLast_maintenance() != null && !maintenanceData.getLast_maintenance().isEmpty()) {
-                // Try different date formats
-                String[] dateFormats = {
-                    "yyyy-MM-dd",
-                    "dd/MM/yyyy",
-                    "MM/dd/yyyy",
-                    "dd-MM-yyyy",
-                    "MM-dd-yyyy"
-                };
-                
-                for (String format : dateFormats) {
-                    try {
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
-                        lastMaintenance = LocalDate.parse(maintenanceData.getLast_maintenance(), formatter);
-                        break;
-                    } catch (Exception e) {
-                        // Continue to next format
-                    }
-                }
-            }
-            
-            // If no last maintenance date, use today
-            if (lastMaintenance == null) {
-                lastMaintenance = LocalDate.now();
-            }
-            
-            maintenance.setLastMaintenance(java.sql.Date.valueOf(lastMaintenance));
+            // Since MaintenanceTask doesn't have last_maintenance field, we'll use today as the last maintenance date
+            LocalDate lastMaintenance = LocalDate.now();
+            maintenance.setLastMaintenance(lastMaintenance);
             
             // Calculate next maintenance date based on frequency
             LocalDate nextMaintenance = calculateNextMaintenanceDate(lastMaintenance, maintenance.getFrequency());
-            maintenance.setNextMaintenance(java.sql.Date.valueOf(nextMaintenance));
+            maintenance.setNextMaintenance(nextMaintenance);
             
             log.debug("Calculated maintenance dates for task '{}': last={}, next={}, frequency={}", 
                 maintenance.getTaskName(), lastMaintenance, nextMaintenance, maintenance.getFrequency());
@@ -363,8 +334,8 @@ public class UnifiedOnboardingService {
             log.error("Error formatting maintenance dates for task: {}", maintenance.getTaskName(), e);
             // Set default dates if parsing fails
             LocalDate today = LocalDate.now();
-            maintenance.setLastMaintenance(java.sql.Date.valueOf(today));
-            maintenance.setNextMaintenance(java.sql.Date.valueOf(today.plusMonths(6))); // Default to 6 months
+            maintenance.setLastMaintenance(today);
+            maintenance.setNextMaintenance(today.plusMonths(6)); // Default to 6 months
         }
     }
 

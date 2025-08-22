@@ -206,4 +206,59 @@ public interface PDFQueryRepository extends JpaRepository<PDFQuery, Long> {
            "AVG(CAST(SUBSTRING(q.processingTime, 1, LOCATE(' ', q.processingTime) - 1) AS double)) as avgProcessingTime " +
            "FROM PDFQuery q WHERE q.pdfDocument.id = :pdfDocumentId AND q.deleted = false")
     Object[] getQueryStatisticsByPdfDocumentId(@Param("pdfDocumentId") Long pdfDocumentId);
+
+    /**
+     * Find chat history by user ID and organization ID
+     */
+    @Query("SELECT q FROM PDFQuery q WHERE q.userId = :userId " +
+           "AND q.organizationId = :organizationId AND q.deleted = false " +
+           "ORDER BY q.createdAt DESC")
+    List<PDFQuery> findChatHistoryByUserIdAndOrganizationId(
+        @Param("userId") Long userId, 
+        @Param("organizationId") String organizationId, 
+        Pageable pageable);
+
+    /**
+     * Find chat history by user ID, device ID and organization ID
+     */
+    @Query("SELECT q FROM PDFQuery q WHERE q.userId = :userId " +
+           "AND q.deviceId = :deviceId AND q.organizationId = :organizationId " +
+           "AND q.deleted = false ORDER BY q.createdAt DESC")
+    List<PDFQuery> findChatHistoryByUserIdAndDeviceIdAndOrganizationId(
+        @Param("userId") Long userId, 
+        @Param("deviceId") String deviceId,
+        @Param("organizationId") String organizationId, 
+        Pageable pageable);
+
+    /**
+     * Find chat history by device ID and organization ID
+     */
+    @Query("SELECT q FROM PDFQuery q WHERE q.deviceId = :deviceId " +
+           "AND q.organizationId = :organizationId AND q.deleted = false " +
+           "ORDER BY q.createdAt DESC")
+    List<PDFQuery> findChatHistoryByDeviceIdAndOrganizationId(
+        @Param("deviceId") String deviceId,
+        @Param("organizationId") String organizationId, 
+        Pageable pageable);
+
+    /**
+     * Find chat history by PDF name (through document relationship)
+     */
+    @Query("SELECT q FROM PDFQuery q JOIN q.pdfDocument d WHERE d.name = :pdfName " +
+           "AND q.organizationId = :organizationId AND q.deleted = false " +
+           "ORDER BY q.createdAt DESC")
+    List<PDFQuery> findChatHistoryByPdfNameAndOrganizationId(
+        @Param("pdfName") String pdfName,
+        @Param("organizationId") String organizationId, 
+        Pageable pageable);
+
+    /**
+     * Find queries by organization ID (active only)
+     */
+    List<PDFQuery> findByOrganizationIdAndDeletedFalseOrderByCreatedAtDesc(String organizationId);
+
+    /**
+     * Find queries by device ID (active only)
+     */
+    List<PDFQuery> findByDeviceIdAndDeletedFalseOrderByCreatedAtDesc(String deviceId);
 }
