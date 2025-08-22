@@ -498,6 +498,49 @@ public class DeviceService {
         }
     }
 
+    public Device updateDevice(String id, Device deviceDetails, String organizationId) {
+        Device device = deviceRepository.findByIdAndOrganizationId(id, organizationId)
+                .orElseThrow(() -> new RuntimeException("Device not found"));
+
+        // Update only the fields that should be updatable
+        if (deviceDetails.getName() != null) {
+            device.setName(deviceDetails.getName());
+        }
+        if (deviceDetails.getLocation() != null) {
+            device.setLocation(deviceDetails.getLocation());
+        }
+        if (deviceDetails.getManufacturer() != null) {
+            device.setManufacturer(deviceDetails.getManufacturer());
+        }
+        if (deviceDetails.getModel() != null) {
+            device.setModel(deviceDetails.getModel());
+        }
+        if (deviceDetails.getConnectionType() != null) {
+            device.setConnectionType(deviceDetails.getConnectionType());
+        }
+        if (deviceDetails.getBrokerUrl() != null) {
+            device.setBrokerUrl(deviceDetails.getBrokerUrl());
+        }
+        if (deviceDetails.getTopic() != null) {
+            device.setTopic(deviceDetails.getTopic());
+        }
+        if (deviceDetails.getHttpEndpoint() != null) {
+            device.setHttpEndpoint(deviceDetails.getHttpEndpoint());
+        }
+        if (deviceDetails.getCoapHost() != null) {
+            device.setCoapHost(deviceDetails.getCoapHost());
+        }
+        if (deviceDetails.getCoapPort() != null) {
+            device.setCoapPort(deviceDetails.getCoapPort());
+        }
+        if (deviceDetails.getAssignedUserId() != null) {
+            device.setAssignedUserId(deviceDetails.getAssignedUserId());
+        }
+
+        device.setLastSeen(LocalDateTime.now());
+        return deviceRepository.save(device);
+    }
+
     public Device updateDeviceStatus(String id, Device.DeviceStatus status, String organizationId) {
         Device device = deviceRepository.findByIdAndOrganizationId(id, organizationId)
                 .orElseThrow(() -> new RuntimeException("Device not found"));

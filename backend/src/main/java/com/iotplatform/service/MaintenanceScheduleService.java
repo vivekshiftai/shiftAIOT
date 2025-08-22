@@ -110,7 +110,7 @@ public class MaintenanceScheduleService {
      * Create a new maintenance task.
      */
     public DeviceMaintenance createMaintenance(DeviceMaintenance maintenance) {
-        log.info("Creating maintenance task for device: {}", maintenance.getDeviceId());
+        log.info("Creating maintenance task for device: {}", maintenance.getDevice() != null ? maintenance.getDevice().getId() : "null");
         return deviceMaintenanceRepository.save(maintenance);
     }
 
