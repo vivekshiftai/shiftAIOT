@@ -54,6 +54,7 @@ public class PDFProcessingDTOs {
         private String query;
         
         @JsonProperty("top_k")
+        @Builder.Default
         private Integer topK = 5;
     }
 
