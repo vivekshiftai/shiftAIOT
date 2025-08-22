@@ -139,6 +139,15 @@ export interface AsyncResponse<T> {
   completed_at?: string;
 }
 
+export interface ProcessingStatusResponse {
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  message: string;
+  pdf_name: string;
+  chunks_processed: number;
+  processing_time: string;
+  collection_name: string;
+}
+
 // Utility function to calculate next maintenance date based on frequency
 export function calculateNextMaintenanceDate(frequency: string, fromDate: Date = new Date()): Date {
   const nextDate = new Date(fromDate);
@@ -189,20 +198,21 @@ export function calculateNextMaintenanceDate(frequency: string, fromDate: Date =
 
 // Consolidated PDF Processing Service
 export class PDFProcessingService {
-  private baseUrl: string;
+  private baseUrl: string
 
-  constructor(baseUrl?: string) {
-    this.baseUrl = baseUrl || getApiConfig().BACKEND_BASE_URL;
+  constructor() {
+    this.baseUrl = getApiConfig().BACKEND_BASE_URL;
   }
 
-  // Upload PDF to backend processing service
-  async uploadPDF(file: File, organizationId: string): Promise<PDFUploadResponse> {
+  // Upload and process PDF files through backend
+  async uploadPDF(file: File, deviceId?: string, deviceName?: string): Promise<PDFUploadResponse> {
     try {
+      console.log('Uploading PDF to backend service:', file.name);
+
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('organizationId', organizationId);
-
-      console.log('Uploading PDF to backend service:', `${this.baseUrl}/api/pdf/upload`);
+      if (deviceId) formData.append('deviceId', deviceId);
+      if (deviceName) formData.append('deviceName', deviceName);
 
       const response = await fetch(`${this.baseUrl}/api/pdf/upload`, {
         method: 'POST',
@@ -214,21 +224,15 @@ export class PDFProcessingService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Backend API error response:', response.status, errorText);
-        throw new Error(`PDF upload failed: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(`Backend upload failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('PDF uploaded to backend successfully:', result);
+      console.log('PDF upload to backend successful:', result);
       return result as PDFUploadResponse;
 
     } catch (error) {
       console.error('PDF upload to backend failed:', error);
-      if (error instanceof Error) {
-        if (error.message.includes('Failed to fetch') || error.message.includes('Network Error')) {
-          throw new Error('Backend service is unavailable. Please check your internet connection and try again.');
-        }
-      }
       throw error;
     }
   }
@@ -236,13 +240,13 @@ export class PDFProcessingService {
   // Query PDF content through backend
   async queryPDF(request: PDFQueryRequest): Promise<PDFQueryResponse> {
     try {
-      console.log('Querying PDF through backend:', request);
+      console.log('Querying PDF through backend service:', request);
 
       const response = await fetch(`${this.baseUrl}/api/pdf/query`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(request),
       });
@@ -253,11 +257,11 @@ export class PDFProcessingService {
       }
 
       const result = await response.json();
-      console.log('PDF query through backend successful:', result);
+      console.log('PDF query from backend successful:', result);
       return result as PDFQueryResponse;
 
     } catch (error) {
-      console.error('PDF query through backend failed:', error);
+      console.error('PDF query from backend failed:', error);
       throw error;
     }
   }
@@ -292,62 +296,52 @@ export class PDFProcessingService {
   // Generate IoT Rules from PDF through backend
   async generateRules(pdfName: string, deviceId: string, organizationId: string): Promise<AsyncResponse<RulesGenerationResponse>> {
     try {
-      console.log('Generating IoT rules through backend for:', pdfName);
-
-      const request: PDFGenerationRequest = {
-        pdf_name: pdfName,
-        device_id: deviceId,
-        organization_id: organizationId
-      };
+      console.log('Generating rules from PDF through backend service:', { pdfName, deviceId });
 
       const response = await fetch(`${this.baseUrl}/api/pdf/generate-rules`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify({
+          pdf_name: pdfName,
+          deviceId: deviceId,
+          organizationId: organizationId
+        }),
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Backend rules generation error:', response.status, errorText);
-        throw new Error(`Rules generation failed: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(`Backend rules generation failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('IoT rules generation through backend successful:', result);
+      console.log('Rules generation from backend successful:', result);
       return result as AsyncResponse<RulesGenerationResponse>;
 
     } catch (error) {
-      console.error('IoT rules generation through backend failed:', error);
-      if (error instanceof Error) {
-        if (error.message.includes('Failed to fetch') || error.message.includes('Network Error')) {
-          throw new Error('Backend service is unavailable. Please check your internet connection and try again.');
-        }
-      }
+      console.error('Rules generation from backend failed:', error);
       throw error;
     }
   }
 
-  // Generate Maintenance Schedule from PDF through backend
+  // Generate maintenance schedule from PDF through backend
   async generateMaintenance(pdfName: string, deviceId: string, organizationId: string): Promise<AsyncResponse<MaintenanceGenerationResponse>> {
     try {
-      console.log('Generating maintenance schedule through backend for:', pdfName);
-
-      const request: PDFGenerationRequest = {
-        pdf_name: pdfName,
-        device_id: deviceId,
-        organization_id: organizationId
-      };
+      console.log('Generating maintenance from PDF through backend service:', { pdfName, deviceId });
 
       const response = await fetch(`${this.baseUrl}/api/pdf/generate-maintenance`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify({
+          pdf_name: pdfName,
+          deviceId: deviceId,
+          organizationId: organizationId
+        }),
       });
 
       if (!response.ok) {
@@ -356,33 +350,31 @@ export class PDFProcessingService {
       }
 
       const result = await response.json();
-      console.log('Maintenance generation through backend successful:', result);
+      console.log('Maintenance generation from backend successful:', result);
       return result as AsyncResponse<MaintenanceGenerationResponse>;
 
     } catch (error) {
-      console.error('Maintenance generation through backend failed:', error);
+      console.error('Maintenance generation from backend failed:', error);
       throw error;
     }
   }
 
-  // Generate Safety Information from PDF through backend
+  // Generate safety precautions from PDF through backend
   async generateSafety(pdfName: string, deviceId: string, organizationId: string): Promise<AsyncResponse<SafetyGenerationResponse>> {
     try {
-      console.log('Generating safety information through backend for:', pdfName);
-
-      const request: PDFGenerationRequest = {
-        pdf_name: pdfName,
-        device_id: deviceId,
-        organization_id: organizationId
-      };
+      console.log('Generating safety precautions from PDF through backend service:', { pdfName, deviceId });
 
       const response = await fetch(`${this.baseUrl}/api/pdf/generate-safety`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify({
+          pdf_name: pdfName,
+          deviceId: deviceId,
+          organizationId: organizationId
+        }),
       });
 
       if (!response.ok) {
@@ -391,88 +383,92 @@ export class PDFProcessingService {
       }
 
       const result = await response.json();
-      console.log('Safety generation through backend successful:', result);
+      console.log('Safety generation from backend successful:', result);
       return result as AsyncResponse<SafetyGenerationResponse>;
 
     } catch (error) {
-      console.error('Safety generation through backend failed:', error);
+      console.error('Safety generation from backend failed:', error);
       throw error;
     }
   }
 
-  // Health check for backend service
-  async healthCheck(): Promise<HealthCheckResponse> {
+  // Download processed PDF through backend
+  async downloadPDF(pdfName: string): Promise<Blob> {
     try {
-      console.log('Checking backend service health');
+      console.log('Downloading PDF from backend service:', pdfName);
 
-      const response = await fetch(`${this.baseUrl}/api/pdf/health`, {
+      const response = await fetch(`${this.baseUrl}/api/pdf/download/${pdfName}`, {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
       });
-      if (!response.ok) {
-        throw new Error(`Backend health check failed: ${response.status} ${response.statusText}`);
-      }
-      const result = await response.json();
-      console.log('Backend health check successful:', result);
-      return result as HealthCheckResponse;
-    } catch (error) {
-      console.error('Backend health check failed:', error);
-      throw error;
-    }
-  }
-
-  // Delete PDF from backend processing service
-  async deletePDF(pdfName: string): Promise<PDFDeleteResponse> {
-    try {
-      console.log(`🗑️ [PDF Processing] Starting deletion of PDF: "${pdfName}"`);
-      console.log(`🌐 [PDF Processing] DELETE request to: ${this.baseUrl}/api/pdf/${pdfName}`);
-
-      const startTime = Date.now();
-      const response = await fetch(`${this.baseUrl}/api/pdf/${pdfName}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      const endTime = Date.now();
-      const duration = endTime - startTime;
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`❌ [PDF Processing] Delete failed for "${pdfName}":`, {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorText,
-          duration: `${duration}ms`,
-          url: `${this.baseUrl}/api/pdf/${pdfName}`
-        });
-        throw new Error(`PDF deletion failed: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(`Backend download failed: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const blob = await response.blob();
+      console.log('PDF download from backend successful:', blob.size, 'bytes');
+      return blob;
+
+    } catch (error) {
+      console.error('PDF download from backend failed:', error);
+      throw error;
+    }
+  }
+
+  // Get PDF processing status through backend
+  async getPDFStatus(pdfName: string): Promise<ProcessingStatusResponse> {
+    try {
+      console.log('Getting PDF status from backend service:', pdfName);
+
+      const response = await fetch(`${this.baseUrl}/api/pdf/status/${pdfName}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Backend status check failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log(`✅ [PDF Processing] Successfully deleted "${pdfName}":`, {
-        result,
-        duration: `${duration}ms`,
-        status: response.status
+      console.log('PDF status from backend successful:', result);
+      return result as ProcessingStatusResponse;
+
+    } catch (error) {
+      console.error('PDF status from backend failed:', error);
+      throw error;
+    }
+  }
+
+  // Delete PDF through backend
+  async deletePDF(pdfName: string): Promise<PDFDeleteResponse> {
+    try {
+      console.log('Deleting PDF from backend service:', pdfName);
+
+      const response = await fetch(`${this.baseUrl}/api/pdf/delete/${pdfName}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Backend deletion failed: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('PDF deletion from backend successful:', result);
       return result as PDFDeleteResponse;
 
     } catch (error) {
-      console.error(`💥 [PDF Processing] PDF deletion failed for "${pdfName}":`, {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        url: `${this.baseUrl}/api/pdf/${pdfName}`
-      });
-      
-      if (error instanceof Error) {
-        if (error.message.includes('Failed to fetch') || error.message.includes('Network Error')) {
-          console.error(`🌐 [PDF Processing] Network error detected for "${pdfName}" - service may be unavailable`);
-          throw new Error('Backend service is unavailable. Please check your internet connection and try again.');
-        }
-      }
+      console.error('PDF deletion from backend failed:', error);
       throw error;
     }
   }
@@ -490,5 +486,5 @@ export class PDFProcessingService {
   }
 }
 
-// Export a default instance
+// Export singleton instance
 export const pdfProcessingService = new PDFProcessingService();

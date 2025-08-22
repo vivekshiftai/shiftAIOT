@@ -1,41 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Settings, 
-  FileText, 
-  Shield, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
+import {
+  Settings,
   Trash2,
-  Eye,
   Edit,
+  Download,
+  Upload,
+  FileText,
+  MessageSquare,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Send,
+  User,
+  Bot,
   Plus,
   Search,
   Filter,
-  Download,
-  Upload,
-  Wrench,
-  Zap,
-  Activity,
-  Battery,
-  Cpu,
-  Thermometer,
-  Wifi,
-  Tag,
-  Send
+  Eye,
+  EyeOff,
+  ArrowLeft,
+  Bell,
+  X,
+  Check,
+  Info
 } from 'lucide-react';
 import { useIoT } from '../contexts/IoTContext';
-import { useAuth } from '../contexts/AuthContext';
-import { Device } from '../types';
-import { DeviceRules } from '../components/Devices/DeviceRules';
-import { DeviceConnectionManager } from '../components/Devices/DeviceConnectionManager';
-import DeviceSafetyInfo from '../components/Devices/DeviceSafetyInfo';
+import { DeviceCard } from '../components/Devices/DeviceCard';
+import { DeviceDetails } from '../components/Devices/DeviceDetails';
+import { DeviceAnalyticsDisplay } from '../components/Devices/DeviceAnalyticsDisplay';
+import { DeviceLogsDisplay } from '../components/Devices/DeviceLogsDisplay';
+import { DeviceMaintenanceDisplay } from '../components/Devices/DeviceMaintenanceDisplay';
+import { DeviceRulesDisplay } from '../components/Devices/DeviceRulesDisplay';
+import { DevicePDFResults } from '../components/Devices/DevicePDFResults';
+import { DeviceChatInterface } from '../components/Devices/DeviceChatInterface';
+import { DeviceSafetyInfo } from '../components/Devices/DeviceSafetyInfo';
 import { deviceAPI } from '../services/api';
+import { pdfAPI } from '../services/api'; // Fixed import path
 import { pdfProcessingService, PDFListResponse } from '../services/pdfprocess';
 import { DeviceStatsService, DeviceStats } from '../services/deviceStatsService';
-import { logError, logInfo } from '../utils/logger';
+import { logInfo, logError } from '../utils/logger';
 
 interface DocumentationInfo {
   deviceId: string;
@@ -69,10 +73,10 @@ interface KnowledgeDocument {
 }
 
 const tabs = [
-  { id: 'device-info', label: 'Device Information', icon: Shield },
+  { id: 'device-info', label: 'Device Information', icon: Settings },
   { id: 'maintenance', label: 'Maintenance Details', icon: Settings },
   { id: 'rules', label: 'Rules', icon: FileText },
-  { id: 'safety', label: 'Safety Info', icon: Shield },
+  { id: 'safety', label: 'Safety Info', icon: Settings },
   { id: 'chat', label: 'Chat History', icon: Settings }
 ];
 
@@ -100,6 +104,7 @@ export const DeviceDetailsSection: React.FC = () => {
   ]);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [initialChatMessage, setInitialChatMessage] = useState<string | null>(null); // Added state for initial chat message
   
   // Real-time data states
   const [deviceStats, setDeviceStats] = useState<DeviceStats | null>(null);
@@ -194,25 +199,25 @@ export const DeviceDetailsSection: React.FC = () => {
     if (!device) return;
     
     try {
-      // Load all PDFs from external API
-      const pdfListResponse: PDFListResponse = await pdfProcessingService.listPDFs();
+      // Load all PDFs from backend API
+      const pdfListResponse = await pdfAPI.listPDFs(0, 100); // Use backend API
       
       // Filter PDFs that might be associated with this device
       // We'll look for PDFs that contain the device name or are likely related
       const deviceNameLower = device.name.toLowerCase();
       const deviceTypeLower = device.type.toLowerCase();
       
-      const filteredPDFs: KnowledgeDocument[] = pdfListResponse.pdfs
-        .map((pdf, index) => ({
-          id: index.toString(),
-          name: pdf.pdf_name,
+      const filteredPDFs: KnowledgeDocument[] = pdfListResponse.data.pdfs
+        .map((pdf: any, index: number) => ({
+          id: pdf.id || index.toString(),
+          name: pdf.name || pdf.filename || `PDF_${index}`,
           type: 'pdf',
-          uploadedAt: pdf.created_at,
-          processedAt: pdf.created_at,
-          size: 0,
-          status: 'completed',
-          vectorized: true,
-          chunk_count: pdf.chunk_count,
+          uploadedAt: pdf.uploaded_at || pdf.created_at || new Date().toISOString(),
+          processedAt: pdf.processed_at || pdf.created_at || new Date().toISOString(),
+          size: pdf.file_size || pdf.size_bytes || 0,
+          status: pdf.status || 'completed',
+          vectorized: pdf.vectorized || true,
+          chunk_count: pdf.chunk_count || 0,
           deviceId: device.id,
           deviceName: device.name
         }))
@@ -239,17 +244,18 @@ export const DeviceDetailsSection: React.FC = () => {
       
       // Update initial chat message if PDFs are found
       if (filteredPDFs.length > 0) {
-        setChatMessages(prev => [
-          {
-            id: '1',
-            type: 'assistant',
-            content: `Hello! I found ${filteredPDFs.length} PDF document(s) related to the ${device.name} device. I can help you find information from these documents. What would you like to know?`,
-            timestamp: new Date()
-          }
-        ]);
+        setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. How can I help you with this device?`);
       }
+      
+      logInfo('DeviceDetails', 'Device PDFs loaded successfully', { 
+        deviceId: device.id, 
+        totalPDFs: pdfListResponse.data.pdfs.length,
+        filteredPDFs: filteredPDFs.length 
+      });
+      
     } catch (error) {
       logError('DeviceDetails', 'Failed to load device PDFs', error instanceof Error ? error : new Error('Unknown error'));
+      setDevicePDFs([]);
     }
   };
 
@@ -335,10 +341,10 @@ export const DeviceDetailsSection: React.FC = () => {
   };
 
   const deviceTypeConfig = {
-    SENSOR: { icon: Thermometer, label: 'Sensor' },
-    ACTUATOR: { icon: Cpu, label: 'Actuator' },
-    GATEWAY: { icon: Wifi, label: 'Gateway' },
-    CONTROLLER: { icon: Cpu, label: 'Controller' }
+    SENSOR: { icon: Settings, label: 'Sensor' },
+    ACTUATOR: { icon: Settings, label: 'Actuator' },
+    GATEWAY: { icon: Settings, label: 'Gateway' },
+    CONTROLLER: { icon: Settings, label: 'Controller' }
   };
 
   const statusInfo = statusConfig[device.status];
@@ -459,7 +465,7 @@ export const DeviceDetailsSection: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
-                <Wifi className="w-5 h-5 text-slate-500" />
+                <Settings className="w-5 h-5 text-slate-500" />
                 <div>
                   <p className="text-sm text-slate-600">Protocol</p>
                   <p className="font-semibold text-slate-800">{device.protocol}</p>
@@ -472,7 +478,7 @@ export const DeviceDetailsSection: React.FC = () => {
               {/* Device Information */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <Shield className="w-5 h-5" />
+                  <Settings className="w-5 h-5" />
                   Device Information
                 </h3>
                 <div className="space-y-3">
@@ -502,7 +508,7 @@ export const DeviceDetailsSection: React.FC = () => {
               {/* Power & Environment */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <Battery className="w-5 h-5" />
+                  <Settings className="w-5 h-5" />
                   Power & Environment
                 </h3>
                 <div className="space-y-3">
@@ -541,7 +547,7 @@ export const DeviceDetailsSection: React.FC = () => {
               {/* Network Configuration */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <Wifi className="w-5 h-5" />
+                  <Settings className="w-5 h-5" />
                   Network Configuration
                 </h3>
                 <div className="space-y-3">
@@ -567,7 +573,7 @@ export const DeviceDetailsSection: React.FC = () => {
               {/* MQTT Configuration */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <Activity className="w-5 h-5" />
+                  <Settings className="w-5 h-5" />
                   MQTT Configuration
                 </h3>
                 <div className="space-y-3">
@@ -587,7 +593,7 @@ export const DeviceDetailsSection: React.FC = () => {
             {device.tags && device.tags.length > 0 && (
               <div className="border-t border-slate-200 pt-6">
                 <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                  <Tag className="w-5 h-5" />
+                  <Settings className="w-5 h-5" />
                   Tags
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -684,7 +690,7 @@ export const DeviceDetailsSection: React.FC = () => {
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-blue-50 rounded-lg">
-                      <Wrench className="w-5 h-5 text-blue-600" />
+                      <Settings className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
                       <p className="text-sm text-slate-600">Maintenance Tasks</p>
@@ -706,7 +712,7 @@ export const DeviceDetailsSection: React.FC = () => {
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-purple-50 rounded-lg">
-                      <Zap className="w-5 h-5 text-purple-600" />
+                      <Settings className="w-5 h-5 text-purple-600" />
                     </div>
                     <div>
                       <p className="text-sm text-slate-600">Active Rules</p>
@@ -755,7 +761,7 @@ export const DeviceDetailsSection: React.FC = () => {
                   </div>
                 ) : (
                   <div className="text-center py-8 text-slate-500">
-                    <Wrench className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+                    <Settings className="w-12 h-12 mx-auto mb-4 text-slate-300" />
                     <p>No maintenance history available</p>
                   </div>
                 )}
@@ -813,7 +819,7 @@ export const DeviceDetailsSection: React.FC = () => {
                   onClick={() => setShowRules(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all"
                 >
-                  <Zap className="w-4 h-4" />
+                  <Settings className="w-4 h-4" />
                   Manage Rules
                 </button>
               </div>
@@ -853,7 +859,7 @@ export const DeviceDetailsSection: React.FC = () => {
               </div>
             ) : (
               <div className="text-center py-8 text-slate-600">
-                <Zap className="w-12 h-12 mx-auto mb-4 text-slate-400" />
+                <Settings className="w-12 h-12 mx-auto mb-4 text-slate-400" />
                 <p>No rules configured for this device.</p>
                 <p className="text-sm text-slate-500 mt-2">Click "Manage Rules" to configure automation rules.</p>
               </div>
@@ -889,7 +895,7 @@ export const DeviceDetailsSection: React.FC = () => {
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-green-50 rounded-lg">
-                      <Shield className="w-5 h-5 text-green-600" />
+                      <Settings className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
                       <p className="text-sm text-slate-600">Safety Precautions</p>
@@ -900,7 +906,7 @@ export const DeviceDetailsSection: React.FC = () => {
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-blue-50 rounded-lg">
-                      <Wrench className="w-5 h-5 text-blue-600" />
+                      <Settings className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
                       <p className="text-sm text-slate-600">Maintenance Tasks</p>
@@ -911,7 +917,7 @@ export const DeviceDetailsSection: React.FC = () => {
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-purple-50 rounded-lg">
-                      <Zap className="w-5 h-5 text-purple-600" />
+                      <Settings className="w-5 h-5 text-purple-600" />
                     </div>
                     <div>
                       <p className="text-sm text-slate-600">Active Rules</p>
@@ -1180,7 +1186,7 @@ export const DeviceDetailsSection: React.FC = () => {
               onClick={() => setShowConnections(true)}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all"
             >
-              <Wifi className="w-4 h-4" />
+              <Settings className="w-4 h-4" />
               Connections
             </button>
           )}
@@ -1189,7 +1195,7 @@ export const DeviceDetailsSection: React.FC = () => {
               onClick={() => setShowRules(true)}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all"
             >
-              <Zap className="w-4 h-4" />
+              <Settings className="w-4 h-4" />
               Rules
             </button>
           )}

@@ -20,6 +20,8 @@ import { deviceAPI } from '../services/api';
 import { pdfProcessingService, PDFListResponse, PDFImage } from '../services/pdfprocess';
 import { logError, logInfo } from '../utils/logger';
 import '../styles/knowledge.css';
+import { pdfAPI } from '../services/api'; // Added pdfAPI import
+import { knowledgeAPI } from '../services/api'; // Added knowledgeAPI import
 
 // Updated interface to match PDF API response
 interface KnowledgeDocument {
@@ -90,34 +92,68 @@ export const KnowledgeSection: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Load PDF documents from external PDF API
-        const pdfListResponse: PDFListResponse = await pdfProcessingService.listPDFs();
-        const convertedDocuments: KnowledgeDocument[] = pdfListResponse.pdfs.map((pdf, index) => ({
-          id: index.toString(), // Use index as ID since external API doesn't provide unique IDs
-          name: pdf.pdf_name,
-          type: 'pdf',
-          uploadedAt: pdf.created_at,
-          processedAt: pdf.created_at, // Assuming processing is immediate
-          size: 0, // Size not available in external API response
-          status: 'completed', // All listed PDFs are processed
-          vectorized: true,
-          chunk_count: pdf.chunk_count,
-          deviceId: undefined, // Not available from external API
-          deviceName: undefined // Not available from external API
-        }));
-        setDocuments(convertedDocuments);
+        setLoading(true);
+        
+        // Load PDF documents from backend API
+        try {
+          const pdfListResponse = await pdfAPI.listPDFs(0, 50); // Use backend API instead of pdfProcessingService
+          const convertedDocuments: KnowledgeDocument[] = pdfListResponse.data.pdfs.map((pdf: any, index: number) => ({
+            id: pdf.id || index.toString(),
+            name: pdf.name || pdf.filename || `PDF_${index}`,
+            type: 'pdf',
+            uploadedAt: pdf.uploaded_at || pdf.created_at || new Date().toISOString(),
+            processedAt: pdf.processed_at || pdf.created_at || new Date().toISOString(),
+            size: pdf.file_size || pdf.size_bytes || 0,
+            status: pdf.status || 'completed',
+            vectorized: pdf.vectorized || true,
+            chunk_count: pdf.chunk_count || 0,
+            deviceId: pdf.device_id || undefined,
+            deviceName: pdf.device_name || undefined
+          }));
+          setDocuments(convertedDocuments);
+          logInfo('Knowledge', 'PDF documents loaded from backend', { count: convertedDocuments.length });
+        } catch (pdfError) {
+          logError('Knowledge', 'Failed to load PDF documents from backend', pdfError instanceof Error ? pdfError : new Error('Unknown error'));
+          // Try fallback to knowledge API
+          try {
+            const knowledgeResponse = await knowledgeAPI.getDocuments();
+            const knowledgeDocuments: KnowledgeDocument[] = knowledgeResponse.data.documents.map((doc: any) => ({
+              id: doc.id.toString(),
+              name: doc.name,
+              type: doc.type || 'pdf',
+              uploadedAt: doc.uploadedAt,
+              processedAt: doc.processedAt || doc.uploadedAt,
+              size: doc.size || 0,
+              status: doc.status || 'completed',
+              vectorized: doc.vectorized || true,
+              chunk_count: doc.chunkCount || 0,
+              deviceId: doc.deviceId,
+              deviceName: doc.deviceName
+            }));
+            setDocuments(knowledgeDocuments);
+            logInfo('Knowledge', 'PDF documents loaded from knowledge API fallback', { count: knowledgeDocuments.length });
+          } catch (knowledgeError) {
+            logError('Knowledge', 'Failed to load documents from knowledge API fallback', knowledgeError instanceof Error ? knowledgeError : new Error('Unknown error'));
+            // Keep empty array as final fallback
+            setDocuments([]);
+          }
+        }
 
         // Load devices for association
         try {
           const devicesResponse = await deviceAPI.getAll();
           setDevices(devicesResponse.data || []);
+          logInfo('Knowledge', 'Devices loaded successfully', { count: devicesResponse.data?.length || 0 });
         } catch (deviceError) {
           logError('Knowledge', 'Failed to load devices', deviceError instanceof Error ? deviceError : new Error('Unknown error'));
           // Continue without devices
+          setDevices([]);
         }
       } catch (error) {
-        logError('Knowledge', 'Failed to load PDF documents from external API', error instanceof Error ? error : new Error('Unknown error'));
-        // Keep empty array as fallback
+        logError('Knowledge', 'Failed to load data', error instanceof Error ? error : new Error('Unknown error'));
+        // Keep empty arrays as fallback
+        setDocuments([]);
+        setDevices([]);
       } finally {
         setLoading(false);
       }
