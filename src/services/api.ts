@@ -144,6 +144,12 @@ export const deviceAPI = {
   getDocumentation: (id: string) => api.get(`/api/devices/${id}/documentation`),
   getDebugData: (deviceId: string) => api.get(`/api/devices/${deviceId}/debug-data`),
   testAuth: () => api.get('/api/devices/auth-test'),
+  onboardWithAI: (formData: FormData) => api.post('/api/devices/onboard-with-ai', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+    timeout: 300000, // 5 minutes timeout for large files
+  }),
 };
 
 // Rule API

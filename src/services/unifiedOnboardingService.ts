@@ -1,5 +1,6 @@
 import { getApiConfig } from '../config/api';
 import { logInfo, logError, logWarn } from '../utils/logger';
+import { deviceAPI } from './api';
 
 export interface UnifiedOnboardingProgress {
   stage: 'upload' | 'device' | 'rules' | 'maintenance' | 'safety' | 'complete';
@@ -136,21 +137,10 @@ export class UnifiedOnboardingService {
 
       logInfo('UnifiedOnboarding', 'Calling unified backend service', { endpoint: '/api/devices/onboard-with-ai' });
 
-      const response = await fetch(`${this.baseUrl}/api/devices/onboard-with-ai`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formDataToSend
-      });
+      // Use the proper API instance with authentication handling
+      const response = await deviceAPI.onboardWithAI(formDataToSend);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        logError('UnifiedOnboarding', `Backend error: ${response.status} - ${errorText}`);
-        throw new Error(`Backend error: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
+      const result = response.data;
       
       logInfo('UnifiedOnboarding', 'Device created successfully', { deviceId: result.id, deviceName: result.name });
       

@@ -7,12 +7,15 @@ server:
       enabled: true
       file-size-threshold: 2KB
       location: ${java.io.tmpdir}
+      resolve-lazily: false
   tomcat:
     max-http-form-post-size: 500MB
     max-swallow-size: 500MB
     connection-timeout: 60000
     max-connections: 8192
     accept-count: 100
+    max-threads: 200
+    min-spare-threads: 10
 
 
 spring:
@@ -94,8 +97,13 @@ openai:
 # File Upload Configuration
 file:
   upload-dir: ${FILE_UPLOAD_DIR:./uploads}
-  max-size: 100MB
+  max-size: 500MB
   allowed-types: pdf,PDF
+
+# App-specific file configuration
+app:
+  file:
+    max-size: 524288000  # 500MB in bytes
 
 # PDF Processing Configuration
 pdf:

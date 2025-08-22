@@ -64,7 +64,7 @@ public class DeviceController {
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final String ANONYMOUS_USER = "anonymous";
     private static final String DEFAULT_ORGANIZATION = "default";
-    private static final int MAX_FILE_SIZE = 10485760; // 10MB in bytes
+    private static final int MAX_FILE_SIZE = 524288000; // 500MB in bytes
 
     private final DeviceService deviceService;
     private final TelemetryService telemetryService;
