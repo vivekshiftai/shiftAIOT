@@ -5,8 +5,7 @@ export const API_CONFIG = {
   // Backend API (your Spring Boot application)
   BACKEND_BASE_URL: 'http://20.57.36.66:8100',
   
-  // External PDF Processing API
-  PDF_PROCESSING_API_URL: 'http://20.57.36.66:8000', // Updated to use new VM IP
+  // PDF Processing is handled by the backend, no direct frontend calls needed
   
   // Example endpoints:
   // PDF_PROCESSING_API_URL: 'https://your-pdf-service.com/api',
@@ -28,12 +27,10 @@ export const getApiConfig = () => {
     case 'production':
       return {
         ...API_CONFIG,
-        PDF_PROCESSING_API_URL: import.meta.env.VITE_PDF_API_URL || API_CONFIG.PDF_PROCESSING_API_URL,
       };
     case 'development':
       return {
         ...API_CONFIG,
-        PDF_PROCESSING_API_URL: import.meta.env.VITE_PDF_API_URL || API_CONFIG.PDF_PROCESSING_API_URL,
       };
     default:
       return API_CONFIG;

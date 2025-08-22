@@ -36,7 +36,7 @@ public class KnowledgeService {
     @Autowired
     private KnowledgeDocumentRepository knowledgeDocumentRepository;
 
-    @Value("${pdf.processing.url}")
+    @Value("${pdf.processing.base-url}")
     private String pdfProcessingUrl;
 
     private final Path uploadPath = Paths.get("uploads/knowledge");
