@@ -42,6 +42,7 @@ export interface Device {
   operatingHumidityMin: number;
   operatingHumidityMax: number;
   lastSeen: string;
+  assignedUserId?: string;
   createdAt: string;
   updatedAt: string;
 }

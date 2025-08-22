@@ -49,4 +49,20 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
     // Find upcoming tasks (next 7 days)
     @Query(value = "SELECT * FROM device_maintenance m WHERE m.organization_id = :organizationId AND m.next_maintenance BETWEEN CURRENT_DATE AND DATE_ADD(CURRENT_DATE, INTERVAL 7 DAY) AND m.status != 'completed'", nativeQuery = true)
     List<MaintenanceSchedule> findUpcomingTasks(@Param("organizationId") String organizationId);
+    
+    // Find today's maintenance tasks
+    @Query(value = "SELECT * FROM device_maintenance m WHERE m.organization_id = :organizationId AND m.next_maintenance = CURRENT_DATE AND m.status != 'completed'", nativeQuery = true)
+    List<MaintenanceSchedule> findTodaysMaintenanceTasks(@Param("organizationId") String organizationId);
+    
+    // Find today's maintenance tasks with device and user details
+    @Query(value = """
+        SELECT m.*, d.name as device_name, d.assigned_user_id, u.first_name, u.last_name, u.email 
+        FROM device_maintenance m 
+        LEFT JOIN devices d ON m.device_id = d.id 
+        LEFT JOIN users u ON d.assigned_user_id = u.id 
+        WHERE m.organization_id = :organizationId 
+        AND m.next_maintenance = CURRENT_DATE 
+        AND m.status != 'completed'
+        """, nativeQuery = true)
+    List<Object[]> findTodaysMaintenanceTasksWithDetails(@Param("organizationId") String organizationId);
 }

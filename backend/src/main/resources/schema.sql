@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS users (
 -- Add phone column to users table if it doesn't exist
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
 
+-- Add assigned_user_id column to devices table if it doesn't exist
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS assigned_user_id VARCHAR(255);
+
 -- Add new columns to rules table if they don't exist
 ALTER TABLE rules ADD COLUMN IF NOT EXISTS metric VARCHAR(100);
 ALTER TABLE rules ADD COLUMN IF NOT EXISTS metric_value VARCHAR(100);
@@ -45,6 +48,7 @@ CREATE TABLE IF NOT EXISTS devices (
     protocol VARCHAR(50) DEFAULT 'HTTP',
     location VARCHAR(255) NOT NULL,
     organization_id VARCHAR(255) NOT NULL,
+    assigned_user_id VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     

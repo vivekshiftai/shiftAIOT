@@ -52,6 +52,9 @@ public class DeviceCreateRequest {
     // Status field (optional)
     private Device.DeviceStatus status = Device.DeviceStatus.OFFLINE;
     
+    // Assigned user field (optional)
+    private String assignedUserId;
+    
     // Getters and Setters
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -112,4 +115,7 @@ public class DeviceCreateRequest {
     
     public Device.DeviceStatus getStatus() { return status; }
     public void setStatus(Device.DeviceStatus status) { this.status = status; }
+    
+    public String getAssignedUserId() { return assignedUserId; }
+    public void setAssignedUserId(String assignedUserId) { this.assignedUserId = assignedUserId; }
 }

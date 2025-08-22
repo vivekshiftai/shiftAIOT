@@ -9,14 +9,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.time.LocalDateTime;
 
 /**
- * Service for managing maintenance schedules.
+ * Service for managing maintenance schedules with proper date calculations.
  */
 @Service
 @Slf4j
@@ -26,11 +28,27 @@ public class MaintenanceScheduleService {
     private final MaintenanceScheduleRepository maintenanceScheduleRepository;
     private final DeviceMaintenanceRepository deviceMaintenanceRepository;
     
+    // Simple frequency mapping for basic string formats
+    private static final Map<String, java.time.temporal.ChronoUnit> FREQUENCY_MAP = Map.of(
+        "daily", java.time.temporal.ChronoUnit.DAYS,
+        "weekly", java.time.temporal.ChronoUnit.WEEKS,
+        "monthly", java.time.temporal.ChronoUnit.MONTHS,
+        "quarterly", java.time.temporal.ChronoUnit.MONTHS,
+        "yearly", java.time.temporal.ChronoUnit.YEARS,
+        "annually", java.time.temporal.ChronoUnit.YEARS
+    );
+    
     /**
-     * Create a new maintenance schedule.
+     * Create a new maintenance schedule with proper date calculations.
      */
     public MaintenanceSchedule createSchedule(MaintenanceSchedule schedule) {
         log.info("Creating maintenance schedule for device: {}", schedule.getDeviceId());
+        
+        // Calculate next maintenance date if not provided
+        if (schedule.getNextMaintenance() == null) {
+            schedule.setNextMaintenance(calculateNextMaintenanceDate(schedule.getFrequency()));
+        }
+        
         return maintenanceScheduleRepository.save(schedule);
     }
     
@@ -81,34 +99,130 @@ public class MaintenanceScheduleService {
     }
     
     /**
-     * Create maintenance tasks from PDF.
+     * Create maintenance tasks from PDF with proper date calculations.
      */
     public void createMaintenanceFromPDF(List<MaintenanceGenerationResponse.MaintenanceTask> maintenanceTasks, String deviceId, String organizationId) {
         log.info("Creating maintenance tasks from PDF for device: {}", deviceId);
+        
         for (MaintenanceGenerationResponse.MaintenanceTask maintenanceData : maintenanceTasks) {
             DeviceMaintenance maintenance = new DeviceMaintenance();
             maintenance.setId(UUID.randomUUID().toString());
-            maintenance.setDeviceId(deviceId);
+            maintenance.setDeviceName("Device " + deviceId);
             maintenance.setOrganizationId(organizationId);
-            maintenance.setTitle(maintenanceData.getTitle());
+            maintenance.setTaskName(maintenanceData.getTaskName());
             maintenance.setDescription(maintenanceData.getDescription());
-            maintenance.setCategory(maintenanceData.getCategory());
-            maintenance.setPriority(maintenanceData.getPriority());
+            maintenance.setFrequency(maintenanceData.getFrequency());
+            maintenance.setPriority(convertPriority(maintenanceData.getPriority()));
+            maintenance.setEstimatedDuration(maintenanceData.getEstimatedDuration());
+            maintenance.setRequiredTools(maintenanceData.getRequiredTools());
             maintenance.setStatus(DeviceMaintenance.Status.ACTIVE);
+            
+            // Calculate next maintenance date based on frequency
+            LocalDate nextMaintenance = calculateNextMaintenanceDate(maintenanceData.getFrequency());
+            maintenance.setNextMaintenance(nextMaintenance);
+            
+            // Set last maintenance to null (first time maintenance)
+            maintenance.setLastMaintenance(null);
+            
             maintenance.setCreatedAt(LocalDateTime.now());
             maintenance.setUpdatedAt(LocalDateTime.now());
             
             deviceMaintenanceRepository.save(maintenance);
+            
+            log.info("Created maintenance task: {} with next maintenance date: {}", 
+                    maintenanceData.getTaskName(), nextMaintenance);
         }
+        
         log.info("Created {} maintenance tasks from PDF for device: {}", maintenanceTasks.size(), deviceId);
     }
     
     /**
-     * Get upcoming maintenance for a device.
+     * Mark maintenance task as completed and calculate next maintenance date.
+     */
+    public DeviceMaintenance completeMaintenanceTask(String maintenanceId) {
+        log.info("Completing maintenance task: {}", maintenanceId);
+        
+        Optional<DeviceMaintenance> optionalMaintenance = deviceMaintenanceRepository.findById(maintenanceId);
+        if (optionalMaintenance.isEmpty()) {
+            log.error("Maintenance task not found: {}", maintenanceId);
+            throw new IllegalArgumentException("Maintenance task not found: " + maintenanceId);
+        }
+        
+        DeviceMaintenance maintenance = optionalMaintenance.get();
+        
+        // Set last maintenance to today
+        maintenance.setLastMaintenance(LocalDate.now());
+        
+        // Calculate next maintenance date based on frequency
+        LocalDate nextMaintenance = calculateNextMaintenanceDate(maintenance.getFrequency());
+        maintenance.setNextMaintenance(nextMaintenance);
+        
+        // Update status to completed
+        maintenance.setStatus(DeviceMaintenance.Status.COMPLETED);
+        maintenance.setUpdatedAt(LocalDateTime.now());
+        
+        DeviceMaintenance savedMaintenance = deviceMaintenanceRepository.save(maintenance);
+        
+        log.info("Completed maintenance task: {} with next maintenance date: {}", 
+                maintenance.getTaskName(), nextMaintenance);
+        
+        return savedMaintenance;
+    }
+    
+    /**
+     * Calculate next maintenance date based on frequency string.
+     * Supports basic formats: "daily", "weekly", "monthly", "quarterly", "yearly", "annually"
+     */
+    public LocalDate calculateNextMaintenanceDate(String frequency) {
+        if (frequency == null || frequency.trim().isEmpty()) {
+            log.warn("Frequency is null or empty, defaulting to monthly");
+            return LocalDate.now().plusMonths(1);
+        }
+        
+        String normalizedFrequency = frequency.toLowerCase().trim();
+        LocalDate today = LocalDate.now();
+        
+        try {
+            // Check for basic frequency formats
+            switch (normalizedFrequency) {
+                case "daily":
+                    return today.plusDays(1);
+                case "weekly":
+                    return today.plusWeeks(1);
+                case "monthly":
+                    return today.plusMonths(1);
+                case "quarterly":
+                    return today.plusMonths(3);
+                case "yearly":
+                case "annually":
+                    return today.plusYears(1);
+                default:
+                    log.warn("Unknown frequency format: '{}', defaulting to monthly", frequency);
+                    return today.plusMonths(1);
+            }
+        } catch (Exception e) {
+            log.error("Error calculating next maintenance date for frequency: {}", frequency, e);
+            return today.plusMonths(1);
+        }
+    }
+    
+    /**
+     * Get overdue maintenance tasks for a device.
+     */
+    public List<DeviceMaintenance> getOverdueMaintenance(String deviceId) {
+        log.info("Fetching overdue maintenance for device: {}", deviceId);
+        return deviceMaintenanceRepository.findByDeviceIdAndStatusAndNextMaintenanceBefore(
+                deviceId, DeviceMaintenance.Status.ACTIVE, LocalDate.now());
+    }
+    
+    /**
+     * Get upcoming maintenance for a device (next 30 days).
      */
     public List<DeviceMaintenance> getUpcomingMaintenance(String deviceId) {
         log.info("Fetching upcoming maintenance for device: {}", deviceId);
-        return deviceMaintenanceRepository.findByDeviceId(deviceId);
+        LocalDate thirtyDaysFromNow = LocalDate.now().plusDays(30);
+        return deviceMaintenanceRepository.findByDeviceIdAndStatusAndNextMaintenanceBetween(
+                deviceId, DeviceMaintenance.Status.ACTIVE, LocalDate.now(), thirtyDaysFromNow);
     }
     
     /**
@@ -117,5 +231,38 @@ public class MaintenanceScheduleService {
     public long getMaintenanceCount(String deviceId) {
         log.info("Fetching maintenance count for device: {}", deviceId);
         return deviceMaintenanceRepository.countByDeviceIdAndStatus(deviceId, DeviceMaintenance.Status.ACTIVE);
+    }
+    
+    /**
+     * Convert string priority to enum priority.
+     */
+    private DeviceMaintenance.Priority convertPriority(String priorityStr) {
+        if (priorityStr == null) return DeviceMaintenance.Priority.MEDIUM;
+        
+        try {
+            return DeviceMaintenance.Priority.valueOf(priorityStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid priority value: {}, using MEDIUM", priorityStr);
+            return DeviceMaintenance.Priority.MEDIUM;
+        }
+    }
+    
+    /**
+     * Update maintenance status to overdue for tasks past their due date.
+     */
+    public void updateOverdueMaintenance() {
+        log.info("Updating overdue maintenance tasks");
+        
+        List<DeviceMaintenance> overdueTasks = deviceMaintenanceRepository
+                .findByStatusAndNextMaintenanceBefore(DeviceMaintenance.Status.ACTIVE, LocalDate.now());
+        
+        for (DeviceMaintenance task : overdueTasks) {
+            task.setStatus(DeviceMaintenance.Status.OVERDUE);
+            task.setUpdatedAt(LocalDateTime.now());
+            deviceMaintenanceRepository.save(task);
+            log.info("Marked maintenance task as overdue: {}", task.getTaskName());
+        }
+        
+        log.info("Updated {} overdue maintenance tasks", overdueTasks.size());
     }
 }

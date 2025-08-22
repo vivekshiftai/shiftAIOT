@@ -483,6 +483,10 @@ export const DeviceDetailsSection: React.FC = () => {
                     <label className="text-sm font-medium text-slate-600">Firmware</label>
                     <p className="text-slate-800">{device.firmware || 'Not specified'}</p>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Assigned User</label>
+                    <p className="text-slate-800">{device.assignedUserId ? `User ID: ${device.assignedUserId}` : 'Not assigned'}</p>
+                  </div>
                 </div>
               </div>
 

@@ -108,6 +108,25 @@ pdf:
       thread-name-prefix: pdf-processing-
       keep-alive-seconds: 60
 
+# Maintenance Notification Scheduler Configuration
+maintenance:
+  scheduler:
+    enabled: true
+    cron: "0 0 6 * * ?"  # Every day at 6:00 AM
+    organization-id: "default-org"  # Default organization ID for notifications
+  
+  # Maintenance Status Update Scheduler Configuration
+  status-updater:
+    enabled: true
+    cron: "0 0 2 * * ?"  # Every day at 2:00 AM (before notification scheduler)
+
+# Conversation API Configuration
+conversation:
+  api:
+    base-url: "http://localhost:8100/api/chat"
+    max-retries: 3
+    retry-delay: 1000  # 1 second
+
 # Logging
 logging:
   level:

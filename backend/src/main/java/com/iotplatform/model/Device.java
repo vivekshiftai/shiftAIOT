@@ -60,6 +60,9 @@ public class Device {
     @Column(name = "organization_id", nullable = false)
     private String organizationId;
 
+    @Column(name = "assigned_user_id")
+    private String assignedUserId;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -265,6 +268,9 @@ public class Device {
 
     public String getOrganizationId() { return organizationId; }
     public void setOrganizationId(String organizationId) { this.organizationId = organizationId; }
+
+    public String getAssignedUserId() { return assignedUserId; }
+    public void setAssignedUserId(String assignedUserId) { this.assignedUserId = assignedUserId; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

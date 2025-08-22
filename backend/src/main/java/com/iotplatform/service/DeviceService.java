@@ -68,6 +68,10 @@ public class DeviceService {
     public Device createDevice(Device device, String organizationId) {
         device.setId(UUID.randomUUID().toString());
         device.setOrganizationId(organizationId);
+        // Set assigned user if provided
+        if (device.getAssignedUserId() != null && !device.getAssignedUserId().trim().isEmpty()) {
+            device.setAssignedUserId(device.getAssignedUserId());
+        }
         // Use the status from the device if provided, otherwise default to ONLINE
         if (device.getStatus() == null) {
             device.setStatus(Device.DeviceStatus.ONLINE);
@@ -91,6 +95,11 @@ public class DeviceService {
         device.setManufacturer(request.getManufacturer());
         device.setModel(request.getModel());
         device.setDescription(request.getDescription());
+        
+        // Set assigned user if provided
+        if (request.getAssignedUserId() != null && !request.getAssignedUserId().trim().isEmpty()) {
+            device.setAssignedUserId(request.getAssignedUserId());
+        }
         
         // Set connection details
         device.setIpAddress(request.getIpAddress());

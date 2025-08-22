@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Upload, FileText, Settings, Bot, CheckCircle, AlertTriangle, MessageSquare, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
 import { unifiedOnboardingService, UnifiedOnboardingProgress } from '../../services/unifiedOnboardingService';
-import { deviceAPI, ruleAPI, knowledgeAPI } from '../../services/api';
+import { deviceAPI, ruleAPI, knowledgeAPI, userAPI } from '../../services/api';
 import EnhancedOnboardingLoader from '../Loading/EnhancedOnboardingLoader';
 import { DeviceChatInterface } from './DeviceChatInterface';
 import { OnboardingSuccess } from './OnboardingSuccess';
@@ -12,7 +12,7 @@ interface DeviceFormData {
   deviceName: string;
   location: string;
   manufacturer: string;
-  deviceStatus: 'ONLINE' | 'OFFLINE' | 'WARNING' | 'ERROR';
+  assignedUserId?: string;
   connectionType: 'MQTT' | 'HTTP' | 'COAP';
   
   // MQTT specific fields
@@ -54,7 +54,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     deviceName: '',
     location: '',
     manufacturer: '',
-    deviceStatus: 'OFFLINE',
+    assignedUserId: '',
     connectionType: 'MQTT',
     brokerUrl: '',
     topic: '',
@@ -76,6 +76,10 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [onboardingResult, setOnboardingResult] = useState<any>(null);
 
+  // Users for assignment dropdown
+  const [users, setUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
   // Progress tracking states
   const [currentProcess, setCurrentProcess] = useState<'pdf' | 'rules' | 'knowledgebase'>('pdf');
   const [progress, setProgress] = useState(0);
@@ -86,6 +90,30 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     totalSteps: number;
     stepName: string;
   } | undefined>(undefined);
+
+  // Fetch users for assignment dropdown
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoadingUsers(true);
+      try {
+        const response = await userAPI.getAll();
+        setUsers(response.data);
+        logInfo('EnhancedDeviceOnboardingForm', 'Users fetched successfully', { count: response.data.length });
+      } catch (error) {
+        logError('EnhancedDeviceOnboardingForm', 'Failed to fetch users', error instanceof Error ? error : new Error('Unknown error'));
+        // Set some dummy users as fallback
+        setUsers([
+          { id: 'user1', firstName: 'John', lastName: 'Doe', role: 'ADMIN' },
+          { id: 'user2', firstName: 'Jane', lastName: 'Smith', role: 'USER' },
+          { id: 'user3', firstName: 'Bob', lastName: 'Johnson', role: 'USER' }
+        ]);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   // Add dummy data for skipped connection settings
   const getDummyConnectionData = useCallback(() => {
@@ -123,7 +151,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       if (!formData.deviceName.trim()) newErrors.deviceName = 'Device name is required';
       if (!formData.location.trim()) newErrors.location = 'Location is required';
       if (!formData.manufacturer.trim()) newErrors.manufacturer = 'Manufacturer is required';
-      if (!formData.deviceStatus) newErrors.deviceStatus = 'Device status is required';
+      if (!formData.assignedUserId) newErrors.assignedUserId = 'Please assign the device to a user';
     }
 
     if (step === 2) {
@@ -383,28 +411,33 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
           <div className="space-y-2">
             <label className="block text-sm font-semibold text-gray-700">
-              Device Status *
+              Assign to User *
             </label>
             <select
-              value={formData.deviceStatus}
-              onChange={(e) => handleInputChange('deviceStatus', e.target.value)}
+              value={formData.assignedUserId || ''}
+              onChange={(e) => handleInputChange('assignedUserId', e.target.value)}
+              disabled={loadingUsers}
               className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 ${
-                errors.deviceStatus ? 'border-red-400' : 'border-gray-300'
-              }`}
+                errors.assignedUserId ? 'border-red-400' : 'border-gray-300'
+              } ${loadingUsers ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              <option value="ONLINE" className="bg-white text-gray-800">🟢 Online</option>
-              <option value="OFFLINE" className="bg-white text-gray-800">🔴 Offline</option>
-              <option value="WARNING" className="bg-white text-gray-800">🟡 Warning</option>
-              <option value="ERROR" className="bg-white text-gray-800">🔴 Error</option>
+              <option value="" className="bg-white text-gray-800">
+                {loadingUsers ? 'Loading users...' : 'Select a user...'}
+              </option>
+              {users.map((user) => (
+                <option key={user.id} value={user.id} className="bg-white text-gray-800">
+                  👤 {user.firstName} {user.lastName} ({user.role})
+                </option>
+              ))}
             </select>
-            {errors.deviceStatus && (
-              <p className="text-red-600 text-sm mt-1">{errors.deviceStatus}</p>
+            {errors.assignedUserId && (
+              <p className="text-red-600 text-sm mt-1">{errors.assignedUserId}</p>
             )}
           </div>
         </div>
       </div>
     </div>
-  ), [formData.deviceName, formData.location, formData.manufacturer, formData.deviceStatus, errors.deviceName, errors.location, errors.manufacturer, errors.deviceStatus, handleInputChange]);
+  ), [formData.deviceName, formData.location, formData.manufacturer, formData.assignedUserId, errors.deviceName, errors.location, errors.manufacturer, errors.assignedUserId, handleInputChange]);
 
     const renderStep2 = useCallback(() => (
     <div className="w-full max-w-4xl mx-auto space-y-8">

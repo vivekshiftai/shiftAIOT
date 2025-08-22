@@ -29,7 +29,14 @@ public interface DeviceMaintenanceRepository extends JpaRepository<DeviceMainten
     @Query("SELECT dm FROM DeviceMaintenance dm WHERE dm.nextMaintenance < :today AND dm.status = 'ACTIVE'")
     List<DeviceMaintenance> findOverdueMaintenance(@Param("today") LocalDate today);
     
-
+    // Find by device ID, status, and next maintenance before a date
+    List<DeviceMaintenance> findByDeviceIdAndStatusAndNextMaintenanceBefore(String deviceId, DeviceMaintenance.Status status, LocalDate date);
+    
+    // Find by device ID, status, and next maintenance between dates
+    List<DeviceMaintenance> findByDeviceIdAndStatusAndNextMaintenanceBetween(String deviceId, DeviceMaintenance.Status status, LocalDate startDate, LocalDate endDate);
+    
+    // Find by status and next maintenance before a date
+    List<DeviceMaintenance> findByStatusAndNextMaintenanceBefore(DeviceMaintenance.Status status, LocalDate date);
     
     long countByDeviceIdAndStatus(String deviceId, DeviceMaintenance.Status status);
     
