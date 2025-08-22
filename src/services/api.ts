@@ -33,7 +33,12 @@ api.interceptors.request.use(
       const token = tokenService.getToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log(`🔐 Adding auth header for: ${config.url}`);
+      } else {
+        console.warn(`⚠️ No token found for protected endpoint: ${config.url}`);
       }
+    } else {
+      console.log(`🌐 Public endpoint (no auth): ${config.url}`);
     }
     return config;
   },
@@ -52,9 +57,19 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const url = error.config?.url || '';
 
+    console.log(`🚨 API Error: ${status} for ${url}`);
+    console.log('Error details:', {
+      status,
+      url,
+      hasToken: !!tokenService.getToken(),
+      tokenLength: tokenService.getToken()?.length,
+      retry: originalRequest._retry
+    });
+
     // Handle 401/403 auth errors
     if ((status === 401 || status === 403) && !originalRequest._retry) {
       originalRequest._retry = true;
+      console.log('🔄 Attempting token refresh...');
 
       try {
         // Attempt token refresh
@@ -62,9 +77,11 @@ api.interceptors.response.use(
         if (newToken) {
           // Retry the original request with new token
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          console.log('✅ Token refreshed, retrying request');
           return api(originalRequest);
         } else {
           // Token refresh failed
+          console.warn('❌ Token refresh failed');
           logWarn('API', 'Token refresh failed');
           
           // For /users endpoint during onboarding, don't redirect to login
@@ -74,12 +91,14 @@ api.interceptors.response.use(
           }
           
           // For other endpoints, redirect to login
+          console.log('🔀 Redirecting to login page');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           window.location.href = '/login';
           return Promise.reject(error);
         }
       } catch (refreshErr: any) {
+        console.error('❌ Token refresh error:', refreshErr);
         logWarn('API', 'Token refresh failed', undefined, refreshErr);
         
         // For /users endpoint during onboarding, don't redirect to login
@@ -89,6 +108,7 @@ api.interceptors.response.use(
         }
         
         // For other endpoints, redirect to login
+        console.log('🔀 Redirecting to login page after refresh error');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';

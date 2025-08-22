@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { deviceAPI } from '../../services/api';
+import { tokenService } from '../../services/tokenService';
 
 export const AuthDebugger: React.FC = () => {
   const [debugInfo, setDebugInfo] = useState<any>(null);
@@ -12,47 +13,53 @@ export const AuthDebugger: React.FC = () => {
     setDebugInfo(null);
 
     try {
-      // Get current token
-      const token = localStorage.getItem('token');
-      const user = localStorage.getItem('user');
+      // Get authentication status using tokenService
+      const authStatus = tokenService.getAuthStatus();
+      tokenService.logAuthStatus();
       
       console.log('🔍 Auth Debug Info:');
-      console.log('Token exists:', !!token);
-      console.log('Token length:', token?.length);
-      console.log('User exists:', !!user);
+      console.log('Auth Status:', authStatus);
       
-      if (token) {
-        console.log('Token preview:', token.substring(0, 50) + '...');
-      }
-
       // Test auth endpoint
       const response = await deviceAPI.testAuth();
       console.log('✅ Auth test successful:', response.data);
       
       setDebugInfo({
-        token: {
-          exists: !!token,
-          length: token?.length,
-          preview: token ? token.substring(0, 50) + '...' : 'N/A'
-        },
-        user: user ? JSON.parse(user) : null,
-        authTest: response.data
+        authStatus,
+        authTest: response.data,
+        timestamp: new Date().toISOString()
       });
       
     } catch (err: any) {
       console.error('❌ Auth test failed:', err);
       setError(err.response?.data?.error || err.message || 'Unknown error');
+      
+      // Still show auth status even if test fails
+      const authStatus = tokenService.getAuthStatus();
+      setDebugInfo({
+        authStatus,
+        error: err.response?.data?.error || err.message || 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const clearAuth = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    tokenService.removeToken();
     setDebugInfo(null);
     setError(null);
     console.log('🧹 Auth data cleared');
+  };
+
+  const checkAuthStatus = () => {
+    const authStatus = tokenService.getAuthStatus();
+    setDebugInfo({
+      authStatus,
+      timestamp: new Date().toISOString()
+    });
+    console.log('🔍 Current Auth Status:', authStatus);
   };
 
   return (
@@ -60,13 +67,20 @@ export const AuthDebugger: React.FC = () => {
       <h3 className="text-lg font-semibold text-yellow-800 mb-4">🔍 Authentication Debugger</h3>
       
       <div className="space-y-4">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={runAuthTest}
             disabled={loading}
             className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50"
           >
             {loading ? 'Testing...' : 'Test Authentication'}
+          </button>
+          
+          <button
+            onClick={checkAuthStatus}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            Check Auth Status
           </button>
           
           <button
@@ -86,7 +100,7 @@ export const AuthDebugger: React.FC = () => {
         {debugInfo && (
           <div className="p-4 bg-white border border-yellow-200 rounded-lg">
             <h4 className="font-semibold text-yellow-800 mb-2">Debug Information:</h4>
-            <pre className="text-sm text-slate-700 overflow-auto">
+            <pre className="text-sm text-slate-700 overflow-auto max-h-96">
               {JSON.stringify(debugInfo, null, 2)}
             </pre>
           </div>

@@ -359,15 +359,44 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     }
   }, [uploadedFile, formData, onboardingStartTime, currentUser]);
 
-  const handleSubmit = useCallback(async () => {
-    if (!validateStep(currentStep)) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
 
-    if (currentStep === 3 && uploadedFile) {
-      await startOnboardingProcess();
-    } else if (currentStep < 3) {
-      nextStep();
+    // Validate authentication first
+    if (!currentUser) {
+      setErrors({ auth: 'You must be logged in to onboard a device. Please log in first.' });
+      logError('EnhancedDeviceOnboardingForm', 'User not authenticated for device onboarding');
+      return;
     }
-  }, [currentStep, uploadedFile, validateStep, startOnboardingProcess, nextStep]);
+
+    // Validate required fields
+    const newErrors: Record<string, string> = {};
+    if (!formData.deviceName.trim()) {
+      newErrors.deviceName = 'Device name is required';
+    }
+    if (!formData.location.trim()) {
+      newErrors.location = 'Location is required';
+    }
+    if (!formData.manufacturer.trim()) {
+      newErrors.manufacturer = 'Manufacturer is required';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formData, uploadedFile);
+    } catch (error: any) {
+      logError('EnhancedDeviceOnboardingForm', 'Form submission failed', error);
+      setErrors({ submit: error.message || 'Failed to submit form' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Handle success continue - close onboarding (chat is now integrated)
   const handleSuccessContinue = useCallback(() => {
@@ -386,6 +415,47 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
     const renderStep1 = useCallback(() => (
     <div className="w-full max-w-4xl mx-auto space-y-8">
+      {/* Authentication Status */}
+      {!currentUser && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                Authentication Required
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>You must be logged in to onboard a device. Please <a href="/login" className="font-medium underline hover:text-red-600">log in</a> first.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {currentUser && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-green-800">
+                Authenticated as {currentUser.firstName} {currentUser.lastName}
+              </h3>
+              <div className="mt-2 text-sm text-green-700">
+                <p>You are logged in and ready to onboard devices.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Step Header */}
       <div className="text-center">
         <h3 className="text-2xl font-bold text-gray-800 mb-2">Basic Device Information</h3>
