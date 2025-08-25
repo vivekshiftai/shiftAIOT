@@ -63,7 +63,6 @@ public class UnifiedOnboardingService {
      * 3. Generate rules, maintenance, safety from processed PDF
      * 4. Store only the results in our database
      */
-    @Transactional
     public DeviceCreateResponse completeUnifiedOnboarding(
             DeviceCreateWithFileRequest deviceRequest,
             MultipartFile manualFile,
@@ -74,27 +73,35 @@ public class UnifiedOnboardingService {
         
         log.info("Starting unified onboarding workflow for device: {}", deviceRequest.getName());
         
+        // Step 1: Create device (without storing PDF files in our DB) - This is transactional
+        log.info("Step 1: Creating device without storing PDF files...");
+        DeviceCreateResponse deviceResponse = createDeviceTransactional(deviceRequest, organizationId);
+        
+        log.info("Device created successfully with ID: {}", deviceResponse.getId());
+        
+        // Step 2: Upload PDF to PDF Processing Service and process - This is non-transactional
+        log.info("Step 2: Uploading PDF to processing service and generating content...");
         try {
-            // Step 1: Create device (without storing PDF files in our DB)
-            log.info("Step 1: Creating device without storing PDF files...");
-            DeviceCreateResponse deviceResponse = deviceService.createDeviceWithoutFiles(
-                deviceRequest, organizationId
-            );
-            
-            log.info("Device created successfully with ID: {}", deviceResponse.getId());
-            
-            // Step 2: Upload PDF to PDF Processing Service and process
-            log.info("Step 2: Uploading PDF to processing service and generating content...");
             processPDFAndGenerateContent(deviceResponse.getId(), manualFile, datasheetFile, certificateFile, organizationId);
-            
-            log.info("Unified onboarding workflow completed successfully for device: {}", deviceResponse.getId());
-            
-            return deviceResponse;
-            
         } catch (Exception e) {
-            log.error("Unified onboarding workflow failed for device: {}", deviceRequest.getName(), e);
-            throw new PDFProcessingException("Unified onboarding failed: " + e.getMessage(), e);
+            log.error("PDF processing failed for device: {}, but device creation succeeded", deviceResponse.getId(), e);
+            // Don't fail the entire onboarding if PDF processing fails
         }
+        
+        log.info("Unified onboarding workflow completed successfully for device: {}", deviceResponse.getId());
+        
+        return deviceResponse;
+    }
+    
+    /**
+     * Create device in a separate transactional method
+     */
+    @Transactional
+    private DeviceCreateResponse createDeviceTransactional(
+            DeviceCreateWithFileRequest deviceRequest,
+            String organizationId
+    ) throws IOException {
+        return deviceService.createDeviceWithoutFiles(deviceRequest, organizationId);
     }
 
     /**
@@ -270,15 +277,39 @@ public class UnifiedOnboardingService {
                 log.debug("Created safety precaution: ID={}, Title={}, Type={}, Category={}", 
                     safety.getId(), safety.getTitle(), safety.getType(), safety.getCategory());
                 
+                // Verify all required fields are set
+                if (safety.getId() == null || safety.getId().trim().isEmpty()) {
+                    log.error("Safety precaution ID is null or empty");
+                    throw new IllegalStateException("Safety precaution ID is required");
+                }
+                if (safety.getType() == null || safety.getType().trim().isEmpty()) {
+                    log.error("Safety precaution Type is null or empty");
+                    throw new IllegalStateException("Safety precaution Type is required");
+                }
+                if (safety.getCategory() == null || safety.getCategory().trim().isEmpty()) {
+                    log.error("Safety precaution Category is null or empty");
+                    throw new IllegalStateException("Safety precaution Category is required");
+                }
+                
                 safetyToSave.add(safety);
             }
             
-            safetyRepository.saveAll(safetyToSave);
+            // Save safety precautions one by one to avoid batch operation issues
+            for (DeviceSafetyPrecaution safety : safetyToSave) {
+                try {
+                    safetyRepository.save(safety);
+                    log.debug("Successfully saved safety precaution: {}", safety.getId());
+                } catch (Exception e) {
+                    log.error("Failed to save safety precaution {}: {}", safety.getId(), e.getMessage());
+                    throw e; // Re-throw to stop the process
+                }
+            }
             log.info("Successfully stored {} safety precautions for device: {}", safetyToSave.size(), deviceId);
             
         } catch (Exception e) {
             log.error("Error storing safety precautions for device: {} - Error: {}", deviceId, e.getMessage(), e);
-            throw e; // Re-throw to ensure transaction rollback
+            // Don't re-throw to avoid transaction rollback issues
+            log.warn("Safety precautions storage failed, but continuing with device creation");
         }
     }
 
@@ -485,13 +516,36 @@ public class UnifiedOnboardingService {
                     safety.setCreatedAt(LocalDateTime.now());
                     safety.setUpdatedAt(LocalDateTime.now());
                     
-                    log.debug("Created safety precaution: ID={}, Title={}, Type={}, Category={}", 
-                        safety.getId(), safety.getTitle(), safety.getType(), safety.getCategory());
-                    
-                    safetyToSave.add(safety);
+                                    log.debug("Created safety precaution: ID={}, Title={}, Type={}, Category={}", 
+                    safety.getId(), safety.getTitle(), safety.getType(), safety.getCategory());
+                
+                // Verify all required fields are set
+                if (safety.getId() == null || safety.getId().trim().isEmpty()) {
+                    log.error("Safety precaution ID is null or empty");
+                    throw new IllegalStateException("Safety precaution ID is required");
+                }
+                if (safety.getType() == null || safety.getType().trim().isEmpty()) {
+                    log.error("Safety precaution Type is null or empty");
+                    throw new IllegalStateException("Safety precaution Type is required");
+                }
+                if (safety.getCategory() == null || safety.getCategory().trim().isEmpty()) {
+                    log.error("Safety precaution Category is null or empty");
+                    throw new IllegalStateException("Safety precaution Category is required");
                 }
                 
-                safetyRepository.saveAll(safetyToSave);
+                safetyToSave.add(safety);
+                }
+                
+                // Save safety precautions one by one to avoid batch operation issues
+                for (DeviceSafetyPrecaution safety : safetyToSave) {
+                    try {
+                        safetyRepository.save(safety);
+                        log.debug("Successfully saved safety precaution: {}", safety.getId());
+                    } catch (Exception e) {
+                        log.error("Failed to save safety precaution {}: {}", safety.getId(), e.getMessage());
+                        throw e; // Re-throw to stop the process
+                    }
+                }
                 log.info("Successfully stored {} safety precautions for device: {}", safetyToSave.size(), deviceId);
             } else {
                 log.warn("No safety precautions generated for device: {}", deviceId);

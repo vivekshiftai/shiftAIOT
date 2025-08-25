@@ -154,7 +154,23 @@ export class UnifiedOnboardingService {
         }
       });
 
-             logInfo('UnifiedOnboarding', 'Calling unified backend service', { endpoint: '/api/devices/device-onboard' });
+      logInfo('UnifiedOnboarding', 'Calling unified backend service', { endpoint: '/api/devices/device-onboard' });
+      
+      // Simulate progress updates during the backend call since it's synchronous
+      const progressInterval = setInterval(() => {
+        onProgress?.({
+          stage: 'device',
+          progress: Math.min(progress + 5, 25),
+          message: 'Processing device creation...',
+          stepDetails: {
+            currentStep: 3,
+            totalSteps: 8,
+            stepName: 'Device Creation'
+          }
+        });
+      }, 1000);
+      
+      let progress = 15;
 
       // Step 1: Validate authentication with detailed logging
       logInfo('UnifiedOnboarding', 'Step 1: Validating authentication');
@@ -291,6 +307,9 @@ export class UnifiedOnboardingService {
 
       const result = response.data;
       
+      // Clear the progress interval
+      clearInterval(progressInterval);
+      
       logInfo('UnifiedOnboarding', 'Device created successfully', { deviceId: result.id, deviceName: result.name });
       
       onProgress?.({
@@ -318,6 +337,20 @@ export class UnifiedOnboardingService {
       });
 
       logInfo('UnifiedOnboarding', 'Rules processing initiated by backend');
+      
+      // Simulate rules processing progress
+      setTimeout(() => {
+        onProgress?.({
+          stage: 'rules',
+          progress: 45,
+          message: 'Generating monitoring rules...',
+          stepDetails: {
+            currentStep: 5,
+            totalSteps: 8,
+            stepName: 'Rules Processing'
+          }
+        });
+      }, 2000);
 
       // Step 5: Maintenance processing (handled by backend with proper date formatting)
       onProgress?.({
@@ -332,6 +365,20 @@ export class UnifiedOnboardingService {
       });
 
       logInfo('UnifiedOnboarding', 'Maintenance processing initiated by backend with date formatting');
+      
+      // Simulate maintenance processing progress
+      setTimeout(() => {
+        onProgress?.({
+          stage: 'maintenance',
+          progress: 60,
+          message: 'Creating maintenance schedules...',
+          stepDetails: {
+            currentStep: 6,
+            totalSteps: 8,
+            stepName: 'Maintenance Processing'
+          }
+        });
+      }, 3000);
 
       // Step 6: Safety processing (handled by backend)
       onProgress?.({
@@ -346,6 +393,20 @@ export class UnifiedOnboardingService {
       });
 
       logInfo('UnifiedOnboarding', 'Safety processing initiated by backend');
+      
+      // Simulate safety processing progress
+      setTimeout(() => {
+        onProgress?.({
+          stage: 'safety',
+          progress: 75,
+          message: 'Generating safety guidelines...',
+          stepDetails: {
+            currentStep: 7,
+            totalSteps: 8,
+            stepName: 'Safety Processing'
+          }
+        });
+      }, 4000);
 
       // Step 7: Completion
       onProgress?.({
@@ -358,6 +419,20 @@ export class UnifiedOnboardingService {
           stepName: 'Finalization'
         }
       });
+      
+      // Simulate finalization progress
+      setTimeout(() => {
+        onProgress?.({
+          stage: 'complete',
+          progress: 95,
+          message: 'Completing setup...',
+          stepDetails: {
+            currentStep: 8,
+            totalSteps: 8,
+            stepName: 'Finalization'
+          }
+        });
+      }, 5000);
 
       // Step 8: Fetch results to get actual counts
       try {

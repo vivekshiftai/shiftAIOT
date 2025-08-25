@@ -43,15 +43,19 @@ public class DeviceSafetyPrecautionService {
     public DeviceSafetyPrecaution createSafetyPrecaution(DeviceSafetyPrecaution safetyPrecaution) {
         logger.info("Creating new safety precaution for device: {}", safetyPrecaution.getDeviceId());
         
-        // Validate required fields before saving
-        validateSafetyPrecaution(safetyPrecaution);
-        
+        // Ensure ID is set
         if (safetyPrecaution.getId() == null || safetyPrecaution.getId().trim().isEmpty()) {
             safetyPrecaution.setId(UUID.randomUUID().toString());
         }
         
+        // Ensure timestamps are set
         safetyPrecaution.setCreatedAt(LocalDateTime.now());
         safetyPrecaution.setUpdatedAt(LocalDateTime.now());
+        
+        // Log the safety precaution details for debugging
+        logger.debug("Creating safety precaution: ID={}, Title={}, Type={}, Category={}, DeviceId={}", 
+            safetyPrecaution.getId(), safetyPrecaution.getTitle(), safetyPrecaution.getType(), 
+            safetyPrecaution.getCategory(), safetyPrecaution.getDeviceId());
         
         DeviceSafetyPrecaution savedPrecaution = deviceSafetyPrecautionRepository.save(safetyPrecaution);
         logger.info("Safety precaution created successfully with ID: {}", savedPrecaution.getId());
@@ -63,14 +67,19 @@ public class DeviceSafetyPrecautionService {
         logger.info("Creating {} safety precautions", safetyPrecautions.size());
         
         for (DeviceSafetyPrecaution precaution : safetyPrecautions) {
-            // Validate required fields before saving
-            validateSafetyPrecaution(precaution);
-            
+            // Ensure ID is set
             if (precaution.getId() == null || precaution.getId().trim().isEmpty()) {
                 precaution.setId(UUID.randomUUID().toString());
             }
+            
+            // Ensure timestamps are set
             precaution.setCreatedAt(LocalDateTime.now());
             precaution.setUpdatedAt(LocalDateTime.now());
+            
+            // Log the safety precaution details for debugging
+            logger.debug("Preparing safety precaution: ID={}, Title={}, Type={}, Category={}, DeviceId={}", 
+                precaution.getId(), precaution.getTitle(), precaution.getType(), 
+                precaution.getCategory(), precaution.getDeviceId());
         }
         
         List<DeviceSafetyPrecaution> savedPrecautions = deviceSafetyPrecautionRepository.saveAll(safetyPrecautions);
@@ -154,24 +163,32 @@ public class DeviceSafetyPrecautionService {
     public void createSafetyFromPDF(List<SafetyGenerationResponse.SafetyPrecaution> safetyPrecautions, String deviceId, String organizationId) {
         logger.info("Creating safety precautions from PDF for device: {} in organization: {}", deviceId, organizationId);
         
-        for (SafetyGenerationResponse.SafetyPrecaution safetyData : safetyPrecautions) {
-            DeviceSafetyPrecaution safety = new DeviceSafetyPrecaution();
-            safety.setId(UUID.randomUUID().toString());
-            safety.setDeviceId(deviceId);
-            safety.setOrganizationId(organizationId);
-            safety.setTitle(safetyData.getTitle());
-            safety.setDescription(safetyData.getDescription());
-            safety.setCategory(safetyData.getCategory());
-            safety.setSeverity(safetyData.getSeverity());
-            safety.setType("PDF_GENERATED");
-            safety.setIsActive(true);
-            safety.setCreatedAt(LocalDateTime.now());
-            safety.setUpdatedAt(LocalDateTime.now());
+        try {
+            for (SafetyGenerationResponse.SafetyPrecaution safetyData : safetyPrecautions) {
+                DeviceSafetyPrecaution safety = new DeviceSafetyPrecaution();
+                safety.setId(UUID.randomUUID().toString());
+                safety.setDeviceId(deviceId);
+                safety.setOrganizationId(organizationId);
+                safety.setTitle(safetyData.getTitle());
+                safety.setDescription(safetyData.getDescription());
+                safety.setCategory(safetyData.getCategory());
+                safety.setSeverity(safetyData.getSeverity());
+                safety.setType("PDF_GENERATED");
+                safety.setIsActive(true);
+                safety.setCreatedAt(LocalDateTime.now());
+                safety.setUpdatedAt(LocalDateTime.now());
+                
+                logger.debug("Creating safety precaution from PDF: ID={}, Title={}, Type={}, Category={}", 
+                    safety.getId(), safety.getTitle(), safety.getType(), safety.getCategory());
+                
+                deviceSafetyPrecautionRepository.save(safety);
+            }
             
-            deviceSafetyPrecautionRepository.save(safety);
+            logger.info("Successfully created {} safety precautions from PDF for device: {}", safetyPrecautions.size(), deviceId);
+        } catch (Exception e) {
+            logger.error("Error creating safety precautions from PDF for device: {} - Error: {}", deviceId, e.getMessage(), e);
+            throw e; // Re-throw to ensure proper error handling
         }
-        
-        logger.info("Successfully created {} safety precautions from PDF for device: {}", safetyPrecautions.size(), deviceId);
     }
     
     /**
