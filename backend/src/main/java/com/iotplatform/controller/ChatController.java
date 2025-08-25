@@ -74,8 +74,8 @@ public class ChatController {
         }
         
         try {
-            // Convert String ID to Long for PDFQuery compatibility
-            Long userId = Long.parseLong(userDetails.getUser().getId());
+            // Use String ID directly (UUID) - no conversion needed
+            String userId = userDetails.getUser().getId();
             String organizationId = userDetails.getUser().getOrganizationId();
             
             log.info("PDF query request received from user: {} for PDF: {} (device: {})", 
@@ -126,8 +126,8 @@ public class ChatController {
         }
         
         try {
-            // Convert String ID to Long for PDFQuery compatibility
-            Long userId = Long.parseLong(userDetails.getUser().getId());
+            // Use String ID directly (UUID) - no conversion needed
+            String userId = userDetails.getUser().getId();
             String organizationId = userDetails.getUser().getOrganizationId();
             
             log.debug("Fetching chat history for user: {} (limit: {})", userId, limit);
@@ -175,8 +175,8 @@ public class ChatController {
         }
         
         try {
-            // Convert String ID to Long for PDFQuery compatibility
-            Long userId = Long.parseLong(userDetails.getUser().getId());
+            // Use String ID directly (UUID) - no conversion needed
+            String userId = userDetails.getUser().getId();
             String organizationId = userDetails.getUser().getOrganizationId();
             
             log.debug("Fetching device chat history for user: {} device: {} (limit: {})", 

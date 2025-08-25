@@ -130,7 +130,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
     }
 
     @Override
-    public PDFQueryResponse queryPDF(PDFQueryRequest request, Long userId, String organizationId) throws PDFProcessingException {
+    public PDFQueryResponse queryPDF(PDFQueryRequest request, String userId, String organizationId) throws PDFProcessingException {
         log.info("Processing PDF query for user: {} in organization: {}", userId, organizationId);
         
         try {
@@ -190,7 +190,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
     }
 
     @Override
-    public PDFQueryResponse queryPDFWithDeviceContext(PDFQueryRequest request, Long userId, String deviceId, String organizationId) throws PDFProcessingException {
+    public PDFQueryResponse queryPDFWithDeviceContext(PDFQueryRequest request, String userId, String deviceId, String organizationId) throws PDFProcessingException {
         log.info("Processing PDF query with device context for user: {} device: {} in organization: {}", userId, deviceId, organizationId);
         
         try {
@@ -701,7 +701,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
     }
 
     @Override
-    public List<PDFQuery> getChatHistory(Long userId, String organizationId, int limit) {
+    public List<PDFQuery> getChatHistory(String userId, String organizationId, int limit) {
         log.debug("Fetching chat history for user: {} in organization: {} (limit: {})", userId, organizationId, limit);
         try {
             PageRequest pageRequest = PageRequest.of(0, limit);
@@ -713,7 +713,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
     }
 
     @Override
-    public List<PDFQuery> getDeviceChatHistory(Long userId, String deviceId, String organizationId, int limit) {
+    public List<PDFQuery> getDeviceChatHistory(String userId, String deviceId, String organizationId, int limit) {
         log.debug("Fetching device chat history for user: {} device: {} in organization: {} (limit: {})", 
             userId, deviceId, organizationId, limit);
         try {

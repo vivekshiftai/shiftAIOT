@@ -40,7 +40,7 @@ public interface PDFProcessingService {
      * @return Query response with AI-generated answer
      * @throws PDFProcessingException if query fails
      */
-    PDFQueryResponse queryPDF(PDFQueryRequest request, Long userId, String organizationId) throws PDFProcessingException;
+    PDFQueryResponse queryPDF(PDFQueryRequest request, String userId, String organizationId) throws PDFProcessingException;
 
     /**
      * Queries a PDF document with device context and stores the interaction.
@@ -52,7 +52,7 @@ public interface PDFProcessingService {
      * @return Query response with AI-generated answer
      * @throws PDFProcessingException if query fails
      */
-    PDFQueryResponse queryPDFWithDeviceContext(PDFQueryRequest request, Long userId, String deviceId, String organizationId) throws PDFProcessingException;
+    PDFQueryResponse queryPDFWithDeviceContext(PDFQueryRequest request, String userId, String deviceId, String organizationId) throws PDFProcessingException;
     
     /**
      * Lists all PDF documents for an organization with pagination.
@@ -191,7 +191,7 @@ public interface PDFProcessingService {
      * @param limit Maximum number of messages to return
      * @return List of chat messages
      */
-    List<PDFQuery> getChatHistory(Long userId, String organizationId, int limit);
+    List<PDFQuery> getChatHistory(String userId, String organizationId, int limit);
 
     /**
      * Gets chat history for a user and device in an organization.
@@ -202,7 +202,7 @@ public interface PDFProcessingService {
      * @param limit Maximum number of messages to return
      * @return List of chat messages
      */
-    List<PDFQuery> getDeviceChatHistory(Long userId, String deviceId, String organizationId, int limit);
+    List<PDFQuery> getDeviceChatHistory(String userId, String deviceId, String organizationId, int limit);
 
     /**
      * Gets chat history for a specific PDF document.

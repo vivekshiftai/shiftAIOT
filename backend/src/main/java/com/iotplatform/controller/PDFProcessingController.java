@@ -156,7 +156,7 @@ public class PDFProcessingController {
             
             PDFQueryResponse response = pdfProcessingService.queryPDF(
                 request, 
-                Long.parseLong(userDetails.getUser().getId()), 
+                userDetails.getUser().getId(), 
                 organizationId
             );
             
@@ -458,6 +458,53 @@ public class PDFProcessingController {
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
             log.error("Unexpected error during PDF deletion for user: {}", userDetails.getUsername(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Delete a PDF document (with /delete/ path for frontend compatibility).
+     * 
+     * @param pdfName The name of the PDF to delete
+     * @param userDetails The authenticated user details
+     * @return PDF deletion response
+     */
+    @Operation(
+        summary = "Delete PDF Document (Frontend Compatible)",
+        description = "Delete a PDF document from both external service and local database - frontend compatible endpoint"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "PDF deleted successfully",
+            content = @Content(schema = @Schema(implementation = PDFDeleteResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "404", description = "PDF document not found"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @DeleteMapping("/delete/{pdfName}")
+    public ResponseEntity<PDFDeleteResponse> deletePDFWithPath(
+            @Parameter(description = "Name of the PDF to delete", required = true)
+            @PathVariable String pdfName,
+            
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        log.info("PDF deletion request (with path) received from user: {} for document: {}", 
+            userDetails.getUsername(), pdfName);
+        
+        try {
+            PDFDeleteResponse response = pdfProcessingService.deletePDF(
+                pdfName, 
+                userDetails.getUser().getOrganizationId()
+            );
+            
+            log.info("PDF deleted successfully (with path): {} by user: {}", pdfName, userDetails.getUsername());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (PDFProcessingException e) {
+            log.error("PDF deletion failed (with path) for user: {} - {}", userDetails.getUsername(), e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            log.error("Unexpected error during PDF deletion (with path) for user: {}", userDetails.getUsername(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

@@ -626,6 +626,10 @@ public class DeviceController {
             @RequestParam(value = "aiRules", required = false) String aiRulesJson,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
+        // Log file upload configuration for debugging
+        logger.info("📁 File upload configuration - max-file-size: 500MB, max-request-size: 500MB");
+        logger.info("📁 PDF processing max-file-size: 500MB (524288000 bytes)");
+        
         logger.info("🔍 onboardDeviceWithAI called - userDetails: {}, user: {}", 
                    userDetails != null, userDetails != null ? userDetails.getUser() != null : false);
         
@@ -666,6 +670,14 @@ public class DeviceController {
             // Parse device data
             DeviceCreateWithFileRequest deviceRequest = objectMapper.readValue(deviceData, DeviceCreateWithFileRequest.class);
             logger.info("✅ Device data parsed successfully: name={}, type={}", deviceRequest.getName(), deviceRequest.getType());
+            
+            // Validate device request
+            if (!isValidDeviceRequest(deviceRequest)) {
+                logger.error("❌ Device request validation failed for device: {}", deviceRequest.getName());
+                return ResponseEntity.badRequest().body(Map.of("error", "Device request validation failed"));
+            }
+            
+            logger.info("✅ Device request validation passed for device: {}", deviceRequest.getName());
             
             // Use unified onboarding service for sequential workflow
             DeviceCreateResponse response = unifiedOnboardingService.completeUnifiedOnboarding(
@@ -936,7 +948,43 @@ public class DeviceController {
         Map<String, String> errorResponse = new HashMap<>();
         errorResponse.put("error", "File size too large");
         errorResponse.put("message", "The uploaded file exceeds the maximum allowed size of 500MB. Please try with a smaller file.");
+        errorResponse.put("maxSize", "500MB");
+        errorResponse.put("details", "Server configured to accept files up to 500MB. PDF processing also supports up to 500MB.");
         return ResponseEntity.status(413).body(errorResponse);
+    }
+
+    /**
+     * Handle JSON processing errors during device data parsing
+     */
+    @ExceptionHandler(com.fasterxml.jackson.core.JsonProcessingException.class)
+    public ResponseEntity<Map<String, Object>> handleJsonProcessingException(com.fasterxml.jackson.core.JsonProcessingException ex) {
+        logger.error("❌ JSON processing error: {}", ex.getMessage());
+        
+        Map<String, Object> errorResponse = Map.of(
+            "error", "Invalid JSON data",
+            "message", "The device data could not be parsed. Please check the format.",
+            "details", ex.getMessage(),
+            "timestamp", new Date()
+        );
+        
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
+     * Handle validation errors for device requests
+     */
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidationExceptions(org.springframework.web.bind.MethodArgumentNotValidException ex) {
+        logger.error("❌ Validation error: {}", ex.getMessage());
+        
+        Map<String, Object> errorResponse = Map.of(
+            "error", "Validation failed",
+            "message", "Device data validation failed. Please check the input.",
+            "details", ex.getMessage(),
+            "timestamp", new Date()
+        );
+        
+        return ResponseEntity.badRequest().body(errorResponse);
     }
 
     /**

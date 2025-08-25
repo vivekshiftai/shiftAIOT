@@ -179,6 +179,82 @@ public class DeviceService {
         return deviceRepository.save(device);
     }
 
+    /**
+     * Create device without storing PDF files in our database
+     * PDF files will be sent directly to PDF Processing Service
+     */
+    public DeviceCreateResponse createDeviceWithoutFiles(DeviceCreateWithFileRequest request, 
+                                                       String organizationId) throws IOException {
+        
+        // Create the device
+        Device device = new Device();
+        device.setId(UUID.randomUUID().toString());
+        device.setOrganizationId(organizationId);
+        // Use the status from the request if provided, otherwise default to ONLINE
+        if (request.getStatus() != null) {
+            device.setStatus(request.getStatus());
+        } else {
+            device.setStatus(Device.DeviceStatus.ONLINE);
+        }
+        
+        // Set basic device information
+        device.setName(request.getName());
+        device.setType(request.getType());
+        device.setLocation(request.getLocation());
+        device.setProtocol(request.getProtocol());
+        device.setFirmware(request.getFirmware());
+        device.setTags(request.getTags());
+        device.setConfig(request.getConfig());
+        
+        // Set device specifications
+        device.setManufacturer(request.getManufacturer());
+        device.setModel(request.getModel());
+        device.setSerialNumber(request.getSerialNumber());
+        device.setMacAddress(request.getMacAddress());
+        device.setIpAddress(request.getIpAddress());
+        device.setPort(request.getPort());
+        
+        // Set documentation URLs (if provided) - but don't store actual files
+        device.setManualUrl(request.getManualUrl());
+        device.setDatasheetUrl(request.getDatasheetUrl());
+        device.setCertificateUrl(request.getCertificateUrl());
+        
+        // Set additional metadata
+        device.setDescription(request.getDescription());
+        device.setInstallationNotes(request.getInstallationNotes());
+        device.setMaintenanceSchedule(request.getMaintenanceSchedule());
+        device.setWarrantyInfo(request.getWarrantyInfo());
+        
+        // Set connectivity details
+        device.setWifiSsid(request.getWifiSsid());
+        device.setMqttBroker(request.getMqttBroker());
+        device.setMqttTopic(request.getMqttTopic());
+        
+        // Set power and environmental details
+        device.setPowerSource(request.getPowerSource());
+        device.setPowerConsumption(request.getPowerConsumption());
+        device.setOperatingTemperatureMin(request.getOperatingTemperatureMin());
+        device.setOperatingTemperatureMax(request.getOperatingTemperatureMax());
+        device.setOperatingHumidityMin(request.getOperatingHumidityMin());
+        device.setOperatingHumidityMax(request.getOperatingHumidityMax());
+        
+        // Save the device (without storing PDF files)
+        Device savedDevice = deviceRepository.save(device);
+        
+        // Create response without file upload information
+        DeviceCreateResponse response = new DeviceCreateResponse();
+        response.setId(savedDevice.getId());
+        response.setName(savedDevice.getName());
+        response.setType(savedDevice.getType().toString());
+        response.setLocation(savedDevice.getLocation());
+        response.setStatus(savedDevice.getStatus().toString());
+        response.setMessage("Device created successfully. PDF files will be processed separately.");
+        response.setCreatedAt(savedDevice.getCreatedAt());
+        response.setUpdatedAt(savedDevice.getUpdatedAt());
+        
+        return response;
+    }
+
     public DeviceCreateResponse createDeviceWithFiles(DeviceCreateWithFileRequest request, 
                                                    MultipartFile manualFile, 
                                                    MultipartFile datasheetFile, 

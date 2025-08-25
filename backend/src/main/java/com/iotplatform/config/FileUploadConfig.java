@@ -31,6 +31,13 @@ public class FileUploadConfig implements CommandLineRunner {
     public void run(String... args) throws Exception {
         logger.info("Initializing file upload configuration...");
         
+        // Log file upload limits
+        logger.info("📁 File upload limits configured:");
+        logger.info("📁 - Server multipart max-file-size: 500MB");
+        logger.info("📁 - Server multipart max-request-size: 500MB");
+        logger.info("📁 - Tomcat max-http-form-post-size: 500MB");
+        logger.info("📁 - PDF processing max-file-size: 500MB");
+        
         // Create upload directory if it doesn't exist
         Path uploadPath = Paths.get(uploadDir);
         if (!Files.exists(uploadPath)) {

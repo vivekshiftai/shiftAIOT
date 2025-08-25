@@ -24,6 +24,9 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 
 @Entity
 @Table(name = "devices")
@@ -83,9 +86,12 @@ public class Device {
 
     // Connection details (nullable)
     @Size(max = 45)
+    @Pattern(regexp = "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$", message = "Invalid IP address format")
     @Column(name = "ip_address")
     private String ipAddress;
 
+    @Min(value = 1, message = "Port must be between 1 and 65535")
+    @Max(value = 65535, message = "Port must be between 1 and 65535")
     @Column(name = "port")
     private Integer port;
 
@@ -152,6 +158,7 @@ public class Device {
     private String serialNumber;
 
     @Size(max = 17)
+    @Pattern(regexp = "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$", message = "Invalid MAC address format")
     @Column(name = "mac_address")
     private String macAddress;
 
@@ -186,18 +193,27 @@ public class Device {
     @Column(name = "power_source")
     private String powerSource;
 
+    @Min(value = 0, message = "Power consumption must be positive")
     @Column(name = "power_consumption")
     private Double powerConsumption;
 
+    @Min(value = -273, message = "Operating temperature minimum must be above absolute zero")
+    @Max(value = 1000, message = "Operating temperature minimum must be below 1000°C")
     @Column(name = "operating_temperature_min")
     private Double operatingTemperatureMin;
 
+    @Min(value = -273, message = "Operating temperature maximum must be above absolute zero")
+    @Max(value = 1000, message = "Operating temperature maximum must be below 1000°C")
     @Column(name = "operating_temperature_max")
     private Double operatingTemperatureMax;
 
+    @Min(value = 0, message = "Operating humidity minimum must be positive")
+    @Max(value = 100, message = "Operating humidity minimum must be below 100%")
     @Column(name = "operating_humidity_min")
     private Double operatingHumidityMin;
 
+    @Min(value = 0, message = "Operating humidity maximum must be positive")
+    @Max(value = 100, message = "Operating humidity maximum must be below 100%")
     @Column(name = "operating_humidity_max")
     private Double operatingHumidityMax;
 
