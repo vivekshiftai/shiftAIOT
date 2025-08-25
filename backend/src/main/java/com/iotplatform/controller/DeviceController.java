@@ -56,6 +56,7 @@ import com.iotplatform.repository.DeviceRepository;
 import com.iotplatform.repository.UserRepository;
 
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
@@ -624,7 +625,20 @@ public class DeviceController {
             @RequestParam(value = "datasheetFile", required = false) MultipartFile datasheetFile,
             @RequestParam(value = "certificateFile", required = false) MultipartFile certificateFile,
             @RequestParam(value = "aiRules", required = false) String aiRulesJson,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            HttpServletRequest request) {
+        
+        // Enhanced authentication logging
+        logger.info("🔐 Authentication check for onboard-with-ai endpoint");
+        logger.info("🔐 userDetails: {}", userDetails != null);
+        logger.info("🔐 userDetails.getUser(): {}", userDetails != null ? userDetails.getUser() != null : false);
+        logger.info("🔐 Authorization header: {}", request.getHeader("Authorization") != null ? "Present" : "Missing");
+        
+        if (userDetails != null && userDetails.getUser() != null) {
+            logger.info("🔐 Authenticated user: {} with roles: {}", 
+                userDetails.getUser().getEmail(), 
+                userDetails.getAuthorities());
+        }
         
         // Log file upload configuration for debugging
         logger.info("📁 File upload configuration - max-file-size: 500MB, max-request-size: 500MB");

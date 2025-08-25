@@ -21,6 +21,15 @@ server:
 spring:
   application:
     name: iot-platform-backend
+  
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+      enabled: true
+      file-size-threshold: 2KB
+      location: ${java.io.tmpdir}
+      resolve-lazily: false
 
   # datasource:
   #   url: jdbc:postgresql://localhost:5432/iotplatform
