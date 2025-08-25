@@ -71,6 +71,7 @@ export class UnifiedOnboardingService {
         name: formData.deviceName || 'Unnamed Device',
         type: formData.deviceType || 'SENSOR',
         location: formData.location || 'Unknown Location',
+        protocol: formData.protocol || 'HTTP', // Backend expects: MQTT, HTTP, COAP
         manufacturer: formData.manufacturer || 'Unknown Manufacturer',
         model: formData.model || 'Unknown Model',
         serialNumber: formData.serialNumber || '',
@@ -87,7 +88,6 @@ export class UnifiedOnboardingService {
         port: formData.port || null,
         mqttBroker: formData.mqttBroker || '',
         mqttTopic: formData.mqttTopic || '',
-        protocol: formData.protocol || 'HTTP',
         assignedUserId: formData.assignedUserId || null,
         tags: formData.tags || [],
         connectionSettings: {
@@ -123,6 +123,9 @@ export class UnifiedOnboardingService {
         formDataToSend.append('manualFile', uploadedFile);
         logInfo('UnifiedOnboarding', 'File attached to request', { fileName: uploadedFile.name });
       }
+      
+      // Add aiRules parameter as empty string (backend expects it)
+      formDataToSend.append('aiRules', '');
 
       // Log FormData contents for debugging
       logInfo('UnifiedOnboarding', 'FormData prepared for sending', {
@@ -139,6 +142,17 @@ export class UnifiedOnboardingService {
           name: value instanceof File ? value.name : null
         }))
       });
+
+      // Additional debugging: Log the actual FormData content
+      console.log('🔍 FormData Debug - All entries:');
+      for (const [key, value] of formDataToSend.entries()) {
+        console.log(`🔍 Key: ${key}, Type: ${typeof value}, IsFile: ${value instanceof File}`);
+        if (value instanceof File) {
+          console.log(`🔍 File: ${value.name}, Size: ${value.size}, Type: ${value.type}`);
+        } else {
+          console.log(`🔍 Value: ${value}`);
+        }
+      }
 
       // Step 3: Call unified backend service for sequential processing
       onProgress?.({

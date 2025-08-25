@@ -36,6 +36,7 @@ import com.iotplatform.dto.DeviceStatsResponse;
 
 import com.iotplatform.dto.TelemetryDataRequest;
 import com.iotplatform.model.Device;
+import com.iotplatform.model.Device.Protocol;
 import com.iotplatform.model.User;
 import com.iotplatform.service.DeviceService;
 import com.iotplatform.service.FileStorageService;
@@ -594,6 +595,28 @@ public class DeviceController {
         ));
     }
 
+    /**
+     * Test endpoint to debug FormData reception
+     */
+    @PostMapping("/test-formdata")
+    public ResponseEntity<Map<String, Object>> testFormData(
+            @RequestParam(value = "testData", required = false) String testData,
+            @RequestParam(value = "testFile", required = false) MultipartFile testFile) {
+        
+        logger.info("🔍 Test FormData endpoint called");
+        logger.info("🔍 testData: {}", testData != null ? "present (length: " + testData.length() + ")" : "null");
+        logger.info("🔍 testFile: {}", testFile != null ? "present (name: " + testFile.getOriginalFilename() + ", size: " + testFile.getSize() + ")" : "null");
+        
+        Map<String, Object> response = Map.of(
+            "status", "success",
+            "testData", testData != null ? "received" : "null",
+            "testFile", testFile != null ? "received" : "null",
+            "timestamp", new Date()
+        );
+        
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/onboard-with-ai")
     public ResponseEntity<DeviceCreateResponse> onboardDeviceWithAI(
             @RequestParam("deviceData") String deviceData,
@@ -948,6 +971,10 @@ public class DeviceController {
     }
     
     private boolean isValidDeviceRequest(DeviceCreateWithFileRequest request) {
+        // Enhanced validation with detailed logging
+        logger.info("Validating device request for device: {}", request.getName());
+        
+        // Required field validation
         if (request.getName() == null || request.getName().trim().isEmpty()) {
             logger.error("Device name is required");
             return false;
@@ -965,6 +992,17 @@ public class DeviceController {
         
         if (request.getProtocol() == null) {
             logger.error("Device protocol is required");
+            return false;
+        }
+        
+        // Required device specifications
+        if (request.getManufacturer() == null || request.getManufacturer().trim().isEmpty()) {
+            logger.error("Manufacturer is required");
+            return false;
+        }
+        
+        if (request.getModel() == null || request.getModel().trim().isEmpty()) {
+            logger.error("Model is required");
             return false;
         }
         
@@ -992,27 +1030,77 @@ public class DeviceController {
             return false;
         }
         
+        // Cross-field validation for protocol-specific requirements
+        if (request.getProtocol() == Protocol.MQTT) {
+            if (request.getMqttBroker() == null || request.getMqttBroker().trim().isEmpty()) {
+                logger.error("MQTT broker is required for MQTT protocol");
+                return false;
+            }
+            if (request.getMqttTopic() == null || request.getMqttTopic().trim().isEmpty()) {
+                logger.error("MQTT topic is required for MQTT protocol");
+                return false;
+            }
+        }
+        
         // Validate environmental specifications
         if (request.getOperatingTemperatureMin() != null && request.getOperatingTemperatureMax() != null) {
             if (request.getOperatingTemperatureMin() >= request.getOperatingTemperatureMax()) {
-                logger.error("Operating temperature min must be less than max");
+                logger.error("Operating temperature min ({}) must be less than max ({})", 
+                    request.getOperatingTemperatureMin(), request.getOperatingTemperatureMax());
+                return false;
+            }
+            if (request.getOperatingTemperatureMin() < -273) {
+                logger.error("Operating temperature min cannot be below absolute zero: {}", 
+                    request.getOperatingTemperatureMin());
+                return false;
+            }
+            if (request.getOperatingTemperatureMax() > 1000) {
+                logger.error("Operating temperature max cannot exceed 1000°C: {}", 
+                    request.getOperatingTemperatureMax());
                 return false;
             }
         }
         
         if (request.getOperatingHumidityMin() != null && request.getOperatingHumidityMax() != null) {
             if (request.getOperatingHumidityMin() >= request.getOperatingHumidityMax()) {
-                logger.error("Operating humidity min must be less than max");
+                logger.error("Operating humidity min ({}) must be less than max ({})", 
+                    request.getOperatingHumidityMin(), request.getOperatingHumidityMax());
+                return false;
+            }
+            if (request.getOperatingHumidityMin() < 0 || request.getOperatingHumidityMax() > 100) {
+                logger.error("Operating humidity must be between 0% and 100%");
                 return false;
             }
         }
         
         // Validate power consumption if provided
         if (request.getPowerConsumption() != null && request.getPowerConsumption() < 0) {
-            logger.error("Power consumption must be positive");
+            logger.error("Power consumption must be positive: {}", request.getPowerConsumption());
             return false;
         }
         
+        // Validate field lengths
+        if (request.getName() != null && request.getName().length() > 100) {
+            logger.error("Device name exceeds maximum length of 100 characters");
+            return false;
+        }
+        
+        if (request.getLocation() != null && request.getLocation().length() > 200) {
+            logger.error("Location exceeds maximum length of 200 characters");
+            return false;
+        }
+        
+        if (request.getManufacturer() != null && request.getManufacturer().length() > 100) {
+            logger.error("Manufacturer exceeds maximum length of 100 characters");
+            return false;
+        }
+        
+        if (request.getModel() != null && request.getModel().length() > 100) {
+            logger.error("Model exceeds maximum length of 100 characters");
+            return false;
+        }
+        
+        logger.info("Device request validation passed for device: {}", request.getName());
         return true;
     }
     

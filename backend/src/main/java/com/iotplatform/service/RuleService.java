@@ -42,7 +42,16 @@ public class RuleService {
     public Rule createRule(Rule rule, String organizationId) {
         rule.setId(UUID.randomUUID().toString());
         rule.setOrganizationId(organizationId);
-        return ruleRepository.save(rule);
+        
+        // Log rule creation with device ID
+        System.out.println("RuleService: Creating rule '" + rule.getName() + "' for device: " + rule.getDeviceId());
+        
+        Rule savedRule = ruleRepository.save(rule);
+        
+        // Log successful save
+        System.out.println("RuleService: Successfully saved rule '" + savedRule.getId() + "' for device: " + savedRule.getDeviceId());
+        
+        return savedRule;
     }
 
     public List<Rule> createBulkRules(List<java.util.Map<String, Object>> rulesData, String organizationId) {

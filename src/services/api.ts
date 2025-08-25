@@ -8,9 +8,6 @@ const API_BASE_URL = getApiConfig().BACKEND_BASE_URL;
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
   timeout: 10000, // 10 second timeout
 });
 
@@ -38,6 +35,11 @@ api.interceptors.request.use(
       console.log(`🌐 Public endpoint (no auth): ${config.url}`);
     }
 
+    // Set Content-Type for JSON requests only
+    if (config.data && typeof config.data === 'object' && !(config.data instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+
     // Log multipart requests for debugging
     if (config.data instanceof FormData) {
       console.log(`📤 Multipart request to: ${config.url}`);
@@ -48,7 +50,19 @@ api.interceptors.request.use(
         size: value instanceof File ? value.size : null,
         name: value instanceof File ? value.name : null
       })));
-      console.log(`📤 Headers:`, config.headers);
+      
+      // Ensure Content-Type is not set for multipart requests
+      delete config.headers['Content-Type'];
+      console.log(`📤 Headers after Content-Type removal:`, config.headers);
+      
+      // Additional debugging: Log the actual request configuration
+      console.log(`📤 Request config:`, {
+        url: config.url,
+        method: config.method,
+        headers: config.headers,
+        dataType: config.data?.constructor?.name,
+        dataEntries: config.data instanceof FormData ? Array.from(config.data.entries()).length : 'Not FormData'
+      });
     }
 
     return config;
@@ -76,6 +90,11 @@ api.interceptors.response.use(
       tokenLength: tokenService.getToken()?.length,
       retry: originalRequest._retry
     });
+
+    // Log the actual error response from backend
+    if (error.response?.data) {
+      console.log('🚨 Backend error response:', error.response.data);
+    }
 
     // Handle 401/403 auth errors
     if ((status === 401 || status === 403) && !originalRequest._retry) {
@@ -176,6 +195,7 @@ export const deviceAPI = {
   getDebugData: (deviceId: string) => api.get(`/api/devices/${deviceId}/debug-data`),
   testAuth: () => api.get('/api/devices/auth-test'),
   testHealth: () => api.get('/api/devices/health'),
+  testFormData: (formData: FormData) => api.post('/api/devices/test-formdata', formData),
   onboardWithAI: (formData: FormData) => api.post('/api/devices/onboard-with-ai', formData),
   getDevicePDFResults: (deviceId: string) => api.get(`/api/devices/${deviceId}/pdf-results`),
 };
@@ -188,7 +208,7 @@ export const ruleAPI = {
   createBulk: (rules: any[]) => api.post('/api/rules/bulk', rules),
   update: (id: string, rule: any) => api.put(`/api/rules/${id}`, rule),
   delete: (id: string) => api.delete(`/api/rules/${id}`),
-  getByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/rules`),
+  getByDevice: (deviceId: string) => api.get(`/api/rules/device/${deviceId}`),
   getByOrganization: (organizationId: string) => api.get(`/api/rules/organization/${organizationId}`),
   activate: (id: string) => api.patch(`/api/rules/${id}/activate`),
   deactivate: (id: string) => api.patch(`/api/rules/${id}/deactivate`),
@@ -233,14 +253,14 @@ export const maintenanceAPI = {
   createBulk: (items: any[]) => api.post('/api/maintenance/bulk', items),
   update: (id: string, item: any) => api.put(`/api/maintenance/${id}`, item),
   delete: (id: string) => api.delete(`/api/maintenance/${id}`),
-  getByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/maintenance`),
+  getByDevice: (deviceId: string) => api.get(`/api/maintenance/device/${deviceId}`),
   getUpcoming: () => api.get('/api/devices/maintenance/upcoming'),
 };
 
 // Device Safety Precautions API
 export const deviceSafetyPrecautionsAPI = {
-  getAllByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/safety-precautions`),
-  getByDevice: (deviceId: string) => api.get(`/api/devices/${deviceId}/safety-precautions`),
+  getAllByDevice: (deviceId: string) => api.get(`/api/device-safety-precautions/device/${deviceId}`),
+  getByDevice: (deviceId: string) => api.get(`/api/device-safety-precautions/device/${deviceId}`),
   getActiveByDevice: (deviceId: string) => api.get(`/api/device-safety-precautions/device/${deviceId}/active`),
   getById: (id: string) => api.get(`/api/device-safety-precautions/${id}`),
   create: (safetyPrecaution: any) => api.post('/api/device-safety-precautions', safetyPrecaution),

@@ -17,6 +17,8 @@ public class RuleCreateRequest {
     @NotNull
     private boolean active = true;
     
+    private String deviceId; // Add device ID field
+    
     @NotNull
     private List<RuleConditionRequest> conditions;
     
@@ -38,4 +40,7 @@ public class RuleCreateRequest {
 
     public List<RuleActionRequest> getActions() { return actions; }
     public void setActions(List<RuleActionRequest> actions) { this.actions = actions; }
+    
+    public String getDeviceId() { return deviceId; }
+    public void setDeviceId(String deviceId) { this.deviceId = deviceId; }
 }

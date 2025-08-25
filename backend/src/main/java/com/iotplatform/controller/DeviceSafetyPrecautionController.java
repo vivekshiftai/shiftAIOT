@@ -114,7 +114,7 @@ public class DeviceSafetyPrecautionController {
         
         try {
             DeviceSafetyPrecaution createdPrecaution = deviceSafetyPrecautionService.createSafetyPrecaution(safetyPrecaution);
-            logger.info("Safety precaution created successfully with ID: {}", createdPrecaution.getId());
+            logger.info("Safety precaution created successfully with ID: {} for device: {}", createdPrecaution.getId(), createdPrecaution.getDeviceId());
             return ResponseEntity.status(HttpStatus.CREATED).body(createdPrecaution);
         } catch (Exception e) {
             logger.error("Error creating safety precaution: {}", e.getMessage(), e);

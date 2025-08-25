@@ -134,10 +134,12 @@ public class MaintenanceController {
         }
 
         try {
-            log.info("Creating maintenance task by user: {}", userDetails.getUsername());
+            log.info("Creating maintenance task by user: {} for device: {}", userDetails.getUsername(), maintenance.getDevice() != null ? maintenance.getDevice().getId() : "null");
 
             maintenance.setOrganizationId(userDetails.getUser().getOrganizationId());
             DeviceMaintenance createdMaintenance = maintenanceScheduleService.createMaintenance(maintenance);
+
+            log.info("Successfully created maintenance task: {} for device: {}", createdMaintenance.getId(), createdMaintenance.getDevice() != null ? createdMaintenance.getDevice().getId() : "null");
 
             return ResponseEntity.status(201).body(createdMaintenance);
 

@@ -10,6 +10,9 @@ import com.iotplatform.model.Device.Protocol;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 
 public class DeviceCreateWithFileRequest {
     
@@ -37,12 +40,28 @@ public class DeviceCreateWithFileRequest {
     
     private Map<String, String> config;
     
-    // Device specifications
+    // Device specifications - Required fields
+    @NotBlank(message = "Manufacturer is required")
+    @Size(max = 100, message = "Manufacturer must be less than 100 characters")
     private String manufacturer;
+    
+    @NotBlank(message = "Model is required")
+    @Size(max = 100, message = "Model must be less than 100 characters")
     private String model;
+    
+    @Size(max = 100, message = "Serial number must be less than 100 characters")
     private String serialNumber;
+    
+    @Pattern(regexp = "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$", message = "Invalid MAC address format (use XX:XX:XX:XX:XX:XX)")
+    @Size(max = 17, message = "MAC address must be less than 17 characters")
     private String macAddress;
+    
+    @Pattern(regexp = "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$", message = "Invalid IP address format")
+    @Size(max = 45, message = "IP address must be less than 45 characters")
     private String ipAddress;
+    
+    @Min(value = 1, message = "Port must be between 1 and 65535")
+    @Max(value = 65535, message = "Port must be between 1 and 65535")
     private Integer port;
     
     // Documentation URLs (for existing files)
@@ -51,25 +70,58 @@ public class DeviceCreateWithFileRequest {
     private String certificateUrl;
     
     // Additional metadata
+    @Size(max = 1000, message = "Description must be less than 1000 characters")
     private String description;
+    
+    @Size(max = 2000, message = "Installation notes must be less than 2000 characters")
     private String installationNotes;
+    
+    @Size(max = 500, message = "Maintenance schedule must be less than 500 characters")
     private String maintenanceSchedule;
+    
+    @Size(max = 500, message = "Warranty info must be less than 500 characters")
     private String warrantyInfo;
     
     // Connectivity details
+    @Size(max = 100, message = "WiFi SSID must be less than 100 characters")
     private String wifiSsid;
+    
+    @Size(max = 255, message = "WiFi password must be less than 255 characters")
     private String wifiPassword;
+    
+    @Size(max = 255, message = "MQTT broker must be less than 255 characters")
     private String mqttBroker;
+    
+    @Size(max = 255, message = "MQTT topic must be less than 255 characters")
     private String mqttTopic;
+    
+    @Size(max = 100, message = "MQTT username must be less than 100 characters")
     private String mqttUsername;
+    
+    @Size(max = 255, message = "MQTT password must be less than 255 characters")
     private String mqttPassword;
     
     // Power and environmental
+    @Size(max = 50, message = "Power source must be less than 50 characters")
     private String powerSource;
+    
+    @Min(value = 0, message = "Power consumption must be positive")
     private Double powerConsumption;
+    
+    @Min(value = -273, message = "Operating temperature minimum must be above absolute zero")
+    @Max(value = 1000, message = "Operating temperature minimum must be below 1000°C")
     private Double operatingTemperatureMin;
+    
+    @Min(value = -273, message = "Operating temperature maximum must be above absolute zero")
+    @Max(value = 1000, message = "Operating temperature maximum must be below 1000°C")
     private Double operatingTemperatureMax;
+    
+    @Min(value = 0, message = "Operating humidity minimum must be positive")
+    @Max(value = 100, message = "Operating humidity minimum must be below 100%")
     private Double operatingHumidityMin;
+    
+    @Min(value = 0, message = "Operating humidity maximum must be positive")
+    @Max(value = 100, message = "Operating humidity maximum must be below 100%")
     private Double operatingHumidityMax;
     
     // File upload information

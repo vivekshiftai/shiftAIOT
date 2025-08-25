@@ -5,14 +5,15 @@ import {
   FileText, 
   Settings, 
   CheckCircle,
-  X as XIcon, 
-  ArrowRight as ArrowRightIcon,
-  ArrowLeft as ArrowLeftIcon,
+  X, 
+  ArrowRight, 
+  ArrowLeft,
   Brain,
-  Zap,
-  Loader,
   Search,
-  Bot
+  Bot,
+  Loader,
+  FileText as FileSearch,
+  Zap
 } from 'lucide-react';
 
 import { unifiedOnboardingService, UnifiedOnboardingProgress } from '../../services/unifiedOnboardingService';
@@ -164,13 +165,25 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
 
     switch (currentStep) {
       case 1:
+        // Required field validation
         if (!formData.name.trim()) newErrors.name = 'Device name is required';
+        if (formData.name.length > 100) newErrors.name = 'Device name must be less than 100 characters';
         if (!formData.status) newErrors.status = 'Device status is required';
         if (!formData.location.trim()) newErrors.location = 'Location is required';
+        if (formData.location.length > 200) newErrors.location = 'Location must be less than 200 characters';
         if (!formData.manufacturer.trim()) newErrors.manufacturer = 'Manufacturer is required';
+        if (formData.manufacturer.length > 100) newErrors.manufacturer = 'Manufacturer must be less than 100 characters';
         if (!formData.model.trim()) newErrors.model = 'Model is required';
+        if (formData.model.length > 100) newErrors.model = 'Model must be less than 100 characters';
+        
+        // Validate description length
+        if (formData.description && formData.description.length > 1000) {
+          newErrors.description = 'Description must be less than 1000 characters';
+        }
         break;
+        
       case 2:
+        // Network configuration validation
         if (formData.macAddress && !/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(formData.macAddress)) {
           newErrors.macAddress = 'Invalid MAC address format (use XX:XX:XX:XX:XX:XX)';
         }
@@ -180,15 +193,71 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
         if (formData.port < 1 || formData.port > 65535) {
           newErrors.port = 'Port must be between 1 and 65535';
         }
+        
+        // Protocol-specific validation
+        if (formData.protocol === 'MQTT') {
+          if (!formData.mqttBroker?.trim()) {
+            newErrors.mqttBroker = 'MQTT broker is required for MQTT protocol';
+          }
+          if (!formData.mqttTopic?.trim()) {
+            newErrors.mqttTopic = 'MQTT topic is required for MQTT protocol';
+          }
+        }
+        
+        // Field length validation
+        if (formData.serialNumber && formData.serialNumber.length > 100) {
+          newErrors.serialNumber = 'Serial number must be less than 100 characters';
+        }
+        if (formData.wifiSsid && formData.wifiSsid.length > 100) {
+          newErrors.wifiSsid = 'WiFi SSID must be less than 100 characters';
+        }
+        if (formData.mqttBroker && formData.mqttBroker.length > 255) {
+          newErrors.mqttBroker = 'MQTT broker must be less than 255 characters';
+        }
+        if (formData.mqttTopic && formData.mqttTopic.length > 255) {
+          newErrors.mqttTopic = 'MQTT topic must be less than 255 characters';
+        }
         break;
+        
       case 3:
+        // Environmental settings validation
         if (formData.operatingTemperatureMin >= formData.operatingTemperatureMax) {
           newErrors.operatingTemperatureMin = 'Minimum temperature must be less than maximum temperature';
         }
+        if (formData.operatingTemperatureMin < -273) {
+          newErrors.operatingTemperatureMin = 'Temperature cannot be below absolute zero (-273°C)';
+        }
+        if (formData.operatingTemperatureMax > 1000) {
+          newErrors.operatingTemperatureMax = 'Temperature cannot exceed 1000°C';
+        }
+        
         if (formData.operatingHumidityMin >= formData.operatingHumidityMax) {
           newErrors.operatingHumidityMin = 'Minimum humidity must be less than maximum humidity';
         }
+        if (formData.operatingHumidityMin < 0 || formData.operatingHumidityMax > 100) {
+          newErrors.operatingHumidityMin = 'Humidity must be between 0% and 100%';
+        }
+        
+        // Power consumption validation
+        if (formData.powerConsumption < 0) {
+          newErrors.powerConsumption = 'Power consumption must be positive';
+        }
+        
+        // Field length validation
+        if (formData.powerSource && formData.powerSource.length > 50) {
+          newErrors.powerSource = 'Power source must be less than 50 characters';
+        }
+        if (formData.installationNotes && formData.installationNotes.length > 2000) {
+          newErrors.installationNotes = 'Installation notes must be less than 2000 characters';
+        }
+        if (formData.maintenanceSchedule && formData.maintenanceSchedule.length > 500) {
+          newErrors.maintenanceSchedule = 'Maintenance schedule must be less than 500 characters';
+        }
+        if (formData.warrantyInfo && formData.warrantyInfo.length > 500) {
+          newErrors.warrantyInfo = 'Warranty info must be less than 500 characters';
+        }
         break;
+        
       case 4:
         if (fileUploads.length === 0) {
           newErrors.files = 'Please upload at least one documentation file';
@@ -794,7 +863,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                         onClick={() => removeFile(index)}
                         className="p-1 hover:bg-slate-200 rounded transition-colors"
                       >
-                        <XIcon className="w-4 h-4 text-slate-500" />
+                        <X className="w-4 h-4 text-slate-500" />
                       </button>
                     </div>
                   ))}

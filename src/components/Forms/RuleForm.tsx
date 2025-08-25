@@ -301,6 +301,9 @@ export const RuleForm: React.FC<RuleFormProps> = ({
     setIsSubmitting(true);
     
     try {
+      // Log rule creation/update with device ID
+      console.log('RuleForm: Creating/updating rule for device:', deviceId);
+      
       if (onSubmit) {
         // Use custom onSubmit if provided
         await onSubmit({
@@ -311,6 +314,7 @@ export const RuleForm: React.FC<RuleFormProps> = ({
           threshold: formData.threshold,
           consequence: formData.consequence,
           active: formData.active,
+          deviceId: deviceId, // Add device ID
           conditions: formData.conditions,
           actions: formData.actions
         });
@@ -324,6 +328,7 @@ export const RuleForm: React.FC<RuleFormProps> = ({
           threshold: formData.threshold,
           consequence: formData.consequence,
           active: formData.active,
+          deviceId: deviceId, // Add device ID to the main rule
           conditions: formData.conditions,
           actions: formData.actions
         });
@@ -337,6 +342,7 @@ export const RuleForm: React.FC<RuleFormProps> = ({
           threshold: formData.threshold,
           consequence: formData.consequence,
           active: formData.active,
+          deviceId: deviceId, // Add device ID to the main rule
           conditions: formData.conditions,
           actions: formData.actions
         });

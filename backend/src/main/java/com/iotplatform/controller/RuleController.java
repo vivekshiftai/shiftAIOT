@@ -71,10 +71,14 @@ public class RuleController {
         }
         User user = userDetails.getUser();
         
+        // Log rule creation with device ID
+        System.out.println("Creating rule: " + request.getName() + " for device: " + request.getDeviceId());
+        
         Rule rule = new Rule();
         rule.setName(request.getName());
         rule.setDescription(request.getDescription());
         rule.setActive(request.isActive());
+        rule.setDeviceId(request.getDeviceId()); // Set device ID from request
         rule.setOrganizationId(user.getOrganizationId());
 
         // Convert conditions
@@ -90,6 +94,10 @@ public class RuleController {
         rule.setActions(actions);
 
         Rule createdRule = ruleService.createRule(rule, user.getOrganizationId());
+        
+        // Log successful rule creation
+        System.out.println("Successfully created rule: " + createdRule.getId() + " for device: " + createdRule.getDeviceId());
+        
         return ResponseEntity.ok(createdRule);
     }
 
@@ -118,6 +126,7 @@ public class RuleController {
             rule.setName(request.getName());
             rule.setDescription(request.getDescription());
             rule.setActive(request.isActive());
+            rule.setDeviceId(request.getDeviceId()); // Set device ID from request
 
             // Convert conditions
             List<RuleCondition> conditions = request.getConditions().stream()
