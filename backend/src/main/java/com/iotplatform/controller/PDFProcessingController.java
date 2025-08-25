@@ -59,6 +59,70 @@ public class PDFProcessingController {
     private final RestTemplate restTemplate;
 
     /**
+     * Upload a PDF file for processing and storage (Authenticated endpoint).
+     * This endpoint requires authentication and uses the user's organization ID.
+     * 
+     * @param file The PDF file to upload
+     * @param userDetails The authenticated user details
+     * @return PDF upload response with processing details
+     */
+    @Operation(
+        summary = "Upload PDF Document (Authenticated)",
+        description = "Upload a PDF file to the processing service for analysis and storage. Requires authentication."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "PDF uploaded successfully",
+            content = @Content(schema = @Schema(implementation = PDFUploadResponse.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid file type, size, or corrupted PDF"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadPDF(
+            @Parameter(description = "PDF file to upload", required = true)
+            @RequestParam("file") MultipartFile file,
+            
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        log.info("Authenticated PDF upload request received from user: {} for file: {} ({} bytes)", 
+            userDetails.getUsername(), file.getOriginalFilename(), file.getSize());
+        
+        try {
+            // Use authenticated user's organization ID
+            String organizationId = userDetails.getUser().getOrganizationId();
+            PDFUploadResponse response = pdfProcessingService.uploadPDF(file, organizationId);
+            
+            log.info("Authenticated PDF upload completed successfully for user: {} - {} ({} chunks processed)", 
+                userDetails.getUsername(), response.getPdfName(), response.getChunksProcessed());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (PDFProcessingException e) {
+            log.error("Authenticated PDF upload failed for user: {} - {}", userDetails.getUsername(), e.getMessage());
+            
+            // Return specific error responses
+            if (e.getMessage().contains("Only PDF files are allowed")) {
+                return ResponseEntity.badRequest()
+                    .body(ErrorResponse.of("Only PDF files are allowed"));
+            } else if (e.getMessage().contains("File size exceeds maximum limit")) {
+                return ResponseEntity.badRequest()
+                    .body(ErrorResponse.of("File too large. Maximum size: 52428800 bytes"));
+            } else if (e.getMessage().contains("Invalid PDF file")) {
+                return ResponseEntity.badRequest()
+                    .body(ErrorResponse.of("Invalid PDF file - please ensure the file is a valid PDF document"));
+            } else {
+                return ResponseEntity.badRequest()
+                    .body(ErrorResponse.of(e.getMessage()));
+            }
+            
+        } catch (Exception e) {
+            log.error("Unexpected error during authenticated PDF upload for user: {}", userDetails.getUsername(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ErrorResponse.of("Internal server error during PDF processing"));
+        }
+    }
+
+    /**
      * Upload a PDF file for processing and storage (Public endpoint).
      * This endpoint matches the specification provided for port 8000.
      * 

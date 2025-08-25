@@ -83,7 +83,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
 
             HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
             
-            log.debug("Uploading PDF to MinerU service: {}", config.getBaseUrl() + "/upload-pdf");
+            log.debug("Uploading PDF to external service: {}", config.getBaseUrl() + "/upload-pdf");
             
             // Call external service
             ResponseEntity<PDFUploadResponse> response = restTemplate.exchange(
@@ -98,22 +98,6 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             }
 
             PDFUploadResponse uploadResponse = response.getBody();
-            
-            // Store PDF metadata in database
-            PDFDocument pdfDocument = PDFDocument.builder()
-                .name(uploadResponse.getPdfName())
-                .originalFilename(file.getOriginalFilename())
-                .fileSize(file.getSize())
-                .chunksProcessed(uploadResponse.getChunksProcessed())
-                .processingTime(uploadResponse.getProcessingTime())
-                .collectionName(uploadResponse.getCollectionName())
-                .uploadedAt(LocalDateTime.now())
-                .processedAt(LocalDateTime.now())
-                .status(PDFDocument.PDFStatus.COMPLETED)
-                .organizationId(organizationId)
-                .build();
-
-            pdfDocumentRepository.save(pdfDocument);
             
             log.info("PDF uploaded successfully: {} ({} chunks processed)", 
                 uploadResponse.getPdfName(), uploadResponse.getChunksProcessed());
@@ -137,20 +121,15 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             // Validate request
             validateQueryRequest(request);
             
-            // Verify PDF exists in our database
-            PDFDocument pdfDocument = pdfDocumentRepository.findByNameAndOrganizationId(
-                request.getPdfName(), organizationId)
-                .orElseThrow(() -> new PDFProcessingException("PDF document not found: " + request.getPdfName()));
-
             // Prepare query request
             HttpHeaders headers = createHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             
             HttpEntity<PDFQueryRequest> requestEntity = new HttpEntity<>(request, headers);
             
-            log.debug("Querying PDF with MinerU service: {}", config.getBaseUrl() + "/query");
+            log.debug("Querying PDF with external service: {}", config.getBaseUrl() + "/query");
             
-            // Call external service
+            // Call external service directly without checking local database
             ResponseEntity<PDFQueryResponse> response = restTemplate.exchange(
                 config.getBaseUrl() + "/query",
                 HttpMethod.POST,
@@ -163,21 +142,6 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             }
 
             PDFQueryResponse queryResponse = response.getBody();
-            
-            // Store query interaction for audit trail and chat history
-            PDFQuery pdfQuery = PDFQuery.builder()
-                .pdfDocument(pdfDocument)
-                .userId(userId)
-                .organizationId(organizationId)
-                .userQuery(request.getQuery())
-                .aiResponse(queryResponse.getResponse())
-                .chunksUsed(queryResponse.getChunksUsed() != null ? 
-                    String.join(",", queryResponse.getChunksUsed()) : "")
-                .processingTime(queryResponse.getProcessingTime())
-                .status(PDFQuery.QueryStatus.COMPLETED)
-                .build();
-
-            pdfQueryRepository.save(pdfQuery);
             
             log.info("PDF query completed successfully for document: {}", request.getPdfName());
             
@@ -197,20 +161,15 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             // Validate request
             validateQueryRequest(request);
             
-            // Verify PDF exists in our database
-            PDFDocument pdfDocument = pdfDocumentRepository.findByNameAndOrganizationId(
-                request.getPdfName(), organizationId)
-                .orElseThrow(() -> new PDFProcessingException("PDF document not found: " + request.getPdfName()));
-
             // Prepare query request
             HttpHeaders headers = createHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             
             HttpEntity<PDFQueryRequest> requestEntity = new HttpEntity<>(request, headers);
             
-            log.debug("Querying PDF with device context using MinerU service: {}", config.getBaseUrl() + "/query");
+            log.debug("Querying PDF with device context using external service: {}", config.getBaseUrl() + "/query");
             
-            // Call external service
+            // Call external service directly without checking local database
             ResponseEntity<PDFQueryResponse> response = restTemplate.exchange(
                 config.getBaseUrl() + "/query",
                 HttpMethod.POST,
@@ -224,22 +183,6 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
 
             PDFQueryResponse queryResponse = response.getBody();
             
-            // Store query interaction with device context for chat history
-            PDFQuery pdfQuery = PDFQuery.builder()
-                .pdfDocument(pdfDocument)
-                .userId(userId)
-                .deviceId(deviceId)
-                .organizationId(organizationId)
-                .userQuery(request.getQuery())
-                .aiResponse(queryResponse.getResponse())
-                .chunksUsed(queryResponse.getChunksUsed() != null ? 
-                    String.join(",", queryResponse.getChunksUsed()) : "")
-                .processingTime(queryResponse.getProcessingTime())
-                .status(PDFQuery.QueryStatus.COMPLETED)
-                .build();
-
-            pdfQueryRepository.save(pdfQuery);
-            
             log.info("PDF query with device context completed successfully for document: {} device: {}", 
                 request.getPdfName(), deviceId);
             
@@ -247,30 +190,6 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
 
         } catch (Exception e) {
             log.error("PDF query with device context failed: {}", e.getMessage(), e);
-            // Store failed query for audit
-            try {
-                PDFDocument pdfDocument = pdfDocumentRepository.findByNameAndOrganizationId(
-                    request.getPdfName(), organizationId).orElse(null);
-                
-                if (pdfDocument != null) {
-                    PDFQuery failedQuery = PDFQuery.builder()
-                        .pdfDocument(pdfDocument)
-                        .userId(userId)
-                        .deviceId(deviceId)
-                        .organizationId(organizationId)
-                        .userQuery(request.getQuery())
-                        .aiResponse("")
-                        .processingTime(null)
-                        .status(PDFQuery.QueryStatus.FAILED)
-                        .errorMessage(e.getMessage())
-                        .build();
-                    
-                    pdfQueryRepository.save(failedQuery);
-                }
-            } catch (Exception saveError) {
-                log.error("Failed to save error query: {}", saveError.getMessage());
-            }
-            
             throw new PDFProcessingException("PDF query with device context failed", e);
         }
     }
@@ -280,23 +199,27 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
         log.info("Listing PDFs for organization: {} (page: {}, size: {})", organizationId, page, size);
         
         try {
-            // Get PDFs from database with pagination
-            Page<PDFDocument> pdfPage = pdfDocumentRepository.findByOrganizationIdOrderByUploadedAtDesc(
-                organizationId, PageRequest.of(page, size));
+            // Call external service to get PDF list
+            HttpHeaders headers = createHeaders();
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+            
+            log.debug("Fetching PDF list from external service: {}", config.getBaseUrl() + "/list");
+            
+            ResponseEntity<PDFListResponse> response = restTemplate.exchange(
+                config.getBaseUrl() + "/list",
+                HttpMethod.GET,
+                requestEntity,
+                PDFListResponse.class
+            );
 
-            // Transform to response format
-            List<PDFListResponse.PDFDocument> pdfs = pdfPage.getContent().stream()
-                .map(this::mapToPDFListResponseDocument)
-                .toList();
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                throw new PDFProcessingException("Failed to list PDFs: Invalid response from external service");
+            }
 
-            return PDFListResponse.builder()
-                .success(true)
-                .pdfs(pdfs)
-                .totalCount((int) pdfPage.getTotalElements())
-                .total((int) pdfPage.getTotalElements())
-                .page(page)
-                .size(size)
-                .build();
+            PDFListResponse listResponse = response.getBody();
+            log.info("Successfully retrieved PDF list from external service");
+            
+            return listResponse;
 
         } catch (Exception e) {
             log.error("Failed to list PDFs: {}", e.getMessage(), e);
@@ -328,12 +251,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
 
                 RulesGenerationResponse rulesResponse = response.getBody();
                 
-                // Save rules to database
-                if (rulesResponse.getRules() != null && !rulesResponse.getRules().isEmpty()) {
-                    ruleService.createRulesFromPDF(rulesResponse.getRules(), deviceId, organizationId);
-                }
-                
-                log.info("Rules generation completed for PDF: {} ({} rules created)", 
+                log.info("Rules generation completed for PDF: {} ({} rules generated)", 
                     pdfName, rulesResponse.getRules() != null ? rulesResponse.getRules().size() : 0);
                 
                 return rulesResponse;
@@ -369,12 +287,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
 
                 MaintenanceGenerationResponse maintenanceResponse = response.getBody();
                 
-                // Save maintenance tasks to database
-                if (maintenanceResponse.getMaintenanceTasks() != null && !maintenanceResponse.getMaintenanceTasks().isEmpty()) {
-                    maintenanceService.createMaintenanceFromPDF(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId);
-                }
-                
-                log.info("Maintenance generation completed for PDF: {} ({} tasks created)", 
+                log.info("Maintenance generation completed for PDF: {} ({} tasks generated)", 
                     pdfName, maintenanceResponse.getMaintenanceTasks() != null ? maintenanceResponse.getMaintenanceTasks().size() : 0);
                 
                 return maintenanceResponse;
@@ -410,12 +323,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
 
                 SafetyGenerationResponse safetyResponse = response.getBody();
                 
-                // Save safety information to database
-                if (safetyResponse.getSafetyPrecautions() != null && !safetyResponse.getSafetyPrecautions().isEmpty()) {
-                    safetyService.createSafetyFromPDF(safetyResponse.getSafetyPrecautions(), deviceId, organizationId);
-                }
-                
-                log.info("Safety generation completed for PDF: {} ({} safety items created)", 
+                log.info("Safety generation completed for PDF: {} ({} safety items generated)", 
                     pdfName, safetyResponse.getSafetyPrecautions() != null ? safetyResponse.getSafetyPrecautions().size() : 0);
                 
                 return safetyResponse;
@@ -432,10 +340,6 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
         log.info("Deleting PDF: {} from organization: {}", pdfName, organizationId);
         
         try {
-            // Verify PDF exists in our database
-            PDFDocument pdfDocument = pdfDocumentRepository.findByNameAndOrganizationId(pdfName, organizationId)
-                .orElseThrow(() -> new PDFProcessingException("PDF document not found: " + pdfName));
-
             // Call external service to delete
             HttpHeaders headers = createHeaders();
             HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
@@ -452,12 +356,6 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             }
 
             PDFDeleteResponse deleteResponse = response.getBody();
-            
-            // Delete from local database
-            pdfDocumentRepository.delete(pdfDocument);
-            
-            // Delete related queries
-            pdfQueryRepository.deleteByPdfDocumentId(pdfDocument.getId(), LocalDateTime.now());
             
             log.info("PDF deleted successfully: {}", pdfName);
             

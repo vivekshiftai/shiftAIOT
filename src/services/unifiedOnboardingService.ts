@@ -272,11 +272,33 @@ export class UnifiedOnboardingService {
       }
 
       // Use the proper API instance with authentication handling
-      const response = await deviceAPI.onboardWithAI(formDataToSend);
-
-      // Validate response
-      if (!response || !response.data) {
-        throw new Error('Invalid response from backend service');
+      logInfo('UnifiedOnboarding', 'Calling onboard-with-ai endpoint with authentication');
+      
+      let response;
+      try {
+        response = await deviceAPI.onboardWithAI(formDataToSend);
+        
+        // Validate response
+        if (!response || !response.data) {
+          throw new Error('Invalid response from backend service');
+        }
+        
+        logInfo('UnifiedOnboarding', 'Onboard-with-ai endpoint call successful');
+      } catch (apiError: any) {
+        logError('UnifiedOnboarding', 'API call to onboard-with-ai failed', apiError instanceof Error ? apiError : new Error('Unknown API error'));
+        
+        // Check if it's an authentication error
+        if (apiError.response?.status === 401 || apiError.response?.status === 403) {
+          throw new Error('Authentication failed. Please log in again and try the onboarding process.');
+        }
+        
+        // Check if it's a network error
+        if (apiError.code === 'ERR_NETWORK' || apiError.message?.includes('Network Error')) {
+          throw new Error('Cannot connect to backend server. Please check if the server is running.');
+        }
+        
+        // Re-throw other errors
+        throw apiError;
       }
 
       const result = response.data;

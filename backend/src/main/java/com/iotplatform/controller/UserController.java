@@ -1,5 +1,6 @@
 package com.iotplatform.controller;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -147,14 +148,36 @@ public class UserController {
         }
     }
 
+    /**
+     * Get current user profile (for token validation)
+     */
     @GetMapping("/profile")
-    public ResponseEntity<User> getCurrentUserProfile(@AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<?> getCurrentUserProfile(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🔍 User profile endpoint called");
+        
         if (userDetails == null || userDetails.getUser() == null) {
-            return ResponseEntity.status(401).build();
+            logger.warn("❌ No user details found in profile request");
+            return ResponseEntity.status(401).body(Map.of(
+                "error", "User not authenticated",
+                "timestamp", new Date()
+            ));
         }
-        User currentUser = userDetails.getUser();
-        currentUser.setPassword(null);
-        return ResponseEntity.ok(currentUser);
+        
+        User user = userDetails.getUser();
+        logger.info("✅ User profile retrieved for: {}", user.getEmail());
+        
+        return ResponseEntity.ok(Map.of(
+            "id", user.getId(),
+            "firstName", user.getFirstName(),
+            "lastName", user.getLastName(),
+            "email", user.getEmail(),
+            "role", user.getRole(),
+            "organizationId", user.getOrganizationId(),
+            "enabled", user.isEnabled(),
+            "createdAt", user.getCreatedAt(),
+            "updatedAt", user.getUpdatedAt(),
+            "lastLogin", user.getLastLogin()
+        ));
     }
 
     @PostMapping("/change-password")

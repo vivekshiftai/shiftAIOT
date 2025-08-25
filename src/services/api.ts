@@ -362,7 +362,7 @@ export const userAPI = {
   getById: (id: string) => api.get(`/users/${id}`),
   update: (id: string, user: any) => api.put(`/users/${id}`, user),
   delete: (id: string) => api.delete(`/users/${id}`),
-  getProfile: () => api.get('/users/profile'),
+  getProfile: () => api.get('/api/users/profile'),
   changePassword: (payload: { currentPassword: string; newPassword: string; confirmPassword: string }) => 
     api.post('/users/change-password', payload),
   // Preferences

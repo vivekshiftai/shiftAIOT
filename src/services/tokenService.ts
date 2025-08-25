@@ -66,6 +66,7 @@ class TokenService {
   public async validateToken(): Promise<boolean> {
     const token = this.getToken();
     if (!token) {
+      console.warn('No token found for validation');
       return false;
     }
 
@@ -74,10 +75,14 @@ class TokenService {
       this.setAxiosAuthHeader(token);
       
       // Make a simple request to validate token
-      const response = await this.axiosInstance.get('/users/profile');
+      const response = await this.axiosInstance.get('/api/users/profile');
+      console.log('Token validation successful:', response.status);
       return response.status === 200;
     } catch (error: any) {
       console.warn('Token validation failed:', error.message);
+      if (error.response) {
+        console.warn('Token validation error response:', error.response.status, error.response.data);
+      }
       return false;
     }
   }
@@ -106,17 +111,23 @@ class TokenService {
 
   private async performTokenRefresh(currentToken: string): Promise<string | null> {
     try {
-      const response = await this.axiosInstance.post('/auth/refresh', { token: currentToken });
+      console.log('Attempting token refresh...');
+      const response = await this.axiosInstance.post('/api/auth/refresh', { token: currentToken });
       const newToken = response.data?.token;
       
       if (newToken) {
+        console.log('Token refresh successful');
         this.setToken(newToken);
         return newToken;
       }
       
+      console.warn('No new token received from refresh endpoint');
       return null;
     } catch (error: any) {
       console.error('Token refresh failed:', error.message);
+      if (error.response) {
+        console.error('Token refresh error response:', error.response.status, error.response.data);
+      }
       // If refresh fails, remove the token
       this.removeToken();
       return null;
