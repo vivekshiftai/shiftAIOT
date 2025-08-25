@@ -13,6 +13,7 @@ import org.springframework.web.client.RestTemplate;
 
 import jakarta.annotation.PostConstruct;
 import java.util.concurrent.Executor;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
  * Configuration for PDF processing service integration.
@@ -31,7 +32,8 @@ public class PDFProcessingConfig {
     /**
      * Base URL for the external PDF processing service
      */
-    private String baseUrl = "http://20.75.50.202:8000";
+    @Value("${pdf.processing.base-url:http://20.57.36.66:8000}")
+    private String baseUrl = "http://20.57.36.66:8000";
 
     /**
      * API key for authentication with external service

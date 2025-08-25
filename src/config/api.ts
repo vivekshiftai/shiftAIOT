@@ -3,7 +3,7 @@
 
 export const API_CONFIG = {
   // Backend API (your Spring Boot application) - using VM IP for development
-  BACKEND_BASE_URL: 'http://20.75.50.202:8100',
+  BACKEND_BASE_URL: 'http://20.57.36.66:8100',
   
   // PDF Processing is handled by the backend, no direct frontend calls needed
   
@@ -27,12 +27,12 @@ export const getApiConfig = () => {
     case 'production':
       return {
         ...API_CONFIG,
-        BACKEND_BASE_URL: 'http://20.75.50.202:8100', // Production backend URL
+        BACKEND_BASE_URL: 'http://20.57.36.66:8100', // Production backend URL
       };
     case 'development':
       return {
         ...API_CONFIG,
-        BACKEND_BASE_URL: 'http://20.75.50.202:8100', // VM backend URL for development
+        BACKEND_BASE_URL: 'http://20.57.36.66:8100', // VM backend URL for development
       };
     default:
       return API_CONFIG;

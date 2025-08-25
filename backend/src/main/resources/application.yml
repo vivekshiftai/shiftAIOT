@@ -108,7 +108,7 @@ app:
 # PDF Processing Configuration
 pdf:
   processing:
-    base-url: http://20.75.50.202:8000
+    base-url: http://20.57.36.66:8000
     max-file-size: 52428800  # 50MB in bytes (as per API specification)
     connection-timeout: 30000  # 30 seconds
     read-timeout: 60000  # 60 seconds
@@ -136,7 +136,7 @@ maintenance:
 # Conversation API Configuration
 conversation:
   api:
-    base-url: "http://localhost:8100/api/chat"
+    base-url: "http://20.57.36.66:8100/api/chat"
     max-retries: 3
     retry-delay: 1000  # 1 second
 

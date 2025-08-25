@@ -1,9 +1,9 @@
-# IoT Platform API Endpoints Documentation
+# API Endpoints Documentation
 
-## Base URL
-- **Backend Server**: `http://20.75.50.202:8100`
-- **Frontend Base URL**: `http://20.75.50.202:8100` (configured in `src/config/api.ts`)
-- **External PDF Processing Service**: `http://20.75.50.202:8000`
+## **Service URLs**
+- **Backend Server**: `http://20.57.36.66:8100`
+- **Frontend Base URL**: `http://20.57.36.66:8100` (configured in `src/config/api.ts`)
+- **External PDF Processing Service**: `http://20.57.36.66:8000`
 
 ---
 
