@@ -249,6 +249,7 @@ public class UnifiedOnboardingService {
      */
     private void storeSafetyPrecautions(List<SafetyGenerationResponse.SafetyPrecaution> safetyPrecautions, String deviceId, String organizationId) {
         try {
+            log.info("Starting to store {} safety precautions for device: {} in organization: {}", safetyPrecautions.size(), deviceId, organizationId);
             List<DeviceSafetyPrecaution> safetyToSave = new ArrayList<>();
             
             for (var safetyData : safetyPrecautions) {
@@ -260,10 +261,14 @@ public class UnifiedOnboardingService {
                 safety.setDescription(safetyData.getDescription());
                 safety.setSeverity(safetyData.getSeverity());
                 safety.setCategory(safetyData.getCategory());
+                safety.setType("PDF_GENERATED"); // Set required type field
                 safety.setRecommendedAction(safetyData.getMitigation());
                 safety.setIsActive(true);
                 safety.setCreatedAt(LocalDateTime.now());
                 safety.setUpdatedAt(LocalDateTime.now());
+                
+                log.debug("Created safety precaution: ID={}, Title={}, Type={}, Category={}", 
+                    safety.getId(), safety.getTitle(), safety.getType(), safety.getCategory());
                 
                 safetyToSave.add(safety);
             }
@@ -272,7 +277,8 @@ public class UnifiedOnboardingService {
             log.info("Successfully stored {} safety precautions for device: {}", safetyToSave.size(), deviceId);
             
         } catch (Exception e) {
-            log.error("Error storing safety precautions for device: {}", deviceId, e);
+            log.error("Error storing safety precautions for device: {} - Error: {}", deviceId, e.getMessage(), e);
+            throw e; // Re-throw to ensure transaction rollback
         }
     }
 
@@ -463,6 +469,7 @@ public class UnifiedOnboardingService {
             
             // Store safety precautions in database
             if (safetyResponse.getSafetyPrecautions() != null && !safetyResponse.getSafetyPrecautions().isEmpty()) {
+                log.info("Processing {} safety precautions for device: {}", safetyResponse.getSafetyPrecautions().size(), deviceId);
                 List<DeviceSafetyPrecaution> safetyToSave = new ArrayList<>();
                 
                 for (var safetyData : safetyResponse.getSafetyPrecautions()) {
@@ -472,10 +479,14 @@ public class UnifiedOnboardingService {
                     safety.setDescription(safetyData.getDescription());
                     safety.setCategory(safetyData.getCategory());
                     safety.setSeverity(safetyData.getSeverity());
+                    safety.setType("PDF_GENERATED"); // Set required type field
                     safety.setDeviceId(deviceId);
                     safety.setOrganizationId(organizationId);
                     safety.setCreatedAt(LocalDateTime.now());
                     safety.setUpdatedAt(LocalDateTime.now());
+                    
+                    log.debug("Created safety precaution: ID={}, Title={}, Type={}, Category={}", 
+                        safety.getId(), safety.getTitle(), safety.getType(), safety.getCategory());
                     
                     safetyToSave.add(safety);
                 }

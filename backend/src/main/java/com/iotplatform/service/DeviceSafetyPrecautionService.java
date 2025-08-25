@@ -43,6 +43,9 @@ public class DeviceSafetyPrecautionService {
     public DeviceSafetyPrecaution createSafetyPrecaution(DeviceSafetyPrecaution safetyPrecaution) {
         logger.info("Creating new safety precaution for device: {}", safetyPrecaution.getDeviceId());
         
+        // Validate required fields before saving
+        validateSafetyPrecaution(safetyPrecaution);
+        
         if (safetyPrecaution.getId() == null || safetyPrecaution.getId().trim().isEmpty()) {
             safetyPrecaution.setId(UUID.randomUUID().toString());
         }
@@ -60,6 +63,9 @@ public class DeviceSafetyPrecautionService {
         logger.info("Creating {} safety precautions", safetyPrecautions.size());
         
         for (DeviceSafetyPrecaution precaution : safetyPrecautions) {
+            // Validate required fields before saving
+            validateSafetyPrecaution(precaution);
+            
             if (precaution.getId() == null || precaution.getId().trim().isEmpty()) {
                 precaution.setId(UUID.randomUUID().toString());
             }
@@ -166,5 +172,42 @@ public class DeviceSafetyPrecautionService {
         }
         
         logger.info("Successfully created {} safety precautions from PDF for device: {}", safetyPrecautions.size(), deviceId);
+    }
+    
+    /**
+     * Validate that all required fields are set for a safety precaution
+     */
+    private void validateSafetyPrecaution(DeviceSafetyPrecaution safetyPrecaution) {
+        if (safetyPrecaution.getDeviceId() == null || safetyPrecaution.getDeviceId().trim().isEmpty()) {
+            logger.error("DeviceSafetyPrecaution validation failed: deviceId is required");
+            throw new IllegalArgumentException("Device ID is required");
+        }
+        
+        if (safetyPrecaution.getTitle() == null || safetyPrecaution.getTitle().trim().isEmpty()) {
+            logger.error("DeviceSafetyPrecaution validation failed: title is required");
+            throw new IllegalArgumentException("Title is required");
+        }
+        
+        if (safetyPrecaution.getDescription() == null || safetyPrecaution.getDescription().trim().isEmpty()) {
+            logger.error("DeviceSafetyPrecaution validation failed: description is required");
+            throw new IllegalArgumentException("Description is required");
+        }
+        
+        if (safetyPrecaution.getType() == null || safetyPrecaution.getType().trim().isEmpty()) {
+            logger.error("DeviceSafetyPrecaution validation failed: type is required");
+            throw new IllegalArgumentException("Type is required");
+        }
+        
+        if (safetyPrecaution.getCategory() == null || safetyPrecaution.getCategory().trim().isEmpty()) {
+            logger.error("DeviceSafetyPrecaution validation failed: category is required");
+            throw new IllegalArgumentException("Category is required");
+        }
+        
+        if (safetyPrecaution.getOrganizationId() == null || safetyPrecaution.getOrganizationId().trim().isEmpty()) {
+            logger.error("DeviceSafetyPrecaution validation failed: organizationId is required");
+            throw new IllegalArgumentException("Organization ID is required");
+        }
+        
+        logger.debug("DeviceSafetyPrecaution validation passed for device: {}", safetyPrecaution.getDeviceId());
     }
 }

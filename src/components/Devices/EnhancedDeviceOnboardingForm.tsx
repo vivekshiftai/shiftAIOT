@@ -289,6 +289,15 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           setProgress(progress.progress);
           setCurrentSubStage(progress.message);
           
+          // Log detailed progress information
+          logInfo('Onboarding', `Progress Update: ${progress.stage} - ${progress.progress}%`, {
+            stage: progress.stage,
+            progress: progress.progress,
+            message: progress.message,
+            subMessage: progress.subMessage,
+            stepDetails: progress.stepDetails
+          });
+          
           if (progress.subMessage) {
             logInfo('Onboarding', progress.subMessage);
           }
@@ -300,7 +309,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               logInfo('Onboarding', 'Processing upload stage', { progress: progress.progress });
               break;
             case 'device':
-              setCurrentProcess('rules');
+              setCurrentProcess('pdf');
               logInfo('Onboarding', 'Processing device creation stage', { progress: progress.progress });
               break;
             case 'rules':
@@ -312,7 +321,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               logInfo('Onboarding', 'Processing maintenance schedule stage with date formatting', { progress: progress.progress });
               break;
             case 'safety':
-              setCurrentProcess('rules');
+              setCurrentProcess('knowledgebase');
               logInfo('Onboarding', 'Processing safety precautions stage', { progress: progress.progress });
               break;
             case 'complete':

@@ -138,9 +138,9 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
             <span>Progress</span>
             <span>{Math.round(progress)}%</span>
           </div>
-          <div className="relative h-1.5 bg-[#F6FFF7] rounded-full overflow-hidden">
+          <div className="relative h-1.5 bg-blue-100 rounded-full overflow-hidden">
             <div 
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-[#20C997] to-[#20C997]/80 rounded-full transition-all duration-300 ease-out"
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-300 ease-out"
               style={{ width: `${progress}%` }}
             >
               {/* Shimmer effect */}
@@ -151,8 +151,8 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
 
         {/* File Info */}
         {pdfFileName && (
-          <div className="flex items-center space-x-3 px-4 py-2 bg-[#D0F5E3] rounded-lg border border-[#20C997]/20">
-            <div className="w-6 h-6 bg-[#20C997] rounded-lg flex items-center justify-center">
+          <div className="flex items-center space-x-3 px-4 py-2 bg-blue-100 rounded-lg border border-blue-200">
+            <div className="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center">
               <span className="text-white text-xs">📄</span>
             </div>
             <div className="flex-1 min-w-0">
@@ -165,9 +165,9 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
         {/* Current Sub-stage */}
         {currentSubStage && (
           <div className="text-center">
-            <div className="inline-flex items-center space-x-2 px-3 py-1.5 bg-[#D0F5E3] rounded-full">
-              <div className="w-1.5 h-1.5 bg-[#20C997] rounded-full animate-pulse"></div>
-              <span className="text-xs text-[#20C997] font-medium">{currentSubStage}</span>
+            <div className="inline-flex items-center space-x-2 px-3 py-1.5 bg-blue-100 rounded-full">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-blue-600 font-medium">{currentSubStage}</span>
             </div>
           </div>
         )}
@@ -178,7 +178,7 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
           {[...Array(4)].map((_, i) => (
             <div
               key={i}
-              className="absolute w-1.5 h-1.5 bg-[#20C997] rounded-full opacity-20 animate-bounce"
+              className="absolute w-1.5 h-1.5 bg-blue-500 rounded-full opacity-20 animate-bounce"
               style={{
                 left: `${25 + i * 20}%`,
                 top: `${20 + (i % 2) * 60}%`,

@@ -626,17 +626,24 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                 // Convert safety precautions from external format to our format
                 List<Map<String, Object>> externalPrecautions = (List<Map<String, Object>>) responseBody.get("safety_information");
                 if (externalPrecautions != null) {
+                    log.info("Processing {} external safety precautions for device: {}", externalPrecautions.size(), deviceId);
                     List<DeviceSafetyPrecaution> safetyPrecautions = new ArrayList<>();
                     for (Map<String, Object> externalPrecaution : externalPrecautions) {
                         DeviceSafetyPrecaution safety = new DeviceSafetyPrecaution();
+                        safety.setId(UUID.randomUUID().toString()); // Set required ID
                         safety.setTitle((String) externalPrecaution.get("name"));
                         safety.setDescription((String) externalPrecaution.get("about_reaction"));
                         safety.setSeverity("HIGH"); // Default severity since not provided in response
+                        safety.setType("PDF_GENERATED"); // Set required type field
+                        safety.setCategory("general"); // Set default category since not provided in response
                         safety.setDeviceId(deviceId);
                         safety.setOrganizationId(organizationId);
                         safety.setIsActive(true);
                         safety.setCreatedAt(LocalDateTime.now());
                         safety.setUpdatedAt(LocalDateTime.now());
+                        
+                        log.debug("Created safety precaution from external data: ID={}, Title={}, Type={}, Category={}", 
+                            safety.getId(), safety.getTitle(), safety.getType(), safety.getCategory());
                         
                         // Store additional safety information
                         String causes = (String) externalPrecaution.get("causes");
