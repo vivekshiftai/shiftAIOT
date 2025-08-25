@@ -16,9 +16,6 @@ server:
     accept-count: 100
     max-threads: 200
     min-spare-threads: 10
-    # Additional file upload settings
-    max-http-post-size: 500MB
-    max-swallow-size: 500MB
 
 
 spring:
