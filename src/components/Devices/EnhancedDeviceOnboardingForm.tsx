@@ -932,7 +932,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   return (
     <>
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div className="bg-gradient-to-br from-blue-50/95 to-indigo-50/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-8xl max-h-[99vh] flex flex-col border border-blue-100/50">
+        <div className="bg-gradient-to-br from-blue-50/95 to-indigo-50/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col border border-blue-100/50">
           {/* Header - Hidden during loading */}
           {!showOnboardingLoader && (
             <div className="bg-gradient-to-br from-blue-400 via-indigo-400 to-purple-400 p-8 text-white flex-shrink-0 rounded-t-3xl">
