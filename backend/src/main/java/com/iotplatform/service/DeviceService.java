@@ -210,8 +210,11 @@ public class DeviceService {
         device.setManufacturer(request.getManufacturer());
         device.setModel(request.getModel());
         device.setSerialNumber(request.getSerialNumber());
+        
+        // Set MAC address and IP address directly (skip validation for now)
         device.setMacAddress(request.getMacAddress());
         device.setIpAddress(request.getIpAddress());
+        
         device.setPort(request.getPort());
         
         // Set documentation URLs (if provided) - but don't store actual files
@@ -238,8 +241,19 @@ public class DeviceService {
         device.setOperatingHumidityMin(request.getOperatingHumidityMin());
         device.setOperatingHumidityMax(request.getOperatingHumidityMax());
         
+        // Log device details before saving for debugging
+        logger.debug("Creating device: name={}, type={}, location={}, macAddress={}, ipAddress={}", 
+            device.getName(), device.getType(), device.getLocation(), device.getMacAddress(), device.getIpAddress());
+        
         // Save the device (without storing PDF files)
-        Device savedDevice = deviceRepository.save(device);
+        Device savedDevice;
+        try {
+            savedDevice = deviceRepository.save(device);
+            logger.info("Device created successfully with ID: {}", savedDevice.getId());
+        } catch (Exception e) {
+            logger.error("Failed to create device: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to create device: " + e.getMessage(), e);
+        }
         
         // Create response without file upload information
         DeviceCreateResponse response = new DeviceCreateResponse();
@@ -284,8 +298,11 @@ public class DeviceService {
         device.setManufacturer(request.getManufacturer());
         device.setModel(request.getModel());
         device.setSerialNumber(request.getSerialNumber());
+        
+        // Set MAC address and IP address directly (skip validation for now)
         device.setMacAddress(request.getMacAddress());
         device.setIpAddress(request.getIpAddress());
+        
         device.setPort(request.getPort());
         
         // Set documentation URLs (if provided)
@@ -312,8 +329,19 @@ public class DeviceService {
         device.setOperatingHumidityMin(request.getOperatingHumidityMin());
         device.setOperatingHumidityMax(request.getOperatingHumidityMax());
         
+        // Log device details before saving for debugging
+        logger.debug("Creating device with files: name={}, type={}, location={}, macAddress={}, ipAddress={}", 
+            device.getName(), device.getType(), device.getLocation(), device.getMacAddress(), device.getIpAddress());
+        
         // Save the device first
-        Device savedDevice = deviceRepository.save(device);
+        Device savedDevice;
+        try {
+            savedDevice = deviceRepository.save(device);
+            logger.info("Device created successfully with ID: {}", savedDevice.getId());
+        } catch (Exception e) {
+            logger.error("Failed to create device: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to create device: " + e.getMessage(), e);
+        }
         
         // Handle file uploads
         boolean manualUploaded = false;

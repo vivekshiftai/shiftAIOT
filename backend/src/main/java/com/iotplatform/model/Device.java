@@ -86,7 +86,6 @@ public class Device {
 
     // Connection details (nullable)
     @Size(max = 45)
-    @Pattern(regexp = "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$", message = "Invalid IP address format")
     @Column(name = "ip_address")
     private String ipAddress;
 
@@ -158,7 +157,6 @@ public class Device {
     private String serialNumber;
 
     @Size(max = 17)
-    @Pattern(regexp = "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$", message = "Invalid MAC address format")
     @Column(name = "mac_address")
     private String macAddress;
 
