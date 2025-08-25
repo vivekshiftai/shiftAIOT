@@ -1,5 +1,6 @@
 package com.iotplatform.controller;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -139,7 +140,7 @@ public class KnowledgeController {
             response.put("pdf_name", pdfName);
             response.put("response", pdfResponse.getResponse());
             response.put("chunks_used", pdfResponse.getChunksUsed() != null ? 
-                List.of(pdfResponse.getChunksUsed().split(",")) : List.of());
+                Arrays.asList(pdfResponse.getChunksUsed()) : List.of());
             response.put("processing_time", pdfResponse.getProcessingTime());
             
             System.out.println("✅ Knowledge Query Response - Success: " + (pdfResponse.getResponse() != null));
