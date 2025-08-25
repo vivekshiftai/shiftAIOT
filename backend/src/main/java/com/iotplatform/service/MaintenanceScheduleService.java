@@ -171,41 +171,49 @@ public class MaintenanceScheduleService {
     }
     
     /**
-     * Create maintenance tasks from PDF with proper date calculations.
+     * Create maintenance tasks from PDF with enhanced data processing and validation.
      */
     public void createMaintenanceFromPDF(List<MaintenanceGenerationResponse.MaintenanceTask> maintenanceTasks, String deviceId, String organizationId) {
-        log.info("Creating maintenance tasks from PDF for device: {}", deviceId);
+        log.info("Creating maintenance tasks from PDF for device: {} in organization: {}", deviceId, organizationId);
         
         for (MaintenanceGenerationResponse.MaintenanceTask maintenanceData : maintenanceTasks) {
-            DeviceMaintenance maintenance = new DeviceMaintenance();
-            maintenance.setId(UUID.randomUUID().toString());
-            maintenance.setDeviceName("Device " + deviceId);
-            maintenance.setOrganizationId(organizationId);
-            maintenance.setTaskName(maintenanceData.getTaskName());
-            maintenance.setDescription(maintenanceData.getDescription());
-            maintenance.setFrequency(maintenanceData.getFrequency());
-            maintenance.setPriority(convertPriority(maintenanceData.getPriority()));
-            maintenance.setEstimatedDuration(maintenanceData.getEstimatedDuration());
-            maintenance.setRequiredTools(maintenanceData.getRequiredTools());
-            maintenance.setStatus(DeviceMaintenance.Status.ACTIVE);
-            
-            // Calculate next maintenance date based on frequency
-            LocalDate nextMaintenance = calculateNextMaintenanceDate(maintenanceData.getFrequency());
-            maintenance.setNextMaintenance(nextMaintenance);
-            
-            // Set last maintenance to null (first time maintenance)
-            maintenance.setLastMaintenance(null);
-            
-            maintenance.setCreatedAt(LocalDateTime.now());
-            maintenance.setUpdatedAt(LocalDateTime.now());
-            
-            deviceMaintenanceRepository.save(maintenance);
-            
-            log.info("Created maintenance task: {} with next maintenance date: {}", 
-                    maintenanceData.getTaskName(), nextMaintenance);
+            try {
+                DeviceMaintenance maintenance = new DeviceMaintenance();
+                maintenance.setId(UUID.randomUUID().toString());
+                maintenance.setDeviceName("Device " + deviceId);
+                maintenance.setOrganizationId(organizationId);
+                
+                // Enhanced data processing and validation
+                maintenance.setTaskName(processTaskName(maintenanceData.getTaskName()));
+                maintenance.setDescription(processDescription(maintenanceData.getDescription()));
+                maintenance.setFrequency(processFrequency(maintenanceData.getFrequency()));
+                maintenance.setPriority(convertPriority(maintenanceData.getPriority()));
+                maintenance.setEstimatedDuration(processDuration(maintenanceData.getEstimatedDuration()));
+                maintenance.setRequiredTools(processTools(maintenanceData.getRequiredTools()));
+                maintenance.setStatus(DeviceMaintenance.Status.ACTIVE);
+                
+                // Calculate next maintenance date based on processed frequency
+                LocalDate nextMaintenance = calculateNextMaintenanceDate(maintenance.getFrequency());
+                maintenance.setNextMaintenance(nextMaintenance);
+                
+                // Set last maintenance to null (first time maintenance)
+                maintenance.setLastMaintenance(null);
+                
+                maintenance.setCreatedAt(LocalDateTime.now());
+                maintenance.setUpdatedAt(LocalDateTime.now());
+                
+                deviceMaintenanceRepository.save(maintenance);
+                
+                log.info("Created maintenance task: '{}' with next maintenance date: {} (frequency: {})", 
+                        maintenance.getTaskName(), nextMaintenance, maintenance.getFrequency());
+                        
+            } catch (Exception e) {
+                log.error("Failed to create maintenance task from PDF data: {}", maintenanceData.getTaskName(), e);
+                // Continue with next task instead of failing completely
+            }
         }
         
-        log.info("Created {} maintenance tasks from PDF for device: {}", maintenanceTasks.size(), deviceId);
+        log.info("Successfully created {} maintenance tasks from PDF for device: {}", maintenanceTasks.size(), deviceId);
     }
     
     /**
@@ -243,7 +251,7 @@ public class MaintenanceScheduleService {
     
     /**
      * Calculate next maintenance date based on frequency string.
-     * Supports basic formats: "daily", "weekly", "monthly", "quarterly", "yearly", "annually"
+     * Enhanced version that handles complex frequency patterns and numeric values.
      */
     public LocalDate calculateNextMaintenanceDate(String frequency) {
         if (frequency == null || frequency.trim().isEmpty()) {
@@ -255,23 +263,57 @@ public class MaintenanceScheduleService {
         LocalDate today = LocalDate.now();
         
         try {
-            // Check for basic frequency formats
-            switch (normalizedFrequency) {
-                case "daily":
-                    return today.plusDays(1);
-                case "weekly":
-                    return today.plusWeeks(1);
-                case "monthly":
-                    return today.plusMonths(1);
-                case "quarterly":
-                    return today.plusMonths(3);
-                case "yearly":
-                case "annually":
-                    return today.plusYears(1);
-                default:
-                    log.warn("Unknown frequency format: '{}', defaulting to monthly", frequency);
-                    return today.plusMonths(1);
+            // Enhanced pattern matching for complex frequencies
+            if (normalizedFrequency.contains("daily") || normalizedFrequency.contains("every day")) {
+                return today.plusDays(1);
+            } else if (normalizedFrequency.contains("weekly") || normalizedFrequency.contains("every week")) {
+                return today.plusWeeks(1);
+            } else if (normalizedFrequency.contains("monthly") || normalizedFrequency.contains("every month")) {
+                return today.plusMonths(1);
+            } else if (normalizedFrequency.contains("quarterly") || normalizedFrequency.contains("every 3 months")) {
+                return today.plusMonths(3);
+            } else if (normalizedFrequency.contains("semi-annual") || normalizedFrequency.contains("every 6 months")) {
+                return today.plusMonths(6);
+            } else if (normalizedFrequency.contains("annual") || normalizedFrequency.contains("yearly") || normalizedFrequency.contains("every year")) {
+                return today.plusYears(1);
+            } else if (normalizedFrequency.contains("bi-annual") || normalizedFrequency.contains("every 2 years")) {
+                return today.plusYears(2);
             }
+            
+            // Regex pattern for numeric frequencies (e.g., "30 days", "6 months", "2 years")
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(\\d+)\\s*(day|week|month|year)s?", java.util.regex.Pattern.CASE_INSENSITIVE);
+            java.util.regex.Matcher matcher = pattern.matcher(normalizedFrequency);
+            
+            if (matcher.find()) {
+                int number = Integer.parseInt(matcher.group(1));
+                String unit = matcher.group(2).toLowerCase();
+                
+                switch (unit) {
+                    case "day":
+                        return today.plusDays(number);
+                    case "week":
+                        return today.plusWeeks(number);
+                    case "month":
+                        return today.plusMonths(number);
+                    case "year":
+                        return today.plusYears(number);
+                }
+            }
+            
+            // Handle "every X hours" patterns (convert to days for approximation)
+            java.util.regex.Pattern hoursPattern = java.util.regex.Pattern.compile("every\\s+(\\d+)\\s+hours?", java.util.regex.Pattern.CASE_INSENSITIVE);
+            java.util.regex.Matcher hoursMatcher = hoursPattern.matcher(normalizedFrequency);
+            
+            if (hoursMatcher.find()) {
+                int hours = Integer.parseInt(hoursMatcher.group(1));
+                int days = Math.max(1, hours / 24); // Convert hours to days, minimum 1 day
+                log.info("Converting {} hours to {} days for maintenance scheduling", hours, days);
+                return today.plusDays(days);
+            }
+            
+            log.warn("Unknown frequency format: '{}', defaulting to monthly", frequency);
+            return today.plusMonths(1);
+            
         } catch (Exception e) {
             log.error("Error calculating next maintenance date for frequency: {}", frequency, e);
             return today.plusMonths(1);
@@ -336,5 +378,129 @@ public class MaintenanceScheduleService {
         }
         
         log.info("Updated {} overdue maintenance tasks", overdueTasks.size());
+    }
+
+    /**
+     * Process and validate task name
+     */
+    private String processTaskName(String taskName) {
+        if (taskName == null || taskName.trim().isEmpty()) {
+            return "Unnamed Maintenance Task";
+        }
+        
+        String processed = taskName.trim();
+        // Capitalize first letter of each word
+        String[] words = processed.split("\\s+");
+        StringBuilder result = new StringBuilder();
+        for (String word : words) {
+            if (word.length() > 0) {
+                result.append(Character.toUpperCase(word.charAt(0)))
+                      .append(word.substring(1).toLowerCase())
+                      .append(" ");
+            }
+        }
+        
+        return result.toString().trim();
+    }
+    
+    /**
+     * Process and validate description
+     */
+    private String processDescription(String description) {
+        if (description == null || description.trim().isEmpty()) {
+            return "No description provided";
+        }
+        
+        String processed = description.trim();
+        // Ensure proper sentence formatting
+        if (!processed.endsWith(".") && !processed.endsWith("!") && !processed.endsWith("?")) {
+            processed += ".";
+        }
+        
+        return processed;
+    }
+    
+    /**
+     * Process and normalize frequency string
+     */
+    private String processFrequency(String frequency) {
+        if (frequency == null || frequency.trim().isEmpty()) {
+            return "monthly";
+        }
+        
+        String processed = frequency.trim().toLowerCase();
+        
+        // Normalize common frequency patterns
+        if (processed.contains("every") && processed.contains("hour")) {
+            return processed; // Keep as is for hour-based frequencies
+        } else if (processed.contains("daily") || processed.contains("every day")) {
+            return "daily";
+        } else if (processed.contains("weekly") || processed.contains("every week")) {
+            return "weekly";
+        } else if (processed.contains("monthly") || processed.contains("every month")) {
+            return "monthly";
+        } else if (processed.contains("quarterly") || processed.contains("every 3 months")) {
+            return "quarterly";
+        } else if (processed.contains("semi-annual") || processed.contains("every 6 months")) {
+            return "semi-annual";
+        } else if (processed.contains("annual") || processed.contains("yearly") || processed.contains("every year")) {
+            return "annual";
+        } else if (processed.contains("bi-annual") || processed.contains("every 2 years")) {
+            return "bi-annual";
+        }
+        
+        return processed; // Return as is if no pattern matches
+    }
+    
+    /**
+     * Process and validate estimated duration
+     */
+    private String processDuration(String duration) {
+        if (duration == null || duration.trim().isEmpty()) {
+            return "Not specified";
+        }
+        
+        String processed = duration.trim();
+        
+        // Normalize common duration formats
+        if (processed.toLowerCase().contains("hour")) {
+            return processed.toLowerCase().replace("hour", "hour(s)");
+        } else if (processed.toLowerCase().contains("minute")) {
+            return processed.toLowerCase().replace("minute", "minute(s)");
+        } else if (processed.toLowerCase().contains("day")) {
+            return processed.toLowerCase().replace("day", "day(s)");
+        }
+        
+        return processed;
+    }
+    
+    /**
+     * Process and validate required tools
+     */
+    private String processTools(String tools) {
+        if (tools == null || tools.trim().isEmpty()) {
+            return "Standard tools";
+        }
+        
+        String processed = tools.trim();
+        
+        // Clean up tool list formatting
+        if (processed.contains(",")) {
+            // Split by comma and clean up each tool
+            String[] toolArray = processed.split(",");
+            StringBuilder result = new StringBuilder();
+            for (String tool : toolArray) {
+                String cleanedTool = tool.trim();
+                if (!cleanedTool.isEmpty()) {
+                    if (result.length() > 0) {
+                        result.append(", ");
+                    }
+                    result.append(cleanedTool);
+                }
+            }
+            return result.toString();
+        }
+        
+        return processed;
     }
 }

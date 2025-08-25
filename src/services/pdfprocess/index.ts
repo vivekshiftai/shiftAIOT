@@ -223,6 +223,234 @@ export class PDFProcessingService {
     }
   }
 
+  // Upload and process PDF files through backend (public endpoint)
+  async uploadPDFPublic(file: File): Promise<PDFUploadResponse> {
+    try {
+      console.log('Uploading PDF to backend service (public):', file.name);
+
+      // Use the public pdfAPI endpoint
+      const response = await pdfAPI.uploadPDFPublic(file);
+      
+      console.log('PDF upload to backend (public) successful:', response.data);
+      return response.data as PDFUploadResponse;
+
+    } catch (error) {
+      console.error('PDF upload to backend (public) failed:', error);
+      throw error;
+    }
+  }
+
+  // List PDFs in external service format
+  async listPDFsExternal(page: number = 1, limit: number = 10): Promise<any> {
+    try {
+      console.log('Listing PDFs in external format (page: {}, limit: {})', page, limit);
+
+      const response = await pdfAPI.listPDFsExternal(page, limit);
+      
+      console.log('External PDF list successful:', response.data);
+      return response.data;
+
+    } catch (error) {
+      console.error('External PDF list failed:', error);
+      throw error;
+    }
+  }
+
+  // Generate rules using external service format
+  async generateRulesExternal(pdfName: string): Promise<any> {
+    try {
+      console.log('Generating rules using external format for PDF:', pdfName);
+
+      const response = await pdfAPI.generateRulesExternal(pdfName);
+      
+      console.log('External rules generation successful:', response.data);
+      return response.data;
+
+    } catch (error) {
+      console.error('External rules generation failed:', error);
+      throw error;
+    }
+  }
+
+  // Generate maintenance using external service format
+  async generateMaintenanceExternal(pdfName: string): Promise<any> {
+    try {
+      console.log('Generating maintenance using external format for PDF:', pdfName);
+
+      const response = await pdfAPI.generateMaintenanceExternal(pdfName);
+      
+      console.log('External maintenance generation successful:', response.data);
+      return response.data;
+
+    } catch (error) {
+      console.error('External maintenance generation failed:', error);
+      throw error;
+    }
+  }
+
+  // Generate safety using external service format
+  async generateSafetyExternal(pdfName: string): Promise<any> {
+    try {
+      console.log('Generating safety using external format for PDF:', pdfName);
+
+      const response = await pdfAPI.generateSafetyExternal(pdfName);
+      
+      console.log('External safety generation successful:', response.data);
+      return response.data;
+
+    } catch (error) {
+      console.error('External safety generation failed:', error);
+      throw error;
+    }
+  }
+
+  // Delete PDF using external service format
+  async deletePDFExternal(pdfName: string): Promise<any> {
+    try {
+      console.log('Deleting PDF using external format:', pdfName);
+
+      const response = await pdfAPI.deletePDFExternal(pdfName);
+      
+      console.log('External PDF deletion successful:', response.data);
+      return response.data;
+
+    } catch (error) {
+      console.error('External PDF deletion failed:', error);
+      throw error;
+    }
+  }
+
+  // Health check
+  async healthCheck(): Promise<any> {
+    try {
+      console.log('Performing health check');
+
+      const response = await pdfAPI.healthCheck();
+      
+      console.log('Health check successful:', response.data);
+      return response.data;
+
+    } catch (error) {
+      console.error('Health check failed:', error);
+      throw error;
+    }
+  }
+
+  // Global health check
+  async globalHealthCheck(): Promise<any> {
+    try {
+      console.log('Performing global health check');
+
+      const response = await pdfAPI.globalHealthCheck();
+      
+      console.log('Global health check successful:', response.data);
+      return response.data;
+
+    } catch (error) {
+      console.error('Global health check failed:', error);
+      throw error;
+    }
+  }
+
+  // Get service info
+  async getServiceInfo(): Promise<any> {
+    try {
+      console.log('Getting service info');
+
+      const response = await pdfAPI.getServiceInfo();
+      
+      console.log('Service info successful:', response.data);
+      return response.data;
+
+    } catch (error) {
+      console.error('Service info failed:', error);
+      throw error;
+    }
+  }
+
+  // Debug methods
+  debug = {
+    // Debug collection analysis
+    collectionAnalysis: async (pdfName: string): Promise<any> => {
+      try {
+        console.log('Performing debug collection analysis for PDF:', pdfName);
+
+        const response = await pdfAPI.debug.collectionAnalysis(pdfName);
+        
+        console.log('Debug collection analysis successful:', response.data);
+        return response.data;
+
+      } catch (error) {
+        console.error('Debug collection analysis failed:', error);
+        throw error;
+      }
+    },
+
+    // Test query pipeline
+    testQueryPipeline: async (pdfName: string, query: string): Promise<any> => {
+      try {
+        console.log('Testing query pipeline for PDF:', pdfName, 'Query:', query);
+
+        const response = await pdfAPI.debug.testQueryPipeline(pdfName, query);
+        
+        console.log('Test query pipeline successful:', response.data);
+        return response.data;
+
+      } catch (error) {
+        console.error('Test query pipeline failed:', error);
+        throw error;
+      }
+    },
+
+    // List all collections
+    listAllCollections: async (): Promise<any> => {
+      try {
+        console.log('Listing all collections');
+
+        const response = await pdfAPI.debug.listAllCollections();
+        
+        console.log('List all collections successful:', response.data);
+        return response.data;
+
+      } catch (error) {
+        console.error('List all collections failed:', error);
+        throw error;
+      }
+    },
+
+    // Debug health check
+    healthCheck: async (): Promise<any> => {
+      try {
+        console.log('Performing debug health check');
+
+        const response = await pdfAPI.debug.healthCheck();
+        
+        console.log('Debug health check successful:', response.data);
+        return response.data;
+
+      } catch (error) {
+        console.error('Debug health check failed:', error);
+        throw error;
+      }
+    },
+
+    // Test images
+    testImages: async (pdfName: string): Promise<any> => {
+      try {
+        console.log('Testing images for PDF:', pdfName);
+
+        const response = await pdfAPI.debug.testImages(pdfName);
+        
+        console.log('Test images successful:', response.data);
+        return response.data;
+
+      } catch (error) {
+        console.error('Test images failed:', error);
+        throw error;
+      }
+    }
+  };
+
   // Query PDF content through backend
   async queryPDF(request: PDFQueryRequest): Promise<PDFQueryResponse> {
     try {

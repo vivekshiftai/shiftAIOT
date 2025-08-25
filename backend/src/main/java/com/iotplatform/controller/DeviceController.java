@@ -540,6 +540,17 @@ public class DeviceController {
         }
     }
 
+    @GetMapping("/health")
+    public ResponseEntity<?> healthCheck() {
+        logger.info("🏥 Health check endpoint called");
+        return ResponseEntity.ok(Map.of(
+            "status", "healthy",
+            "timestamp", new Date(),
+            "service", "IoT Platform Backend",
+            "version", "1.0.0"
+        ));
+    }
+
     @GetMapping("/debug-auth")
     public ResponseEntity<?> debugAuthentication(@AuthenticationPrincipal CustomUserDetails userDetails) {
         logger.info("🔍 Debug authentication endpoint called");

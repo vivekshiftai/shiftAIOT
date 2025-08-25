@@ -31,7 +31,7 @@ public class PDFProcessingConfig {
     /**
      * Base URL for the external PDF processing service
      */
-    private String baseUrl = "http://20.57.36.66:8000";
+    private String baseUrl = "http://20.75.50.202:8000";
 
     /**
      * API key for authentication with external service

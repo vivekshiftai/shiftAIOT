@@ -258,4 +258,11 @@ public interface PDFProcessingService {
      * @throws PDFProcessingException if status check fails
      */
     PDFProcessingDTOs.PDFStatusResponse getPDFStatus(String pdfName, String organizationId) throws PDFProcessingException;
+
+    /**
+     * Gets the maximum file size allowed for PDF uploads.
+     * 
+     * @return Maximum file size in bytes
+     */
+    long getMaxFileSize();
 }

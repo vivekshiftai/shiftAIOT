@@ -74,7 +74,7 @@ class TokenService {
       this.setAxiosAuthHeader(token);
       
       // Make a simple request to validate token
-      const response = await this.axiosInstance.get('/api/users/profile');
+      const response = await this.axiosInstance.get('/users/profile');
       return response.status === 200;
     } catch (error: any) {
       console.warn('Token validation failed:', error.message);

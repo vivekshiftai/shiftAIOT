@@ -829,6 +829,11 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
         }
     }
 
+    @Override
+    public long getMaxFileSize() {
+        return config.getMaxFileSize();
+    }
+
     // Private helper methods
 
     private void validatePDFFile(MultipartFile file) throws PDFProcessingException {
@@ -836,12 +841,40 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             throw new PDFProcessingException("PDF file is required");
         }
         
+        // Check content type
         if (!file.getContentType().equals("application/pdf")) {
             throw new PDFProcessingException("Only PDF files are allowed");
         }
         
+        // Check file size
         if (file.getSize() > config.getMaxFileSize()) {
             throw new PDFProcessingException("File size exceeds maximum limit: " + config.getMaxFileSize() + " bytes");
+        }
+        
+        // Validate PDF content by checking file header
+        try {
+            byte[] fileBytes = file.getBytes();
+            if (fileBytes.length < 4) {
+                throw new PDFProcessingException("Invalid PDF file - file too small");
+            }
+            
+            // Check for PDF magic number: %PDF
+            String header = new String(fileBytes, 0, Math.min(4, fileBytes.length));
+            if (!header.equals("%PDF")) {
+                throw new PDFProcessingException("Invalid PDF file - please ensure the file is a valid PDF document");
+            }
+            
+            log.debug("PDF file validation passed for: {} ({} bytes)", file.getOriginalFilename(), file.getSize());
+            
+        } catch (IOException e) {
+            log.error("Failed to read file for validation: {}", e.getMessage(), e);
+            throw new PDFProcessingException("Failed to read file for validation", e);
+        } catch (PDFProcessingException e) {
+            // Re-throw PDF validation exceptions
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error during PDF validation: {}", e.getMessage(), e);
+            throw new PDFProcessingException("Invalid PDF file - please ensure the file is a valid PDF document", e);
         }
     }
 

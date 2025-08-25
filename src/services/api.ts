@@ -350,7 +350,7 @@ export const userAPI = {
 
 // PDF Processing API - All calls go through backend
 export const pdfAPI = {
-  // Upload and process PDF files through backend
+  // Upload and process PDF files through backend (authenticated)
   uploadPDF: async (file: File, deviceId?: string, deviceName?: string) => {
     // Get user from localStorage to get organizationId
     const userStr = localStorage.getItem('user');
@@ -364,6 +364,19 @@ export const pdfAPI = {
     if (deviceName) formData.append('deviceName', deviceName);
     
     return api.post('/api/pdf/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 300000, // 5 minutes timeout for large files
+    });
+  },
+
+  // Upload and process PDF files through backend (public endpoint)
+  uploadPDFPublic: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return api.post('/api/pdf/upload-pdf', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -388,6 +401,14 @@ export const pdfAPI = {
     return api.get('/api/pdf/list', { params });
   },
 
+  // List PDFs in external service format
+  listPDFsExternal: async (page: number = 1, limit: number = 10) => {
+    return api.get('/api/pdf/pdfs', { 
+      params: { page, limit },
+      timeout: 30000,
+    });
+  },
+
   // Download processed PDF through backend
   downloadPDF: async (pdfName: string) => {
     return api.get(`/api/pdf/download/${pdfName}`, {
@@ -409,6 +430,13 @@ export const pdfAPI = {
     return api.post('/api/pdf/generate-rules', payload);
   },
 
+  // Generate rules using external service format
+  generateRulesExternal: async (pdfName: string) => {
+    return api.post(`/api/pdf/generate-rules/${pdfName}`, {}, {
+      timeout: 120000, // 2 minutes timeout for generation
+    });
+  },
+
   // Generate maintenance schedule from PDF through backend
   generateMaintenance: async (pdfName: string, deviceId?: string) => {
     const payload: any = { pdf_name: pdfName };
@@ -417,12 +445,26 @@ export const pdfAPI = {
     return api.post('/api/pdf/generate-maintenance', payload);
   },
 
+  // Generate maintenance using external service format
+  generateMaintenanceExternal: async (pdfName: string) => {
+    return api.post(`/api/pdf/generate-maintenance/${pdfName}`, {}, {
+      timeout: 120000, // 2 minutes timeout for generation
+    });
+  },
+
   // Generate safety precautions from PDF through backend
   generateSafety: async (pdfName: string, deviceId?: string) => {
     const payload: any = { pdf_name: pdfName };
     if (deviceId) payload.deviceId = deviceId;
     
     return api.post('/api/pdf/generate-safety', payload);
+  },
+
+  // Generate safety using external service format
+  generateSafetyExternal: async (pdfName: string) => {
+    return api.post(`/api/pdf/generate-safety/${pdfName}`, {}, {
+      timeout: 120000, // 2 minutes timeout for generation
+    });
   },
 
   // Delete PDF through backend
@@ -437,8 +479,8 @@ export const pdfAPI = {
       const duration = endTime - startTime;
       
       console.log(`✅ [API] PDF deletion successful: "${pdfName}"`, {
-        status: response.status,
         duration: `${duration}ms`,
+        status: response.status,
         data: response.data
       });
       
@@ -448,11 +490,61 @@ export const pdfAPI = {
       const duration = endTime - startTime;
       
       console.error(`❌ [API] PDF deletion failed: "${pdfName}"`, {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        duration: `${duration}ms`
+        duration: `${duration}ms`,
+        error: error
       });
       
       throw error;
     }
   },
+
+  // Delete PDF using external service format
+  deletePDFExternal: async (pdfName: string) => {
+    return api.delete(`/api/pdf/pdfs/${pdfName}`, {
+      timeout: 30000,
+    });
+  },
+
+  // Health check
+  healthCheck: async () => {
+    return api.get('/api/pdf/health');
+  },
+
+  // Global health check
+  globalHealthCheck: async () => {
+    return api.get('/api/pdf/health/global');
+  },
+
+  // Service info
+  getServiceInfo: async () => {
+    return api.get('/api/pdf/info');
+  },
+
+  // Debug endpoints
+  debug: {
+    // Debug collection analysis
+    collectionAnalysis: async (pdfName: string) => {
+      return api.get(`/api/pdf/debug/collection/${pdfName}`);
+    },
+
+    // Test query pipeline
+    testQueryPipeline: async (pdfName: string, query: string) => {
+      return api.post(`/api/pdf/debug/test-query/${pdfName}`, { query });
+    },
+
+    // List all collections
+    listAllCollections: async () => {
+      return api.get('/api/pdf/debug/collections');
+    },
+
+    // Debug health check
+    healthCheck: async () => {
+      return api.get('/api/pdf/debug/health');
+    },
+
+    // Test images
+    testImages: async (pdfName: string) => {
+      return api.get(`/api/pdf/debug/test-images/${pdfName}`);
+    }
+  }
 };

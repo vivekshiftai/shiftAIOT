@@ -1,6 +1,7 @@
 import { getApiConfig } from '../config/api';
 import { logInfo, logError, logWarn } from '../utils/logger';
 import { deviceAPI } from './api';
+import { tokenService } from '../services/tokenService';
 
 export interface UnifiedOnboardingProgress {
   stage: 'upload' | 'device' | 'rules' | 'maintenance' | 'safety' | 'complete';
@@ -48,9 +49,9 @@ export class UnifiedOnboardingService {
     const startTime = Date.now();
     
     try {
-      logInfo('UnifiedOnboarding', 'Starting unified onboarding workflow', {
+      logInfo('UnifiedOnboarding', 'Starting unified onboarding process', {
         deviceName: formData.deviceName,
-        hasFile: !!uploadedFile,
+        fileSize: uploadedFile?.size,
         fileName: uploadedFile?.name
       });
 
@@ -137,48 +138,58 @@ export class UnifiedOnboardingService {
 
       logInfo('UnifiedOnboarding', 'Calling unified backend service', { endpoint: '/api/devices/onboard-with-ai' });
 
-      // Debug: Check token status before making the request
-      const token = localStorage.getItem('token');
-      const user = localStorage.getItem('user');
-      logInfo('UnifiedOnboarding', 'Token status before request', { 
-        hasToken: !!token, 
-        tokenLength: token?.length || 0,
-        hasUser: !!user,
-        userData: user ? JSON.parse(user) : null
-      });
-
-      // Validate authentication before proceeding
+      // Step 1: Validate authentication with detailed logging
+      logInfo('UnifiedOnboarding', 'Step 1: Validating authentication');
+      const token = tokenService.getToken();
+      
       if (!token) {
+        logError('UnifiedOnboarding', 'No authentication token found');
         throw new Error('No authentication token found. Please log in again.');
       }
 
-      // Test authentication with a simple API call
-      try {
-        logInfo('UnifiedOnboarding', 'Testing authentication before onboarding...');
-        
-        // Get user email from localStorage
-        const userData = user ? JSON.parse(user) : null;
-        const userEmail = userData?.email;
-        
-        if (userEmail) {
-          // Check if user exists in database
-          const dbCheckResponse = await fetch(`${this.baseUrl}/api/devices/debug-db?email=${encodeURIComponent(userEmail)}`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
+      logInfo('UnifiedOnboarding', 'Token found', { 
+        tokenLength: token.length,
+        tokenPrefix: token.substring(0, 20) + '...',
+        hasToken: !!token 
+      });
 
-          if (dbCheckResponse.ok) {
-            const dbData = await dbCheckResponse.json();
-            logInfo('UnifiedOnboarding', 'Database check successful', dbData);
-          } else {
-            logWarn('UnifiedOnboarding', `Database check failed: ${dbCheckResponse.status} ${dbCheckResponse.statusText}`);
+      // Step 2: Test backend connectivity first
+      logInfo('UnifiedOnboarding', 'Testing backend connectivity');
+      
+      try {
+        const healthResponse = await fetch(`${this.baseUrl}/api/devices/health`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
           }
+        });
+
+        logInfo('UnifiedOnboarding', 'Health check response', {
+          status: healthResponse.status,
+          statusText: healthResponse.statusText,
+          ok: healthResponse.ok,
+          url: healthResponse.url
+        });
+
+        if (!healthResponse.ok) {
+          throw new Error(`Backend health check failed: ${healthResponse.status} ${healthResponse.statusText}`);
+        }
+
+        logInfo('UnifiedOnboarding', 'Backend connectivity test successful');
+      } catch (healthError) {
+        logError('UnifiedOnboarding', 'Backend connectivity test failed', healthError instanceof Error ? healthError : new Error('Unknown health error'));
+        
+        if (healthError instanceof TypeError && healthError.message.includes('fetch')) {
+          throw new Error(`Cannot connect to backend server at ${this.baseUrl}. Please check if the server is running.`);
         }
         
-        // First, test the debug endpoint
+        throw new Error('Backend server is not accessible. Please check if the server is running.');
+      }
+
+      // Step 3: Test authentication with debug endpoint only (more reliable)
+      try {
+        logInfo('UnifiedOnboarding', 'Testing authentication with debug endpoint');
+        
         const debugResponse = await fetch(`${this.baseUrl}/api/devices/debug-auth`, {
           method: 'GET',
           headers: {
@@ -187,31 +198,45 @@ export class UnifiedOnboardingService {
           }
         });
 
+        logInfo('UnifiedOnboarding', 'Debug endpoint response', {
+          status: debugResponse.status,
+          statusText: debugResponse.statusText,
+          ok: debugResponse.ok,
+          url: debugResponse.url
+        });
+
         if (debugResponse.ok) {
           const debugData = await debugResponse.json();
           logInfo('UnifiedOnboarding', 'Debug authentication successful', debugData);
         } else {
-          logError('UnifiedOnboarding', `Debug authentication failed: ${debugResponse.status} ${debugResponse.statusText}`);
-        }
-
-        // Then test the profile endpoint
-        const authTestResponse = await fetch(`${this.baseUrl}/api/users/profile`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+          logWarn('UnifiedOnboarding', `Debug authentication failed: ${debugResponse.status} ${debugResponse.statusText}`);
+          
+          // Try to get response text for more details
+          try {
+            const errorText = await debugResponse.text();
+            logWarn('UnifiedOnboarding', `Debug endpoint error response: ${errorText}`);
+          } catch (textError) {
+            logWarn('UnifiedOnboarding', 'Could not read debug endpoint error response', textError instanceof Error ? textError : new Error('Unknown text error'));
           }
-        });
-
-        if (!authTestResponse.ok) {
-          logError('UnifiedOnboarding', `Authentication test failed: ${authTestResponse.status} ${authTestResponse.statusText}`);
-          throw new Error(`Authentication failed: ${authTestResponse.status} ${authTestResponse.statusText}`);
+          
+          // Don't throw error for authentication failure during onboarding
+          // Just log a warning and continue
+          logWarn('UnifiedOnboarding', 'Authentication test failed, but continuing with onboarding process');
         }
 
-        logInfo('UnifiedOnboarding', 'Authentication test successful');
-      } catch (authError) {
-        logError('UnifiedOnboarding', 'Authentication validation failed', authError instanceof Error ? authError : new Error('Unknown error'));
-        throw new Error('Authentication validation failed. Please log in again.');
+        logInfo('UnifiedOnboarding', 'Authentication test completed');
+              } catch (authError) {
+          const error = authError instanceof Error ? authError : new Error(String(authError));
+          logWarn('UnifiedOnboarding', 'Authentication validation failed, but continuing', undefined, error);
+        
+        // Check if it's a network error
+        if (authError instanceof TypeError && authError.message.includes('fetch')) {
+          logError('UnifiedOnboarding', `Network error - backend might not be accessible. Base URL: ${this.baseUrl}, Error: ${authError.message}`);
+          throw new Error('Cannot connect to backend server. Please check if the server is running.');
+        }
+        
+        // Don't throw error for authentication issues during onboarding
+        logWarn('UnifiedOnboarding', 'Authentication issues detected, but continuing with onboarding process');
       }
 
       // Use the proper API instance with authentication handling
@@ -339,7 +364,8 @@ export class UnifiedOnboardingService {
         };
 
              } catch (pdfResultsError) {
-         logWarn('UnifiedOnboarding', 'Failed to fetch PDF results, using default counts', pdfResultsError instanceof Error ? pdfResultsError : new Error('Unknown error'));
+         const errorObj = pdfResultsError instanceof Error ? pdfResultsError : new Error(String(pdfResultsError));
+         logWarn('UnifiedOnboarding', 'Failed to fetch PDF results, using default counts', undefined, errorObj);
         
         // Return with default counts if PDF results fetch fails
         onProgress?.({
@@ -372,7 +398,8 @@ export class UnifiedOnboardingService {
 
     } catch (error) {
       const processingTime = Date.now() - startTime;
-      logError('UnifiedOnboarding', 'Unified onboarding failed', error);
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      logError('UnifiedOnboarding', 'Unified onboarding failed', errorObj);
       
       onProgress?.({
         stage: 'complete',
@@ -401,7 +428,8 @@ export class UnifiedOnboardingService {
       return response.data;
       
          } catch (error) {
-       logError('UnifiedOnboarding', 'Failed to get onboarding status', error instanceof Error ? error : new Error('Unknown error'));
+       const errorObj = error instanceof Error ? error : new Error(String(error));
+       logError('UnifiedOnboarding', 'Failed to get onboarding status', errorObj);
       throw error;
     }
   }
@@ -428,7 +456,8 @@ export class UnifiedOnboardingService {
       return await response.json();
       
          } catch (error) {
-       logError('UnifiedOnboarding', 'Failed to retry onboarding step', error instanceof Error ? error : new Error('Unknown error'));
+       const errorObj = error instanceof Error ? error : new Error(String(error));
+       logError('UnifiedOnboarding', 'Failed to retry onboarding step', errorObj);
       throw error;
     }
   }

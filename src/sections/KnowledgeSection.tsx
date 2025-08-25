@@ -88,54 +88,139 @@ export const KnowledgeSection: React.FC = () => {
     }
   }, [chatMessages]);
 
+  // Function to refresh collections data
+  const refreshCollections = async () => {
+    try {
+      setLoading(true);
+      const collectionsResponse = await pdfAPI.debug.listAllCollections();
+      console.log('Collections refresh response:', collectionsResponse);
+      
+      // Handle both response formats from external service
+      let collections = [];
+      if (collectionsResponse.data.success && collectionsResponse.data.data && collectionsResponse.data.data.collections) {
+        // New format: { success: true, data: { collections: [...] } }
+        collections = collectionsResponse.data.data.collections;
+      } else if (collectionsResponse.data.success && collectionsResponse.data.collections) {
+        // Alternative format: { success: true, collections: [...] }
+        collections = collectionsResponse.data.collections;
+      } else if (Array.isArray(collectionsResponse.data)) {
+        // Direct array format: [...]
+        collections = collectionsResponse.data;
+      } else {
+        console.error('Unexpected collections response format:', collectionsResponse.data);
+        throw new Error('Invalid collections response format');
+      }
+
+      const convertedDocuments: KnowledgeDocument[] = collections.map((collection: any, index: number) => ({
+        id: collection.collection_name || collection.id || index.toString(),
+        name: collection.pdf_name || collection.name || collection.collection_name || `PDF_${index}`,
+        type: 'pdf',
+        uploadedAt: collection.created_at || collection.uploadedAt || new Date().toISOString(),
+        processedAt: collection.created_at || collection.processedAt || new Date().toISOString(),
+        size: collection.size || 0,
+        status: collection.status || 'completed',
+        vectorized: collection.vectorized !== false, // Default to true unless explicitly false
+        chunk_count: collection.chunk_count || collection.chunkCount || 0,
+        deviceId: collection.deviceId || undefined,
+        deviceName: collection.deviceName || undefined
+      }));
+      setDocuments(convertedDocuments);
+      logInfo('Knowledge', 'Collections refreshed successfully', { count: convertedDocuments.length });
+    } catch (error) {
+      logError('Knowledge', 'Failed to refresh collections', error instanceof Error ? error : new Error('Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Load documents from external PDF API and devices on component mount
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
         
-        // Load PDF documents from backend API
+        // Load PDF documents from external collections API
         try {
-          const pdfListResponse = await pdfAPI.listPDFs(0, 50); // Use backend API instead of pdfProcessingService
-          const convertedDocuments: KnowledgeDocument[] = pdfListResponse.data.pdfs.map((pdf: any, index: number) => ({
-            id: pdf.id || index.toString(),
-            name: pdf.name || pdf.filename || `PDF_${index}`,
+          const collectionsResponse = await pdfAPI.debug.listAllCollections();
+          console.log('Collections response:', collectionsResponse);
+          
+          // Handle both response formats from external service
+          let collections = [];
+          if (collectionsResponse.data.success && collectionsResponse.data.data && collectionsResponse.data.data.collections) {
+            // New format: { success: true, data: { collections: [...] } }
+            collections = collectionsResponse.data.data.collections;
+          } else if (collectionsResponse.data.success && collectionsResponse.data.collections) {
+            // Alternative format: { success: true, collections: [...] }
+            collections = collectionsResponse.data.collections;
+          } else if (Array.isArray(collectionsResponse.data)) {
+            // Direct array format: [...]
+            collections = collectionsResponse.data;
+          } else {
+            console.error('Unexpected collections response format:', collectionsResponse.data);
+            throw new Error('Invalid collections response format');
+          }
+
+          const convertedDocuments: KnowledgeDocument[] = collections.map((collection: any, index: number) => ({
+            id: collection.collection_name || collection.id || index.toString(),
+            name: collection.pdf_name || collection.name || collection.collection_name || `PDF_${index}`,
             type: 'pdf',
-            uploadedAt: pdf.uploaded_at || pdf.created_at || new Date().toISOString(),
-            processedAt: pdf.processed_at || pdf.created_at || new Date().toISOString(),
-            size: pdf.file_size || pdf.size_bytes || 0,
-            status: pdf.status || 'completed',
-            vectorized: pdf.vectorized || true,
-            chunk_count: pdf.chunk_count || 0,
-            deviceId: pdf.device_id || undefined,
-            deviceName: pdf.device_name || undefined
+            uploadedAt: collection.created_at || collection.uploadedAt || new Date().toISOString(),
+            processedAt: collection.created_at || collection.processedAt || new Date().toISOString(),
+            size: collection.size || 0,
+            status: collection.status || 'completed',
+            vectorized: collection.vectorized !== false, // Default to true unless explicitly false
+            chunk_count: collection.chunk_count || collection.chunkCount || 0,
+            deviceId: collection.deviceId || undefined,
+            deviceName: collection.deviceName || undefined
           }));
           setDocuments(convertedDocuments);
-          logInfo('Knowledge', 'PDF documents loaded from backend', { count: convertedDocuments.length });
-        } catch (pdfError) {
-          logError('Knowledge', 'Failed to load PDF documents from backend', pdfError instanceof Error ? pdfError : new Error('Unknown error'));
-          // Try fallback to knowledge API
+          logInfo('Knowledge', 'PDF documents loaded from external collections', { count: convertedDocuments.length });
+        } catch (collectionsError) {
+          logError('Knowledge', 'Failed to load PDF documents from external collections', collectionsError instanceof Error ? collectionsError : new Error('Unknown error'));
+          
+          // Fallback to backend PDF API
           try {
-            const knowledgeResponse = await knowledgeAPI.getDocuments();
-            const knowledgeDocuments: KnowledgeDocument[] = knowledgeResponse.data.documents.map((doc: any) => ({
-              id: doc.id.toString(),
-              name: doc.name,
-              type: doc.type || 'pdf',
-              uploadedAt: doc.uploadedAt,
-              processedAt: doc.processedAt || doc.uploadedAt,
-              size: doc.size || 0,
-              status: doc.status || 'completed',
-              vectorized: doc.vectorized || true,
-              chunk_count: doc.chunkCount || 0,
-              deviceId: doc.deviceId,
-              deviceName: doc.deviceName
+            const pdfListResponse = await pdfAPI.listPDFs(0, 50);
+            const convertedDocuments: KnowledgeDocument[] = pdfListResponse.data.pdfs.map((pdf: any, index: number) => ({
+              id: pdf.id || index.toString(),
+              name: pdf.name || pdf.filename || `PDF_${index}`,
+              type: 'pdf',
+              uploadedAt: pdf.uploaded_at || pdf.created_at || new Date().toISOString(),
+              processedAt: pdf.processed_at || pdf.created_at || new Date().toISOString(),
+              size: pdf.file_size || pdf.size_bytes || 0,
+              status: pdf.status || 'completed',
+              vectorized: pdf.vectorized || true,
+              chunk_count: pdf.chunk_count || 0,
+              deviceId: pdf.device_id || undefined,
+              deviceName: pdf.device_name || undefined
             }));
-            setDocuments(knowledgeDocuments);
-            logInfo('Knowledge', 'PDF documents loaded from knowledge API fallback', { count: knowledgeDocuments.length });
-          } catch (knowledgeError) {
-            logError('Knowledge', 'Failed to load documents from knowledge API fallback', knowledgeError instanceof Error ? knowledgeError : new Error('Unknown error'));
-            // Keep empty array as final fallback
-            setDocuments([]);
+            setDocuments(convertedDocuments);
+            logInfo('Knowledge', 'PDF documents loaded from backend fallback', { count: convertedDocuments.length });
+          } catch (pdfError) {
+            logError('Knowledge', 'Failed to load PDF documents from backend fallback', pdfError instanceof Error ? pdfError : new Error('Unknown error'));
+            // Try fallback to knowledge API
+            try {
+              const knowledgeResponse = await knowledgeAPI.getDocuments();
+              const knowledgeDocuments: KnowledgeDocument[] = knowledgeResponse.data.documents.map((doc: any) => ({
+                id: doc.id.toString(),
+                name: doc.name,
+                type: doc.type || 'pdf',
+                uploadedAt: doc.uploadedAt,
+                processedAt: doc.processedAt || doc.uploadedAt,
+                size: doc.size || 0,
+                status: doc.status || 'completed',
+                vectorized: doc.vectorized || true,
+                chunk_count: doc.chunkCount || 0,
+                deviceId: doc.deviceId,
+                deviceName: doc.deviceName
+              }));
+              setDocuments(knowledgeDocuments);
+              logInfo('Knowledge', 'PDF documents loaded from knowledge API fallback', { count: knowledgeDocuments.length });
+            } catch (knowledgeError) {
+              logError('Knowledge', 'Failed to load documents from knowledge API fallback', knowledgeError instanceof Error ? knowledgeError : new Error('Unknown error'));
+              // Keep empty array as final fallback
+              setDocuments([]);
+            }
           }
         }
 
@@ -312,8 +397,8 @@ export const KnowledgeSection: React.FC = () => {
     try {
       const deviceName = deviceId ? devices.find((d: Device) => d.id === deviceId)?.name : undefined;
       
-      // Upload directly to PDF processing service (like in Device section)
-      const uploadResponse = await pdfProcessingService.uploadPDF(file);
+      // Upload directly to PDF processing service using the public endpoint
+      const uploadResponse = await pdfProcessingService.uploadPDFPublic(file);
       
       // Create a new document entry
       const newDocument: KnowledgeDocument = {
@@ -655,23 +740,38 @@ export const KnowledgeSection: React.FC = () => {
           <div className="knowledge-fixed-header flex-shrink-0 p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">PDF Library</h2>
-              <label className="cursor-pointer">
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  disabled={uploading}
-                />
-                <div className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all shadow-sm">
-                  {uploading ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={refreshCollections}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all shadow-sm disabled:opacity-50"
+                  title="Refresh collections from external service"
+                >
+                  {loading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
                   ) : (
-                    <Plus className="w-4 h-4" />
+                    <Settings className="w-4 h-4" />
                   )}
-                  {uploading ? 'Uploading...' : 'Upload'}
-                </div>
-              </label>
+                  Refresh
+                </button>
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all shadow-sm">
+                    {uploading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <Plus className="w-4 h-4" />
+                    )}
+                    {uploading ? 'Uploading...' : 'Upload'}
+                  </div>
+                </label>
+              </div>
             </div>
 
             {/* Search and Filters */}
