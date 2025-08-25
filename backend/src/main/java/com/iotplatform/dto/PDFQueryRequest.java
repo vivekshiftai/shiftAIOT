@@ -27,8 +27,7 @@ public class PDFQueryRequest {
     private Integer topK = 5; // Default value
     
     @JsonProperty("organization_id")
-    @NotBlank(message = "Organization ID is required")
-    private String organizationId;
+    private String organizationId; // Optional - will be set from authenticated user
     
     // Default constructor for JSON deserialization
     public PDFQueryRequest() {}

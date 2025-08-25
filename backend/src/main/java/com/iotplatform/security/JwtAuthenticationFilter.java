@@ -39,7 +39,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (requestURI.startsWith("/api/auth/") || 
                 requestURI.startsWith("/auth/") ||
                 requestURI.startsWith("/api/health") ||
-                requestURI.startsWith("/health")) {
+                requestURI.startsWith("/health") ||
+                requestURI.startsWith("/swagger-ui") ||
+                requestURI.startsWith("/v3/api-docs")) {
                 logger.debug("Skipping JWT authentication for public endpoint: {}", requestURI);
                 filterChain.doFilter(request, response);
                 return;
@@ -60,7 +62,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     if (username != null) {
                         try {
                             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                            logger.info("🔐 User details loaded successfully for: {}", username);
+                            logger.info("🔐 User details loaded successfully for: {} with roles: {}", 
+                                      username, userDetails.getAuthorities());
+                            
+                            // Check if user is admin and log it
+                            boolean isAdmin = userDetails.getAuthorities().stream()
+                                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+                            if (isAdmin) {
+                                logger.info("🔐 Admin user detected: {} - granting all permissions", username);
+                            }
                             
                             UsernamePasswordAuthenticationToken authentication = 
                                 new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());

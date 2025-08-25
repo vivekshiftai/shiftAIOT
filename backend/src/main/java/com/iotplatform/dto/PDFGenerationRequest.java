@@ -27,8 +27,6 @@ public class PDFGenerationRequest {
     @JsonProperty("device_id")
     private String deviceId;
     
-    @NotBlank(message = "Organization ID is required")
-    @Size(max = 255, message = "Organization ID must not exceed 255 characters")
     @JsonProperty("organization_id")
-    private String organizationId;
+    private String organizationId; // Optional - will be set from authenticated user
 }

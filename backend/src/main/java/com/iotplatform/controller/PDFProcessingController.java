@@ -148,10 +148,16 @@ public class PDFProcessingController {
             userDetails.getUsername(), request.getPdfName());
         
         try {
+            // Set organization ID from authenticated user
+            String organizationId = userDetails.getUser().getOrganizationId();
+            request.setOrganizationId(organizationId);
+            
+            log.info("PDF query request processed with organization ID: {}", organizationId);
+            
             PDFQueryResponse response = pdfProcessingService.queryPDF(
                 request, 
                 Long.parseLong(userDetails.getUser().getId()), 
-                userDetails.getUser().getOrganizationId()
+                organizationId
             );
             
             log.info("PDF query completed successfully for user: {} on document: {}", 
@@ -250,10 +256,16 @@ public class PDFProcessingController {
             userDetails.getUsername(), request.getPdfName(), request.getDeviceId());
         
         try {
+            // Set organization ID from authenticated user
+            String organizationId = userDetails.getUser().getOrganizationId();
+            request.setOrganizationId(organizationId);
+            
+            log.info("Rules generation request processed with organization ID: {}", organizationId);
+            
             CompletableFuture<RulesGenerationResponse> future = pdfProcessingService.generateRulesAsync(
                 request.getPdfName(), 
                 request.getDeviceId(), 
-                request.getOrganizationId()
+                organizationId
             );
             
             // Create async response
@@ -307,10 +319,16 @@ public class PDFProcessingController {
             userDetails.getUsername(), request.getPdfName(), request.getDeviceId());
         
         try {
+            // Set organization ID from authenticated user
+            String organizationId = userDetails.getUser().getOrganizationId();
+            request.setOrganizationId(organizationId);
+            
+            log.info("Maintenance generation request processed with organization ID: {}", organizationId);
+            
             CompletableFuture<MaintenanceGenerationResponse> future = pdfProcessingService.generateMaintenanceAsync(
                 request.getPdfName(), 
                 request.getDeviceId(), 
-                request.getOrganizationId()
+                organizationId
             );
             
             // Create async response
@@ -364,10 +382,16 @@ public class PDFProcessingController {
             userDetails.getUsername(), request.getPdfName(), request.getDeviceId());
         
         try {
+            // Set organization ID from authenticated user
+            String organizationId = userDetails.getUser().getOrganizationId();
+            request.setOrganizationId(organizationId);
+            
+            log.info("Safety generation request processed with organization ID: {}", organizationId);
+            
             CompletableFuture<SafetyGenerationResponse> future = pdfProcessingService.generateSafetyAsync(
                 request.getPdfName(), 
                 request.getDeviceId(), 
-                request.getOrganizationId()
+                organizationId
             );
             
             // Create async response

@@ -1,5 +1,6 @@
 package com.iotplatform.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -7,14 +8,18 @@ import jakarta.validation.constraints.NotNull;
 public class ConversationConfigRequest {
     
     @NotBlank
+    @JsonProperty("platformName")
     private String platformName;
     
     @NotBlank
+    @JsonProperty("platformType")
     private String platformType;
     
     @NotNull
+    @JsonProperty("credentials")
     private Map<String, Object> credentials;
     
+    @JsonProperty("isActive")
     private boolean isActive = true;
 
     // Getters and Setters

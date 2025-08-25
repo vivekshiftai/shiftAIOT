@@ -71,7 +71,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        logger.info("Configuring Security Filter Chain with proper authentication");
+        logger.info("Configuring Security Filter Chain with proper authentication and admin permissions");
         
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -94,6 +94,10 @@ public class SecurityConfig {
                 .requestMatchers("/health/**").permitAll()
                 .requestMatchers("/api/health/**").permitAll()
                 
+                // Admin endpoints (admin role required)
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/system/**").hasRole("ADMIN")
+                
                 // Protected endpoints (authentication required)
                 .requestMatchers("/api/devices/**").authenticated()
                 .requestMatchers("/api/notifications/**").authenticated()
@@ -102,6 +106,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/users/**").authenticated()
                 .requestMatchers("/api/analytics/**").authenticated()
                 .requestMatchers("/api/logs/**").authenticated()
+                .requestMatchers("/api/conversation-configs/**").authenticated()
+                .requestMatchers("/api/pdf/**").authenticated()
+                .requestMatchers("/api/chat/**").authenticated()
                 
                 // Legacy endpoints (for backward compatibility)
                 .requestMatchers("/devices/**").authenticated()
@@ -115,7 +122,7 @@ public class SecurityConfig {
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthenticationFilter(tokenProvider, userDetailsService), UsernamePasswordAuthenticationFilter.class);
 
-        logger.info("Security configuration completed with proper authentication");
+        logger.info("Security configuration completed with proper authentication and admin permissions");
         return http.build();
     }
 
