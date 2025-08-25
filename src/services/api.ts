@@ -162,12 +162,7 @@ export const deviceAPI = {
   getDebugData: (deviceId: string) => api.get(`/api/devices/${deviceId}/debug-data`),
   testAuth: () => api.get('/api/devices/auth-test'),
   testHealth: () => api.get('/api/devices/health'),
-  onboardWithAI: (formData: FormData) => api.post('/api/devices/onboard-with-ai', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-    timeout: 300000, // 5 minutes timeout for large files
-  }),
+  onboardWithAI: (formData: FormData) => api.post('/api/devices/onboard-with-ai', formData),
   getDevicePDFResults: (deviceId: string) => api.get(`/api/devices/${deviceId}/pdf-results`),
 };
 
@@ -250,11 +245,7 @@ export const knowledgeAPI = {
   uploadDocument: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post('/api/knowledge/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return api.post('/api/knowledge/upload', formData);
   },
   
   uploadPDF: (file: File, deviceId?: string, deviceName?: string) => {
@@ -266,11 +257,7 @@ export const knowledgeAPI = {
     if (deviceName) {
       formData.append('deviceName', deviceName);
     }
-    return api.post('/api/knowledge/upload-pdf', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return api.post('/api/knowledge/upload-pdf', formData);
   },
   
   getDocuments: (deviceId?: string) => {
@@ -365,9 +352,6 @@ export const pdfAPI = {
     if (deviceName) formData.append('deviceName', deviceName);
     
     return api.post('/api/pdf/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
       timeout: 300000, // 5 minutes timeout for large files
     });
   },
@@ -378,9 +362,6 @@ export const pdfAPI = {
     formData.append('file', file);
     
     return api.post('/api/pdf/upload-pdf', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
       timeout: 300000, // 5 minutes timeout for large files
     });
   },

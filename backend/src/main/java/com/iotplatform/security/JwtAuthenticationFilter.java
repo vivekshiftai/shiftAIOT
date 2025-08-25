@@ -36,6 +36,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             // Skip authentication for public endpoints only
             String requestURI = request.getRequestURI();
+            String contentType = request.getContentType();
+            String method = request.getMethod();
+            
+            logger.info("🔐 JWT Filter - URI: {}, Method: {}, Content-Type: {}", 
+                       requestURI, method, contentType);
+            
             if (requestURI.startsWith("/api/auth/") || 
                 requestURI.startsWith("/auth/") ||
                 requestURI.startsWith("/api/health") ||
