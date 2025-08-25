@@ -145,7 +145,6 @@ public class UnifiedOnboardingService {
             RulesGenerationResponse rulesResponse = pdfProcessingService.generateRules(pdfName, deviceId, organizationId);
             
             if (rulesResponse.isSuccess() && rulesResponse.getRules() != null && !rulesResponse.getRules().isEmpty()) {
-                storeRules(rulesResponse.getRules(), deviceId, organizationId);
                 log.info("Successfully generated and stored {} rules for device: {}", rulesResponse.getRules().size(), deviceId);
             } else {
                 log.warn("No rules generated for device: {}", deviceId);
@@ -156,7 +155,6 @@ public class UnifiedOnboardingService {
             MaintenanceGenerationResponse maintenanceResponse = pdfProcessingService.generateMaintenance(pdfName, deviceId, organizationId);
             
             if (maintenanceResponse.isSuccess() && maintenanceResponse.getMaintenanceTasks() != null && !maintenanceResponse.getMaintenanceTasks().isEmpty()) {
-                storeMaintenance(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId);
                 log.info("Successfully generated and stored {} maintenance items for device: {}", maintenanceResponse.getMaintenanceTasks().size(), deviceId);
             } else {
                 log.warn("No maintenance items generated for device: {}", deviceId);
@@ -167,7 +165,6 @@ public class UnifiedOnboardingService {
             SafetyGenerationResponse safetyResponse = pdfProcessingService.generateSafety(pdfName, deviceId, organizationId);
             
             if (safetyResponse.isSuccess() && safetyResponse.getSafetyPrecautions() != null && !safetyResponse.getSafetyPrecautions().isEmpty()) {
-                storeSafetyPrecautions(safetyResponse.getSafetyPrecautions(), deviceId, organizationId);
                 log.info("Successfully generated and stored {} safety precautions for device: {}", safetyResponse.getSafetyPrecautions().size(), deviceId);
             } else {
                 log.warn("No safety precautions generated for device: {}", deviceId);

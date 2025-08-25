@@ -59,6 +59,9 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
     private final PDFProcessingConfig config;
     private final PDFDocumentRepository pdfDocumentRepository;
     private final PDFQueryRepository pdfQueryRepository;
+    private final RuleRepository ruleRepository;
+    private final DeviceMaintenanceRepository deviceMaintenanceRepository;
+    private final DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository;
     private final RuleService ruleService;
     private final MaintenanceScheduleService maintenanceService;
     private final DeviceSafetyPrecautionService safetyService;
@@ -397,26 +400,22 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
         log.info("Generating rules synchronously for PDF: {} and device: {}", pdfName, deviceId);
         
         try {
-            // Call external service for rules generation
+            // Call external service for rules generation with PDF name in URL
             HttpHeaders headers = createHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("pdf_name", pdfName);
-            requestBody.put("device_id", deviceId);
-            requestBody.put("organization_id", organizationId);
+            // No request body needed - PDF name is in URL
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
             
-            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
-            
-            // Use consistent endpoint format
-            String endpoint = config.getBaseUrl() + "/generate-rules";
+            // Use correct endpoint format: /generate-rules/{pdfName}
+            String endpoint = config.getBaseUrl() + "/generate-rules/" + pdfName;
             log.debug("Calling external service endpoint: {}", endpoint);
             
-            ResponseEntity<RulesGenerationResponse> response = restTemplate.exchange(
+            ResponseEntity<Map> response = restTemplate.exchange(
                 endpoint,
                 HttpMethod.POST,
                 requestEntity,
-                RulesGenerationResponse.class
+                Map.class
             );
 
             if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
@@ -424,15 +423,44 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                 throw new PDFProcessingException("Failed to generate rules: Invalid response from external service");
             }
 
-            RulesGenerationResponse rulesResponse = response.getBody();
+            Map<String, Object> responseBody = response.getBody();
             
-            // Validate response
-            if (rulesResponse == null) {
-                throw new PDFProcessingException("Rules generation failed: Null response from external service");
+            // Handle the external service response format
+            RulesGenerationResponse rulesResponse = new RulesGenerationResponse();
+            
+            if (Boolean.TRUE.equals(responseBody.get("success"))) {
+                rulesResponse.setSuccess(true);
+                rulesResponse.setPdfName((String) responseBody.get("pdf_name"));
+                rulesResponse.setProcessingTime((String) responseBody.get("processing_time"));
+                
+                // Convert rules from external format to our format
+                List<Map<String, Object>> externalRules = (List<Map<String, Object>>) responseBody.get("rules");
+                if (externalRules != null) {
+                    List<Rule> rules = new ArrayList<>();
+                    for (Map<String, Object> externalRule : externalRules) {
+                        Rule rule = new Rule();
+                        rule.setName((String) externalRule.get("rule_name"));
+                        rule.setDescription((String) externalRule.get("description"));
+                        rule.setCondition("metric: " + externalRule.get("metric") + ", threshold: " + externalRule.get("threshold"));
+                        rule.setAction("consequence: " + externalRule.get("consequence"));
+                        rule.setDeviceId(deviceId);
+                        rule.setOrganizationId(organizationId);
+                        rule.setActive(true);
+                        rule.setCreatedAt(LocalDateTime.now());
+                        rule.setUpdatedAt(LocalDateTime.now());
+                        
+                        // Store rule in database
+                        ruleRepository.save(rule);
+                        rules.add(rule);
+                    }
+                    rulesResponse.setRules(rules);
+                }
+                
+                log.info("Rules generated and stored successfully for device: {}, rules count: {}", 
+                    deviceId, rulesResponse.getRules() != null ? rulesResponse.getRules().size() : 0);
+            } else {
+                throw new PDFProcessingException("Rules generation failed: External service returned success=false");
             }
-            
-            log.info("Rules generated successfully for device: {}, rules count: {}", 
-                deviceId, rulesResponse.getRules() != null ? rulesResponse.getRules().size() : 0);
             
             return rulesResponse;
 
@@ -455,26 +483,22 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
         log.info("Generating maintenance schedule synchronously for PDF: {} and device: {}", pdfName, deviceId);
         
         try {
-            // Call external service for maintenance generation
+            // Call external service for maintenance generation with PDF name in URL
             HttpHeaders headers = createHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("pdf_name", pdfName);
-            requestBody.put("device_id", deviceId);
-            requestBody.put("organization_id", organizationId);
+            // No request body needed - PDF name is in URL
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
             
-            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
-            
-            // Use consistent endpoint format
-            String endpoint = config.getBaseUrl() + "/generate-maintenance";
+            // Use correct endpoint format: /generate-maintenance/{pdfName}
+            String endpoint = config.getBaseUrl() + "/generate-maintenance/" + pdfName;
             log.debug("Calling external service endpoint: {}", endpoint);
             
-            ResponseEntity<MaintenanceGenerationResponse> response = restTemplate.exchange(
+            ResponseEntity<Map> response = restTemplate.exchange(
                 endpoint,
                 HttpMethod.POST,
                 requestEntity,
-                MaintenanceGenerationResponse.class
+                Map.class
             );
 
             if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
@@ -482,15 +506,42 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                 throw new PDFProcessingException("Failed to generate maintenance: Invalid response from external service");
             }
 
-            MaintenanceGenerationResponse maintenanceResponse = response.getBody();
+            Map<String, Object> responseBody = response.getBody();
             
-            // Validate response
-            if (maintenanceResponse == null) {
-                throw new PDFProcessingException("Maintenance generation failed: Null response from external service");
+            // Handle the external service response format
+            MaintenanceGenerationResponse maintenanceResponse = new MaintenanceGenerationResponse();
+            
+            if (Boolean.TRUE.equals(responseBody.get("success"))) {
+                maintenanceResponse.setSuccess(true);
+                maintenanceResponse.setPdfName((String) responseBody.get("pdf_name"));
+                maintenanceResponse.setProcessingTime((String) responseBody.get("processing_time"));
+                
+                // Convert maintenance tasks from external format to our format
+                List<Map<String, Object>> externalTasks = (List<Map<String, Object>>) responseBody.get("maintenance_tasks");
+                if (externalTasks != null) {
+                    List<DeviceMaintenance> maintenanceTasks = new ArrayList<>();
+                    for (Map<String, Object> externalTask : externalTasks) {
+                        DeviceMaintenance maintenance = new DeviceMaintenance();
+                        maintenance.setTitle((String) externalTask.get("task_name"));
+                        maintenance.setDescription((String) externalTask.get("description"));
+                        maintenance.setDeviceId(deviceId);
+                        maintenance.setOrganizationId(organizationId);
+                        maintenance.setStatus("PENDING");
+                        maintenance.setCreatedAt(LocalDateTime.now());
+                        maintenance.setUpdatedAt(LocalDateTime.now());
+                        
+                        // Store maintenance task in database
+                        deviceMaintenanceRepository.save(maintenance);
+                        maintenanceTasks.add(maintenance);
+                    }
+                    maintenanceResponse.setMaintenanceTasks(maintenanceTasks);
+                }
+                
+                log.info("Maintenance tasks generated and stored successfully for device: {}, tasks count: {}", 
+                    deviceId, maintenanceResponse.getMaintenanceTasks() != null ? maintenanceResponse.getMaintenanceTasks().size() : 0);
+            } else {
+                throw new PDFProcessingException("Maintenance generation failed: External service returned success=false");
             }
-            
-            log.info("Maintenance schedule generated successfully for device: {}, tasks count: {}", 
-                deviceId, maintenanceResponse.getMaintenanceTasks() != null ? maintenanceResponse.getMaintenanceTasks().size() : 0);
             
             return maintenanceResponse;
 
@@ -513,26 +564,22 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
         log.info("Generating safety precautions synchronously for PDF: {} and device: {}", pdfName, deviceId);
         
         try {
-            // Call external service for safety generation
+            // Call external service for safety generation with PDF name in URL
             HttpHeaders headers = createHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("pdf_name", pdfName);
-            requestBody.put("device_id", deviceId);
-            requestBody.put("organization_id", organizationId);
+            // No request body needed - PDF name is in URL
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
             
-            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
-            
-            // Use consistent endpoint format
-            String endpoint = config.getBaseUrl() + "/generate-safety";
+            // Use correct endpoint format: /generate-safety/{pdfName}
+            String endpoint = config.getBaseUrl() + "/generate-safety/" + pdfName;
             log.debug("Calling external service endpoint: {}", endpoint);
             
-            ResponseEntity<SafetyGenerationResponse> response = restTemplate.exchange(
+            ResponseEntity<Map> response = restTemplate.exchange(
                 endpoint,
                 HttpMethod.POST,
                 requestEntity,
-                SafetyGenerationResponse.class
+                Map.class
             );
 
             if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
@@ -540,15 +587,57 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                 throw new PDFProcessingException("Failed to generate safety precautions: Invalid response from external service");
             }
 
-            SafetyGenerationResponse safetyResponse = response.getBody();
+            Map<String, Object> responseBody = response.getBody();
             
-            // Validate response
-            if (safetyResponse == null) {
-                throw new PDFProcessingException("Safety generation failed: Null response from external service");
+            // Handle the external service response format
+            SafetyGenerationResponse safetyResponse = new SafetyGenerationResponse();
+            
+            if (Boolean.TRUE.equals(responseBody.get("success"))) {
+                safetyResponse.setSuccess(true);
+                safetyResponse.setPdfName((String) responseBody.get("pdf_name"));
+                safetyResponse.setProcessingTime((String) responseBody.get("processing_time"));
+                
+                // Convert safety precautions from external format to our format
+                List<Map<String, Object>> externalPrecautions = (List<Map<String, Object>>) responseBody.get("safety_information");
+                if (externalPrecautions != null) {
+                    List<DeviceSafetyPrecaution> safetyPrecautions = new ArrayList<>();
+                    for (Map<String, Object> externalPrecaution : externalPrecautions) {
+                        DeviceSafetyPrecaution safety = new DeviceSafetyPrecaution();
+                        safety.setTitle((String) externalPrecaution.get("name"));
+                        safety.setDescription((String) externalPrecaution.get("about_reaction"));
+                        safety.setSeverity("HIGH"); // Default severity since not provided in response
+                        safety.setDeviceId(deviceId);
+                        safety.setOrganizationId(organizationId);
+                        safety.setActive(true);
+                        safety.setCreatedAt(LocalDateTime.now());
+                        safety.setUpdatedAt(LocalDateTime.now());
+                        
+                        // Store additional safety information
+                        String causes = (String) externalPrecaution.get("causes");
+                        String howToAvoid = (String) externalPrecaution.get("how_to_avoid");
+                        String safetyInfo = (String) externalPrecaution.get("safety_info");
+                        
+                        // Combine all safety information into description
+                        StringBuilder fullDescription = new StringBuilder();
+                        fullDescription.append("About: ").append(externalPrecaution.get("about_reaction")).append("\n");
+                        if (causes != null) fullDescription.append("Causes: ").append(causes).append("\n");
+                        if (howToAvoid != null) fullDescription.append("How to Avoid: ").append(howToAvoid).append("\n");
+                        if (safetyInfo != null) fullDescription.append("Safety Info: ").append(safetyInfo);
+                        
+                        safety.setDescription(fullDescription.toString());
+                        
+                        // Store safety precaution in database
+                        deviceSafetyPrecautionRepository.save(safety);
+                        safetyPrecautions.add(safety);
+                    }
+                    safetyResponse.setSafetyPrecautions(safetyPrecautions);
+                }
+                
+                log.info("Safety precautions generated and stored successfully for device: {}, precautions count: {}", 
+                    deviceId, safetyResponse.getSafetyPrecautions() != null ? safetyResponse.getSafetyPrecautions().size() : 0);
+            } else {
+                throw new PDFProcessingException("Safety generation failed: External service returned success=false");
             }
-            
-            log.info("Safety precautions generated successfully for device: {}, precautions count: {}", 
-                deviceId, safetyResponse.getSafetyPrecautions() != null ? safetyResponse.getSafetyPrecautions().size() : 0);
             
             return safetyResponse;
 
