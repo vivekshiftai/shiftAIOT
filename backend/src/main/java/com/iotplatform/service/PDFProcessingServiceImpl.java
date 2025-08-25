@@ -10,6 +10,9 @@ import com.iotplatform.model.DeviceSafetyPrecaution;
 import com.iotplatform.model.Device;
 import com.iotplatform.repository.PDFDocumentRepository;
 import com.iotplatform.repository.PDFQueryRepository;
+import com.iotplatform.repository.RuleRepository;
+import com.iotplatform.repository.DeviceMaintenanceRepository;
+import com.iotplatform.repository.DeviceSafetyPrecautionRepository;
 import com.iotplatform.config.PDFProcessingConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -430,7 +433,6 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             
             if (Boolean.TRUE.equals(responseBody.get("success"))) {
                 rulesResponse.setSuccess(true);
-                rulesResponse.setPdfName((String) responseBody.get("pdf_name"));
                 rulesResponse.setProcessingTime((String) responseBody.get("processing_time"));
                 
                 // Convert rules from external format to our format
@@ -441,8 +443,9 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                         Rule rule = new Rule();
                         rule.setName((String) externalRule.get("rule_name"));
                         rule.setDescription((String) externalRule.get("description"));
-                        rule.setCondition("metric: " + externalRule.get("metric") + ", threshold: " + externalRule.get("threshold"));
-                        rule.setAction("consequence: " + externalRule.get("consequence"));
+                        rule.setMetric((String) externalRule.get("metric"));
+                        rule.setThreshold((String) externalRule.get("threshold"));
+                        rule.setConsequence((String) externalRule.get("consequence"));
                         rule.setDeviceId(deviceId);
                         rule.setOrganizationId(organizationId);
                         rule.setActive(true);
@@ -453,7 +456,20 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                         ruleRepository.save(rule);
                         rules.add(rule);
                     }
-                    rulesResponse.setRules(rules);
+                    // Convert to DTO format
+                    List<RulesGenerationResponse.Rule> dtoRules = new ArrayList<>();
+                    for (Rule rule : rules) {
+                        RulesGenerationResponse.Rule dtoRule = new RulesGenerationResponse.Rule();
+                        dtoRule.setName(rule.getName());
+                        dtoRule.setDescription(rule.getDescription());
+                        dtoRule.setMetric(rule.getMetric());
+                        dtoRule.setThreshold(rule.getThreshold());
+                        dtoRule.setConsequence(rule.getConsequence());
+                        dtoRule.setCondition("metric: " + rule.getMetric() + ", threshold: " + rule.getThreshold());
+                        dtoRule.setAction("consequence: " + rule.getConsequence());
+                        dtoRules.add(dtoRule);
+                    }
+                    rulesResponse.setRules(dtoRules);
                 }
                 
                 log.info("Rules generated and stored successfully for device: {}, rules count: {}", 
@@ -513,7 +529,6 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             
             if (Boolean.TRUE.equals(responseBody.get("success"))) {
                 maintenanceResponse.setSuccess(true);
-                maintenanceResponse.setPdfName((String) responseBody.get("pdf_name"));
                 maintenanceResponse.setProcessingTime((String) responseBody.get("processing_time"));
                 
                 // Convert maintenance tasks from external format to our format
@@ -522,11 +537,11 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                     List<DeviceMaintenance> maintenanceTasks = new ArrayList<>();
                     for (Map<String, Object> externalTask : externalTasks) {
                         DeviceMaintenance maintenance = new DeviceMaintenance();
-                        maintenance.setTitle((String) externalTask.get("task_name"));
+                        maintenance.setTaskName((String) externalTask.get("task_name"));
                         maintenance.setDescription((String) externalTask.get("description"));
                         maintenance.setDeviceId(deviceId);
                         maintenance.setOrganizationId(organizationId);
-                        maintenance.setStatus("PENDING");
+                        maintenance.setStatus(DeviceMaintenance.Status.PENDING);
                         maintenance.setCreatedAt(LocalDateTime.now());
                         maintenance.setUpdatedAt(LocalDateTime.now());
                         
@@ -534,7 +549,19 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                         deviceMaintenanceRepository.save(maintenance);
                         maintenanceTasks.add(maintenance);
                     }
-                    maintenanceResponse.setMaintenanceTasks(maintenanceTasks);
+                    // Convert to DTO format
+                    List<MaintenanceGenerationResponse.MaintenanceTask> dtoTasks = new ArrayList<>();
+                    for (DeviceMaintenance maintenance : maintenanceTasks) {
+                        MaintenanceGenerationResponse.MaintenanceTask dtoTask = new MaintenanceGenerationResponse.MaintenanceTask();
+                        dtoTask.setTaskName(maintenance.getTaskName());
+                        dtoTask.setDescription(maintenance.getDescription());
+                        dtoTask.setFrequency(maintenance.getFrequency());
+                        dtoTask.setPriority(maintenance.getPriority() != null ? maintenance.getPriority().name() : "MEDIUM");
+                        dtoTask.setEstimatedDuration(maintenance.getEstimatedDuration());
+                        dtoTask.setRequiredTools(maintenance.getRequiredTools());
+                        dtoTasks.add(dtoTask);
+                    }
+                    maintenanceResponse.setMaintenanceTasks(dtoTasks);
                 }
                 
                 log.info("Maintenance tasks generated and stored successfully for device: {}, tasks count: {}", 
@@ -594,7 +621,6 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             
             if (Boolean.TRUE.equals(responseBody.get("success"))) {
                 safetyResponse.setSuccess(true);
-                safetyResponse.setPdfName((String) responseBody.get("pdf_name"));
                 safetyResponse.setProcessingTime((String) responseBody.get("processing_time"));
                 
                 // Convert safety precautions from external format to our format
@@ -608,7 +634,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                         safety.setSeverity("HIGH"); // Default severity since not provided in response
                         safety.setDeviceId(deviceId);
                         safety.setOrganizationId(organizationId);
-                        safety.setActive(true);
+                        safety.setIsActive(true);
                         safety.setCreatedAt(LocalDateTime.now());
                         safety.setUpdatedAt(LocalDateTime.now());
                         
@@ -630,7 +656,17 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                         deviceSafetyPrecautionRepository.save(safety);
                         safetyPrecautions.add(safety);
                     }
-                    safetyResponse.setSafetyPrecautions(safetyPrecautions);
+                    // Convert to DTO format
+                    List<SafetyGenerationResponse.SafetyPrecaution> dtoPrecautions = new ArrayList<>();
+                    for (DeviceSafetyPrecaution safety : safetyPrecautions) {
+                        SafetyGenerationResponse.SafetyPrecaution dtoPrecaution = new SafetyGenerationResponse.SafetyPrecaution();
+                        dtoPrecaution.setTitle(safety.getTitle());
+                        dtoPrecaution.setDescription(safety.getDescription());
+                        dtoPrecaution.setCategory(safety.getCategory());
+                        dtoPrecaution.setSeverity(safety.getSeverity());
+                        dtoPrecautions.add(dtoPrecaution);
+                    }
+                    safetyResponse.setSafetyPrecautions(dtoPrecautions);
                 }
                 
                 log.info("Safety precautions generated and stored successfully for device: {}, precautions count: {}", 
