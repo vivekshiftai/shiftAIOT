@@ -36,9 +36,14 @@ public class DatabaseConfig {
             logger.info("Database User: {}", databaseUsername);
             logger.info("Database Product: {}", connection.getMetaData().getDatabaseProductName());
             logger.info("Database Version: {}", connection.getMetaData().getDatabaseProductVersion());
+            logger.info("Connection Auto Commit: {}", connection.getAutoCommit());
+            logger.info("Connection Read Only: {}", connection.isReadOnly());
             return "Database connection successful";
         } catch (SQLException e) {
             logger.error("❌ Failed to connect to PostgreSQL database: {}", e.getMessage());
+            logger.error("SQL State: {}", e.getSQLState());
+            logger.error("Error Code: {}", e.getErrorCode());
+            logger.error("Stack trace:", e);
             throw new RuntimeException("Database connection failed", e);
         }
     }
