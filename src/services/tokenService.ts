@@ -12,7 +12,7 @@ class TokenService {
   private constructor() {
     this.axiosInstance = axios.create({
       baseURL: getApiConfig().BACKEND_BASE_URL,
-      timeout: 10000,
+      // Removed timeout for better user experience
     });
   }
 

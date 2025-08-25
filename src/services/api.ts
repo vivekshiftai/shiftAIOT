@@ -8,7 +8,7 @@ const API_BASE_URL = getApiConfig().BACKEND_BASE_URL;
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, // 10 second timeout
+  // Removed timeout for better user experience
 });
 
 // Initialize token service
@@ -386,9 +386,7 @@ export const pdfAPI = {
     if (deviceId) formData.append('deviceId', deviceId);
     if (deviceName) formData.append('deviceName', deviceName);
     
-    return api.post('/api/pdf/upload', formData, {
-      timeout: 300000, // 5 minutes timeout for large files
-    });
+    return api.post('/api/pdf/upload', formData);
   },
 
   // Upload and process PDF files through backend (public endpoint)
@@ -396,9 +394,7 @@ export const pdfAPI = {
     const formData = new FormData();
     formData.append('file', file);
     
-    return api.post('/api/pdf/upload-pdf', formData, {
-      timeout: 300000, // 5 minutes timeout for large files
-    });
+    return api.post('/api/pdf/upload-pdf', formData);
   },
 
   // Query PDF content through backend
@@ -421,16 +417,14 @@ export const pdfAPI = {
   // List PDFs in external service format
   listPDFsExternal: async (page: number = 1, limit: number = 10) => {
     return api.get('/api/pdf/pdfs', { 
-      params: { page, limit },
-      timeout: 30000,
+      params: { page, limit }
     });
   },
 
   // Download processed PDF through backend
   downloadPDF: async (pdfName: string) => {
     return api.get(`/api/pdf/download/${pdfName}`, {
-      responseType: 'blob',
-      timeout: 30000,
+      responseType: 'blob'
     });
   },
 
@@ -449,9 +443,7 @@ export const pdfAPI = {
 
   // Generate rules using external service format
   generateRulesExternal: async (pdfName: string) => {
-    return api.post(`/api/pdf/generate-rules/${pdfName}`, {}, {
-      timeout: 120000, // 2 minutes timeout for generation
-    });
+    return api.post(`/api/pdf/generate-rules/${pdfName}`, {});
   },
 
   // Generate maintenance schedule from PDF through backend
@@ -464,9 +456,7 @@ export const pdfAPI = {
 
   // Generate maintenance using external service format
   generateMaintenanceExternal: async (pdfName: string) => {
-    return api.post(`/api/pdf/generate-maintenance/${pdfName}`, {}, {
-      timeout: 120000, // 2 minutes timeout for generation
-    });
+    return api.post(`/api/pdf/generate-maintenance/${pdfName}`, {});
   },
 
   // Generate safety precautions from PDF through backend
@@ -479,9 +469,7 @@ export const pdfAPI = {
 
   // Generate safety using external service format
   generateSafetyExternal: async (pdfName: string) => {
-    return api.post(`/api/pdf/generate-safety/${pdfName}`, {}, {
-      timeout: 120000, // 2 minutes timeout for generation
-    });
+    return api.post(`/api/pdf/generate-safety/${pdfName}`, {});
   },
 
   // Delete PDF through backend

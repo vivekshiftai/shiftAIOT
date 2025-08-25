@@ -931,11 +931,11 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
-        <div className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col border border-white/30">
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="bg-gradient-to-br from-blue-50/95 to-indigo-50/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-8xl max-h-[99vh] flex flex-col border border-blue-100/50">
           {/* Header - Hidden during loading */}
           {!showOnboardingLoader && (
-            <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 p-8 text-white flex-shrink-0 rounded-t-3xl">
+            <div className="bg-gradient-to-br from-blue-400 via-indigo-400 to-purple-400 p-8 text-white flex-shrink-0 rounded-t-3xl">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-3xl font-bold drop-shadow-lg">
@@ -962,7 +962,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           )}
 
           {/* Content - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-8 min-h-0 bg-gradient-to-br from-gray-50/50 to-white/30">
+          <div className="flex-1 overflow-y-auto p-8 min-h-0 bg-gradient-to-br from-blue-50/30 to-indigo-50/20">
             {showOnboardingLoader ? (
               renderLoadingContent()
             ) : showSuccessMessage ? (
@@ -978,7 +978,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
           {/* Footer - Hidden during loading and success */}
           {!showOnboardingLoader && !showSuccessMessage && (
-            <div className="p-8 border-t border-white/20 bg-white/40 backdrop-blur-sm flex-shrink-0 rounded-b-3xl">
+            <div className="p-8 border-t border-blue-100/50 bg-blue-50/40 backdrop-blur-sm flex-shrink-0 rounded-b-3xl">
               <div className="flex justify-between items-center">
                 <button
                   onClick={prevStep}
@@ -1010,7 +1010,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   <button
                     onClick={currentStep === 3 ? handleSubmit : nextStep}
                     disabled={isSubmitting || (currentStep === 3 && !uploadedFile)}
-                    className="flex items-center gap-3 px-8 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-xl hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
+                    className="flex items-center gap-3 px-8 py-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 text-white rounded-xl hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
                     {currentStep === 3 ? 'Complete Onboarding' : 'Next'}
                     <ArrowRight className="w-5 h-5" />

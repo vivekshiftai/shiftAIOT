@@ -151,11 +151,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     setLoading(true);
     setError(null);
 
-    // Add a timeout to prevent getting stuck in loading state
-    const timeoutId = setTimeout(() => {
-      logInfo('IoT', 'Loading timeout, setting loading to false');
-      setLoading(false);
-    }, 10000); // 10 second timeout
+    // Removed timeout for better user experience
     
     try {
       // Load all data from backend independently to handle partial failures
@@ -221,7 +217,6 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       // Don't set any dummy data - let the UI show empty state if no data
       logInfo('IoT', 'No data loaded from backend, showing empty state');
     } finally {
-      clearTimeout(timeoutId);
       logInfo('IoT', 'Setting loading to false');
       setLoading(false);
     }
@@ -229,7 +224,17 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
 
   // Note: Removed telemetry simulation to prevent unwanted notifications and data interference
 
-  // Note: Removed periodic device refresh to prevent interference with database data
+  // Real-time device refresh every 30 seconds
+  useEffect(() => {
+    if (!user) return;
+    
+    const interval = setInterval(() => {
+      logInfo('IoT', 'Auto-refreshing devices');
+      refreshDevices();
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [user]);
 
   const updateDeviceStatus = (deviceId: string, status: Status) => {
     logInfo('IoT', 'Updating device status', { deviceId, status });

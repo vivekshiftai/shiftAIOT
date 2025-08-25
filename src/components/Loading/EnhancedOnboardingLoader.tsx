@@ -60,15 +60,15 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
   const currentStepIndex = steps.indexOf(currentProcess);
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center bg-white overflow-hidden">
+    <div className="relative w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 overflow-hidden">
 
       {/* Main Content Container */}
       <div className="flex flex-col items-center justify-center space-y-8 px-6 max-w-md w-full">
         
-        {/* Morphing Green Streak Animation */}
+        {/* Morphing Blue Streak Animation */}
         <div className="relative w-full h-1 mb-4">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#20C997] to-transparent rounded-full animate-pulse opacity-30"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#20C997] to-transparent rounded-full animate-ping opacity-20" style={{ animationDelay: '0.5s' }}></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400 to-transparent rounded-full animate-pulse opacity-30"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-400 to-transparent rounded-full animate-ping opacity-20" style={{ animationDelay: '0.5s' }}></div>
         </div>
 
         {/* Detailed Step Progress */}
@@ -76,7 +76,7 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
           <div className="text-center space-y-2">
             <div className="flex items-center justify-center space-x-2">
               <span className="text-sm font-medium text-gray-600">Step</span>
-              <span className="text-lg font-bold text-[#20C997]">{stepDetails.currentStep}</span>
+              <span className="text-lg font-bold text-blue-500">{stepDetails.currentStep}</span>
               <span className="text-sm text-gray-400">of</span>
               <span className="text-lg font-bold text-gray-800">{stepDetails.totalSteps}</span>
             </div>
@@ -92,21 +92,21 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
               <div 
                 className={`w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
                   currentStepIndex === index 
-                    ? 'border-[#20C997] bg-[#D0F5E3] shadow-lg shadow-[#20C997]/20 scale-110' 
+                    ? 'border-blue-500 bg-blue-100 shadow-lg shadow-blue-500/20 scale-110' 
                     : index < currentStepIndex
-                    ? 'border-[#20C997] bg-[#D0F5E3]'
-                    : 'border-gray-200 bg-[#F6FFF7]'
+                    ? 'border-blue-500 bg-blue-100'
+                    : 'border-gray-200 bg-blue-50'
                 }`}
                 
               >
                 {currentStepIndex === index ? (
                   <div className="relative">
                     {/* Pulsing animation for current step */}
-                    <div className="absolute inset-0 rounded-full bg-[#20C997] animate-ping opacity-30"></div>
+                    <div className="absolute inset-0 rounded-full bg-blue-500 animate-ping opacity-30"></div>
                     <div className="relative z-10 text-lg">{stepInfo.icon}</div>
                   </div>
                 ) : index < currentStepIndex ? (
-                  <div className="text-[#20C997] text-lg">✓</div>
+                  <div className="text-blue-500 text-lg">✓</div>
                 ) : (
                   <div className="text-gray-400 text-lg">
                     {step === 'pdf' ? '📄' : step === 'rules' ? '⚡' : '🧠'}
@@ -118,7 +118,7 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
               {index < steps.length - 1 && (
                 <div className={`absolute top-6 left-12 w-6 h-0.5 transition-all duration-500 ${
                   index < currentStepIndex
-                    ? 'bg-[#20C997]'
+                    ? 'bg-blue-500'
                     : 'bg-gray-200'
                 }`}></div>
               )}

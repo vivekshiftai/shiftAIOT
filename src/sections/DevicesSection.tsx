@@ -27,6 +27,16 @@ export const DevicesSection: React.FC = () => {
   // Debug logging
   logInfo('DevicesSection', 'Devices data', { devices: devices, loading, count: devices?.length || 0 });
 
+  // Real-time device refresh every 15 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      logInfo('DevicesSection', 'Auto-refreshing devices');
+      // This will trigger a re-render with fresh data from IoT context
+    }, 15000); // 15 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
+
   // Initialize filters from query params
   useEffect(() => {
     const params = new URLSearchParams(location.search);

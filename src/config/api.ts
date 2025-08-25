@@ -11,8 +11,8 @@ export const API_CONFIG = {
   // PDF_PROCESSING_API_URL: 'https://your-pdf-service.com/api',
   // PDF_PROCESSING_API_URL: 'https://api.example.com/v1/pdf',
   
-  // Timeouts
-  REQUEST_TIMEOUT: 30000, // 30 seconds
+  // Timeouts - Removed for better user experience
+  // REQUEST_TIMEOUT: 30000, // 30 seconds
   
   // Retry configuration
   MAX_RETRIES: 3,
