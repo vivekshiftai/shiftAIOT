@@ -29,10 +29,10 @@ public interface DeviceDocumentationRepository extends JpaRepository<DeviceDocum
     Optional<DeviceDocumentation> findByIdAndDeviceOrganizationId(String id, String organizationId);
     
     @Query("SELECT COUNT(d) FROM DeviceDocumentation d WHERE d.device.id = :deviceId")
-    Long countByDeviceId(@Param("deviceId") String deviceId);
+    long countByDeviceId(@Param("deviceId") String deviceId);
     
     @Query("SELECT COUNT(d) FROM DeviceDocumentation d WHERE d.device.organizationId = :organizationId AND d.documentType = :documentType")
-    Long countByOrganizationIdAndDocumentType(@Param("organizationId") String organizationId, @Param("documentType") DocumentType documentType);
+    long countByOrganizationIdAndDocumentType(@Param("organizationId") String organizationId, @Param("documentType") DocumentType documentType);
     
     void deleteByDeviceId(String deviceId);
 }

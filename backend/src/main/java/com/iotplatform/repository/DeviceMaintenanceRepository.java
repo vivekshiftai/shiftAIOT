@@ -13,9 +13,11 @@ import com.iotplatform.model.DeviceMaintenance;
 @Repository
 public interface DeviceMaintenanceRepository extends JpaRepository<DeviceMaintenance, String> {
     
-    List<DeviceMaintenance> findByDeviceId(String deviceId);
+    @Query("SELECT dm FROM DeviceMaintenance dm WHERE dm.device.id = :deviceId")
+    List<DeviceMaintenance> findByDeviceId(@Param("deviceId") String deviceId);
     
-    List<DeviceMaintenance> findByDeviceIdAndOrganizationId(String deviceId, String organizationId);
+    @Query("SELECT dm FROM DeviceMaintenance dm WHERE dm.device.id = :deviceId AND dm.organizationId = :organizationId")
+    List<DeviceMaintenance> findByDeviceIdAndOrganizationId(@Param("deviceId") String deviceId, @Param("organizationId") String organizationId);
     
     List<DeviceMaintenance> findByOrganizationId(String organizationId);
     
@@ -30,17 +32,21 @@ public interface DeviceMaintenanceRepository extends JpaRepository<DeviceMainten
     List<DeviceMaintenance> findOverdueMaintenance(@Param("today") LocalDate today);
     
     // Find by device ID, status, and next maintenance before a date
-    List<DeviceMaintenance> findByDeviceIdAndStatusAndNextMaintenanceBefore(String deviceId, DeviceMaintenance.Status status, LocalDate date);
+    @Query("SELECT dm FROM DeviceMaintenance dm WHERE dm.device.id = :deviceId AND dm.status = :status AND dm.nextMaintenance < :date")
+    List<DeviceMaintenance> findByDeviceIdAndStatusAndNextMaintenanceBefore(@Param("deviceId") String deviceId, @Param("status") DeviceMaintenance.Status status, @Param("date") LocalDate date);
     
     // Find by device ID, status, and next maintenance between dates
-    List<DeviceMaintenance> findByDeviceIdAndStatusAndNextMaintenanceBetween(String deviceId, DeviceMaintenance.Status status, LocalDate startDate, LocalDate endDate);
+    @Query("SELECT dm FROM DeviceMaintenance dm WHERE dm.device.id = :deviceId AND dm.status = :status AND dm.nextMaintenance BETWEEN :startDate AND :endDate")
+    List<DeviceMaintenance> findByDeviceIdAndStatusAndNextMaintenanceBetween(@Param("deviceId") String deviceId, @Param("status") DeviceMaintenance.Status status, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
     
     // Find by status and next maintenance before a date
     List<DeviceMaintenance> findByStatusAndNextMaintenanceBefore(DeviceMaintenance.Status status, LocalDate date);
     
-    long countByDeviceIdAndStatus(String deviceId, DeviceMaintenance.Status status);
+    @Query("SELECT COUNT(dm) FROM DeviceMaintenance dm WHERE dm.device.id = :deviceId AND dm.status = :status")
+    long countByDeviceIdAndStatus(@Param("deviceId") String deviceId, @Param("status") DeviceMaintenance.Status status);
     
     long countByOrganizationIdAndStatus(String organizationId, DeviceMaintenance.Status status);
     
-    void deleteByDeviceId(String deviceId);
+    @Query("DELETE FROM DeviceMaintenance dm WHERE dm.device.id = :deviceId")
+    void deleteByDeviceId(@Param("deviceId") String deviceId);
 }

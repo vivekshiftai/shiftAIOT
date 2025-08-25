@@ -260,6 +260,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                         .organizationId(organizationId)
                         .userQuery(request.getQuery())
                         .aiResponse("")
+                        .processingTime(null)
                         .status(PDFQuery.QueryStatus.FAILED)
                         .errorMessage(e.getMessage())
                         .build();

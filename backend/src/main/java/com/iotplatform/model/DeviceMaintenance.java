@@ -100,7 +100,7 @@ public class DeviceMaintenance {
     private LocalDateTime updatedAt;
 
     public enum MaintenanceType {
-        PREVENTIVE, CORRECTIVE, PREDICTIVE
+        PREVENTIVE, CORRECTIVE, PREDICTIVE, GENERAL
     }
 
     public enum Priority {
@@ -108,7 +108,7 @@ public class DeviceMaintenance {
     }
 
     public enum Status {
-        ACTIVE, COMPLETED, CANCELLED, OVERDUE
+        ACTIVE, COMPLETED, CANCELLED, OVERDUE, PENDING
     }
 
     @PrePersist
@@ -176,6 +176,13 @@ public class DeviceMaintenance {
 
     public String getOrganizationId() { return organizationId; }
     public void setOrganizationId(String organizationId) { this.organizationId = organizationId; }
+
+    public void setDeviceId(String deviceId) {
+        if (this.device == null) {
+            this.device = new Device();
+        }
+        this.device.setId(deviceId);
+    }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

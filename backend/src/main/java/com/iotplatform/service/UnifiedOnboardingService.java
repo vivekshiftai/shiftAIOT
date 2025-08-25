@@ -137,7 +137,7 @@ public class UnifiedOnboardingService {
                 return;
             }
             
-            String pdfName = uploadResponse.getFilename();
+            String pdfName = uploadResponse.getPdfName();
             log.info("PDF uploaded successfully: {}", pdfName);
             
             // Step 2: Generate rules from processed PDF
@@ -225,15 +225,14 @@ public class UnifiedOnboardingService {
             for (var maintenanceData : maintenanceItems) {
                 DeviceMaintenance maintenance = new DeviceMaintenance();
                 maintenance.setId(UUID.randomUUID().toString());
-                maintenance.setDeviceId(deviceId);
                 maintenance.setOrganizationId(organizationId);
                 maintenance.setComponentName(maintenanceData.getTaskName());
-                maintenance.setMaintenanceType("GENERAL");
+                maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
                 maintenance.setFrequency(maintenanceData.getFrequency());
                 maintenance.setDescription(maintenanceData.getDescription());
                 maintenance.setLastMaintenance(LocalDate.now());
-                maintenance.setNextMaintenance(calculateNextMaintenanceDate(maintenanceData.getFrequency()));
-                maintenance.setStatus("PENDING");
+                maintenance.setNextMaintenance(calculateNextMaintenanceDate(LocalDate.now(), maintenanceData.getFrequency()));
+                maintenance.setStatus(DeviceMaintenance.Status.PENDING);
                 maintenance.setCreatedAt(LocalDateTime.now());
                 maintenance.setUpdatedAt(LocalDateTime.now());
                 
@@ -265,7 +264,7 @@ public class UnifiedOnboardingService {
                 safety.setSeverity(safetyData.getSeverity());
                 safety.setCategory(safetyData.getCategory());
                 safety.setRecommendedAction(safetyData.getMitigation());
-                safety.setActive(true);
+                safety.setIsActive(true);
                 safety.setCreatedAt(LocalDateTime.now());
                 safety.setUpdatedAt(LocalDateTime.now());
                 

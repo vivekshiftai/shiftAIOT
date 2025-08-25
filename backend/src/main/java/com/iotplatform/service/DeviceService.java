@@ -245,10 +245,9 @@ public class DeviceService {
         DeviceCreateResponse response = new DeviceCreateResponse();
         response.setId(savedDevice.getId());
         response.setName(savedDevice.getName());
-        response.setType(savedDevice.getType().toString());
+        response.setType(savedDevice.getType());
         response.setLocation(savedDevice.getLocation());
-        response.setStatus(savedDevice.getStatus().toString());
-        response.setMessage("Device created successfully. PDF files will be processed separately.");
+        response.setStatus(savedDevice.getStatus());
         response.setCreatedAt(savedDevice.getCreatedAt());
         response.setUpdatedAt(savedDevice.getUpdatedAt());
         

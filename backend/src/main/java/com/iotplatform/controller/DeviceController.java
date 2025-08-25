@@ -618,7 +618,7 @@ public class DeviceController {
     }
 
     @PostMapping("/onboard-with-ai")
-    public ResponseEntity<DeviceCreateResponse> onboardDeviceWithAI(
+    public ResponseEntity<?> onboardDeviceWithAI(
             @RequestParam("deviceData") String deviceData,
             @RequestParam(value = "manualFile", required = false) MultipartFile manualFile,
             @RequestParam(value = "datasheetFile", required = false) MultipartFile datasheetFile,
@@ -693,7 +693,7 @@ public class DeviceController {
             }
             
             logger.info("✅ AI-powered device onboarding completed successfully for device: {}", response.getId());
-            return ResponseEntity.ok(response);
+            return ResponseEntity.<DeviceCreateResponse>ok(response);
             
         } catch (Exception e) {
             logger.error("❌ Failed to onboard device with AI: {}", e.getMessage(), e);

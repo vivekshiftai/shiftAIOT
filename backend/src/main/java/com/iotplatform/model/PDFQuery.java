@@ -48,7 +48,7 @@ public class PDFQuery {
      * ID of the user who made the query
      */
     @Column(name = "user_id", nullable = false)
-    private Long userId;
+    private String userId;
 
     /**
      * ID of the device associated with this query (optional)
