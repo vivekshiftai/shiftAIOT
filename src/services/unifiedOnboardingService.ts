@@ -124,6 +124,22 @@ export class UnifiedOnboardingService {
         logInfo('UnifiedOnboarding', 'File attached to request', { fileName: uploadedFile.name });
       }
 
+      // Log FormData contents for debugging
+      logInfo('UnifiedOnboarding', 'FormData prepared for sending', {
+        deviceDataLength: JSON.stringify(deviceData).length,
+        deviceDataKeys: Object.keys(deviceData),
+        hasManualFile: !!uploadedFile,
+        manualFileName: uploadedFile?.name,
+        manualFileSize: uploadedFile?.size,
+        formDataEntries: Array.from(formDataToSend.entries()).map(([key, value]) => ({
+          key,
+          type: typeof value,
+          isFile: value instanceof File,
+          size: value instanceof File ? value.size : null,
+          name: value instanceof File ? value.name : null
+        }))
+      });
+
       // Step 3: Call unified backend service for sequential processing
       onProgress?.({
         stage: 'device',
@@ -140,11 +156,21 @@ export class UnifiedOnboardingService {
 
       // Step 1: Validate authentication with detailed logging
       logInfo('UnifiedOnboarding', 'Step 1: Validating authentication');
-      const token = tokenService.getToken();
+      let token = tokenService.getToken();
       
       if (!token) {
-        logError('UnifiedOnboarding', 'No authentication token found');
-        throw new Error('No authentication token found. Please log in again.');
+        logWarn('UnifiedOnboarding', 'No token found in token service, attempting to refresh');
+        try {
+          token = await tokenService.refreshToken();
+          if (!token) {
+            logError('UnifiedOnboarding', 'Token refresh failed');
+            throw new Error('Authentication token not available. Please log in again.');
+          }
+          logInfo('UnifiedOnboarding', 'Token refreshed successfully');
+        } catch (refreshError) {
+          logError('UnifiedOnboarding', 'Token refresh failed', refreshError instanceof Error ? refreshError : new Error('Unknown refresh error'));
+          throw new Error('Authentication failed. Please log in again.');
+        }
       }
 
       logInfo('UnifiedOnboarding', 'Token found', { 

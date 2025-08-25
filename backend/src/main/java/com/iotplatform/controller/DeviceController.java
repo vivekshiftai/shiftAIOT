@@ -603,11 +603,19 @@ public class DeviceController {
             @RequestParam(value = "aiRules", required = false) String aiRulesJson,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
-        logger.info("onboardDeviceWithAI called - userDetails: {}, user: {}", 
+        logger.info("🔍 onboardDeviceWithAI called - userDetails: {}, user: {}", 
                    userDetails != null, userDetails != null ? userDetails.getUser() != null : false);
         
+        // Log all request parameters for debugging
+        logger.info("🔍 Request parameters received:");
+        logger.info("🔍 deviceData: {}", deviceData != null ? "present (length: " + deviceData.length() + ")" : "null");
+        logger.info("🔍 manualFile: {}", manualFile != null ? "present (name: " + manualFile.getOriginalFilename() + ", size: " + manualFile.getSize() + ")" : "null");
+        logger.info("🔍 datasheetFile: {}", datasheetFile != null ? "present (name: " + datasheetFile.getOriginalFilename() + ", size: " + datasheetFile.getSize() + ")" : "null");
+        logger.info("🔍 certificateFile: {}", certificateFile != null ? "present (name: " + certificateFile.getOriginalFilename() + ", size: " + certificateFile.getSize() + ")" : "null");
+        logger.info("🔍 aiRulesJson: {}", aiRulesJson != null ? "present (length: " + aiRulesJson.length() + ")" : "null");
+        
         if (userDetails == null || userDetails.getUser() == null) {
-            logger.error("Authentication failed: userDetails is null or user is null");
+            logger.error("❌ Authentication failed: userDetails is null or user is null");
             return ResponseEntity.status(401).build();
         }
         User user = userDetails.getUser();
@@ -615,26 +623,26 @@ public class DeviceController {
         String userEmail = user.getEmail();
         String organizationId = user.getOrganizationId();
         
-        logger.info("User {} starting unified AI-powered device onboarding", userEmail);
+        logger.info("✅ User {} starting unified AI-powered device onboarding", userEmail);
         
         // Log file information for debugging
         if (manualFile != null) {
-            logger.info("Manual file received: name={}, size={} bytes, content-type={}", 
+            logger.info("📁 Manual file received: name={}, size={} bytes, content-type={}", 
                 manualFile.getOriginalFilename(), manualFile.getSize(), manualFile.getContentType());
         }
         if (datasheetFile != null) {
-            logger.info("Datasheet file received: name={}, size={} bytes, content-type={}", 
+            logger.info("📁 Datasheet file received: name={}, size={} bytes, content-type={}", 
                 datasheetFile.getOriginalFilename(), datasheetFile.getSize(), datasheetFile.getContentType());
         }
         if (certificateFile != null) {
-            logger.info("Certificate file received: name={}, size={} bytes, content-type={}", 
+            logger.info("📁 Certificate file received: name={}, size={} bytes, content-type={}", 
                 certificateFile.getOriginalFilename(), certificateFile.getSize(), certificateFile.getContentType());
         }
         
         try {
             // Parse device data
             DeviceCreateWithFileRequest deviceRequest = objectMapper.readValue(deviceData, DeviceCreateWithFileRequest.class);
-            logger.info("Device data parsed successfully: name={}, type={}", deviceRequest.getName(), deviceRequest.getType());
+            logger.info("✅ Device data parsed successfully: name={}, type={}", deviceRequest.getName(), deviceRequest.getType());
             
             // Use unified onboarding service for sequential workflow
             DeviceCreateResponse response = unifiedOnboardingService.completeUnifiedOnboarding(
@@ -642,18 +650,18 @@ public class DeviceController {
             );
             
             // Log the device creation with maintenance details
-            logger.info("Unified onboarding completed for device: {} with ID: {}", deviceRequest.getName(), response.getId());
+            logger.info("✅ Unified onboarding completed for device: {} with ID: {}", deviceRequest.getName(), response.getId());
             
             // Process additional AI-generated rules if provided
             if (aiRulesJson != null && !aiRulesJson.trim().isEmpty()) {
                 processAIRules(aiRulesJson, response.getId());
             }
             
-            logger.info("AI-powered device onboarding completed successfully for device: {}", response.getId());
+            logger.info("✅ AI-powered device onboarding completed successfully for device: {}", response.getId());
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            logger.error("Failed to onboard device with AI: {}", e.getMessage(), e);
+            logger.error("❌ Failed to onboard device with AI: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().build();
         }
     }
@@ -906,6 +914,28 @@ public class DeviceController {
         errorResponse.put("error", "File size too large");
         errorResponse.put("message", "The uploaded file exceeds the maximum allowed size of 500MB. Please try with a smaller file.");
         return ResponseEntity.status(413).body(errorResponse);
+    }
+
+    /**
+     * Handle missing request parameters with detailed logging
+     */
+    @ExceptionHandler(org.springframework.web.bind.MissingServletRequestParameterException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingParameter(
+            org.springframework.web.bind.MissingServletRequestParameterException ex) {
+        
+        logger.error("❌ Missing request parameter: {}", ex.getParameterName());
+        logger.error("❌ Parameter type: {}", ex.getParameterType());
+        logger.error("❌ Error message: {}", ex.getMessage());
+        
+        Map<String, Object> errorResponse = Map.of(
+            "error", "Missing required parameter",
+            "parameter", ex.getParameterName(),
+            "type", ex.getParameterType(),
+            "message", "Required request parameter '" + ex.getParameterName() + "' for method parameter type " + ex.getParameterType() + " is not present",
+            "timestamp", new Date()
+        );
+        
+        return ResponseEntity.badRequest().body(errorResponse);
     }
 
     // Helper methods

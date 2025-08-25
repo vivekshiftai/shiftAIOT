@@ -37,6 +37,20 @@ api.interceptors.request.use(
     } else {
       console.log(`🌐 Public endpoint (no auth): ${config.url}`);
     }
+
+    // Log multipart requests for debugging
+    if (config.data instanceof FormData) {
+      console.log(`📤 Multipart request to: ${config.url}`);
+      console.log(`📤 FormData entries:`, Array.from(config.data.entries()).map(([key, value]) => ({
+        key,
+        type: typeof value,
+        isFile: value instanceof File,
+        size: value instanceof File ? value.size : null,
+        name: value instanceof File ? value.name : null
+      })));
+      console.log(`📤 Headers:`, config.headers);
+    }
+
     return config;
   },
   (error) => {
