@@ -503,15 +503,6 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       <div className="text-center">
         <h3 className="text-2xl font-bold text-gray-800 mb-2">Connection Settings</h3>
         <p className="text-gray-600">Configure how your device will communicate</p>
-        <div className="mt-4">
-          <button
-            onClick={handleSkipStep2}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-all duration-300 hover:bg-gray-100 rounded-lg border border-gray-300"
-          >
-            <span>⏭️</span>
-            Skip this step
-          </button>
-        </div>
       </div>
 
       {/* Input Fields */}
@@ -1005,6 +996,16 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   >
                     Cancel
                   </button>
+                  
+                  {currentStep === 2 && (
+                    <button
+                      onClick={handleSkipStep2}
+                      className="flex items-center gap-2 px-6 py-3 text-gray-600 hover:text-gray-800 transition-all duration-300 hover:bg-white/20 rounded-xl font-medium"
+                    >
+                      <span>⏭️</span>
+                      Skip
+                    </button>
+                  )}
                   
                   <button
                     onClick={currentStep === 3 ? handleSubmit : nextStep}

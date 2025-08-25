@@ -2,6 +2,8 @@
 // This service handles all PDF processing operations through our backend API
 
 import { getApiConfig } from '../../config/api';
+import { tokenService } from '../tokenService';
+import { pdfAPI } from '../api';
 
 // PDF Processing API Service
 export interface PDFUploadRequest {
@@ -209,27 +211,11 @@ export class PDFProcessingService {
     try {
       console.log('Uploading PDF to backend service:', file.name);
 
-      const formData = new FormData();
-      formData.append('file', file);
-      if (deviceId) formData.append('deviceId', deviceId);
-      if (deviceName) formData.append('deviceName', deviceName);
-
-      const response = await fetch(`${this.baseUrl}/api/pdf/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Backend upload failed: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('PDF upload to backend successful:', result);
-      return result as PDFUploadResponse;
+      // Use the pdfAPI which has proper token handling
+      const response = await pdfAPI.uploadPDF(file, deviceId, deviceName);
+      
+      console.log('PDF upload to backend successful:', response.data);
+      return response.data as PDFUploadResponse;
 
     } catch (error) {
       console.error('PDF upload to backend failed:', error);
@@ -242,23 +228,10 @@ export class PDFProcessingService {
     try {
       console.log('Querying PDF through backend service:', request);
 
-      const response = await fetch(`${this.baseUrl}/api/pdf/query`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Backend query failed: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('PDF query from backend successful:', result);
-      return result as PDFQueryResponse;
+      const response = await pdfAPI.queryPDF(request.query, request.pdf_name, request.top_k);
+      
+      console.log('PDF query from backend successful:', response.data);
+      return response.data as PDFQueryResponse;
 
     } catch (error) {
       console.error('PDF query from backend failed:', error);
@@ -271,21 +244,10 @@ export class PDFProcessingService {
     try {
       console.log('Listing PDFs from backend service');
 
-      const response = await fetch(`${this.baseUrl}/api/pdf/list?page=${page}&size=${size}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Backend list failed: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('PDF list from backend successful:', result);
-      return result as PDFListResponse;
+      const response = await pdfAPI.listPDFs(page, size);
+      
+      console.log('PDF list from backend successful:', response.data);
+      return response.data as PDFListResponse;
 
     } catch (error) {
       console.error('PDF list from backend failed:', error);
@@ -301,7 +263,7 @@ export class PDFProcessingService {
       const response = await fetch(`${this.baseUrl}/api/pdf/generate-rules`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${tokenService.getToken()}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -334,7 +296,7 @@ export class PDFProcessingService {
       const response = await fetch(`${this.baseUrl}/api/pdf/generate-maintenance`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${tokenService.getToken()}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -367,7 +329,7 @@ export class PDFProcessingService {
       const response = await fetch(`${this.baseUrl}/api/pdf/generate-safety`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${tokenService.getToken()}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -400,7 +362,7 @@ export class PDFProcessingService {
       const response = await fetch(`${this.baseUrl}/api/pdf/download/${pdfName}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${tokenService.getToken()}`,
         },
       });
 
@@ -427,7 +389,7 @@ export class PDFProcessingService {
       const response = await fetch(`${this.baseUrl}/api/pdf/status/${pdfName}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${tokenService.getToken()}`,
         },
       });
 
@@ -451,21 +413,10 @@ export class PDFProcessingService {
     try {
       console.log('Deleting PDF from backend service:', pdfName);
 
-      const response = await fetch(`${this.baseUrl}/api/pdf/delete/${pdfName}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Backend deletion failed: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('PDF deletion from backend successful:', result);
-      return result as PDFDeleteResponse;
+      const response = await pdfAPI.deletePDF(pdfName);
+      
+      console.log('PDF deletion from backend successful:', response.data);
+      return response.data as PDFDeleteResponse;
 
     } catch (error) {
       console.error('PDF deletion from backend failed:', error);

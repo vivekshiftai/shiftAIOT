@@ -1,4 +1,5 @@
 import { getApiConfig } from '../config/api';
+import { tokenService } from './tokenService';
 import { logInfo, logError } from '../utils/logger';
 
 /**
@@ -81,7 +82,7 @@ export class ChatService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${tokenService.getToken()}`,
         },
         body: JSON.stringify(request),
       });
@@ -119,7 +120,7 @@ export class ChatService {
       const response = await fetch(`${this.baseUrl}/api/chat/history?limit=${limit}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${tokenService.getToken()}`,
         },
       });
 
@@ -163,7 +164,7 @@ export class ChatService {
       const response = await fetch(`${this.baseUrl}/api/chat/history/device/${encodeURIComponent(deviceId)}?limit=${limit}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${tokenService.getToken()}`,
         },
       });
 
@@ -209,7 +210,7 @@ export class ChatService {
       const response = await fetch(`${this.baseUrl}/api/chat/history/pdf/${encodeURIComponent(pdfName)}?limit=${limit}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${tokenService.getToken()}`,
         },
       });
 
@@ -253,7 +254,7 @@ export class ChatService {
       const response = await fetch(`${this.baseUrl}/api/chat/history?limit=1`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${tokenService.getToken()}`,
         },
       });
 

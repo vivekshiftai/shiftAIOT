@@ -22,12 +22,9 @@ api.interceptors.request.use(
   (config) => {
     // Skip authentication for public endpoints
     const isPublicEndpoint = config.url?.includes('/auth/') ||
-                           config.url?.includes('/upload-pdf') ||
-                           config.url?.includes('/generate/') ||
-                           config.url?.includes('/pdfs') ||
-                           config.url?.includes('/query') ||
+                           config.url?.includes('/api/auth/') ||
                            config.url?.includes('/health') ||
-                           config.url?.includes('/knowledge/');
+                           config.url?.includes('/api/health/');
     
     if (!isPublicEndpoint) {
       const token = tokenService.getToken();
@@ -355,8 +352,14 @@ export const userAPI = {
 export const pdfAPI = {
   // Upload and process PDF files through backend
   uploadPDF: async (file: File, deviceId?: string, deviceName?: string) => {
+    // Get user from localStorage to get organizationId
+    const userStr = localStorage.getItem('user');
+    const user = userStr ? JSON.parse(userStr) : null;
+    const organizationId = user?.organizationId || 'default';
+
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('organizationId', organizationId);
     if (deviceId) formData.append('deviceId', deviceId);
     if (deviceName) formData.append('deviceName', deviceName);
     
