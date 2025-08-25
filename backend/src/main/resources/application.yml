@@ -22,16 +22,16 @@ spring:
   application:
     name: iot-platform-backend
 
-  # datasource:
-  #   url: jdbc:postgresql://localhost:5432/iotplatform
-  #   driver-class-name: org.postgresql.Driver
-  #   username: ${DB_USERNAME:superuser}
-  #   password: ${DB_PASSWORD:Vivek@1234}
   datasource:
     url: jdbc:postgresql://localhost:5432/iotplatform
     driver-class-name: org.postgresql.Driver
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:123}
+    username: ${DB_USERNAME:superuser}
+    password: ${DB_PASSWORD:Vivek@1234}
+  # datasource:
+  #   url: jdbc:postgresql://localhost:5432/iotplatform
+  #   driver-class-name: org.postgresql.Driver
+  #   username: ${DB_USERNAME:root}
+  #   password: ${DB_PASSWORD:123}
 
   jpa:
     hibernate:
