@@ -196,7 +196,8 @@ export const deviceAPI = {
   testAuth: () => api.get('/api/devices/auth-test'),
   testHealth: () => api.get('/api/devices/health'),
   testFormData: (formData: FormData) => api.post('/api/devices/test-formdata', formData),
-  onboardWithAI: (formData: FormData) => api.post('/api/devices/onboard-with-ai', formData),
+
+  deviceOnboard: (formData: FormData) => api.post('/api/devices/device-onboard', formData),
   getDevicePDFResults: (deviceId: string) => api.get(`/api/devices/${deviceId}/pdf-results`),
 };
 

@@ -66,41 +66,30 @@ export class UnifiedOnboardingService {
         }
       });
 
-      // Step 1: Prepare device data with proper validation
-      const deviceData = {
-        name: formData.deviceName || 'Unnamed Device',
-        type: formData.deviceType || 'SENSOR',
-        location: formData.location || 'Unknown Location',
-        protocol: formData.protocol || 'HTTP', // Backend expects: MQTT, HTTP, COAP
-        manufacturer: formData.manufacturer || 'Unknown Manufacturer',
-        model: formData.model || 'Unknown Model',
-        serialNumber: formData.serialNumber || '',
-        firmware: formData.firmware || '',
-        powerSource: formData.powerSource || 'Unknown',
-        powerConsumption: formData.powerConsumption || null,
-        operatingTemperatureMin: formData.operatingTemperatureMin || null,
-        operatingTemperatureMax: formData.operatingTemperatureMax || null,
-        operatingHumidityMin: formData.operatingHumidityMin || null,
-        operatingHumidityMax: formData.operatingHumidityMax || null,
-        wifiSsid: formData.wifiSsid || '',
-        ipAddress: formData.ipAddress || '',
-        macAddress: formData.macAddress || '',
-        port: formData.port || null,
-        mqttBroker: formData.mqttBroker || '',
-        mqttTopic: formData.mqttTopic || '',
-        assignedUserId: formData.assignedUserId || null,
-        tags: formData.tags || [],
-        connectionSettings: {
-          mqttBroker: formData.mqttBroker || '',
-          mqttTopic: formData.mqttTopic || '',
-          httpEndpoint: formData.httpEndpoint || '',
-          httpMethod: formData.httpMethod || 'GET',
-          httpHeaders: formData.httpHeaders || {},
-          coapHost: formData.coapHost || '',
-          coapPort: formData.coapPort || 5683,
-          coapPath: formData.coapPath || ''
-        }
-      };
+             // Step 1: Prepare device data with proper validation (only required fields)
+       const deviceData = {
+         name: formData.deviceName || 'Unnamed Device',
+         type: formData.deviceType || 'SENSOR',
+         location: formData.location || 'Unknown Location',
+         protocol: formData.protocol || 'HTTP', // Backend expects: MQTT, HTTP, COAP
+         manufacturer: formData.manufacturer || 'Unknown Manufacturer',
+         model: formData.model || 'Unknown Model',
+         serialNumber: formData.serialNumber || '',
+         firmware: formData.firmware || '',
+         powerSource: formData.powerSource || 'Unknown',
+         powerConsumption: formData.powerConsumption || null,
+         operatingTemperatureMin: formData.operatingTemperatureMin || null,
+         operatingTemperatureMax: formData.operatingTemperatureMax || null,
+         operatingHumidityMin: formData.operatingHumidityMin || null,
+         operatingHumidityMax: formData.operatingHumidityMax || null,
+         wifiSsid: formData.wifiSsid || '',
+         ipAddress: formData.ipAddress || '',
+         macAddress: formData.macAddress || '',
+         port: formData.port || null,
+         mqttBroker: formData.mqttBroker || '',
+         mqttTopic: formData.mqttTopic || '',
+         tags: formData.tags || []
+       };
 
       logInfo('UnifiedOnboarding', 'Device data prepared', { deviceName: deviceData.name });
 
@@ -124,8 +113,7 @@ export class UnifiedOnboardingService {
         logInfo('UnifiedOnboarding', 'File attached to request', { fileName: uploadedFile.name });
       }
       
-      // Add aiRules parameter as empty string (backend expects it)
-      formDataToSend.append('aiRules', '');
+             // No need to send aiRules parameter - backend will handle AI processing internally
 
       // Log FormData contents for debugging
       logInfo('UnifiedOnboarding', 'FormData prepared for sending', {
@@ -166,7 +154,7 @@ export class UnifiedOnboardingService {
         }
       });
 
-      logInfo('UnifiedOnboarding', 'Calling unified backend service', { endpoint: '/api/devices/onboard-with-ai' });
+             logInfo('UnifiedOnboarding', 'Calling unified backend service', { endpoint: '/api/devices/device-onboard' });
 
       // Step 1: Validate authentication with detailed logging
       logInfo('UnifiedOnboarding', 'Step 1: Validating authentication');
@@ -272,20 +260,20 @@ export class UnifiedOnboardingService {
       }
 
       // Use the proper API instance with authentication handling
-      logInfo('UnifiedOnboarding', 'Calling onboard-with-ai endpoint with authentication');
+             logInfo('UnifiedOnboarding', 'Calling device-onboard endpoint with authentication');
       
       let response;
-      try {
-        response = await deviceAPI.onboardWithAI(formDataToSend);
+             try {
+         response = await deviceAPI.deviceOnboard(formDataToSend);
         
         // Validate response
         if (!response || !response.data) {
           throw new Error('Invalid response from backend service');
         }
         
-        logInfo('UnifiedOnboarding', 'Onboard-with-ai endpoint call successful');
+                 logInfo('UnifiedOnboarding', 'Device-onboard endpoint call successful');
       } catch (apiError: any) {
-        logError('UnifiedOnboarding', 'API call to onboard-with-ai failed', apiError instanceof Error ? apiError : new Error('Unknown API error'));
+                 logError('UnifiedOnboarding', 'API call to device-onboard failed', apiError instanceof Error ? apiError : new Error('Unknown API error'));
         
         // Check if it's an authentication error
         if (apiError.response?.status === 401 || apiError.response?.status === 403) {

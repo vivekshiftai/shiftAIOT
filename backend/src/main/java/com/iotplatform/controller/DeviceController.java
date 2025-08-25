@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iotplatform.dto.DeviceCreateResponse;
 import com.iotplatform.dto.DeviceCreateWithFileRequest;
@@ -58,6 +58,7 @@ import com.iotplatform.repository.UserRepository;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -618,102 +619,7 @@ public class DeviceController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/onboard-with-ai")
-    public ResponseEntity<?> onboardDeviceWithAI(
-            @RequestParam("deviceData") String deviceData,
-            @RequestParam(value = "manualFile", required = false) MultipartFile manualFile,
-            @RequestParam(value = "datasheetFile", required = false) MultipartFile datasheetFile,
-            @RequestParam(value = "certificateFile", required = false) MultipartFile certificateFile,
-            @RequestParam(value = "aiRules", required = false) String aiRulesJson,
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            HttpServletRequest request) {
-        
-        // Enhanced authentication logging
-        logger.info("🔐 Authentication check for onboard-with-ai endpoint");
-        logger.info("🔐 userDetails: {}", userDetails != null);
-        logger.info("🔐 userDetails.getUser(): {}", userDetails != null ? userDetails.getUser() != null : false);
-        logger.info("🔐 Authorization header: {}", request.getHeader("Authorization") != null ? "Present" : "Missing");
-        
-        if (userDetails != null && userDetails.getUser() != null) {
-            logger.info("🔐 Authenticated user: {} with roles: {}", 
-                userDetails.getUser().getEmail(), 
-                userDetails.getAuthorities());
-        }
-        
-        // Log file upload configuration for debugging
-        logger.info("📁 File upload configuration - max-file-size: 500MB, max-request-size: 500MB");
-        logger.info("📁 PDF processing max-file-size: 500MB (524288000 bytes)");
-        
-        logger.info("🔍 onboardDeviceWithAI called - userDetails: {}, user: {}", 
-                   userDetails != null, userDetails != null ? userDetails.getUser() != null : false);
-        
-        // Log all request parameters for debugging
-        logger.info("🔍 Request parameters received:");
-        logger.info("🔍 deviceData: {}", deviceData != null ? "present (length: " + deviceData.length() + ")" : "null");
-        logger.info("🔍 manualFile: {}", manualFile != null ? "present (name: " + manualFile.getOriginalFilename() + ", size: " + manualFile.getSize() + ")" : "null");
-        logger.info("🔍 datasheetFile: {}", datasheetFile != null ? "present (name: " + datasheetFile.getOriginalFilename() + ", size: " + datasheetFile.getSize() + ")" : "null");
-        logger.info("🔍 certificateFile: {}", certificateFile != null ? "present (name: " + certificateFile.getOriginalFilename() + ", size: " + certificateFile.getSize() + ")" : "null");
-        logger.info("🔍 aiRulesJson: {}", aiRulesJson != null ? "present (length: " + aiRulesJson.length() + ")" : "null");
-        
-        if (userDetails == null || userDetails.getUser() == null) {
-            logger.error("❌ Authentication failed: userDetails is null or user is null");
-            return ResponseEntity.status(401).build();
-        }
-        User user = userDetails.getUser();
-        
-        String userEmail = user.getEmail();
-        String organizationId = user.getOrganizationId();
-        
-        logger.info("✅ User {} starting unified AI-powered device onboarding", userEmail);
-        
-        // Log file information for debugging
-        if (manualFile != null) {
-            logger.info("📁 Manual file received: name={}, size={} bytes, content-type={}", 
-                manualFile.getOriginalFilename(), manualFile.getSize(), manualFile.getContentType());
-        }
-        if (datasheetFile != null) {
-            logger.info("📁 Datasheet file received: name={}, size={} bytes, content-type={}", 
-                datasheetFile.getOriginalFilename(), datasheetFile.getSize(), datasheetFile.getContentType());
-        }
-        if (certificateFile != null) {
-            logger.info("📁 Certificate file received: name={}, size={} bytes, content-type={}", 
-                certificateFile.getOriginalFilename(), certificateFile.getSize(), certificateFile.getContentType());
-        }
-        
-        try {
-            // Parse device data
-            DeviceCreateWithFileRequest deviceRequest = objectMapper.readValue(deviceData, DeviceCreateWithFileRequest.class);
-            logger.info("✅ Device data parsed successfully: name={}, type={}", deviceRequest.getName(), deviceRequest.getType());
-            
-            // Validate device request
-            if (!isValidDeviceRequest(deviceRequest)) {
-                logger.error("❌ Device request validation failed for device: {}", deviceRequest.getName());
-                return ResponseEntity.badRequest().body(Map.of("error", "Device request validation failed"));
-            }
-            
-            logger.info("✅ Device request validation passed for device: {}", deviceRequest.getName());
-            
-            // Use unified onboarding service for sequential workflow
-            DeviceCreateResponse response = unifiedOnboardingService.completeUnifiedOnboarding(
-                deviceRequest, manualFile, datasheetFile, certificateFile, organizationId
-            );
-            
-            // Log the device creation with maintenance details
-            logger.info("✅ Unified onboarding completed for device: {} with ID: {}", deviceRequest.getName(), response.getId());
-            
-            // Process additional AI-generated rules if provided
-            if (aiRulesJson != null && !aiRulesJson.trim().isEmpty()) {
-                processAIRules(aiRulesJson, response.getId());
-            }
-            
-            logger.info("✅ AI-powered device onboarding completed successfully for device: {}", response.getId());
-            return ResponseEntity.<DeviceCreateResponse>ok(response);
-            
-        } catch (Exception e) {
-            logger.error("❌ Failed to onboard device with AI: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().build();
-        }
-    }
+
     
     @GetMapping("/{id}/pdf-results")
     public ResponseEntity<?> getDevicePDFResults(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -1254,26 +1160,7 @@ public class DeviceController {
         }
     }
     
-    private void processAIRules(String aiRulesJson, String deviceId) {
-        try {
-            List<Map<String, Object>> aiRules = objectMapper.readValue(aiRulesJson, 
-                new TypeReference<List<Map<String, Object>>>() {});
-            
-            logger.info("Processing {} AI-generated rules for device: {}", aiRules.size(), deviceId);
-            
-            // Here you would integrate with your AI service to process the rules
-            // For now, we'll just log the rules
-            for (Map<String, Object> ruleData : aiRules) {
-                if (Boolean.TRUE.equals(ruleData.get("isSelected"))) {
-                    logger.info("Selected AI rule: {} - {}", ruleData.get("name"), ruleData.get("description"));
-                }
-            }
-            
-            logger.info("AI rules processed for device: {}", deviceId);
-        } catch (Exception e) {
-            logger.warn("Failed to process AI rules for device {}: {}", deviceId, e.getMessage());
-        }
-    }
+
 
     /**
      * Get device onboarding progress
@@ -1389,6 +1276,97 @@ public class DeviceController {
         } catch (Exception e) {
             logger.error("Error retrieving upcoming maintenance: {}", e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of("error", "Failed to retrieve upcoming maintenance"));
+        }
+    }
+
+    /**
+     * Device onboarding endpoint - simplified version without aiRules
+     * Only accepts device data and PDF file
+     */
+    @PostMapping("/device-onboard")
+    public ResponseEntity<?> deviceOnboard(
+            @RequestParam("deviceData") String deviceData,
+            @RequestParam(value = "manualFile", required = false) MultipartFile manualFile,
+            @RequestParam(value = "datasheetFile", required = false) MultipartFile datasheetFile,
+            @RequestParam(value = "certificateFile", required = false) MultipartFile certificateFile,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            HttpServletRequest request) {
+        
+        // Enhanced authentication logging
+        logger.info("🔐 Authentication check for device-onboard endpoint");
+        logger.info("🔐 userDetails: {}", userDetails != null);
+        logger.info("🔐 userDetails.getUser(): {}", userDetails != null ? userDetails.getUser() != null : false);
+        logger.info("🔐 Authorization header: {}", request.getHeader("Authorization") != null ? "Present" : "Missing");
+        
+        if (userDetails != null && userDetails.getUser() != null) {
+            logger.info("🔐 Authenticated user: {} with roles: {}", 
+                userDetails.getUser().getEmail(), 
+                userDetails.getAuthorities());
+        }
+        
+        // Log file upload configuration for debugging
+        logger.info("📁 File upload configuration - max-file-size: 500MB, max-request-size: 500MB");
+        logger.info("📁 PDF processing max-file-size: 500MB (524288000 bytes)");
+        
+        logger.info("🔍 deviceOnboard called - userDetails: {}, user: {}", 
+                   userDetails != null, userDetails != null ? userDetails.getUser() != null : false);
+        
+        // Log all request parameters for debugging
+        logger.info("🔍 Request parameters received:");
+        logger.info("🔍 deviceData: {}", deviceData != null ? "present (length: " + deviceData.length() + ")" : "null");
+        logger.info("🔍 manualFile: {}", manualFile != null ? "present (name: " + manualFile.getOriginalFilename() + ", size: " + manualFile.getSize() + ")" : "null");
+        logger.info("🔍 datasheetFile: {}", datasheetFile != null ? "present (name: " + datasheetFile.getOriginalFilename() + ", size: " + datasheetFile.getSize() + ")" : "null");
+        logger.info("🔍 certificateFile: {}", certificateFile != null ? "present (name: " + certificateFile.getOriginalFilename() + ", size: " + certificateFile.getSize() + ")" : "null");
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            logger.error("❌ Authentication failed: userDetails is null or user is null");
+            return ResponseEntity.status(401).build();
+        }
+        
+        try {
+            logger.info("✅ User {} starting simplified device onboarding", userDetails.getUser().getEmail());
+            
+            // Parse device data
+            ObjectMapper objectMapper = new ObjectMapper();
+            DeviceCreateWithFileRequest deviceRequest = objectMapper.readValue(deviceData, DeviceCreateWithFileRequest.class);
+            
+            // Log file information
+            if (manualFile != null) {
+                logger.info("📁 Manual file received: name={}, size={} bytes, content-type={}", 
+                           manualFile.getOriginalFilename(), manualFile.getSize(), manualFile.getContentType());
+            }
+            if (datasheetFile != null) {
+                logger.info("📁 Datasheet file received: name={}, size={} bytes, content-type={}", 
+                           datasheetFile.getOriginalFilename(), datasheetFile.getSize(), datasheetFile.getContentType());
+            }
+            if (certificateFile != null) {
+                logger.info("📁 Certificate file received: name={}, size={} bytes, content-type={}", 
+                           certificateFile.getOriginalFilename(), certificateFile.getSize(), certificateFile.getContentType());
+            }
+            
+            // Get organization ID from authenticated user
+            String organizationId = userDetails.getUser().getOrganizationId();
+            logger.info("🏢 Using organization ID: {}", organizationId);
+            
+            // Call unified onboarding service
+            DeviceCreateResponse response = unifiedOnboardingService.completeUnifiedOnboarding(
+                deviceRequest, manualFile, datasheetFile, certificateFile, organizationId);
+            
+            logger.info("✅ Device onboarding completed successfully for user: {}", userDetails.getUser().getEmail());
+            return ResponseEntity.ok(response);
+            
+        } catch (JsonProcessingException e) {
+            logger.error("❌ Failed to parse device data JSON", e);
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "Invalid device data format",
+                "message", e.getMessage()
+            ));
+        } catch (Exception e) {
+            logger.error("❌ Failed to onboard device: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "error", "Device onboarding failed",
+                "message", e.getMessage()
+            ));
         }
     }
 }

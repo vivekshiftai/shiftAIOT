@@ -59,7 +59,7 @@
 | GET | `/api/devices/debug-db` | Debug database | ❌ Not used |
 | GET | `/api/devices/health` | Health check | ✅ Used in onboarding |
 | GET | `/api/devices/debug-auth` | Debug authentication | ✅ Used in onboarding |
-| POST | `/api/devices/onboard-with-ai` | AI-powered device onboarding | ✅ `deviceAPI.onboardWithAI()` |
+| POST | `/api/devices/device-onboard` | Device onboarding with PDF processing | ✅ `deviceAPI.deviceOnboard()` |
 | GET | `/api/devices/{id}/pdf-results` | Get PDF processing results | ✅ `deviceAPI.getDevicePDFResults()` |
 | GET | `/api/devices/{id}/maintenance` | Get device maintenance | ❌ Not used |
 | GET | `/api/devices/{id}/safety-precautions` | Get device safety precautions | ❌ Not used |

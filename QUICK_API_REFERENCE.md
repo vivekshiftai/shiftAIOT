@@ -47,7 +47,7 @@ Headers: Authorization: Bearer <token>
 Body: {"name": "Device Name", "type": "SENSOR", ...}
 
 # AI-powered device onboarding
-POST /api/devices/onboard-with-ai
+POST /api/devices/device-onboard
 Headers: Authorization: Bearer <token>
 Body: FormData with deviceData and files
 
