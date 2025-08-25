@@ -41,7 +41,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 requestURI.startsWith("/api/health") ||
                 requestURI.startsWith("/health") ||
                 requestURI.startsWith("/swagger-ui") ||
-                requestURI.startsWith("/v3/api-docs")) {
+                requestURI.startsWith("/v3/api-docs") ||
+                requestURI.equals("/api/devices/health")) {
                 logger.debug("Skipping JWT authentication for public endpoint: {}", requestURI);
                 filterChain.doFilter(request, response);
                 return;

@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.iotplatform.dto.ChangePasswordRequest;
 import com.iotplatform.model.User;
 import com.iotplatform.repository.UserRepository;
+import com.iotplatform.security.CustomUserDetails;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -37,11 +38,12 @@ public class UserController {
     private PasswordEncoder passwordEncoder;
 
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers(@AuthenticationPrincipal User currentUser) {
-        if (currentUser == null) {
+    public ResponseEntity<List<User>> getAllUsers(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
             logger.error("No authenticated user found");
             return ResponseEntity.status(401).build();
         }
+        User currentUser = userDetails.getUser();
         logger.info("User {} requesting all users for organization: {}", 
                    currentUser.getEmail(), currentUser.getOrganizationId());
         try {
@@ -55,10 +57,11 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable String id, @AuthenticationPrincipal User currentUser) {
-        if (currentUser == null) {
+    public ResponseEntity<User> getUserById(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
             return ResponseEntity.status(401).build();
         }
+        User currentUser = userDetails.getUser();
         if (id == null || id.trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
@@ -80,10 +83,11 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<User> updateUser(@PathVariable String id, 
                                          @RequestBody User updatedUser, 
-                                         @AuthenticationPrincipal User currentUser) {
-        if (currentUser == null) {
+                                         @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
             return ResponseEntity.status(401).build();
         }
+        User currentUser = userDetails.getUser();
         if (id == null || id.trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
@@ -114,10 +118,11 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteUser(@PathVariable String id, @AuthenticationPrincipal User currentUser) {
-        if (currentUser == null) {
+    public ResponseEntity<?> deleteUser(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
             return ResponseEntity.status(401).build();
         }
+        User currentUser = userDetails.getUser();
         if (id == null || id.trim().isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
@@ -143,20 +148,22 @@ public class UserController {
     }
 
     @GetMapping("/profile")
-    public ResponseEntity<User> getCurrentUserProfile(@AuthenticationPrincipal User currentUser) {
-        if (currentUser == null) {
+    public ResponseEntity<User> getCurrentUserProfile(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
             return ResponseEntity.status(401).build();
         }
+        User currentUser = userDetails.getUser();
         currentUser.setPassword(null);
         return ResponseEntity.ok(currentUser);
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<?> changePassword(@AuthenticationPrincipal User currentUser,
+    public ResponseEntity<?> changePassword(@AuthenticationPrincipal CustomUserDetails userDetails,
                                             @RequestBody ChangePasswordRequest body) {
-        if (currentUser == null) {
+        if (userDetails == null || userDetails.getUser() == null) {
             return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
         }
+        User currentUser = userDetails.getUser();
         if (body.getNewPassword() == null || body.getNewPassword().length() < 6) {
             return ResponseEntity.badRequest().body(Map.of("error", "New password must be at least 6 characters"));
         }

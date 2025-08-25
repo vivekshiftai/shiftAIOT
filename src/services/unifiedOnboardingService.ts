@@ -157,23 +157,15 @@ export class UnifiedOnboardingService {
       logInfo('UnifiedOnboarding', 'Testing backend connectivity');
       
       try {
-        const healthResponse = await fetch(`${this.baseUrl}/api/devices/health`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
+        // Use the authenticated API service instead of fetch
+        const healthResponse = await deviceAPI.testHealth();
 
         logInfo('UnifiedOnboarding', 'Health check response', {
           status: healthResponse.status,
           statusText: healthResponse.statusText,
-          ok: healthResponse.ok,
-          url: healthResponse.url
+          ok: healthResponse.status === 200,
+          url: `${this.baseUrl}/api/devices/health`
         });
-
-        if (!healthResponse.ok) {
-          throw new Error(`Backend health check failed: ${healthResponse.status} ${healthResponse.statusText}`);
-        }
 
         logInfo('UnifiedOnboarding', 'Backend connectivity test successful');
       } catch (healthError) {
