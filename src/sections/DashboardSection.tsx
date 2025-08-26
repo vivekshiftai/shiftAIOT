@@ -47,10 +47,6 @@ export const DashboardSection: React.FC = () => {
     };
 
     fetchUpcomingMaintenance();
-    
-    // Poll for maintenance updates every 60 seconds
-    const interval = setInterval(fetchUpcomingMaintenance, 60000);
-    return () => clearInterval(interval);
   }, []);
 
   // Calculate metrics

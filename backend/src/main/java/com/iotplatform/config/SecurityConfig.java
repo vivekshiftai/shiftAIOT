@@ -107,6 +107,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/notifications/**").authenticated()
                 .requestMatchers("/api/rules/**").authenticated()
                 .requestMatchers("/api/maintenance/**").authenticated()
+                .requestMatchers("/api/device-safety-precautions/**").authenticated()
                 .requestMatchers("/api/users/**").authenticated()
                 .requestMatchers("/api/organizations/**").authenticated()
                 .requestMatchers("/api/analytics/**").authenticated()

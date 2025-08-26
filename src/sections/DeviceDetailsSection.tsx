@@ -112,6 +112,11 @@ export const DeviceDetailsSection: React.FC = () => {
   const [lastSeen, setLastSeen] = useState<string>('');
   const [isRealTimeLoading, setIsRealTimeLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  
+  // Edit state for device profile
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedDevice, setEditedDevice] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
     const device = devices.find(d => d.id === deviceId);
 
@@ -193,15 +198,11 @@ export const DeviceDetailsSection: React.FC = () => {
     }
   };
 
-  // Auto-refresh real-time data every 30 seconds
+  // Load real-time data only when device changes
   useEffect(() => {
-    if (!device) return;
-    
-    const interval = setInterval(() => {
+    if (device) {
       fetchRealTimeData();
-    }, 30000); // 30 seconds
-    
-    return () => clearInterval(interval);
+    }
   }, [device?.id]);
 
   const loadDevicePDFs = async () => {
@@ -376,6 +377,78 @@ export const DeviceDetailsSection: React.FC = () => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  // Edit functions
+  const handleEditClick = () => {
+    setEditedDevice({
+      name: device.name,
+      location: device.location,
+      manufacturer: device.manufacturer || '',
+      model: device.model || '',
+      description: device.description || '',
+      ipAddress: device.ipAddress || '',
+      port: device.port || '',
+      mqttBroker: device.mqttBroker || '',
+      mqttTopic: device.mqttTopic || '',
+      mqttUsername: device.mqttUsername || '',
+      mqttPassword: device.mqttPassword || '',
+      httpEndpoint: device.httpEndpoint || '',
+      httpMethod: device.httpMethod || 'GET',
+      httpHeaders: device.httpHeaders || '',
+      coapHost: device.coapHost || '',
+      coapPort: device.coapPort || '',
+      coapPath: device.coapPath || ''
+    });
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedDevice(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!device || !editedDevice) return;
+
+    setIsSaving(true);
+    try {
+      // Create update payload with only non-null and non-empty values
+      const updatePayload: any = {};
+      
+      // Only include fields that have been changed and are not empty strings
+      Object.keys(editedDevice).forEach(key => {
+        const value = editedDevice[key];
+        if (value !== null && value !== undefined && value !== '') {
+          updatePayload[key] = value;
+        }
+      });
+
+      // Add device ID
+      updatePayload.id = device.id;
+
+      await deviceAPI.update(device.id, updatePayload);
+      
+      // Update the device in the IoT context
+      updateDeviceStatus(device.id, { ...device, ...editedDevice });
+      
+      setIsEditing(false);
+      setEditedDevice(null);
+      
+      logInfo('DeviceDetails', 'Device updated successfully', { deviceId: device.id });
+    } catch (error) {
+      logError('DeviceDetails', 'Failed to update device', error instanceof Error ? error : new Error('Unknown error'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    if (!editedDevice) return;
+    setEditedDevice((prev: any) => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || isTyping) return;
 
@@ -448,6 +521,41 @@ export const DeviceDetailsSection: React.FC = () => {
       case 'device-info':
         return (
           <div className="space-y-8">
+            {/* Header with Edit Button */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-slate-800">Device Profile</h2>
+              {!isEditing ? (
+                <button
+                  onClick={handleEditClick}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit Device
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={isSaving}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
+                  >
+                    {isSaving ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <CheckCircle className="w-4 h-4" />
+                    )}
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Status and Basic Info */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
@@ -465,7 +573,7 @@ export const DeviceDetailsSection: React.FC = () => {
                 <div>
                   <p className="text-sm text-slate-600">Last Seen</p>
                   <p className="font-semibold text-slate-800">
-                    {lastSeen ? formatLastSeen(lastSeen) : formatLastSeen(device.lastSeen)}
+                    {lastSeen ? formatLastSeen(lastSeen) : 'Not available'}
                     {isRealTimeLoading && (
                       <span className="ml-2 inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
                     )}
@@ -492,20 +600,72 @@ export const DeviceDetailsSection: React.FC = () => {
                 </h3>
                 <div className="space-y-3">
                   <div>
+                    <label className="text-sm font-medium text-slate-600">Device Name</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedDevice?.name || ''}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    ) : (
+                      <p className="text-slate-800">{device.name}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Location</label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedDevice?.location || ''}
+                        onChange={(e) => handleInputChange('location', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    ) : (
+                      <p className="text-slate-800">{device.location}</p>
+                    )}
+                  </div>
+                  <div>
                     <label className="text-sm font-medium text-slate-600">Manufacturer</label>
-                    <p className="text-slate-800">{device.manufacturer || 'Not specified'}</p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedDevice?.manufacturer || ''}
+                        onChange={(e) => handleInputChange('manufacturer', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter manufacturer"
+                      />
+                    ) : (
+                      <p className="text-slate-800">{device.manufacturer || 'Not specified'}</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-slate-600">Model</label>
-                    <p className="text-slate-800">{device.model || 'Not specified'}</p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedDevice?.model || ''}
+                        onChange={(e) => handleInputChange('model', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter model"
+                      />
+                    ) : (
+                      <p className="text-slate-800">{device.model || 'Not specified'}</p>
+                    )}
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-slate-600">Serial Number</label>
-                    <p className="text-slate-800">{device.serialNumber || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Firmware</label>
-                    <p className="text-slate-800">{device.firmware || 'Not specified'}</p>
+                    <label className="text-sm font-medium text-slate-600">Description</label>
+                    {isEditing ? (
+                      <textarea
+                        value={editedDevice?.description || ''}
+                        onChange={(e) => handleInputChange('description', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        rows={3}
+                        placeholder="Enter device description"
+                      />
+                    ) : (
+                      <p className="text-slate-800">{device.description || 'Not specified'}</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-slate-600">Assigned User</label>
@@ -514,86 +674,140 @@ export const DeviceDetailsSection: React.FC = () => {
                 </div>
               </div>
 
-              {/* Power & Environment */}
+              {/* Connection Details */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
                   <Settings className="w-5 h-5" />
-                  Power & Environment
+                  Connection Details
                 </h3>
                 <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Power Source</label>
-                    <p className="text-slate-800">{device.powerSource || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Power Consumption</label>
-                    <p className="text-slate-800">{device.powerConsumption ? `${device.powerConsumption}W` : 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Operating Temperature</label>
-                    <p className="text-slate-800">
-                      {device.operatingTemperatureMin && device.operatingTemperatureMax 
-                        ? `${device.operatingTemperatureMin}°C to ${device.operatingTemperatureMax}°C`
-                        : 'Not specified'
-                      }
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Operating Humidity</label>
-                    <p className="text-slate-800">
-                      {device.operatingHumidityMin && device.operatingHumidityMax 
-                        ? `${device.operatingHumidityMin}% to ${device.operatingHumidityMax}%`
-                        : 'Not specified'
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Connection Details */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Network Configuration */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <Settings className="w-5 h-5" />
-                  Network Configuration
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">WiFi SSID</label>
-                    <p className="text-slate-800">{device.wifiSsid || 'Not specified'}</p>
-                  </div>
                   <div>
                     <label className="text-sm font-medium text-slate-600">IP Address</label>
-                    <p className="text-slate-800">{device.ipAddress || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">MAC Address</label>
-                    <p className="text-slate-800">{device.macAddress || 'Not specified'}</p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedDevice?.ipAddress || ''}
+                        onChange={(e) => handleInputChange('ipAddress', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter IP address"
+                      />
+                    ) : (
+                      <p className="text-slate-800">{device.ipAddress || 'Not specified'}</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-slate-600">Port</label>
-                    <p className="text-slate-800">{device.port || 'Not specified'}</p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editedDevice?.port || ''}
+                        onChange={(e) => handleInputChange('port', e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter port"
+                      />
+                    ) : (
+                      <p className="text-slate-800">{device.port || 'Not specified'}</p>
+                    )}
                   </div>
-                </div>
-              </div>
-
-              {/* MQTT Configuration */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <Settings className="w-5 h-5" />
-                  MQTT Configuration
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">MQTT Broker</label>
-                    <p className="text-slate-800">{device.mqttBroker || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">MQTT Topic</label>
-                    <p className="text-slate-800">{device.mqttTopic || 'Not specified'}</p>
-                  </div>
+                  {device.protocol === 'MQTT' && (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">MQTT Broker</label>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editedDevice?.mqttBroker || ''}
+                            onChange={(e) => handleInputChange('mqttBroker', e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter MQTT broker URL"
+                          />
+                        ) : (
+                          <p className="text-slate-800">{device.mqttBroker || 'Not specified'}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">MQTT Topic</label>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editedDevice?.mqttTopic || ''}
+                            onChange={(e) => handleInputChange('mqttTopic', e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter MQTT topic"
+                          />
+                        ) : (
+                          <p className="text-slate-800">{device.mqttTopic || 'Not specified'}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  {device.protocol === 'HTTP' && (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">HTTP Endpoint</label>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editedDevice?.httpEndpoint || ''}
+                            onChange={(e) => handleInputChange('httpEndpoint', e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter HTTP endpoint"
+                          />
+                        ) : (
+                          <p className="text-slate-800">{device.httpEndpoint || 'Not specified'}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">HTTP Method</label>
+                        {isEditing ? (
+                          <select
+                            value={editedDevice?.httpMethod || 'GET'}
+                            onChange={(e) => handleInputChange('httpMethod', e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="GET">GET</option>
+                            <option value="POST">POST</option>
+                            <option value="PUT">PUT</option>
+                            <option value="DELETE">DELETE</option>
+                          </select>
+                        ) : (
+                          <p className="text-slate-800">{device.httpMethod || 'GET'}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  {device.protocol === 'COAP' && (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">COAP Host</label>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editedDevice?.coapHost || ''}
+                            onChange={(e) => handleInputChange('coapHost', e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter COAP host"
+                          />
+                        ) : (
+                          <p className="text-slate-800">{device.coapHost || 'Not specified'}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">COAP Port</label>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editedDevice?.coapPort || ''}
+                            onChange={(e) => handleInputChange('coapPort', e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter COAP port"
+                          />
+                        ) : (
+                          <p className="text-slate-800">{device.coapPort || 'Not specified'}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

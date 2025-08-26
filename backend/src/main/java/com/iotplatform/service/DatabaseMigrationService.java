@@ -1,11 +1,16 @@
 package com.iotplatform.service;
 
+import com.iotplatform.model.User;
+import com.iotplatform.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 public class DatabaseMigrationService implements CommandLineRunner {
@@ -13,58 +18,112 @@ public class DatabaseMigrationService implements CommandLineRunner {
     private static final Logger logger = LoggerFactory.getLogger(DatabaseMigrationService.class);
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) throws Exception {
-        logger.info("Starting database migration service...");
-        fixInvalidUserRoles();
-        logger.info("Database migration completed.");
+        logger.info("🚀 Starting database migration and initialization...");
+        
+        // Ensure default users exist
+        ensureDefaultUsersExist();
+        
+        logger.info("✅ Database migration and initialization completed");
     }
 
-    private void fixInvalidUserRoles() {
+    private void ensureDefaultUsersExist() {
+        logger.info("👥 Ensuring default users exist in database...");
+        
+        // Create default admin user if not exists
+        ensureUserExists(
+            "admin@shiftaiot.com",
+            "Admin",
+            "User",
+            "admin123",
+            User.Role.ADMIN,
+            "shiftAIOT-org-2024"
+        );
+        
+        // Create default regular user if not exists
+        ensureUserExists(
+            "user@shiftaiot.com",
+            "Regular",
+            "User",
+            "user123",
+            User.Role.USER,
+            "shiftAIOT-org-2024"
+        );
+        
+        logger.info("✅ Default users check completed");
+    }
+
+    private void ensureUserExists(String email, String firstName, String lastName, 
+                                String password, User.Role role, String organizationId) {
         try {
-            logger.info("Checking for invalid user roles...");
+            Optional<User> existingUser = userRepository.findByEmail(email);
             
-            // Count users with invalid roles
-            Integer invalidRoleCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM users WHERE role NOT IN ('ADMIN', 'USER')", 
-                Integer.class
-            );
-            
-            if (invalidRoleCount != null && invalidRoleCount > 0) {
-                logger.warn("Found {} users with invalid roles. Fixing...", invalidRoleCount);
+            if (existingUser.isPresent()) {
+                User user = existingUser.get();
+                logger.info("✅ User already exists: {} (ID: {}, Role: {})", 
+                           email, user.getId(), user.getRole());
                 
-                // Fix specific invalid roles
-                int viewerCount = jdbcTemplate.update(
-                    "UPDATE users SET role = 'USER' WHERE role = 'VIEWER'"
-                );
-                if (viewerCount > 0) {
-                    logger.info("Fixed {} users with 'VIEWER' role", viewerCount);
+                // Update user if needed
+                boolean updated = false;
+                
+                if (!user.getFirstName().equals(firstName)) {
+                    user.setFirstName(firstName);
+                    updated = true;
                 }
                 
-                int orgAdminCount = jdbcTemplate.update(
-                    "UPDATE users SET role = 'ADMIN' WHERE role = 'ORG_ADMIN'"
-                );
-                if (orgAdminCount > 0) {
-                    logger.info("Fixed {} users with 'ORG_ADMIN' role", orgAdminCount);
+                if (!user.getLastName().equals(lastName)) {
+                    user.setLastName(lastName);
+                    updated = true;
                 }
                 
-                // Fix any other invalid roles
-                int otherInvalidCount = jdbcTemplate.update(
-                    "UPDATE users SET role = 'USER' WHERE role NOT IN ('ADMIN', 'USER')"
-                );
-                if (otherInvalidCount > 0) {
-                    logger.info("Fixed {} users with other invalid roles", otherInvalidCount);
+                if (user.getRole() != role) {
+                    user.setRole(role);
+                    updated = true;
                 }
                 
-                logger.info("User role migration completed successfully.");
+                if (!user.getOrganizationId().equals(organizationId)) {
+                    user.setOrganizationId(organizationId);
+                    updated = true;
+                }
+                
+                if (!user.isEnabled()) {
+                    user.setEnabled(true);
+                    updated = true;
+                }
+                
+                if (updated) {
+                    user.setUpdatedAt(LocalDateTime.now());
+                    userRepository.save(user);
+                    logger.info("✅ Updated user: {}", email);
+                }
+                
             } else {
-                logger.info("No invalid user roles found.");
+                // Create new user
+                User newUser = new User();
+                newUser.setId(java.util.UUID.randomUUID().toString());
+                newUser.setFirstName(firstName);
+                newUser.setLastName(lastName);
+                newUser.setEmail(email);
+                newUser.setPassword(passwordEncoder.encode(password));
+                newUser.setRole(role);
+                newUser.setOrganizationId(organizationId);
+                newUser.setEnabled(true);
+                newUser.setCreatedAt(LocalDateTime.now());
+                newUser.setUpdatedAt(LocalDateTime.now());
+                
+                User savedUser = userRepository.save(newUser);
+                logger.info("✅ Created new user: {} (ID: {}, Role: {})", 
+                           email, savedUser.getId(), savedUser.getRole());
             }
             
         } catch (Exception e) {
-            logger.error("Error during user role migration: {}", e.getMessage(), e);
+            logger.error("❌ Error ensuring user exists: {}", email, e);
         }
     }
 }

@@ -139,8 +139,13 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       try {
         logInfo('EnhancedDeviceOnboardingForm', 'Attempting to fetch users for device assignment');
         const response = await userAPI.getAll();
-        setUsers(response.data);
-        logInfo('EnhancedDeviceOnboardingForm', 'Users fetched successfully', { count: response.data.length });
+        // Filter only enabled users for assignment
+        const enabledUsers = response.data.filter((user: any) => user.enabled);
+        setUsers(enabledUsers);
+        logInfo('EnhancedDeviceOnboardingForm', 'Users fetched successfully', { 
+          total: response.data.length, 
+          enabled: enabledUsers.length 
+        });
       } catch (error: any) {
         logError('EnhancedDeviceOnboardingForm', 'Failed to fetch users', error instanceof Error ? error : new Error('Unknown error'));
         
@@ -149,14 +154,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           logWarn('EnhancedDeviceOnboardingForm', 'Authentication error when fetching users - user may not be logged in or token expired');
         }
         
-        // Set some dummy users as fallback
-        const fallbackUsers = [
-          { id: 'user1', firstName: 'John', lastName: 'Doe', role: 'ADMIN' },
-          { id: 'user2', firstName: 'Jane', lastName: 'Smith', role: 'USER' },
-          { id: 'user3', firstName: 'Bob', lastName: 'Johnson', role: 'USER' }
-        ];
-        setUsers(fallbackUsers);
-        logInfo('EnhancedDeviceOnboardingForm', 'Using fallback users due to fetch failure', { count: fallbackUsers.length });
+        // Don't set any fallback data - let the user see the error state
+        setUsers([]);
+        logWarn('EnhancedDeviceOnboardingForm', 'No users available for assignment due to fetch failure');
       } finally {
         setLoadingUsers(false);
       }

@@ -141,10 +141,6 @@ const RulesPage: React.FC = () => {
 
   useEffect(() => {
     fetchAllData();
-    
-    // Poll for updates every 30 seconds
-    const interval = setInterval(fetchAllData, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   // Filter functions

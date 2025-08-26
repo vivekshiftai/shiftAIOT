@@ -34,6 +34,7 @@ export const AuthStatusIndicator: React.FC<AuthStatusIndicatorProps> = ({ classN
       setLastCheck(new Date());
     };
 
+    // Check auth status only when component mounts or user changes
     checkAuthStatus();
   }, [user]);
 

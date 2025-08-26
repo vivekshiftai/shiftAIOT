@@ -30,6 +30,11 @@ public class DeviceSafetyPrecautionService {
         return deviceSafetyPrecautionRepository.findByDeviceIdAndOrganizationId(deviceId, organizationId);
     }
     
+    public List<DeviceSafetyPrecaution> getAllSafetyPrecautionsByOrganization(String organizationId) {
+        logger.info("Fetching all safety precautions for organization: {}", organizationId);
+        return deviceSafetyPrecautionRepository.findByOrganizationId(organizationId);
+    }
+    
     public List<DeviceSafetyPrecaution> getActiveSafetyPrecautionsByDevice(String deviceId, String organizationId) {
         logger.info("Fetching active safety precautions for device: {} in organization: {}", deviceId, organizationId);
         return deviceSafetyPrecautionRepository.findByDeviceIdAndIsActiveTrueAndOrganizationId(deviceId, organizationId);
@@ -148,11 +153,6 @@ public class DeviceSafetyPrecautionService {
     public long getActiveSafetyPrecautionsCount(String deviceId, String organizationId) {
         logger.info("Counting active safety precautions for device: {}", deviceId);
         return deviceSafetyPrecautionRepository.countActiveByDeviceIdAndOrganizationId(deviceId, organizationId);
-    }
-    
-    public List<DeviceSafetyPrecaution> getAllSafetyPrecautionsByOrganization(String organizationId) {
-        logger.info("Fetching all safety precautions for organization: {}", organizationId);
-        return deviceSafetyPrecautionRepository.findByOrganizationId(organizationId);
     }
     
     public List<DeviceSafetyPrecaution> getSafetyPrecautionsByDeviceId(String deviceId) {

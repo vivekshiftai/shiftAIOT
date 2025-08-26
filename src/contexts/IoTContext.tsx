@@ -224,16 +224,12 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
 
   // Note: Removed telemetry simulation to prevent unwanted notifications and data interference
 
-  // Real-time device refresh every 30 seconds
+  // Load data only when user changes or component mounts
   useEffect(() => {
-    if (!user) return;
-    
-    const interval = setInterval(() => {
-      logInfo('IoT', 'Auto-refreshing devices');
-      refreshDevices();
-    }, 30000); // 30 seconds
-    
-    return () => clearInterval(interval);
+    if (user) {
+      logInfo('IoT', 'Loading data on user change or mount');
+      loadData();
+    }
   }, [user]);
 
   const updateDeviceStatus = (deviceId: string, status: Status) => {

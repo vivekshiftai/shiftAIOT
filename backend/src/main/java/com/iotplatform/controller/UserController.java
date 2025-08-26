@@ -442,22 +442,22 @@ public class UserController {
             if (hasChanges) {
                 User savedUser = userRepository.save(currentUser);
                 logger.info("✅ Integration IDs updated successfully for user: {}", savedUser.getEmail());
-                return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Integration IDs updated successfully",
-                    "gmailId", savedUser.getGmailId(),
-                    "slackId", savedUser.getSlackId(),
-                    "teamId", savedUser.getTeamId()
-                ));
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "Integration IDs updated successfully");
+                response.put("gmailId", savedUser.getGmailId());
+                response.put("slackId", savedUser.getSlackId());
+                response.put("teamId", savedUser.getTeamId());
+                return ResponseEntity.ok(response);
             } else {
                 logger.info("ℹ️ No changes detected for integration IDs update for user: {}", currentUser.getEmail());
-                return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "No changes detected",
-                    "gmailId", currentUser.getGmailId(),
-                    "slackId", currentUser.getSlackId(),
-                    "teamId", currentUser.getTeamId()
-                ));
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "No changes detected");
+                response.put("gmailId", currentUser.getGmailId());
+                response.put("slackId", currentUser.getSlackId());
+                response.put("teamId", currentUser.getTeamId());
+                return ResponseEntity.ok(response);
             }
             
         } catch (Exception e) {

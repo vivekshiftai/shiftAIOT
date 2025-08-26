@@ -40,6 +40,9 @@ import com.iotplatform.repository.MaintenanceScheduleRepository;
 import com.iotplatform.service.DeviceSafetyPrecautionService;
 import com.iotplatform.model.DeviceMaintenance;
 import com.iotplatform.repository.DeviceMaintenanceRepository;
+import com.iotplatform.model.User;
+import com.iotplatform.repository.UserRepository;
+import com.iotplatform.service.NotificationService;
 
 
 @Service
@@ -49,6 +52,12 @@ public class DeviceService {
 
     @Autowired
     private DeviceRepository deviceRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Autowired
     private TelemetryService telemetryService;
@@ -289,10 +298,14 @@ public class DeviceService {
         // Set user assignment - use assignedUserId from request if provided, otherwise use current user
         if (request.getAssignedUserId() != null && !request.getAssignedUserId().trim().isEmpty()) {
             device.setAssignedUserId(request.getAssignedUserId().trim());
+            device.setAssignedBy(currentUserId);
+            
+            // Create notification for the assigned user
+            createDeviceAssignmentNotification(device, request.getAssignedUserId().trim(), organizationId);
         } else {
             device.setAssignedUserId(currentUserId);
+            device.setAssignedBy(currentUserId);
         }
-        device.setAssignedBy(currentUserId);
         
         // Use the status from the request if provided, otherwise default to ONLINE
         if (request.getStatus() != null) {
@@ -629,5 +642,87 @@ public class DeviceService {
         long error = deviceRepository.countByOrganizationIdAndStatus(organizationId, Device.DeviceStatus.ERROR);
 
         return new DeviceStatsResponse(total, online, offline, warning, error);
+    }
+
+    private void createDeviceAssignmentNotification(Device device, String assignedUserId, String organizationId) {
+        try {
+            // Get the assigned user
+            Optional<User> assignedUserOpt = userRepository.findById(assignedUserId);
+            if (assignedUserOpt.isPresent()) {
+                User assignedUser = assignedUserOpt.get();
+                
+                // Create notification with enhanced content
+                Notification notification = new Notification();
+                notification.setTitle("New Device Assignment");
+                notification.setMessage(String.format(
+                    "You have been assigned a new device: %s (%s) at location: %s. " +
+                    "The device is currently %s and ready for monitoring.",
+                    device.getName(),
+                    device.getType(),
+                    device.getLocation(),
+                    device.getStatus().toString().toLowerCase()
+                ));
+                notification.setType(Notification.NotificationType.INFO);
+                notification.setUserId(assignedUserId);
+                notification.setDeviceId(device.getId());
+                notification.setOrganizationId(organizationId);
+                notification.setRead(false);
+                
+                // Save notification using the notification service
+                notificationService.createNotification(notification);
+                
+                logger.info("✅ Created device assignment notification for user: {} for device: {}", 
+                           assignedUser.getEmail(), device.getName());
+            } else {
+                logger.warn("⚠️ Could not create notification - assigned user not found: {}", assignedUserId);
+            }
+        } catch (Exception e) {
+            logger.error("❌ Failed to create device assignment notification for user: {} device: {}", 
+                        assignedUserId, device.getId(), e);
+            // Don't fail the device creation if notification fails
+        }
+    }
+
+    private void createDeviceUpdateNotification(Device device, String assignedUserId, String organizationId, String updatedBy) {
+        try {
+            // Get the assigned user
+            Optional<User> assignedUserOpt = userRepository.findById(assignedUserId);
+            if (assignedUserOpt.isPresent()) {
+                User assignedUser = assignedUserOpt.get();
+                
+                // Get the user who made the update
+                Optional<User> updatedByUserOpt = userRepository.findById(updatedBy);
+                String updatedByUserName = updatedByUserOpt.map(user -> user.getFirstName() + " " + user.getLastName()).orElse("System");
+                
+                // Create notification for device update
+                Notification notification = new Notification();
+                notification.setTitle("Device Assignment Updated");
+                notification.setMessage(String.format(
+                    "Your device assignment has been updated by %s. " +
+                    "Device: %s (%s) at location: %s is now assigned to you.",
+                    updatedByUserName,
+                    device.getName(),
+                    device.getType(),
+                    device.getLocation()
+                ));
+                notification.setType(Notification.NotificationType.INFO);
+                notification.setUserId(assignedUserId);
+                notification.setDeviceId(device.getId());
+                notification.setOrganizationId(organizationId);
+                notification.setRead(false);
+                
+                // Save notification using the notification service
+                notificationService.createNotification(notification);
+                
+                logger.info("✅ Created device update notification for user: {} for device: {}", 
+                           assignedUser.getEmail(), device.getName());
+            } else {
+                logger.warn("⚠️ Could not create update notification - assigned user not found: {}", assignedUserId);
+            }
+        } catch (Exception e) {
+            logger.error("❌ Failed to create device update notification for user: {} device: {}", 
+                        assignedUserId, device.getId(), e);
+            // Don't fail the device update if notification fails
+        }
     }
 }

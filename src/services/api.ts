@@ -166,26 +166,18 @@ export const authAPI = {
 export const deviceAPI = {
   getAll: () => api.get('/api/devices'),
   getById: (id: string) => api.get(`/api/devices/${id}`),
-  create: (device: any) => api.post('/api/devices', device),
-  createSimple: (device: any) => api.post('/api/devices/simple', device),
-  update: (id: string, device: any) => api.put(`/api/devices/${id}`, device),
-  delete: (id: string) => {
-    console.log('🔍 deviceAPI.delete called with ID:', id);
-    console.log('🔍 Full URL will be:', `${API_BASE_URL}/api/devices/${id}`);
-    return api.delete(`/api/devices/${id}`);
-  },
-  getByOrganization: (organizationId: string) => api.get(`/api/devices/organization/${organizationId}`),
-  getStatus: (id: string) => api.get(`/api/devices/${id}/status`),
-  updateStatus: (id: string, status: string) => api.patch(`/api/devices/${id}/status`, { status }),
-  getTelemetry: (id: string) => api.get(`/api/devices/${id}/telemetry`),
-  getDocumentation: (id: string) => api.get(`/api/devices/${id}/documentation`),
-  getDebugData: (deviceId: string) => api.get(`/api/devices/${deviceId}/debug-data`),
-  testAuth: () => api.get('/api/devices/auth-test'),
-  testHealth: () => api.get('/api/devices/health'),
-  testFormData: (formData: FormData) => api.post('/api/devices/test-formdata', formData),
-
-  deviceOnboard: (formData: FormData) => api.post('/api/devices/device-onboard', formData),
-  getDevicePDFResults: (deviceId: string) => api.get(`/api/devices/${deviceId}/pdf-results`),
+  create: (deviceData: any) => api.post('/api/devices', deviceData),
+  update: (id: string, deviceData: any) => api.put(`/api/devices/${id}`, deviceData),
+  delete: (id: string) => api.delete(`/api/devices/${id}`),
+  getDocumentation: (deviceId: string) => api.get(`/api/devices/${deviceId}/documentation`),
+  downloadDocumentation: (deviceId: string, type: string) => api.get(`/api/devices/${deviceId}/documentation/${type}/download`),
+  debugDatabase: (email: string) => api.get(`/api/devices/debug-db?email=${email}`),
+  healthCheck: () => api.get('/api/devices/health'),
+  deviceOnboard: (formData: FormData) => api.post('/api/devices/device-onboard', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
 };
 
 // Rule API
@@ -349,21 +341,15 @@ export const deviceConnectionAPI = {
 export const userAPI = {
   getAll: () => api.get('/api/users'),
   getById: (id: string) => api.get(`/api/users/${id}`),
-  update: (id: string, user: any) => api.put(`/api/users/${id}`, user),
+  update: (id: string, userData: any) => api.put(`/api/users/${id}`, userData),
   delete: (id: string) => api.delete(`/api/users/${id}`),
   getProfile: () => api.get('/api/users/profile'),
-  changePassword: (payload: { currentPassword: string; newPassword: string; confirmPassword: string }) => 
-    api.post('/api/users/change-password', payload),
-  // User search and stats
-  search: (params: { name?: string; email?: string; role?: string }) => 
-    api.get('/api/users/search', { params }),
-  getStats: () => api.get('/api/users/stats'),
+  changePassword: (passwordData: any) => api.post('/api/users/change-password', passwordData),
+  updateIntegrationIds: (integrationIds: { gmailId?: string | null; slackId?: string | null; teamId?: string | null }) => 
+    api.post('/api/users/update-integration-ids', integrationIds),
   // Preferences
   getPreferences: () => api.get('/api/user-preferences'),
   savePreferences: (prefs: any) => api.post('/api/user-preferences', prefs),
-  // Integration IDs
-  updateIntegrationIds: (integrationIds: { gmailId?: string | null; slackId?: string | null; teamId?: string | null }) => 
-    api.post('/api/users/update-integration-ids', integrationIds),
 };
 
 // Organization API

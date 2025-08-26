@@ -125,7 +125,7 @@ class TokenService {
   private async performTokenRefresh(refreshToken: string): Promise<string | null> {
     try {
       console.log('🔄 Attempting token refresh...');
-      const response = await this.axiosInstance.post('/api/auth/refresh', { token: refreshToken });
+      const response = await this.axiosInstance.post('/auth/refresh', { token: refreshToken });
       const newToken = response.data?.token;
       const newRefreshToken = response.data?.refreshToken;
       

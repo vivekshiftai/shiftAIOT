@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Date;
+import java.time.LocalDateTime;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,7 @@ import com.iotplatform.dto.DeviceCreateRequest;
 import com.iotplatform.dto.DeviceStatsResponse;
 
 import com.iotplatform.dto.TelemetryDataRequest;
+import com.iotplatform.dto.DeviceUpdateRequest;
 import com.iotplatform.model.Device;
 import com.iotplatform.model.Device.Protocol;
 import com.iotplatform.model.User;
@@ -55,6 +57,8 @@ import com.iotplatform.repository.DeviceMaintenanceRepository;
 import com.iotplatform.repository.DeviceSafetyPrecautionRepository;
 import com.iotplatform.repository.DeviceRepository;
 import com.iotplatform.repository.UserRepository;
+import com.iotplatform.model.Notification;
+import com.iotplatform.service.NotificationService;
 
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
@@ -84,8 +88,9 @@ public class DeviceController {
     private final DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository;
     private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
-    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository) {
+    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.fileStorageService = fileStorageService;
@@ -98,6 +103,7 @@ public class DeviceController {
         this.deviceSafetyPrecautionRepository = deviceSafetyPrecautionRepository;
         this.deviceRepository = deviceRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @GetMapping
@@ -247,29 +253,127 @@ public class DeviceController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Device> updateDevice(@PathVariable String id, @Valid @RequestBody Device deviceDetails, @AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<?> updateDevice(@PathVariable String id, @RequestBody DeviceUpdateRequest deviceRequest, 
+                                        @AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🔧 Update device request received for device ID: {}", id);
+        
         if (userDetails == null || userDetails.getUser() == null) {
+            logger.error("❌ No authenticated user found for device update request");
             return ResponseEntity.status(401).build();
         }
-        User user = userDetails.getUser();
         
-        String userEmail = user.getEmail();
-        String organizationId = user.getOrganizationId();
+        User currentUser = userDetails.getUser();
+        logger.info("👤 User {} requesting to update device: {}", currentUser.getEmail(), id);
         
-        logger.info("User {} updating device: {}", userEmail, id);
-        
+        // Validate device ID
         if (id == null || id.trim().isEmpty()) {
-            logger.warn("Invalid device ID provided by user {}", userEmail);
-            return ResponseEntity.badRequest().build();
+            logger.warn("❌ Invalid device ID provided: {}", id);
+            return ResponseEntity.badRequest().body(Map.of(
+                "error", "Invalid device ID",
+                "message", "Device ID cannot be null or empty"
+            ));
         }
         
         try {
-            Device updatedDevice = deviceService.updateDevice(id.trim(), deviceDetails, organizationId);
-            logger.info("Device {} updated successfully", id);
+            // Check if device exists and belongs to the same organization
+            Optional<Device> existingDeviceOpt = deviceRepository.findById(id.trim());
+            if (existingDeviceOpt.isEmpty()) {
+                logger.warn("❌ Device not found: {}", id);
+                return ResponseEntity.notFound().build();
+            }
+            
+            Device existingDevice = existingDeviceOpt.get();
+            if (!existingDevice.getOrganizationId().equals(currentUser.getOrganizationId())) {
+                logger.warn("❌ Forbidden access attempt - user {} trying to update device {} from different organization: {} vs {}", 
+                          currentUser.getEmail(), id, currentUser.getOrganizationId(), existingDevice.getOrganizationId());
+                return ResponseEntity.status(403).build();
+            }
+            
+            // Update device fields only if they are not null (partial update)
+            if (deviceRequest.getName() != null) {
+                existingDevice.setName(convertEmptyToNull(deviceRequest.getName()));
+            }
+            if (deviceRequest.getLocation() != null) {
+                existingDevice.setLocation(convertEmptyToNull(deviceRequest.getLocation()));
+            }
+            if (deviceRequest.getManufacturer() != null) {
+                existingDevice.setManufacturer(convertEmptyToNull(deviceRequest.getManufacturer()));
+            }
+            if (deviceRequest.getModel() != null) {
+                existingDevice.setModel(convertEmptyToNull(deviceRequest.getModel()));
+            }
+            if (deviceRequest.getDescription() != null) {
+                existingDevice.setDescription(convertEmptyToNull(deviceRequest.getDescription()));
+            }
+            if (deviceRequest.getIpAddress() != null) {
+                existingDevice.setIpAddress(convertEmptyToNull(deviceRequest.getIpAddress()));
+            }
+            if (deviceRequest.getPort() != null) {
+                existingDevice.setPort(deviceRequest.getPort());
+            }
+            if (deviceRequest.getMqttBroker() != null) {
+                existingDevice.setMqttBroker(convertEmptyToNull(deviceRequest.getMqttBroker()));
+            }
+            if (deviceRequest.getMqttTopic() != null) {
+                existingDevice.setMqttTopic(convertEmptyToNull(deviceRequest.getMqttTopic()));
+            }
+            if (deviceRequest.getMqttUsername() != null) {
+                existingDevice.setMqttUsername(convertEmptyToNull(deviceRequest.getMqttUsername()));
+            }
+            if (deviceRequest.getMqttPassword() != null) {
+                existingDevice.setMqttPassword(convertEmptyToNull(deviceRequest.getMqttPassword()));
+            }
+            if (deviceRequest.getHttpEndpoint() != null) {
+                existingDevice.setHttpEndpoint(convertEmptyToNull(deviceRequest.getHttpEndpoint()));
+            }
+            if (deviceRequest.getHttpMethod() != null) {
+                existingDevice.setHttpMethod(convertEmptyToNull(deviceRequest.getHttpMethod()));
+            }
+            if (deviceRequest.getHttpHeaders() != null) {
+                existingDevice.setHttpHeaders(convertEmptyToNull(deviceRequest.getHttpHeaders()));
+            }
+            if (deviceRequest.getCoapHost() != null) {
+                existingDevice.setCoapHost(convertEmptyToNull(deviceRequest.getCoapHost()));
+            }
+            if (deviceRequest.getCoapPort() != null) {
+                existingDevice.setCoapPort(deviceRequest.getCoapPort());
+            }
+            if (deviceRequest.getCoapPath() != null) {
+                existingDevice.setCoapPath(convertEmptyToNull(deviceRequest.getCoapPath()));
+            }
+            
+            // Check if assigned user has changed
+            String previousAssignedUserId = existingDevice.getAssignedUserId();
+            if (deviceRequest.getAssignedUserId() != null && 
+                !deviceRequest.getAssignedUserId().equals(previousAssignedUserId)) {
+                
+                // Update assigned user
+                existingDevice.setAssignedUserId(deviceRequest.getAssignedUserId());
+                existingDevice.setAssignedBy(currentUser.getId());
+                
+                // Create notification for the newly assigned user
+                createDeviceAssignmentNotification(existingDevice, deviceRequest.getAssignedUserId(), 
+                                                  currentUser.getOrganizationId(), currentUser.getId());
+                
+                logger.info("✅ Device assignment changed from {} to {} for device: {}", 
+                           previousAssignedUserId, deviceRequest.getAssignedUserId(), id);
+            }
+            
+            // Always update the timestamp
+            existingDevice.setUpdatedAt(LocalDateTime.now());
+            
+            Device updatedDevice = deviceRepository.save(existingDevice);
+            
+            logger.info("✅ Device updated successfully: {} by user: {}", id, currentUser.getEmail());
+            
             return ResponseEntity.ok(updatedDevice);
-        } catch (RuntimeException e) {
-            logger.error("Failed to update device {}: {}", id, e.getMessage());
-            return ResponseEntity.notFound().build();
+            
+        } catch (Exception e) {
+            logger.error("❌ Error updating device: {} by user: {}", id, currentUser.getEmail(), e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                "error", "Failed to update device",
+                "message", e.getMessage()
+            ));
         }
     }
 
@@ -1356,6 +1460,53 @@ public class DeviceController {
                 "error", "Device onboarding failed",
                 "message", e.getMessage()
             ));
+        }
+    }
+
+    private String convertEmptyToNull(String value) {
+        return (value != null && value.trim().isEmpty()) ? null : value;
+    }
+
+    private void createDeviceAssignmentNotification(Device device, String assignedUserId, String organizationId, String updatedBy) {
+        try {
+            // Get the assigned user
+            Optional<User> assignedUserOpt = userRepository.findById(assignedUserId);
+            if (assignedUserOpt.isPresent()) {
+                User assignedUser = assignedUserOpt.get();
+                
+                // Get the user who made the update
+                Optional<User> updatedByUserOpt = userRepository.findById(updatedBy);
+                String updatedByUserName = updatedByUserOpt.map(user -> user.getFirstName() + " " + user.getLastName()).orElse("System");
+                
+                // Create notification for device assignment
+                Notification notification = new Notification();
+                notification.setTitle("Device Assignment Updated");
+                notification.setMessage(String.format(
+                    "You have been assigned a device by %s. " +
+                    "Device: %s (%s) at location: %s is now assigned to you.",
+                    updatedByUserName,
+                    device.getName(),
+                    device.getType(),
+                    device.getLocation()
+                ));
+                notification.setType(Notification.NotificationType.INFO);
+                notification.setUserId(assignedUserId);
+                notification.setDeviceId(device.getId());
+                notification.setOrganizationId(organizationId);
+                notification.setRead(false);
+                
+                // Save notification using the notification service
+                notificationService.createNotification(notification);
+                
+                logger.info("✅ Created device assignment notification for user: {} for device: {}", 
+                           assignedUser.getEmail(), device.getName());
+            } else {
+                logger.warn("⚠️ Could not create assignment notification - assigned user not found: {}", assignedUserId);
+            }
+        } catch (Exception e) {
+            logger.error("❌ Failed to create device assignment notification for user: {} device: {}", 
+                        assignedUserId, device.getId(), e);
+            // Don't fail the device update if notification fails
         }
     }
 }

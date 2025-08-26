@@ -29,6 +29,28 @@ public class DeviceSafetyPrecautionController {
         this.deviceSafetyPrecautionService = deviceSafetyPrecautionService;
     }
     
+    @GetMapping
+    @PreAuthorize("hasAuthority('DEVICE_READ')")
+    public ResponseEntity<List<DeviceSafetyPrecaution>> getAllSafetyPrecautions(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        
+        String organizationId = userDetails.getUser().getOrganizationId();
+        logger.info("User {} requesting all safety precautions for organization: {}", userDetails.getUser().getEmail(), organizationId);
+        
+        try {
+            List<DeviceSafetyPrecaution> precautions = deviceSafetyPrecautionService.getAllSafetyPrecautionsByOrganization(organizationId);
+            logger.info("Found {} safety precautions for organization: {}", precautions.size(), organizationId);
+            return ResponseEntity.ok(precautions);
+        } catch (Exception e) {
+            logger.error("Error fetching safety precautions for organization {}: {}", organizationId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
     @GetMapping("/device/{deviceId}")
     @PreAuthorize("hasAuthority('DEVICE_READ')")
     public ResponseEntity<List<DeviceSafetyPrecaution>> getSafetyPrecautionsByDevice(

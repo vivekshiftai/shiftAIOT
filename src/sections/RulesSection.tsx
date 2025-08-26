@@ -18,13 +18,9 @@ export const RulesSection: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Refresh rules when component mounts and set up polling
+  // Load rules only when component mounts
   useEffect(() => {
     refreshRules();
-    
-    // Poll for updates every 60 seconds (reduced from 30)
-    const interval = setInterval(refreshRules, 60000);
-    return () => clearInterval(interval);
   }, [refreshRules]);
 
   // Filter rules based on search and status
