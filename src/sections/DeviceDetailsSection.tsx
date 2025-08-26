@@ -134,6 +134,14 @@ export const DeviceDetailsSection: React.FC = () => {
     device: device
   });
 
+  // Clear loading state if device is found and we're still loading
+  useEffect(() => {
+    if (device && deviceId && isInitialLoading) {
+      console.log('🔄 Device found, clearing initial loading state');
+      setIsInitialLoading(false);
+    }
+  }, [device, deviceId, isInitialLoading]);
+
   // Show loading if devices are still being loaded
   if (devices.length === 0) {
     console.log('🔄 Devices array is empty, showing loading screen');
@@ -154,6 +162,8 @@ export const DeviceDetailsSection: React.FC = () => {
   }
 
   useEffect(() => {
+    console.log('🔄 useEffect triggered with:', { deviceId, devicesLength: devices.length, deviceFound: !!device });
+    
     if (device && deviceId) {
       console.log('🚀 Starting data loading for device:', device.id);
       setIsInitialLoading(true);
@@ -162,7 +172,7 @@ export const DeviceDetailsSection: React.FC = () => {
       const timeoutId = setTimeout(() => {
         console.warn('⚠️ Data loading timeout, forcing completion');
         setIsInitialLoading(false);
-      }, 30000); // 30 second timeout
+      }, 15000); // 15 second timeout
       
       Promise.allSettled([
         fetchDocumentationInfo(),
@@ -185,7 +195,7 @@ export const DeviceDetailsSection: React.FC = () => {
       console.log('❌ Device not found in devices array, stopping loading');
       setIsInitialLoading(false);
     }
-  }, [deviceId, devices.length, device?.id]);
+  }, [deviceId, devices.length, device]);
 
   // Real-time data fetching
   const fetchRealTimeData = async () => {
@@ -195,18 +205,31 @@ export const DeviceDetailsSection: React.FC = () => {
     try {
       logInfo('DeviceDetails', `🔄 Fetching real-time data for device: ${device.name} (${device.id})`);
       
-      // Fetch device statistics
-      const stats = await DeviceStatsService.getDeviceStats(device.id);
-      console.log('📊 Device stats:', stats);
-      setDeviceStats(stats);
+      // Fetch device statistics with timeout
+      try {
+        const statsPromise = DeviceStatsService.getDeviceStats(device.id);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Device stats timeout')), 5000)
+        );
+        const stats = await Promise.race([statsPromise, timeoutPromise]) as any;
+        console.log('📊 Device stats:', stats);
+        setDeviceStats(stats);
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch device stats:', error);
+        setDeviceStats(null);
+      }
       
-      // Fetch detailed data with better error handling
+      // Fetch detailed data with better error handling and timeouts
       logInfo('DeviceDetails', 'Fetching rules, maintenance, and safety data...');
       
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('API timeout')), 5000)
+      );
+      
       const [rules, maintenance, safety] = await Promise.allSettled([
-        DeviceStatsService.getDeviceRules(device.id),
-        DeviceStatsService.getDeviceMaintenance(device.id),
-        DeviceStatsService.getDeviceSafety(device.id)
+        Promise.race([DeviceStatsService.getDeviceRules(device.id), timeoutPromise]),
+        Promise.race([DeviceStatsService.getDeviceMaintenance(device.id), timeoutPromise]),
+        Promise.race([DeviceStatsService.getDeviceSafety(device.id), timeoutPromise])
       ]);
       
       console.log('📋 Rules result:', rules);
@@ -247,8 +270,12 @@ export const DeviceDetailsSection: React.FC = () => {
     
     try {
       console.log('📄 Loading PDFs for device:', device.id);
-      // Load all PDFs from backend API
-      const pdfListResponse = await pdfAPI.listPDFs(0, 100); // Use backend API
+      // Load all PDFs from backend API with timeout
+      const pdfPromise = pdfAPI.listPDFs(0, 100);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('PDF loading timeout')), 5000)
+      );
+      const pdfListResponse = await Promise.race([pdfPromise, timeoutPromise]) as any;
       
       // Filter PDFs that might be associated with this device
       // We'll look for PDFs that contain the device name or are likely related
@@ -325,7 +352,11 @@ export const DeviceDetailsSection: React.FC = () => {
     if (!device) return;
     try {
       console.log('📚 Fetching documentation info for device:', device.id);
-      const response = await deviceAPI.getDocumentation(device.id);
+      const docPromise = deviceAPI.getDocumentation(device.id);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Documentation timeout')), 5000)
+      );
+      const response = await Promise.race([docPromise, timeoutPromise]) as any;
       setDocumentationInfo(response.data);
       console.log('✅ Documentation info loaded:', response.data);
     } catch (error) {
