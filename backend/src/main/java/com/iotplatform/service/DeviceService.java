@@ -123,6 +123,10 @@ public class DeviceService {
         if (device.getAssignedUserId() != null && !device.getAssignedUserId().trim().isEmpty()) {
             device.setAssignedUserId(device.getAssignedUserId());
         }
+        // Set assigned by if provided
+        if (device.getAssignedBy() != null && !device.getAssignedBy().trim().isEmpty()) {
+            device.setAssignedBy(device.getAssignedBy());
+        }
         // Use the status from the device if provided, otherwise default to ONLINE
         if (device.getStatus() == null) {
             device.setStatus(Device.DeviceStatus.ONLINE);
@@ -150,6 +154,10 @@ public class DeviceService {
         // Set assigned user if provided
         if (request.getAssignedUserId() != null && !request.getAssignedUserId().trim().isEmpty()) {
             device.setAssignedUserId(request.getAssignedUserId());
+        }
+        // Set assigned by if provided
+        if (request.getAssignedBy() != null && !request.getAssignedBy().trim().isEmpty()) {
+            device.setAssignedBy(request.getAssignedBy());
         }
         
         // Set connection details
@@ -184,12 +192,21 @@ public class DeviceService {
      * PDF files will be sent directly to PDF Processing Service
      */
     public DeviceCreateResponse createDeviceWithoutFiles(DeviceCreateWithFileRequest request, 
-                                                       String organizationId) throws IOException {
+                                                       String organizationId, String currentUserId) throws IOException {
         
         // Create the device
         Device device = new Device();
         device.setId(UUID.randomUUID().toString());
         device.setOrganizationId(organizationId);
+        
+        // Set user assignment - use assignedUserId from request if provided, otherwise use current user
+        if (request.getAssignedUserId() != null && !request.getAssignedUserId().trim().isEmpty()) {
+            device.setAssignedUserId(request.getAssignedUserId().trim());
+        } else {
+            device.setAssignedUserId(currentUserId);
+        }
+        device.setAssignedBy(currentUserId);
+        
         // Use the status from the request if provided, otherwise default to ONLINE
         if (request.getStatus() != null) {
             device.setStatus(request.getStatus());
@@ -261,12 +278,22 @@ public class DeviceService {
                                                    MultipartFile manualFile, 
                                                    MultipartFile datasheetFile, 
                                                    MultipartFile certificateFile, 
-                                                   String organizationId) throws IOException {
+                                                   String organizationId,
+                                                   String currentUserId) throws IOException {
         
         // Create the device
         Device device = new Device();
         device.setId(UUID.randomUUID().toString());
         device.setOrganizationId(organizationId);
+        
+        // Set user assignment - use assignedUserId from request if provided, otherwise use current user
+        if (request.getAssignedUserId() != null && !request.getAssignedUserId().trim().isEmpty()) {
+            device.setAssignedUserId(request.getAssignedUserId().trim());
+        } else {
+            device.setAssignedUserId(currentUserId);
+        }
+        device.setAssignedBy(currentUserId);
+        
         // Use the status from the request if provided, otherwise default to ONLINE
         if (request.getStatus() != null) {
             device.setStatus(request.getStatus());

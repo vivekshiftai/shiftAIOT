@@ -10,17 +10,13 @@ import {
   Search, 
   Filter, 
   Settings,
-  Bolt,
   Clock,
   CheckCircle,
   AlertTriangle,
-  CalendarDays,
-  Radio,
-  Activity,
   BarChart3,
-  Circle,
   Shield,
-  Settings2
+  Target,
+  Wrench
 } from 'lucide-react';
 import Button from '../components/UI/Button';
 import Modal from '../components/UI/Modal';
@@ -433,7 +429,7 @@ const RulesPage: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center gap-2 text-sm">
-                  <Zap className="w-4 h-4 text-yellow-600" />
+                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
                   <span className="text-gray-600">Priority:</span>
                   <span className="font-medium text-gray-900 capitalize">{rule.priority || 'Medium'}</span>
                 </div>
@@ -533,7 +529,7 @@ const RulesPage: React.FC = () => {
               
               <div className="space-y-2 mb-4">
                 <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="w-4 h-4 text-blue-600" />
+                  <Clock className="w-4 h-4 text-blue-600" />
                   <span className="text-gray-600">Next:</span>
                   <span className="font-medium text-gray-900">{new Date(task.nextMaintenance).toLocaleDateString()}</span>
                 </div>

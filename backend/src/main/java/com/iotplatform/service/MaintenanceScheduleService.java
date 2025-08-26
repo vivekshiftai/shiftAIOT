@@ -154,6 +154,35 @@ public class MaintenanceScheduleService {
     }
 
     /**
+     * Get today's maintenance tasks for an organization.
+     */
+    public List<DeviceMaintenance> getTodayMaintenance(String organizationId) {
+        log.info("Fetching today's maintenance tasks for organization: {}", organizationId);
+        // Get all maintenance for organization and filter for today's tasks
+        List<DeviceMaintenance> allMaintenance = deviceMaintenanceRepository.findByOrganizationId(organizationId);
+        log.info("Found {} total maintenance tasks for organization: {}", allMaintenance.size(), organizationId);
+        
+        LocalDate today = LocalDate.now();
+        log.info("Today's date: {}", today);
+        
+        List<DeviceMaintenance> todayTasks = allMaintenance.stream()
+                .filter(maintenance -> {
+                    boolean hasNextMaintenance = maintenance.getNextMaintenance() != null;
+                    boolean isToday = hasNextMaintenance && maintenance.getNextMaintenance().equals(today);
+                    boolean isActive = maintenance.getStatus() == DeviceMaintenance.Status.ACTIVE;
+                    
+                    log.debug("Maintenance task: {} - nextMaintenance: {}, isToday: {}, isActive: {}", 
+                        maintenance.getTaskName(), maintenance.getNextMaintenance(), isToday, isActive);
+                    
+                    return hasNextMaintenance && isToday && isActive;
+                })
+                .collect(java.util.stream.Collectors.toList());
+        
+        log.info("Found {} maintenance tasks scheduled for today", todayTasks.size());
+        return todayTasks;
+    }
+
+    /**
      * Get upcoming maintenance tasks for an organization.
      */
     public List<DeviceMaintenance> getUpcomingMaintenanceByOrganization(String organizationId) {

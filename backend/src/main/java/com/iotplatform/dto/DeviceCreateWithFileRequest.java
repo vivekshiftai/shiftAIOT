@@ -87,6 +87,9 @@ public class DeviceCreateWithFileRequest {
     private List<String> tags;
     private Map<String, String> config;
     
+    // User assignment (optional)
+    private String assignedUserId;
+    
     // File upload information
     private String manualFileName;
     private String datasheetFileName;
@@ -275,6 +278,9 @@ public class DeviceCreateWithFileRequest {
     
     public Map<String, String> getConfig() { return config; }
     public void setConfig(Map<String, String> config) { this.config = config; }
+    
+    public String getAssignedUserId() { return assignedUserId; }
+    public void setAssignedUserId(String assignedUserId) { this.assignedUserId = assignedUserId; }
     
     public String getManualFileName() { return manualFileName; }
     public void setManualFileName(String manualFileName) { this.manualFileName = manualFileName; }

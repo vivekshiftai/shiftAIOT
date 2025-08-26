@@ -33,6 +33,50 @@ public class MaintenanceController {
     private final MaintenanceScheduleService maintenanceScheduleService;
 
     /**
+     * Get today's maintenance tasks for the organization.
+     */
+    @Operation(
+        summary = "Get Today's Maintenance Tasks",
+        description = "Get all maintenance tasks scheduled for today for the current user's organization"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Today's maintenance tasks retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    @GetMapping("/today")
+    @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
+    public ResponseEntity<List<DeviceMaintenance>> getTodayMaintenance(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            log.info("Fetching today's maintenance tasks for organization: {} by user: {}", 
+                    userDetails.getUser().getOrganizationId(), userDetails.getUsername());
+
+            String organizationId = userDetails.getUser().getOrganizationId();
+            List<DeviceMaintenance> todayMaintenance = maintenanceScheduleService.getTodayMaintenance(organizationId);
+            
+            log.info("Returning {} today's maintenance tasks for organization: {}", todayMaintenance.size(), organizationId);
+            if (!todayMaintenance.isEmpty()) {
+                log.info("Today's tasks: {}", todayMaintenance.stream()
+                    .map(task -> String.format("'%s' (device: %s, assigned: %s, status: %s)", 
+                        task.getTaskName(), task.getDeviceName(), task.getAssignedTo(), task.getStatus()))
+                    .collect(java.util.stream.Collectors.joining(", ")));
+            }
+
+            return ResponseEntity.ok(todayMaintenance);
+
+        } catch (Exception e) {
+            log.error("Error fetching today's maintenance tasks", e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    /**
      * Get all maintenance tasks for the organization.
      */
     @Operation(

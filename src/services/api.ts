@@ -28,6 +28,8 @@ api.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
         console.log(`🔐 Adding auth header for: ${config.url}`);
+        console.log(`🔐 Token length: ${token.length}`);
+        console.log(`🔐 Token preview: ${token.substring(0, 20)}...`);
       } else {
         console.warn(`⚠️ No token found for protected endpoint: ${config.url}`);
       }
@@ -186,7 +188,11 @@ export const deviceAPI = {
   create: (device: any) => api.post('/api/devices', device),
   createSimple: (device: any) => api.post('/api/devices/simple', device),
   update: (id: string, device: any) => api.put(`/api/devices/${id}`, device),
-  delete: (id: string) => api.delete(`/api/devices/${id}`),
+  delete: (id: string) => {
+    console.log('🔍 deviceAPI.delete called with ID:', id);
+    console.log('🔍 Full URL will be:', `${API_BASE_URL}/api/devices/${id}`);
+    return api.delete(`/api/devices/${id}`);
+  },
   getByOrganization: (organizationId: string) => api.get(`/api/devices/organization/${organizationId}`),
   getStatus: (id: string) => api.get(`/api/devices/${id}/status`),
   updateStatus: (id: string, status: string) => api.patch(`/api/devices/${id}/status`, { status }),
@@ -256,6 +262,7 @@ export const maintenanceAPI = {
   delete: (id: string) => api.delete(`/api/maintenance/${id}`),
   getByDevice: (deviceId: string) => api.get(`/api/maintenance/device/${deviceId}`),
   getUpcoming: () => api.get('/api/devices/maintenance/upcoming'),
+  getToday: () => api.get('/api/maintenance/today'),
 };
 
 // Device Safety Precautions API

@@ -92,18 +92,23 @@ export interface Rule {
 // Maintenance Types
 export interface MaintenanceTask {
   id: string;
-  title: string;
+  taskName: string;
   description: string;
-  type: 'PREVENTIVE' | 'CORRECTIVE' | 'PREDICTIVE';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH';
-  status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  deviceName?: string;
+  componentName?: string;
+  maintenanceType?: 'PREVENTIVE' | 'CORRECTIVE' | 'PREDICTIVE' | 'GENERAL';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  status: 'ACTIVE' | 'PENDING' | 'COMPLETED' | 'CANCELLED';
   assignedTo?: string;
   deviceId?: string;
-  scheduledDate: string;
-  completedDate?: string;
+  lastMaintenance?: string;
+  nextMaintenance: string;
   estimatedDuration?: string;
   requiredTools?: string;
   safetyNotes?: string;
+  estimatedCost?: number;
+  frequency: string;
+  organizationId: string;
   createdAt: string;
   updatedAt: string;
 }

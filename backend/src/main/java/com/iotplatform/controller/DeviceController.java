@@ -233,7 +233,8 @@ public class DeviceController {
                 return ResponseEntity.badRequest().build();
             }
             
-            DeviceCreateResponse response = deviceService.createDeviceWithFiles(request, manualFile, datasheetFile, certificateFile, organizationId);
+            String currentUserId = user.getId();
+            DeviceCreateResponse response = deviceService.createDeviceWithFiles(request, manualFile, datasheetFile, certificateFile, organizationId, currentUserId);
             logger.info("Device {} created successfully with files, ID: {}", request.getName(), response.getId());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -271,7 +272,11 @@ public class DeviceController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteDevice(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🔍 DELETE request received for device ID: {}", id);
+        logger.info("🔍 User details: {}", userDetails != null ? "present" : "null");
+        
         if (userDetails == null || userDetails.getUser() == null) {
+            logger.error("❌ Authentication failed - user details or user is null");
             return ResponseEntity.status(401).build();
         }
         User user = userDetails.getUser();
@@ -279,19 +284,40 @@ public class DeviceController {
         String userEmail = user.getEmail();
         String organizationId = user.getOrganizationId();
         
-        logger.info("User {} deleting device: {}", userEmail, id);
+        logger.info("🔍 User {} (org: {}) attempting to delete device: {}", userEmail, organizationId, id);
         
         if (id == null || id.trim().isEmpty()) {
-            logger.warn("Invalid device ID provided by user {}", userEmail);
+            logger.warn("❌ Invalid device ID provided by user {}: '{}'", userEmail, id);
             return ResponseEntity.badRequest().build();
         }
         
+        String trimmedId = id.trim();
+        logger.info("🔍 Trimmed device ID: '{}'", trimmedId);
+        
+        // Check if device exists before attempting deletion
         try {
-            deviceService.deleteDevice(id.trim(), organizationId);
-            logger.info("Device {} deleted successfully", id);
+            Optional<Device> existingDevice = deviceRepository.findByIdAndOrganizationId(trimmedId, organizationId);
+            if (existingDevice.isEmpty()) {
+                logger.error("❌ Device not found - ID: {}, Organization: {}", trimmedId, organizationId);
+                logger.error("❌ Available devices for org {}: {}", organizationId, 
+                    deviceRepository.findByOrganizationId(organizationId).stream()
+                        .map(Device::getId)
+                        .collect(java.util.stream.Collectors.toList()));
+                return ResponseEntity.notFound().build();
+            }
+            logger.info("✅ Device found: {} - {}", existingDevice.get().getId(), existingDevice.get().getName());
+        } catch (Exception e) {
+            logger.error("❌ Error checking device existence: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).build();
+        }
+        
+        try {
+            logger.info("🔍 Starting device deletion process for device: {}", trimmedId);
+            deviceService.deleteDevice(trimmedId, organizationId);
+            logger.info("✅ Device {} deleted successfully", trimmedId);
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
-            logger.error("Failed to delete device {}: {}", id, e.getMessage());
+            logger.error("❌ Failed to delete device {}: {}", trimmedId, e.getMessage(), e);
             return ResponseEntity.notFound().build();
         }
     }
@@ -1306,8 +1332,9 @@ public class DeviceController {
             logger.info("🏢 Using organization ID: {}", organizationId);
             
             // Call unified onboarding service
+            String currentUserId = userDetails.getUser().getId();
             DeviceCreateResponse response = unifiedOnboardingService.completeUnifiedOnboarding(
-                deviceRequest, manualFile, datasheetFile, certificateFile, organizationId);
+                deviceRequest, manualFile, datasheetFile, certificateFile, organizationId, currentUserId);
             
             logger.info("✅ Device onboarding completed successfully for user: {}", userDetails.getUser().getEmail());
             return ResponseEntity.ok(response);

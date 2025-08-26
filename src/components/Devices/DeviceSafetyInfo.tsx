@@ -45,9 +45,11 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
     try {
       setLoading(true);
       logInfo('DeviceSafetyInfo', 'Loading safety precautions for device', { deviceId });
+      console.log('🔧 DeviceSafetyInfo: Loading safety precautions for device', deviceId);
       
-      // Use unified service to get safety precautions
-      const safetyData = await unifiedOnboardingService.getDeviceSafetyPrecautions(deviceId);
+      // Use device safety precautions API to get safety precautions for this specific device
+      const safetyResponse = await deviceSafetyPrecautionsAPI.getByDevice(deviceId);
+      const safetyData = safetyResponse.data || [];
       
       // Transform the data to match the expected format
       const transformedPrecautions: DeviceSafetyPrecaution[] = safetyData.map((precaution: any) => ({
@@ -75,6 +77,7 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
         deviceId, 
         precautionsCount: transformedPrecautions.length 
       });
+      console.log(`🔧 DeviceSafetyInfo: Loaded ${transformedPrecautions.length} safety precautions for device ${deviceId}`);
     } catch (err) {
       logError('DeviceSafetyInfo', 'Error loading safety precautions', err instanceof Error ? err : new Error('Unknown error'));
       console.error('Error loading safety precautions:', err);

@@ -7,7 +7,8 @@ import {
   Search, 
   Plus, 
   Edit, 
-  Trash2
+  Trash2,
+  Wrench
 } from 'lucide-react';
 import { maintenanceAPI, userAPI } from '../../services/api';
 import { unifiedOnboardingService } from '../../services/unifiedOnboardingService';
@@ -94,6 +95,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
 
   useEffect(() => {
     logComponentMount('DeviceMaintenanceDisplay', { deviceId });
+    console.log('🔧 DeviceMaintenanceDisplay: Loading maintenance data for device', deviceId);
     loadMaintenanceTasks();
     loadUsers();
   }, [deviceId]);
@@ -103,13 +105,14 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
       setLoading(true);
       logInfo('DeviceMaintenanceDisplay', 'Loading maintenance tasks for device', { deviceId });
       
-      // Use unified service to get maintenance tasks
-      const maintenanceData = await unifiedOnboardingService.getDeviceMaintenance(deviceId);
+      // Use maintenance API to get maintenance tasks for this specific device
+      const maintenanceResponse = await maintenanceAPI.getByDevice(deviceId);
+      const maintenanceData = maintenanceResponse.data || [];
       
       // Transform the data to match the expected format
       const transformedTasks: DeviceMaintenance[] = maintenanceData.map((task: any) => ({
         id: task.id || task.maintenance_id || `maintenance_${Math.random()}`,
-        deviceId: deviceId,
+        deviceId: task.deviceId || deviceId,
         title: task.taskName || task.title || 'Unnamed Task',
         description: task.description || 'No description available',
         type: task.maintenanceType || task.type || 'preventive',
@@ -166,7 +169,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'preventive':
-        return <Calendar className="w-5 h-5 text-blue-500" />;
+        return <Clock className="w-5 h-5 text-blue-500" />;
       case 'corrective':
         return <Wrench className="w-5 h-5 text-orange-500" />;
       case 'emergency':
@@ -216,6 +219,13 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
     
     return matchesType && matchesStatus && matchesSearch;
   });
+
+  // Log filtered results for debugging
+  useEffect(() => {
+    const filteredCount = filteredTasks.length;
+    const totalCount = maintenanceTasks.length;
+    console.log(`🔧 DeviceMaintenanceDisplay: Filtered ${filteredCount} of ${totalCount} maintenance tasks for device ${deviceId}`);
+  }, [filteredTasks.length, maintenanceTasks.length, deviceId]);
 
   const handleAddTask = () => {
     setFormData({
@@ -553,7 +563,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
 
       {/* Add/Edit Modal */}
       <Modal
-        isVisible={showAddModal || showEditModal}
+        isOpen={showAddModal || showEditModal}
         onClose={() => {
           setShowAddModal(false);
           setShowEditModal(false);

@@ -370,10 +370,31 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   const deleteDevice = async (deviceId: string) => {
     try {
       logInfo('IoT', 'Deleting device', { deviceId });
-      await deviceAPI.delete(deviceId);
+      console.log('🔍 IoTContext: Starting device deletion for ID:', deviceId);
+      console.log('🔍 IoTContext: Current API base URL:', import.meta.env.VITE_API_BASE_URL || 'http://20.57.36.66:8100');
+      
+      // First, verify the device exists
+      try {
+        console.log('🔍 IoTContext: Verifying device exists before deletion...');
+        const deviceCheck = await deviceAPI.getById(deviceId);
+        console.log('✅ IoTContext: Device found:', deviceCheck.data);
+      } catch (checkError) {
+        console.error('❌ IoTContext: Device not found during verification:', checkError);
+        throw new Error(`Device not found: ${deviceId}`);
+      }
+      
+      const response = await deviceAPI.delete(deviceId);
+      console.log('✅ IoTContext: Device deletion API call successful:', response);
       logInfo('IoT', 'Device deleted successfully', { deviceId });
       await refreshDevices();
     } catch (error) {
+      console.error('❌ IoTContext: Device deletion failed:', error);
+      console.error('❌ IoTContext: Error details:', {
+        deviceId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        response: error instanceof Error && 'response' in error ? (error as any).response : undefined
+      });
       logError('IoT', 'Failed to delete device', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }

@@ -676,192 +676,31 @@ export const DeviceDetailsSection: React.FC = () => {
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <div className="flex items-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span className="text-blue-800 font-medium">Updating real-time data...</span>
+                  <span className="text-blue-800 font-medium">Updating maintenance data...</span>
                 </div>
               </div>
             )}
 
-            {/* Device Statistics */}
-            {deviceStats && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-50 rounded-lg">
-                      <Settings className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Maintenance Tasks</p>
-                      <p className="text-2xl font-bold text-slate-800">{deviceStats.maintenanceCount}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-50 rounded-lg">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Safety Precautions</p>
-                      <p className="text-2xl font-bold text-slate-800">{deviceStats.safetyCount}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-50 rounded-lg">
-                      <Settings className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Active Rules</p>
-                      <p className="text-2xl font-bold text-slate-800">{deviceStats.rulesCount}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Maintenance Schedule */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                <h3 className="font-semibold text-yellow-800">Maintenance Schedule</h3>
-              </div>
-              <p className="text-yellow-700">{device.maintenanceSchedule || 'No maintenance schedule defined'}</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Real-time Maintenance History */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800">Maintenance History</h3>
-                {maintenanceHistory.length > 0 ? (
-                  <div className="space-y-3">
-                    {maintenanceHistory.slice(0, 3).map((maintenance, index) => (
-                      <div key={index} className="p-3 bg-slate-50 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-slate-800">{maintenance.title || 'Maintenance Task'}</span>
-                          <span className="text-sm text-slate-600">
-                            {maintenance.scheduledDate ? new Date(maintenance.scheduledDate).toLocaleDateString() : 'Scheduled'}
-                          </span>
-                        </div>
-                        <p className="text-sm text-slate-600 mt-1">{maintenance.description || 'Maintenance task'}</p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            maintenance.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                            maintenance.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {maintenance.status || 'PENDING'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-slate-500">
-                    <Settings className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-                    <p>No maintenance history available</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Warranty Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800">Warranty Information</h3>
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="font-medium text-green-800">Under Warranty</span>
-                  </div>
-                  <p className="text-green-700">{device.warrantyInfo || 'Standard warranty coverage'}</p>
-                </div>
-                
-                {/* Last Updated */}
-                {lastSeen && (
-                  <div className="text-xs text-slate-500 mt-2">
-                    Last updated: {new Date(lastSeen).toLocaleString()}
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Use the dedicated DeviceMaintenanceDisplay component */}
+            <DeviceMaintenanceDisplay deviceId={deviceId!} />
           </div>
         );
 
       case 'rules':
         return (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-slate-800">Device Rules</h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={async () => {
-                    try {
-                      const response = await fetch(`/api/devices/${deviceId}/debug-data`, {
-                        headers: {
-                          'Authorization': `Bearer ${localStorage.getItem('token')}`
-                        }
-                      });
-                      const data = await response.json();
-                      console.log('🔍 Debug data:', data);
-                      alert(`Debug data: ${JSON.stringify(data, null, 2)}`);
-                    } catch (error) {
-                      console.error('Debug error:', error);
-                      alert('Debug error: ' + error);
-                    }
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all"
-                >
-                  Debug
-                </button>
-
-              </div>
-            </div>
-            
-            {/* Real-time Rules Status */}
-            {deviceRules.length > 0 ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {deviceRules.slice(0, 6).map((rule, index) => (
-                    <div key={index} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-medium text-slate-800 truncate">{rule.name || `Rule ${index + 1}`}</h4>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          rule.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {rule.active ? 'ACTIVE' : 'INACTIVE'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-600 mb-3 line-clamp-2">
-                        {rule.description || 'Automation rule for device control'}
-                      </p>
-                      <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span>Type: {rule.type || 'Condition'}</span>
-                        {rule.lastTriggered && (
-                          <span>Last: {new Date(rule.lastTriggered).toLocaleDateString()}</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+            {/* Real-time Status */}
+            {isRealTimeLoading && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-blue-800 font-medium">Updating rules data...</span>
                 </div>
-                {deviceRules.length > 6 && (
-                  <div className="text-center text-slate-500 text-sm">
-                    Showing 6 of {deviceRules.length} rules
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-slate-600">
-                <Settings className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-                <p>No rules configured for this device.</p>
-                <p className="text-sm text-slate-500 mt-2">Click "Manage Rules" to configure automation rules.</p>
               </div>
             )}
-            
-            {/* Last Updated */}
-            {lastSeen && (
-              <div className="text-xs text-slate-500 text-center">
-                Last updated: {new Date(lastSeen).toLocaleString()}
-              </div>
-            )}
+
+            {/* Use the dedicated DeviceRulesDisplay component */}
+            <DeviceRulesDisplay deviceId={deviceId!} />
           </div>
         );
 
@@ -880,87 +719,8 @@ export const DeviceDetailsSection: React.FC = () => {
               </div>
             )}
 
-            {/* Safety Statistics */}
-            {deviceStats && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-50 rounded-lg">
-                      <Settings className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Safety Precautions</p>
-                      <p className="text-2xl font-bold text-slate-800">{deviceStats.safetyCount}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-50 rounded-lg">
-                      <Settings className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Maintenance Tasks</p>
-                      <p className="text-2xl font-bold text-slate-800">{deviceStats.maintenanceCount}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-50 rounded-lg">
-                      <Settings className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Active Rules</p>
-                      <p className="text-2xl font-bold text-slate-800">{deviceStats.rulesCount}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Real-time Safety Precautions */}
-            {safetyPrecautions.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800">Safety Precautions</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {safetyPrecautions.slice(0, 4).map((precaution, index) => (
-                    <div key={index} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-red-50 rounded-lg">
-                          <AlertTriangle className="w-5 h-5 text-red-600" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-slate-800 mb-2">{precaution.title || `Safety Precaution ${index + 1}`}</h4>
-                          <p className="text-sm text-slate-600 mb-3">{precaution.description || 'Safety precaution for device operation'}</p>
-                          <div className="flex items-center gap-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              precaution.severity === 'HIGH' ? 'bg-red-100 text-red-800' :
-                              precaution.severity === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-green-100 text-green-800'
-                            }`}>
-                              {precaution.severity || 'MEDIUM'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Device Safety Info Component */}
-            <div className="border-t border-slate-200 pt-6">
-              <DeviceSafetyInfo deviceId={device.id} />
-            </div>
-
-            {/* Last Updated */}
-            {lastSeen && (
-              <div className="text-xs text-slate-500 text-center">
-                Last updated: {new Date(lastSeen).toLocaleString()}
-              </div>
-            )}
+            {/* Use the dedicated DeviceSafetyInfo component */}
+            <DeviceSafetyInfo deviceId={deviceId!} />
           </div>
         );
 

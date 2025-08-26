@@ -467,146 +467,145 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   }, [onCancel]);
 
     const renderStep1 = useCallback(() => (
-    <div className="w-full max-w-4xl mx-auto space-y-8">
+    <div className="w-full space-y-6">
       {/* Step Header */}
-      <div className="text-center">
-        <h3 className="text-2xl font-bold text-gray-800 mb-2">Basic Device Information</h3>
-        <p className="text-gray-600">Enter the essential details about your device</p>
+      <div className="text-center mb-8">
+        <h3 className="text-xl font-bold text-gray-800 mb-2">Basic Device Information</h3>
+        <p className="text-gray-600 text-sm">Enter the essential details about your device</p>
       </div>
 
-      {/* Input Fields */}
-      <div className="space-y-6">
-        {/* First Row - Device Name and Location */}
-        <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700">
-              Device Name *
-            </label>
-            <input
-              type="text"
-              value={formData.deviceName}
-              onChange={(e) => handleInputChange('deviceName', e.target.value)}
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
-                errors.deviceName ? 'border-red-400' : 'border-gray-300'
-              }`}
-              placeholder="e.g., Temperature Sensor 001"
-            />
-            {errors.deviceName && (
-              <p className="text-red-600 text-sm mt-1">{errors.deviceName}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700">
-              Location *
-            </label>
-            <input
-              type="text"
-              value={formData.location}
-              onChange={(e) => handleInputChange('location', e.target.value)}
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
-                errors.location ? 'border-red-400' : 'border-gray-300'
-              }`}
-              placeholder="e.g., Building A, Floor 2, Room 205"
-            />
-            {errors.location && (
-              <p className="text-red-600 text-sm mt-1">{errors.location}</p>
-            )}
-          </div>
+      {/* Input Fields - Vertical Layout */}
+      <div className="space-y-4">
+        {/* Device Name */}
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-gray-700">
+            Device Name *
+          </label>
+          <input
+            type="text"
+            value={formData.deviceName}
+            onChange={(e) => handleInputChange('deviceName', e.target.value)}
+            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
+              errors.deviceName ? 'border-red-400' : ''
+            }`}
+            placeholder="e.g., Temperature Sensor 001"
+          />
+          {errors.deviceName && (
+            <p className="text-red-600 text-sm mt-1">{errors.deviceName}</p>
+          )}
         </div>
 
-        {/* Second Row - Manufacturer and Device Status */}
-        <div className="grid grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700">
-              Manufacturer *
-            </label>
-            <input
-              type="text"
-              value={formData.manufacturer}
-              onChange={(e) => handleInputChange('manufacturer', e.target.value)}
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
-                errors.manufacturer ? 'border-red-400' : 'border-gray-300'
-              }`}
-              placeholder="e.g., Siemens, Schneider Electric"
-            />
-            {errors.manufacturer && (
-              <p className="text-red-600 text-sm mt-1">{errors.manufacturer}</p>
-            )}
-          </div>
+        {/* Location */}
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-gray-700">
+            Location *
+          </label>
+          <input
+            type="text"
+            value={formData.location}
+            onChange={(e) => handleInputChange('location', e.target.value)}
+            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
+              errors.location ? 'border-red-400' : ''
+            }`}
+            placeholder="e.g., Building A, Floor 2, Room 205"
+          />
+          {errors.location && (
+            <p className="text-red-600 text-sm mt-1">{errors.location}</p>
+          )}
+        </div>
 
-          <div className="space-y-2">
-            <label className="block text-sm font-semibold text-gray-700">
-              Assign to User {currentUser && !formData.assignedUserId && (
-                <span className="text-xs text-indigo-600 font-normal">(will auto-assign to you)</span>
-              )}
-            </label>
-            <select
-              value={formData.assignedUserId || ''}
-              onChange={(e) => handleInputChange('assignedUserId', e.target.value)}
-              disabled={loadingUsers}
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 ${
-                errors.assignedUserId ? 'border-red-400' : 'border-gray-300'
-              } ${loadingUsers ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <option value="" className="bg-white text-gray-800">
-                {loadingUsers ? 'Loading users...' : 'Select a user...'}
-              </option>
-              {users.length > 0 ? (
-                users.map((user) => (
-                  <option key={user.id} value={user.id} className="bg-white text-gray-800">
-                    👤 {user.firstName} {user.lastName} ({user.role})
-                    {currentUser && user.id === currentUser.id ? ' (You)' : ''}
-                  </option>
-                ))
-              ) : (
-                <option value="" className="bg-white text-gray-800" disabled>
-                  No users available
+        {/* Manufacturer */}
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-gray-700">
+            Manufacturer *
+          </label>
+          <input
+            type="text"
+            value={formData.manufacturer}
+            onChange={(e) => handleInputChange('manufacturer', e.target.value)}
+            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
+              errors.manufacturer ? 'border-red-400' : ''
+            }`}
+            placeholder="e.g., Siemens, Schneider Electric"
+          />
+          {errors.manufacturer && (
+            <p className="text-red-600 text-sm mt-1">{errors.manufacturer}</p>
+          )}
+        </div>
+
+        {/* Assign to User */}
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-gray-700">
+            Assign to User {currentUser && !formData.assignedUserId && (
+              <span className="text-xs text-blue-600 font-normal">(will auto-assign to you)</span>
+            )}
+          </label>
+          <select
+            value={formData.assignedUserId || ''}
+            onChange={(e) => handleInputChange('assignedUserId', e.target.value)}
+            disabled={loadingUsers}
+            className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 ${
+              errors.assignedUserId ? 'border-red-400' : ''
+            } ${loadingUsers ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <option value="" className="bg-white text-gray-800">
+              {loadingUsers ? 'Loading users...' : 'Select a user...'}
+            </option>
+            {users.length > 0 ? (
+              users.map((user) => (
+                <option key={user.id} value={user.id} className="bg-white text-gray-800">
+                  👤 {user.firstName} {user.lastName} ({user.role})
+                  {currentUser && user.id === currentUser.id ? ' (You)' : ''}
                 </option>
-              )}
-            </select>
-            {currentUser && !formData.assignedUserId && (
-              <p className="text-indigo-600 text-sm mt-1">
-                💡 Device will be automatically assigned to you ({currentUser.firstName} {currentUser.lastName})
-              </p>
+              ))
+            ) : (
+              <option value="" className="bg-white text-gray-800" disabled>
+                No users available
+              </option>
             )}
-            {errors.assignedUserId && (
-              <p className="text-red-600 text-sm mt-1">{errors.assignedUserId}</p>
-            )}
-          </div>
+          </select>
+          {currentUser && !formData.assignedUserId && (
+            <p className="text-blue-600 text-sm mt-1">
+              💡 Device will be automatically assigned to you ({currentUser.firstName} {currentUser.lastName})
+            </p>
+          )}
+          {errors.assignedUserId && (
+            <p className="text-red-600 text-sm mt-1">{errors.assignedUserId}</p>
+          )}
         </div>
       </div>
     </div>
   ), [formData.deviceName, formData.location, formData.manufacturer, formData.assignedUserId, errors.deviceName, errors.location, errors.manufacturer, errors.assignedUserId, handleInputChange, currentUser]);
 
     const renderStep2 = useCallback(() => (
-    <div className="w-full max-w-4xl mx-auto space-y-8">
+    <div className="w-full space-y-6">
       {/* Step Header */}
-      <div className="text-center">
-        <h3 className="text-2xl font-bold text-gray-800 mb-2">Connection Settings</h3>
-        <p className="text-gray-600">Configure how your device will communicate</p>
+      <div className="text-center mb-8">
+        <h3 className="text-xl font-bold text-gray-800 mb-2">Connection Settings</h3>
+        <p className="text-gray-600 text-sm">Configure how your device will communicate</p>
       </div>
 
       {/* Input Fields */}
       <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-3">
+        {/* Connection Type Selection */}
+        <div className="space-y-3">
+          <label className="block text-sm font-semibold text-gray-700">
             Connection Type *
           </label>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             {(['MQTT', 'HTTP', 'COAP'] as const).map((type) => (
               <button
                 key={type}
                 type="button"
                 onClick={() => handleInputChange('connectionType', type)}
-                className={`p-4 rounded-lg border-2 transition-all duration-300 ${
+                className={`p-3 rounded-lg border transition-all duration-300 ${
                   formData.connectionType === type
-                    ? 'border-indigo-400 bg-indigo-500/20 text-indigo-700 shadow-lg'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
                     : 'border-gray-300 hover:border-gray-400 bg-white text-gray-700 hover:text-gray-900'
                 }`}
               >
                 <div className="text-center">
-                  <div className="text-lg font-semibold">{type}</div>
+                  <div className="text-sm font-semibold">{type}</div>
                   <div className="text-xs text-gray-500 mt-1">
                     {type === 'MQTT' && 'Message Queue'}
                     {type === 'HTTP' && 'REST API'}
@@ -620,8 +619,8 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
         {/* MQTT Fields */}
         {formData.connectionType === 'MQTT' && (
-          <div className="space-y-6">
-            <div>
+          <div className="space-y-4">
+            <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-700">
                 Broker URL *
               </label>
@@ -629,8 +628,8 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 type="text"
                 value={formData.brokerUrl || ''}
                 onChange={(e) => handleInputChange('brokerUrl', e.target.value)}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
-                  errors.brokerUrl ? 'border-red-400' : 'border-gray-300'
+                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
+                  errors.brokerUrl ? 'border-red-400' : ''
                 }`}
                 placeholder="e.g., mqtt://broker.example.com:1883"
               />
@@ -639,7 +638,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               )}
             </div>
 
-            <div>
+            <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-700">
                 Topic *
               </label>
@@ -647,8 +646,8 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 type="text"
                 value={formData.topic || ''}
                 onChange={(e) => handleInputChange('topic', e.target.value)}
-                className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
-                  errors.topic ? 'border-red-400' : 'border-gray-300'
+                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
+                  errors.topic ? 'border-red-400' : ''
                 }`}
                 placeholder="e.g., device/sensor001/data"
               />
@@ -657,31 +656,30 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  value={formData.username || ''}
-                  onChange={(e) => handleInputChange('username', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
-                  placeholder="Optional"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={formData.password || ''}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
-                  placeholder="Optional"
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Username
+              </label>
+              <input
+                type="text"
+                value={formData.username || ''}
+                onChange={(e) => handleInputChange('username', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
+                placeholder="Optional"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Password
+              </label>
+              <input
+                type="password"
+                value={formData.password || ''}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
+                placeholder="Optional"
+              />
             </div>
           </div>
         )}
@@ -689,52 +687,51 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         {/* HTTP Fields */}
         {formData.connectionType === 'HTTP' && (
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
                 Endpoint URL *
               </label>
               <input
                 type="text"
                 value={formData.httpEndpoint || ''}
                 onChange={(e) => handleInputChange('httpEndpoint', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
-                  errors.httpEndpoint ? 'border-red-300' : 'border-slate-300'
+                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
+                  errors.httpEndpoint ? 'border-red-400' : ''
                 }`}
                 placeholder="e.g., https://api.example.com/device/data"
               />
               {errors.httpEndpoint && (
-                <p className="text-red-500 text-sm mt-1">{errors.httpEndpoint}</p>
+                <p className="text-red-600 text-sm mt-1">{errors.httpEndpoint}</p>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  HTTP Method
-                </label>
-                <select
-                  value={formData.httpMethod || 'GET'}
-                  onChange={(e) => handleInputChange('httpMethod', e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                >
-                  <option value="GET">GET</option>
-                  <option value="POST">POST</option>
-                  <option value="PUT">PUT</option>
-                  <option value="PATCH">PATCH</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Headers (JSON)
-                </label>
-                <input
-                  type="text"
-                  value={formData.httpHeaders || ''}
-                  onChange={(e) => handleInputChange('httpHeaders', e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  placeholder='{"Content-Type": "application/json"}'
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                HTTP Method
+              </label>
+              <select
+                value={formData.httpMethod || 'GET'}
+                onChange={(e) => handleInputChange('httpMethod', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800"
+              >
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="PATCH">PATCH</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Headers (JSON)
+              </label>
+              <input
+                type="text"
+                value={formData.httpHeaders || ''}
+                onChange={(e) => handleInputChange('httpHeaders', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
+                placeholder='{"Content-Type": "application/json"}'
+              />
             </div>
           </div>
         )}
@@ -742,49 +739,48 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         {/* COAP Fields */}
         {formData.connectionType === 'COAP' && (
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
                 Host *
               </label>
               <input
                 type="text"
                 value={formData.coapHost || ''}
                 onChange={(e) => handleInputChange('coapHost', e.target.value)}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
-                  errors.coapHost ? 'border-red-300' : 'border-slate-300'
+                className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 ${
+                  errors.coapHost ? 'border-red-400' : ''
                 }`}
                 placeholder="e.g., coap.example.com"
               />
               {errors.coapHost && (
-                <p className="text-red-500 text-sm mt-1">{errors.coapHost}</p>
+                <p className="text-red-600 text-sm mt-1">{errors.coapHost}</p>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Port
-                </label>
-                <input
-                  type="text"
-                  value={formData.coapPort || ''}
-                  onChange={(e) => handleInputChange('coapPort', e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  placeholder="5683"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Path
-                </label>
-                <input
-                  type="text"
-                  value={formData.coapPath || ''}
-                  onChange={(e) => handleInputChange('coapPath', e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                  placeholder="/device/data"
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Port
+              </label>
+              <input
+                type="text"
+                value={formData.coapPort || ''}
+                onChange={(e) => handleInputChange('coapPort', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
+                placeholder="5683"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Path
+              </label>
+              <input
+                type="text"
+                value={formData.coapPath || ''}
+                onChange={(e) => handleInputChange('coapPath', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
+                placeholder="/device/data"
+              />
             </div>
           </div>
         )}
@@ -882,16 +878,16 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   ), [formData.connectionType, formData.brokerUrl, formData.topic, formData.username, formData.password, formData.httpEndpoint, formData.httpMethod, formData.httpHeaders, formData.coapHost, formData.coapPort, formData.coapPath, errors, handleInputChange, handleSkipStep2]);
 
   const renderStep3 = useCallback(() => (
-    <div className="w-full max-w-4xl mx-auto space-y-8">
+    <div className="w-full space-y-6">
       {/* Step Header */}
-      <div className="text-center">
-        <h3 className="text-2xl font-bold text-gray-800 mb-2">Upload Device Documentation</h3>
-        <p className="text-gray-600">Upload a PDF to automatically configure your device</p>
+      <div className="text-center mb-8">
+        <h3 className="text-xl font-bold text-gray-800 mb-2">Upload Device Documentation</h3>
+        <p className="text-gray-600 text-sm">Upload a PDF to automatically configure your device</p>
       </div>
 
       {/* Input Fields */}
       <div className="space-y-6">
-        <div className="border-2 border-dashed border-gray-400 rounded-lg p-8 text-center hover:border-gray-500 transition-all duration-300 bg-gray-50">
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-all duration-300 bg-white">
           <input
             type="file"
             accept=".pdf"
@@ -900,11 +896,11 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             id="file-upload"
           />
           <label htmlFor="file-upload" className="cursor-pointer">
-            <Upload className="w-16 h-16 text-gray-500 mx-auto mb-4" />
-            <p className="text-xl font-semibold text-gray-800 mb-2">
+            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+            <p className="text-lg font-semibold text-gray-800 mb-2">
               {uploadedFile ? uploadedFile.file.name : 'Click to upload PDF'}
             </p>
-            <p className="text-gray-600">
+            <p className="text-gray-600 text-sm">
               {uploadedFile ? 'File uploaded successfully' : 'Upload device manual, datasheet, or documentation'}
             </p>
           </label>
@@ -913,8 +909,8 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         {uploadedFile && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <div className="flex items-center">
-              <CheckCircle className="w-6 h-6 text-green-600 mr-3" />
-              <span className="text-green-800 font-semibold">File uploaded successfully</span>
+              <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
+              <span className="text-green-800 font-semibold text-sm">File uploaded successfully</span>
             </div>
           </div>
         )}
@@ -1186,93 +1182,149 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   return (
     <>
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div className="bg-gradient-to-br from-blue-50/95 to-indigo-50/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col border border-blue-100/50">
-          {/* Header - Hidden during loading */}
-          {!showOnboardingLoader && (
-            <div className="bg-gradient-to-br from-blue-400 via-indigo-400 to-purple-400 p-8 text-white flex-shrink-0 rounded-t-3xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-3xl font-bold drop-shadow-lg">
-                    {showSuccessMessage ? 'Onboarding Complete!' : 'Device Onboarding'}
-                  </h2>
-                  <p className="text-white/90 mt-2 text-lg">
-                    {showSuccessMessage
-                      ? 'Your device has been successfully onboarded'
-                      : 'Enter basic device information and specifications'
-                    }
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex border border-gray-200">
+          {/* Left Side - Header, Progress, and Step Details */}
+          <div className="w-1/3 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white p-8 flex flex-col">
+            {/* Header */}
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold mb-2">
+                {showSuccessMessage ? 'Onboarding Complete!' : 'Device Onboarding'}
+              </h2>
+              <p className="text-blue-100 text-sm">
+                {showSuccessMessage
+                  ? 'Your device has been successfully onboarded'
+                  : 'Enter basic device information and specifications'
+                }
+              </p>
+            </div>
+
+            {/* Progress Indicator */}
+            {!showOnboardingLoader && !showSuccessMessage && (
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  {[1, 2, 3].map((step) => (
+                    <div key={step} className="flex items-center">
+                      <div className={`flex flex-col items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${
+                        step < currentStep
+                          ? 'bg-green-500 border-green-500 text-white'
+                          : step === currentStep
+                          ? 'bg-white border-white text-blue-600'
+                          : 'border-white/30 text-white/30'
+                      }`}>
+                        {step < currentStep ? (
+                          <CheckCircle className="w-6 h-6" />
+                        ) : (
+                          <span className="text-sm font-semibold">{step}</span>
+                        )}
+                      </div>
+                      {step < 3 && (
+                        <div className={`w-16 h-0.5 mx-2 ${
+                          step < currentStep ? 'bg-green-500' : 'bg-white/30'
+                        }`} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Step Labels */}
+                <div className="flex justify-between text-xs">
+                  <span className={currentStep >= 1 ? 'text-white' : 'text-blue-200'}>Basic Info</span>
+                  <span className={currentStep >= 2 ? 'text-white' : 'text-blue-200'}>Connection</span>
+                  <span className={currentStep >= 3 ? 'text-white' : 'text-blue-200'}>Upload PDF</span>
+                </div>
+              </div>
+            )}
+
+            {/* Current Step Details */}
+            {!showOnboardingLoader && !showSuccessMessage && (
+              <div className="flex-1">
+                <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                  <h3 className="font-semibold mb-2">
+                    {currentStep === 1 && 'Basic Device Information'}
+                    {currentStep === 2 && 'Connection Configuration'}
+                    {currentStep === 3 && 'Document Upload'}
+                  </h3>
+                  <p className="text-blue-100 text-sm">
+                    {currentStep === 1 && 'Provide essential device details like name, location, and manufacturer.'}
+                    {currentStep === 2 && 'Configure how your device connects to the platform (MQTT, HTTP, or COAP).'}
+                    {currentStep === 3 && 'Upload device documentation to automatically configure rules and safety information.'}
                   </p>
                 </div>
-                {!showSuccessMessage && (
-                  <button
-                    onClick={onCancel}
-                    className="p-3 hover:bg-white/20 rounded-xl transition-all duration-300 hover:scale-110"
-                  >
-                    <span className="text-2xl font-bold">×</span>
-                  </button>
-                )}
               </div>
-              {renderFormStepIndicator()}
-            </div>
-          )}
+            )}
 
-          {/* Content - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-8 min-h-0 bg-gradient-to-br from-blue-50/30 to-indigo-50/20">
-            {showOnboardingLoader ? (
-              renderLoadingContent()
-            ) : showSuccessMessage ? (
-              renderSuccessContent()
-            ) : (
-              <div className="w-full">
-                {currentStep === 1 && renderStep1()}
-                {currentStep === 2 && renderStep2()}
-                {currentStep === 3 && renderStep3()}
-              </div>
+            {/* Close Button */}
+            {!showSuccessMessage && (
+              <button
+                onClick={onCancel}
+                className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-lg transition-all duration-300"
+              >
+                <span className="text-xl font-bold">×</span>
+              </button>
             )}
           </div>
 
-          {/* Footer - Hidden during loading and success */}
-          {!showOnboardingLoader && !showSuccessMessage && (
-            <div className="p-8 border-t border-blue-100/50 bg-blue-50/40 backdrop-blur-sm flex-shrink-0 rounded-b-3xl">
-              <div className="flex justify-between items-center">
-                <button
-                  onClick={prevStep}
-                  disabled={currentStep === 1}
-                  className="flex items-center gap-3 px-6 py-3 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:bg-white/20 rounded-xl font-medium"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                  Previous
-                </button>
-                
-                <div className="flex gap-4">
+          {/* Right Side - Form Content */}
+          <div className="w-2/3 bg-white flex flex-col">
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto p-8">
+              {showOnboardingLoader ? (
+                renderLoadingContent()
+              ) : showSuccessMessage ? (
+                renderSuccessContent()
+              ) : (
+                <div className="max-w-md mx-auto">
+                  {currentStep === 1 && renderStep1()}
+                  {currentStep === 2 && renderStep2()}
+                  {currentStep === 3 && renderStep3()}
+                </div>
+              )}
+            </div>
+
+            {/* Footer - Navigation Buttons */}
+            {!showOnboardingLoader && !showSuccessMessage && (
+              <div className="p-6 border-t border-gray-200 bg-gray-50">
+                <div className="flex justify-between items-center">
                   <button
-                    onClick={onCancel}
-                    className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-all duration-300 hover:bg-white/20 rounded-xl font-medium"
+                    onClick={prevStep}
+                    disabled={currentStep === 1}
+                    className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-medium"
                   >
-                    Cancel
+                    <ArrowLeft className="w-4 h-4" />
+                    Previous
                   </button>
                   
-                  {currentStep === 2 && (
+                  <div className="flex gap-3">
                     <button
-                      onClick={handleSkipStep2}
-                      className="flex items-center gap-2 px-6 py-3 text-gray-600 hover:text-gray-800 transition-all duration-300 hover:bg-white/20 rounded-xl font-medium"
+                      onClick={onCancel}
+                      className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-all duration-300 font-medium"
                     >
-                      <span>⏭️</span>
-                      Skip
+                      Cancel
                     </button>
-                  )}
-                  
-                  <button
-                    onClick={currentStep === 3 ? handleSubmit : nextStep}
-                    disabled={isSubmitting || (currentStep === 3 && !uploadedFile)}
-                    className="flex items-center gap-3 px-8 py-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 text-white rounded-xl hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
-                  >
-                    {currentStep === 3 ? 'Complete Onboarding' : 'Next'}
-                    <ArrowRight className="w-5 h-5" />
-                  </button>
+                    
+                    {currentStep === 2 && (
+                      <button
+                        onClick={handleSkipStep2}
+                        className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 transition-all duration-300 font-medium"
+                      >
+                        <span>⏭️</span>
+                        Skip
+                      </button>
+                    )}
+                    
+                    <button
+                      onClick={currentStep === 3 ? handleSubmit : nextStep}
+                      disabled={isSubmitting || (currentStep === 3 && !uploadedFile)}
+                      className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-medium"
+                    >
+                      {currentStep === 3 ? 'Complete Onboarding' : 'Next'}
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </>

@@ -68,14 +68,15 @@ public class UnifiedOnboardingService {
             MultipartFile manualFile,
             MultipartFile datasheetFile,
             MultipartFile certificateFile,
-            String organizationId
+            String organizationId,
+            String currentUserId
     ) throws IOException, PDFProcessingException {
         
         log.info("Starting unified onboarding workflow for device: {}", deviceRequest.getName());
         
         // Step 1: Create device (without storing PDF files in our DB) - This is transactional
         log.info("Step 1: Creating device without storing PDF files...");
-        DeviceCreateResponse deviceResponse = createDeviceTransactional(deviceRequest, organizationId);
+        DeviceCreateResponse deviceResponse = createDeviceTransactional(deviceRequest, organizationId, currentUserId);
         
         log.info("Device created successfully with ID: {}", deviceResponse.getId());
         
@@ -99,9 +100,10 @@ public class UnifiedOnboardingService {
     @Transactional
     private DeviceCreateResponse createDeviceTransactional(
             DeviceCreateWithFileRequest deviceRequest,
-            String organizationId
+            String organizationId,
+            String currentUserId
     ) throws IOException {
-        return deviceService.createDeviceWithoutFiles(deviceRequest, organizationId);
+        return deviceService.createDeviceWithoutFiles(deviceRequest, organizationId, currentUserId);
     }
 
     /**

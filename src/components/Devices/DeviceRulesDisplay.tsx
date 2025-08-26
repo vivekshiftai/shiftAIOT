@@ -48,9 +48,11 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
     try {
       setLoading(true);
       logInfo('DeviceRulesDisplay', 'Loading rules for device', { deviceId });
+      console.log('🔧 DeviceRulesDisplay: Loading rules for device', deviceId);
       
-      // Use unified service to get rules
-      const rulesData = await unifiedOnboardingService.getDeviceRules(deviceId);
+      // Use rule API to get rules for this specific device
+      const rulesResponse = await ruleAPI.getByDevice(deviceId);
+      const rulesData = rulesResponse.data || [];
       
       // Transform the data to match the expected format
       const transformedRules: IoTRule[] = rulesData.map((rule: any) => ({
@@ -78,6 +80,7 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
         deviceId, 
         rulesCount: transformedRules.length 
       });
+      console.log(`🔧 DeviceRulesDisplay: Loaded ${transformedRules.length} rules for device ${deviceId}`);
     } catch (err) {
       logError('DeviceRulesDisplay', 'Error loading rules', err instanceof Error ? err : new Error('Unknown error'));
       console.error('Error loading rules:', err);

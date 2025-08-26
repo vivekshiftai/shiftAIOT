@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Wrench, 
@@ -13,6 +13,8 @@ import {
 import { useAppDispatch, useAppSelector } from '../../hooks/useRedux';
 import { fetchMaintenanceTasks, fetchMaintenanceStats } from '../../store/slices/maintenanceSlice';
 import { LoadingSpinner } from '../Loading/LoadingComponents';
+import { maintenanceAPI } from '../../services/api';
+import { MaintenanceTask } from '../../types';
 
 /**
  * Enhanced maintenance dashboard component with detailed statistics
@@ -21,11 +23,27 @@ import { LoadingSpinner } from '../Loading/LoadingComponents';
 export const MaintenanceDashboard: React.FC = () => {
   const dispatch = useAppDispatch();
   const { tasks, stats, loading, error } = useAppSelector(state => state.maintenance);
+  const [todayTasks, setTodayTasks] = useState<MaintenanceTask[]>([]);
+  const [todayLoading, setTodayLoading] = useState(false);
 
   useEffect(() => {
     dispatch(fetchMaintenanceTasks());
     dispatch(fetchMaintenanceStats());
+    fetchTodayMaintenance();
   }, [dispatch]);
+
+  const fetchTodayMaintenance = async () => {
+    try {
+      setTodayLoading(true);
+      const response = await maintenanceAPI.getToday();
+      console.log('Today\'s maintenance tasks response:', response.data);
+      setTodayTasks(response.data || []);
+    } catch (error) {
+      console.error('Failed to fetch today\'s maintenance tasks:', error);
+    } finally {
+      setTodayLoading(false);
+    }
+  };
 
   /**
    * Animation variants for staggered card animations
@@ -134,28 +152,36 @@ export const MaintenanceDashboard: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Upcoming Maintenance Tasks */}
+      {/* Today's Maintenance Tasks */}
       <motion.div variants={cardVariants}>
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200">
           <div className="p-6 border-b border-slate-200">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-blue-600" />
-                Upcoming Maintenance
+                <Calendar className="w-5 h-5 text-orange-600" />
+                Today's Maintenance Tasks - Name, Device, Assigned To & Status
               </h3>
               <div className="flex items-center gap-2 text-sm text-slate-600">
                 <Clock className="w-4 h-4" />
-                <span>Next 7 days</span>
+                <span>{new Date().toLocaleDateString()}</span>
               </div>
             </div>
           </div>
           
           <div className="p-6">
-            <div className="space-y-4">
-              {tasks
-                .filter(task => task.status === 'pending')
-                .slice(0, 5)
-                .map((task, index) => (
+            {todayLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <LoadingSpinner size="md" />
+              </div>
+            ) : todayTasks.length === 0 ? (
+              <div className="text-center py-8">
+                <Calendar className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                <p className="text-slate-600 font-medium">No maintenance tasks scheduled for today</p>
+                <p className="text-slate-500 text-sm mt-1">No tasks with today's date found in the maintenance table</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {todayTasks.map((task, index) => (
                   <motion.div
                     key={task.id}
                     initial={{ opacity: 0, x: -20 }}
@@ -164,37 +190,42 @@ export const MaintenanceDashboard: React.FC = () => {
                     className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
                   >
                     <div className={`p-2 rounded-lg ${
-                      task.priority === 'critical' ? 'bg-red-100' :
-                      task.priority === 'high' ? 'bg-orange-100' :
-                      task.priority === 'medium' ? 'bg-yellow-100' : 'bg-green-100'
+                      task.priority === 'CRITICAL' ? 'bg-red-100' :
+                      task.priority === 'HIGH' ? 'bg-orange-100' :
+                      task.priority === 'MEDIUM' ? 'bg-yellow-100' : 'bg-green-100'
                     }`}>
                       <Wrench className={`w-4 h-4 ${
-                        task.priority === 'critical' ? 'text-red-600' :
-                        task.priority === 'high' ? 'text-orange-600' :
-                        task.priority === 'medium' ? 'text-yellow-600' : 'text-green-600'
+                        task.priority === 'CRITICAL' ? 'text-red-600' :
+                        task.priority === 'HIGH' ? 'text-orange-600' :
+                        task.priority === 'MEDIUM' ? 'text-yellow-600' : 'text-green-600'
                       }`} />
                     </div>
                     
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-1">
-                        <h4 className="font-medium text-slate-800">{task.title}</h4>
+                        <h4 className="font-medium text-slate-800">{task.taskName}</h4>
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          task.priority === 'critical' ? 'bg-red-100 text-red-700' :
-                          task.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                          task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+                          task.status === 'ACTIVE' ? 'bg-blue-100 text-blue-700' :
+                          task.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                          task.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-gray-100 text-gray-700'
                         }`}>
-                          {task.priority}
+                          {task.status}
                         </span>
                       </div>
-                      <p className="text-sm text-slate-600">{task.deviceName}</p>
+                      <p className="text-sm text-slate-600">Device: {task.deviceName}</p>
                       <p className="text-xs text-slate-500 mt-1">
-                        Scheduled: {new Date(task.scheduledDate).toLocaleDateString()}
+                        Assigned to: {task.assignedTo || 'Unassigned'}
                       </p>
                     </div>
                     
                     <div className="text-right">
-                      <p className="text-sm font-medium text-slate-800">{task.estimatedDuration}min</p>
-                      <p className="text-xs text-slate-500">{task.assignedTo}</p>
+                      <p className="text-sm font-medium text-slate-800">
+                        {task.estimatedDuration || 'N/A'}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {task.nextMaintenance && new Date(task.nextMaintenance).toLocaleDateString()}
+                      </p>
                     </div>
                   </motion.div>
                 ))}
