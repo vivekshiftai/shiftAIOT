@@ -116,34 +116,15 @@ api.interceptors.response.use(
           console.warn('❌ Token refresh failed');
           logWarn('API', 'Token refresh failed');
           
-          // For /users endpoint during onboarding, don't redirect to login
-          if (url.includes('/users')) {
-            logWarn('API', 'Authentication failed for /users endpoint - this is expected during onboarding if user is not fully authenticated');
-            return Promise.reject(error);
-          }
-          
-          // For other endpoints, redirect to login
-          console.log('🔀 Redirecting to login page');
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
+          // Don't automatically redirect to login - let the component handle it
+          // This prevents automatic logout on temporary network issues
           return Promise.reject(error);
         }
       } catch (refreshErr: any) {
         console.error('❌ Token refresh error:', refreshErr);
         logWarn('API', 'Token refresh failed', undefined, refreshErr);
         
-        // For /users endpoint during onboarding, don't redirect to login
-        if (url.includes('/users')) {
-          logWarn('API', 'Authentication failed for /users endpoint - this is expected during onboarding if user is not fully authenticated');
-          return Promise.reject(error);
-        }
-        
-        // For other endpoints, redirect to login
-        console.log('🔀 Redirecting to login page after refresh error');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
+        // Don't automatically redirect to login - let the component handle it
         return Promise.reject(error);
       }
     }
@@ -262,11 +243,11 @@ export const maintenanceAPI = {
   delete: (id: string) => api.delete(`/api/maintenance/${id}`),
   getByDevice: (deviceId: string) => api.get(`/api/maintenance/device/${deviceId}`),
   getUpcoming: () => api.get('/api/devices/maintenance/upcoming'),
-  getToday: () => api.get('/api/maintenance/today'),
 };
 
 // Device Safety Precautions API
 export const deviceSafetyPrecautionsAPI = {
+  getAll: () => api.get('/api/device-safety-precautions'),
   getAllByDevice: (deviceId: string) => api.get(`/api/device-safety-precautions/device/${deviceId}`),
   getByDevice: (deviceId: string) => api.get(`/api/device-safety-precautions/device/${deviceId}`),
   getActiveByDevice: (deviceId: string) => api.get(`/api/device-safety-precautions/device/${deviceId}/active`),

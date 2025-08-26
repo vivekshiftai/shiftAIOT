@@ -62,7 +62,7 @@ class TokenService {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
   }
 
-  // Validate token by making a test request
+  // Validate token by making a test request - NEVER remove token on failure
   public async validateToken(): Promise<boolean> {
     const token = this.getToken();
     if (!token) {
@@ -76,13 +76,14 @@ class TokenService {
       
       // Make a simple request to validate token
       const response = await this.axiosInstance.get('/api/users/profile');
-      console.log('Token validation successful:', response.status);
+      console.log('✅ Token validation successful:', response.status);
       return response.status === 200;
     } catch (error: any) {
-      console.warn('Token validation failed:', error.message);
+      console.warn('⚠️ Token validation failed, but keeping token:', error.message);
       if (error.response) {
-        console.warn('Token validation error response:', error.response.status, error.response.data);
+        console.warn('⚠️ Token validation error response:', error.response.status, error.response.data);
       }
+      // NEVER remove token on validation failure - let user stay logged in
       return false;
     }
   }
@@ -111,25 +112,24 @@ class TokenService {
 
   private async performTokenRefresh(currentToken: string): Promise<string | null> {
     try {
-      console.log('Attempting token refresh...');
+      console.log('🔄 Attempting token refresh...');
       const response = await this.axiosInstance.post('/api/auth/refresh', { token: currentToken });
       const newToken = response.data?.token;
       
       if (newToken) {
-        console.log('Token refresh successful');
+        console.log('✅ Token refresh successful');
         this.setToken(newToken);
         return newToken;
       }
       
-      console.warn('No new token received from refresh endpoint');
+      console.warn('⚠️ No new token received from refresh endpoint');
       return null;
     } catch (error: any) {
-      console.error('Token refresh failed:', error.message);
+      console.error('⚠️ Token refresh failed, but keeping existing token:', error.message);
       if (error.response) {
-        console.error('Token refresh error response:', error.response.status, error.response.data);
+        console.error('⚠️ Token refresh error response:', error.response.status, error.response.data);
       }
-      // If refresh fails, remove the token
-      this.removeToken();
+      // NEVER remove token on refresh failure - let user stay logged in with existing token
       return null;
     }
   }

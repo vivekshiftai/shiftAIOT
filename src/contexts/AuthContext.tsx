@@ -74,77 +74,78 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Check for existing session on mount
+  // Check for existing session on mount - NEVER auto-logout users
   useEffect(() => {
     const checkAuth = async () => {
-      logInfo('Auth', 'Starting authentication check');
+      logInfo('Auth', 'Starting authentication check - NEVER auto-logout');
       const savedUser = localStorage.getItem('user');
       const token = localStorage.getItem('token');
 
       logInfo('Auth', `Token exists: ${!!token}`);
       logInfo('Auth', `Saved user exists: ${!!savedUser}`);
 
-      if (!token) {
-        logInfo('Auth', 'No token found, setting loading to false');
-        setIsLoading(false);
-        return;
-      }
+      // If we have a token, we ALWAYS try to keep the user logged in
+      if (token) {
+        // Set token in API headers
+        tokenService.setAxiosAuthHeader(token);
+        logInfo('Auth', 'Token set in API headers');
 
-      // Set token in API headers
-      tokenService.setAxiosAuthHeader(token);
-      logInfo('Auth', 'Token set in API headers');
-
-      if (savedUser) {
+        // Try to load fresh profile from API
         try {
-          const parsedUser = JSON.parse(savedUser);
-          logInfo('Auth', 'Setting user from localStorage', parsedUser);
-          setUser(parsedUser);
-          
-          // Validate token in background
-          logInfo('Auth', 'Validating token in background');
-          const isValid = await validateTokenAndLoadProfile();
-          logInfo('Auth', `Token validation result: ${isValid}`);
-          
-          if (!isValid) {
-            logInfo('Auth', 'Token invalid, attempting refresh');
-            // Try token refresh
-            try {
-              const refreshResponse = await authAPI.refresh(token);
-              const newToken = refreshResponse.data?.token;
-              if (newToken) {
-                logInfo('Auth', 'Token refresh successful');
-                localStorage.setItem('token', newToken);
-                tokenService.setAxiosAuthHeader(newToken);
-                
-                // Try to validate with new token
-                const newTokenValid = await validateTokenAndLoadProfile();
-                logInfo('Auth', `New token validation result: ${newTokenValid}`);
-                if (!newTokenValid) {
-                  logWarn('Auth', 'Token refresh succeeded but profile still unavailable');
-                  // Never logout user automatically - keep existing user data
-                }
-              }
-            } catch (refreshError: unknown) {
-              logWarn('Auth', 'Token refresh failed', undefined, refreshError instanceof Error ? refreshError : new Error('Unknown error'));
-              // Never logout user on refresh failure - keep existing session
-            }
+          const profileLoaded = await validateTokenAndLoadProfile();
+          if (profileLoaded) {
+            logInfo('Auth', '✅ Fresh profile loaded successfully from API');
+            setIsLoading(false);
+            return;
           }
-        } catch (parseError: unknown) {
-          logWarn('Auth', 'Failed to parse saved user', undefined, parseError instanceof Error ? parseError : new Error('Unknown error'));
-          // Try to validate token and load profile, but never logout automatically
-          await validateTokenAndLoadProfile();
+        } catch (error) {
+          logWarn('Auth', '⚠️ Failed to load profile from API, but keeping user logged in', undefined, error instanceof Error ? error : new Error('Unknown error'));
+        }
+
+        // If API fails, use saved user data - NEVER logout
+        if (savedUser) {
+          try {
+            const parsedUser = JSON.parse(savedUser);
+            logInfo('Auth', '✅ Setting user from localStorage - keeping user logged in', parsedUser);
+            setUser(parsedUser);
+            
+            // Try token refresh in background (non-blocking)
+            logInfo('Auth', '🔄 Attempting token refresh in background');
+            setTimeout(async () => {
+              try {
+                const refreshResponse = await authAPI.refresh(token);
+                const newToken = refreshResponse.data?.token;
+                if (newToken) {
+                  logInfo('Auth', '✅ Token refresh successful');
+                  localStorage.setItem('token', newToken);
+                  tokenService.setAxiosAuthHeader(newToken);
+                  
+                  // Try to load fresh profile with new token
+                  const newProfileLoaded = await validateTokenAndLoadProfile();
+                  if (newProfileLoaded) {
+                    logInfo('Auth', '✅ Fresh profile loaded with new token');
+                  }
+                }
+              } catch (refreshError: unknown) {
+                logWarn('Auth', '⚠️ Token refresh failed, but keeping existing session', undefined, refreshError instanceof Error ? refreshError : new Error('Unknown error'));
+                // NEVER logout on refresh failure - keep existing session
+              }
+            }, 1000); // Delay refresh to not block initial load
+          } catch (parseError: unknown) {
+            logWarn('Auth', '⚠️ Failed to parse saved user, but keeping token', undefined, parseError instanceof Error ? parseError : new Error('Unknown error'));
+            // Even if user data is corrupted, keep the token and try to recover
+            setUser(null);
+          }
+        } else {
+          logInfo('Auth', '⚠️ No saved user data, but keeping token for recovery');
+          setUser(null);
         }
       } else {
-        logInfo('Auth', 'No saved user, loading profile with token');
-        // No saved user, try to load profile with token
-        const profileLoaded = await validateTokenAndLoadProfile();
-        if (!profileLoaded) {
-          logWarn('Auth', 'Failed to load profile, but never logging out automatically');
-          // Never logout user automatically - just keep loading state false
-        }
+        logInfo('Auth', 'No token found - user not logged in');
+        setUser(null);
       }
 
-      logInfo('Auth', 'Authentication check complete, setting loading to false');
+      logInfo('Auth', 'Authentication check complete - user session preserved');
       setIsLoading(false);
     };
 
@@ -222,7 +223,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
   };
 
+  // ONLY function that should log out users - called when user clicks logout button
   const logout = () => {
+    logInfo('Auth', '🚪 User explicitly logged out via logout button');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     tokenService.removeToken();

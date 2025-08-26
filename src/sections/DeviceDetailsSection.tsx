@@ -39,6 +39,7 @@ import { pdfAPI } from '../services/api';
 import { pdfProcessingService, PDFListResponse } from '../services/pdfprocess';
 import { DeviceStatsService, DeviceStats } from '../services/deviceStatsService';
 import { logInfo, logError } from '../utils/logger';
+import { TabLoadingScreen, DataLoadingState, LoadingSpinner } from '../components/Loading/LoadingComponents';
 
 interface DocumentationInfo {
   deviceId: string;
@@ -110,8 +111,14 @@ export const DeviceDetailsSection: React.FC = () => {
   const [safetyPrecautions, setSafetyPrecautions] = useState<any[]>([]);
   const [lastSeen, setLastSeen] = useState<string>('');
   const [isRealTimeLoading, setIsRealTimeLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  const device = devices.find(d => d.id === deviceId);
+    const device = devices.find(d => d.id === deviceId);
+
+  // Show loading screen while initial data is being fetched
+  if (isInitialLoading) {
+    return <TabLoadingScreen />;
+  }
 
   useEffect(() => {
     if (!device && devices.length > 0) {
@@ -122,9 +129,14 @@ export const DeviceDetailsSection: React.FC = () => {
 
   useEffect(() => {
     if (device) {
-      fetchDocumentationInfo();
-      loadDevicePDFs();
-      fetchRealTimeData();
+      setIsInitialLoading(true);
+      Promise.all([
+        fetchDocumentationInfo(),
+        loadDevicePDFs(),
+        fetchRealTimeData()
+      ]).finally(() => {
+        setIsInitialLoading(false);
+      });
     }
   }, [device?.id]);
 
@@ -681,6 +693,11 @@ export const DeviceDetailsSection: React.FC = () => {
               </div>
             )}
 
+            {/* Tab Loading State */}
+            {isTabLoading && activeTab === 'maintenance' && (
+              <DataLoadingState message="Loading maintenance information..." />
+            )}
+
             {/* Use the dedicated DeviceMaintenanceDisplay component */}
             <DeviceMaintenanceDisplay deviceId={deviceId!} />
           </div>
@@ -717,6 +734,11 @@ export const DeviceDetailsSection: React.FC = () => {
                   <span className="text-blue-800 font-medium">Updating real-time safety data...</span>
                 </div>
               </div>
+            )}
+
+            {/* Tab Loading State */}
+            {isTabLoading && activeTab === 'safety' && (
+              <DataLoadingState message="Loading safety information..." />
             )}
 
             {/* Use the dedicated DeviceSafetyInfo component */}

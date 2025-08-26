@@ -76,7 +76,9 @@ export class DeviceStatsService {
   private static async fetchMaintenanceCount(deviceId: string): Promise<number> {
     try {
       const response = await maintenanceAPI.getByDevice(deviceId);
-      return response.data?.length || 0;
+      // The backend returns a complex object with maintenanceTasks field
+      const maintenanceData = response.data?.maintenanceTasks || response.data || [];
+      return maintenanceData.length || 0;
     } catch (error: any) {
       const status = error.response?.status;
       if (status === 401) {
@@ -96,7 +98,10 @@ export class DeviceStatsService {
   private static async fetchSafetyCount(deviceId: string): Promise<number> {
     try {
       const response = await deviceSafetyPrecautionsAPI.getByDevice(deviceId);
-      return response.data?.length || 0;
+      console.log(`🔧 DeviceStatsService: Safety response for device ${deviceId}:`, response);
+      const safetyData = response.data || [];
+      console.log(`🔧 DeviceStatsService: Safety data length for device ${deviceId}:`, safetyData.length);
+      return safetyData.length || 0;
     } catch (error: any) {
       const status = error.response?.status;
       if (status === 401) {
@@ -144,7 +149,9 @@ export class DeviceStatsService {
   static async getDeviceMaintenance(deviceId: string) {
     try {
       const response = await maintenanceAPI.getByDevice(deviceId);
-      return response.data || [];
+      // The backend returns a complex object with maintenanceTasks field
+      const maintenanceData = response.data?.maintenanceTasks || response.data || [];
+      return maintenanceData;
     } catch (error: any) {
       console.warn(`Failed to fetch device maintenance for ${deviceId}:`, error.response?.status || error.message);
       return [];
@@ -157,7 +164,10 @@ export class DeviceStatsService {
   static async getDeviceSafety(deviceId: string) {
     try {
       const response = await deviceSafetyPrecautionsAPI.getByDevice(deviceId);
-      return response.data || [];
+      console.log(`🔧 DeviceStatsService: getDeviceSafety response for device ${deviceId}:`, response);
+      const safetyData = response.data || [];
+      console.log(`🔧 DeviceStatsService: getDeviceSafety data for device ${deviceId}:`, safetyData);
+      return safetyData;
     } catch (error: any) {
       console.warn(`Failed to fetch device safety for ${deviceId}:`, error.response?.status || error.message);
       return [];

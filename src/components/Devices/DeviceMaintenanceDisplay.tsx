@@ -104,15 +104,20 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
     try {
       setLoading(true);
       logInfo('DeviceMaintenanceDisplay', 'Loading maintenance tasks for device', { deviceId });
+      console.log('🔧 DeviceMaintenanceDisplay: Loading maintenance tasks for device', deviceId);
       
       // Use maintenance API to get maintenance tasks for this specific device
       const maintenanceResponse = await maintenanceAPI.getByDevice(deviceId);
-      const maintenanceData = maintenanceResponse.data || [];
+      console.log('🔧 DeviceMaintenanceDisplay: Raw maintenance response:', maintenanceResponse);
+      
+      // The backend returns a complex object with maintenanceTasks field
+      const maintenanceData = maintenanceResponse.data?.maintenanceTasks || maintenanceResponse.data || [];
+      console.log('🔧 DeviceMaintenanceDisplay: Maintenance data:', maintenanceData);
       
       // Transform the data to match the expected format
       const transformedTasks: DeviceMaintenance[] = maintenanceData.map((task: any) => ({
         id: task.id || task.maintenance_id || `maintenance_${Math.random()}`,
-        deviceId: task.deviceId || deviceId,
+        deviceId: task.deviceId || task.device?.id || deviceId,
         title: task.taskName || task.title || 'Unnamed Task',
         description: task.description || 'No description available',
         type: task.maintenanceType || task.type || 'preventive',
@@ -138,6 +143,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
         deviceId, 
         tasksCount: transformedTasks.length 
       });
+      console.log(`🔧 DeviceMaintenanceDisplay: Loaded ${transformedTasks.length} maintenance tasks for device ${deviceId}`);
     } catch (err) {
       logError('DeviceMaintenanceDisplay', 'Error loading maintenance tasks', err instanceof Error ? err : new Error('Unknown error'));
       console.error('Error loading maintenance tasks:', err);
@@ -341,7 +347,10 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading maintenance tasks...</p>
+        </div>
       </div>
     );
   }

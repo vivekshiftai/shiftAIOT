@@ -1,16 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
-import { Rule, Device } from '../../types';
-import { useIoT } from '../../contexts/IoTContext';
+import { AlertCircle, CheckCircle } from 'lucide-react';
+import { Rule } from '../../types';
 import Button from '../UI/Button';
 import { LoadingSpinner } from '../Loading/LoadingComponents';
+import { logInfo, logError } from '../../utils/logger';
+
+interface RuleCreateRequest {
+  name: string;
+  description: string;
+  active: boolean;
+  deviceId?: string;
+  conditions: Array<{
+    deviceId?: string;
+    parameter: string;
+    operator: string;
+    value: string;
+  }>;
+  actions: Array<{
+    type: string;
+    deviceId?: string;
+    action: string;
+    value: string;
+  }>;
+}
 
 interface RuleFormProps {
   isOpen: boolean;
   onClose: () => void;
   rule?: Rule;
-  deviceId?: string; // Pre-assigned device when opened from device details
-  onSubmit?: (ruleData: Omit<Rule, 'id' | 'createdAt'>) => Promise<void>;
+  deviceId?: string;
+  onSubmit?: (ruleData: RuleCreateRequest) => Promise<void>;
 }
 
 export const RuleForm: React.FC<RuleFormProps> = ({
@@ -20,15 +39,16 @@ export const RuleForm: React.FC<RuleFormProps> = ({
   deviceId,
   onSubmit
 }) => {
-  const { devices, createRule, updateRule, refreshRules } = useIoT();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{
     name?: string;
-    conditions?: string;
-    actions?: string;
+    description?: string;
+    condition?: string;
+    action?: string;
   }>({});
+
   const [formData, setFormData] = useState<{
     name: string;
     description: string;
@@ -55,7 +75,7 @@ export const RuleForm: React.FC<RuleFormProps> = ({
     category: rule?.category || 'General'
   });
 
-  // Reset form when rule changes or deviceId changes
+  // Reset form when rule changes
   useEffect(() => {
     if (rule) {
       setFormData({
@@ -91,291 +111,96 @@ export const RuleForm: React.FC<RuleFormProps> = ({
     setFieldErrors({});
   }, [rule, deviceId]);
 
-  // Real-time validation
-  const validateField = (field: string, value: any) => {
-    const newErrors = { ...fieldErrors };
-    
-    switch (field) {
-      case 'name':
-        if (!value.trim()) {
-          newErrors.name = 'Rule name is required';
-        } else if (value.trim().length < 3) {
-          newErrors.name = 'Rule name must be at least 3 characters';
-        } else {
-          delete newErrors.name;
-        }
-        break;
-      case 'conditions':
-        if (!value || value.length === 0) {
-          newErrors.conditions = 'At least one condition is required';
-        } else {
-          const hasUnassignedDevice = value.some((condition: RuleCondition) => !condition.deviceId);
-          if (hasUnassignedDevice) {
-            newErrors.conditions = 'All conditions must have a device assigned';
-          } else {
-            delete newErrors.conditions;
-          }
-        }
-        break;
-      case 'actions':
-        if (!value || value.length === 0) {
-          newErrors.actions = 'At least one action is required';
-        } else {
-          delete newErrors.actions;
-        }
-        break;
+  // Validate form
+  const validateForm = () => {
+    const newErrors: typeof fieldErrors = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Rule name is required';
     }
-    
+
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required';
+    }
+
+    if (!formData.condition.trim()) {
+      newErrors.condition = 'Condition is required';
+    }
+
+    if (!formData.action.trim()) {
+      newErrors.action = 'Action is required';
+    }
+
     setFieldErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle form data changes with real-time validation
-  const handleFormDataChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    validateField(field, value);
-  };
-
-  // Get device name for display
-  const getDeviceName = (deviceId: string) => {
-    const device = devices.find(d => d.id === deviceId);
-    return device ? device.name : 'Unknown Device';
-  };
-
-  const addCondition = () => {
-    const newCondition: RuleCondition = {
-      id: Date.now().toString(),
-      type: 'telemetry_threshold',
-      deviceId: deviceId || '',
-      metric: 'temperature',
-      operator: '>',
-      value: 0,
-      logicOperator: 'AND'
-    };
-    setFormData(prev => ({
-      ...prev,
-      conditions: [...prev.conditions, newCondition]
-    }));
-  };
-
-  const addAction = () => {
-    const newAction: RuleAction = {
-      id: Date.now().toString(),
-      type: 'notification',
-      config: { channels: ['email'] }
-    };
-    setFormData(prev => ({
-      ...prev,
-      actions: [...prev.actions, newAction]
-    }));
-  };
-
-  const updateCondition = (index: number, field: string, value: any) => {
-    setFormData(prev => {
-      const newConditions = prev.conditions.map((condition, i) => 
-        i === index ? { ...condition, [field]: value } : condition
-      );
-      const newFormData = { ...prev, conditions: newConditions };
-      
-      // Validate conditions after update
-      validateField('conditions', newConditions);
-      
-      return newFormData;
-    });
-  };
-
-  const removeCondition = (index: number) => {
-    if (formData.conditions.length > 1) {
-      setFormData(prev => {
-        const newConditions = prev.conditions.filter((_, i) => i !== index);
-        const newFormData = { ...prev, conditions: newConditions };
-        
-        // Validate conditions after removal
-        validateField('conditions', newConditions);
-        
-        return newFormData;
-      });
-    }
-  };
-
-  const updateAction = (index: number, field: string, value: any) => {
-    setFormData(prev => {
-      const newActions = prev.actions.map((action, i) => 
-        i === index ? { ...action, [field]: value } : action
-      );
-      const newFormData = { ...prev, actions: newActions };
-      
-      // Validate actions after update
-      validateField('actions', newActions);
-      
-      return newFormData;
-    });
-  };
-
-  const removeAction = (index: number) => {
-    if (formData.actions.length > 1) {
-      setFormData(prev => {
-        const newActions = prev.actions.filter((_, i) => i !== index);
-        const newFormData = { ...prev, actions: newActions };
-        
-        // Validate actions after removal
-        validateField('actions', newActions);
-        
-        return newFormData;
-      });
-    }
-  };
-
-  const validateForm = () => {
-    const errors: string[] = [];
-    
-    if (!formData.name.trim()) {
-      errors.push('Rule name is required');
-    } else if (formData.name.trim().length < 3) {
-      errors.push('Rule name must be at least 3 characters');
-    }
-    
-    if (formData.conditions.length === 0) {
-      errors.push('At least one condition is required');
-    } else {
-      const hasUnassignedDevice = formData.conditions.some(condition => !condition.deviceId);
-      if (hasUnassignedDevice) {
-        errors.push('All conditions must have a device assigned');
-      }
-    }
-    
-    if (formData.actions.length === 0) {
-      errors.push('At least one action is required');
-    }
-    
-    if (errors.length > 0) {
-      setError(errors.join(', '));
-      return false;
-    }
-    
-    return true;
-  };
-
-  // Check if form is valid for submit button
-  const isFormValid = () => {
-    return formData.name.trim().length >= 3 && 
-           formData.conditions.length > 0 && 
-           formData.actions.length > 0 &&
-           !formData.conditions.some(condition => !condition.deviceId) &&
-           Object.keys(fieldErrors).length === 0;
-  };
-
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-
+    
     if (!validateForm()) {
       return;
     }
 
     setIsSubmitting(true);
-    
+    setError('');
+    setSuccess('');
+
     try {
-      // Log rule creation/update with device ID
-      console.log('RuleForm: Creating/updating rule for device:', deviceId);
-      console.log('RuleForm: Form data:', formData);
-      console.log('RuleForm: Existing rule:', rule);
-      
+      // Get user from localStorage to get organizationId
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
+      const organizationId = user?.organizationId || 'default';
+
+      // Convert to backend expected format
+      const ruleData = {
+        name: formData.name,
+        description: formData.description,
+        active: formData.status === 'ACTIVE',
+        deviceId: deviceId || rule?.deviceId,
+        conditions: [
+          {
+            deviceId: deviceId || rule?.deviceId,
+            parameter: formData.metric,
+            operator: 'equals',
+            value: formData.metricValue
+          }
+        ],
+        actions: [
+          {
+            type: 'notification',
+            deviceId: deviceId || rule?.deviceId,
+            action: formData.action,
+            value: formData.threshold
+          }
+        ]
+      };
+
+      logInfo('RuleForm', 'Submitting rule data', ruleData);
+
       if (onSubmit) {
-        // Use custom onSubmit if provided
-        console.log('RuleForm: Using custom onSubmit');
-        await onSubmit({
-          name: formData.name,
-          description: formData.description,
-          metric: formData.metric,
-          metricValue: formData.metricValue,
-          threshold: formData.threshold,
-          consequence: formData.consequence,
-          active: formData.active,
-          deviceId: deviceId, // Add device ID
-          conditions: formData.conditions,
-          actions: formData.actions
-        });
-      } else if (rule) {
-        // Update existing rule
-        console.log('RuleForm: Updating existing rule with ID:', rule.id);
-        const updateData = {
-          name: formData.name,
-          description: formData.description,
-          metric: formData.metric,
-          metricValue: formData.metricValue,
-          threshold: formData.threshold,
-          consequence: formData.consequence,
-          active: formData.active,
-          deviceId: deviceId || rule.deviceId, // Use existing deviceId if not provided
-          conditions: formData.conditions,
-          actions: formData.actions,
-          category: rule.category || 'General', // Preserve existing category
-          priority: rule.priority || 'MEDIUM' // Preserve existing priority
-        };
-        console.log('RuleForm: Update data:', updateData);
-        await updateRule(rule.id, updateData);
-      } else {
-        // Create new rule
-        console.log('RuleForm: Creating new rule');
-        const createData = {
-          name: formData.name,
-          description: formData.description,
-          metric: formData.metric,
-          metricValue: formData.metricValue,
-          threshold: formData.threshold,
-          consequence: formData.consequence,
-          active: formData.active,
-          deviceId: deviceId, // Add device ID to the main rule
-          conditions: formData.conditions,
-          actions: formData.actions,
-          category: 'General', // Default category
-          priority: 'MEDIUM' // Default priority
-        };
-        console.log('RuleForm: Create data:', createData);
-        await createRule(createData);
+        await onSubmit(ruleData);
+        setSuccess('Rule saved successfully!');
+        setTimeout(() => {
+          onClose();
+        }, 1500);
       }
-      
-      setSuccess(rule ? 'Rule updated successfully!' : 'Rule created successfully!');
-      
-      // Refresh rules data
-      await refreshRules();
-      
-      // Close modal after a short delay to show success message
-      setTimeout(() => {
-        onClose();
-      }, 1500);
-    } catch (error) {
-      console.error('RuleForm: Failed to save rule:', error);
-      console.error('RuleForm: Error details:', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        response: error instanceof Error && 'response' in error ? (error as any).response : undefined,
-        formData,
-        rule,
-        deviceId
-      });
-      
-      // Provide more specific error messages
-      let errorMessage = 'Failed to save rule';
-      if (error instanceof Error) {
-        if (error.message.includes('401') || error.message.includes('403')) {
-          errorMessage = 'Permission denied. You do not have the required permissions to modify rules.';
-        } else if (error.message.includes('404')) {
-          errorMessage = 'Rule not found. It may have been deleted.';
-        } else if (error.message.includes('500')) {
-          errorMessage = 'Server error. Please try again later.';
-        } else if (error.message.includes('validation') || error.message.includes('invalid')) {
-          errorMessage = `Validation error: ${error.message}`;
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      setError(errorMessage);
+    } catch (err: any) {
+      logError('RuleForm', 'Failed to save rule', err);
+      setError(err.response?.data?.message || err.message || 'Failed to save rule');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Handle input changes
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear field error when user starts typing
+    if (fieldErrors[field as keyof typeof fieldErrors]) {
+      setFieldErrors(prev => ({ ...prev, [field]: undefined }));
     }
   };
 
@@ -383,374 +208,235 @@ export const RuleForm: React.FC<RuleFormProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-800">
-                {rule ? 'Edit Rule' : 'Create New Rule'}
-              </h2>
-              {deviceId && (
-                <p className="text-sm text-slate-600 mt-1">
-                  Device: <span className="font-medium">{getDeviceName(deviceId)}</span>
-                </p>
-              )}
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-slate-600" />
-            </button>
-          </div>
+      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900">
+            {rule ? 'Edit Rule' : 'Create New Rule'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <span className="text-2xl">×</span>
+          </button>
         </div>
 
-        {/* Error/Success Messages */}
-        {error && (
-          <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-300 rounded-lg shadow-sm">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              <div>
-                <h4 className="font-semibold text-red-800">Error</h4>
-                <p className="text-red-700 leading-relaxed">{error}</p>
-              </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Error/Success Messages */}
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+              <AlertCircle className="w-5 h-5" />
+              <span>{error}</span>
             </div>
-          </div>
-        )}
+          )}
 
-        {success && (
-          <div className="mx-6 mt-4 p-4 bg-green-50 border border-green-300 rounded-lg shadow-sm">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              <div>
-                <h4 className="font-semibold text-green-800">Success</h4>
-                <p className="text-green-700 leading-relaxed">{success}</p>
-              </div>
+          {success && (
+            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700">
+              <CheckCircle className="w-5 h-5" />
+              <span>{success}</span>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Basic Info */}
+          {/* Basic Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Rule Name *
               </label>
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => handleFormDataChange('name', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900"
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  fieldErrors.name ? 'border-red-300' : 'border-gray-300'
+                }`}
                 placeholder="Enter rule name"
-                required
               />
               {fieldErrors.name && (
-                <p className="text-xs text-red-500 mt-1">{fieldErrors.name}</p>
+                <p className="text-red-600 text-sm mt-1">{fieldErrors.name}</p>
               )}
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Status
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Category
               </label>
-              <select
-                value={formData.active ? 'active' : 'inactive'}
-                onChange={(e) => setFormData(prev => ({ ...prev, active: e.target.value === 'active' }))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900"
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+              <input
+                type="text"
+                value={formData.category}
+                onChange={(e) => handleInputChange('category', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="e.g., Temperature, Security, Performance"
+              />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Description
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Description *
             </label>
             <textarea
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e) => handleInputChange('description', e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900"
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                fieldErrors.description ? 'border-red-300' : 'border-gray-300'
+              }`}
               placeholder="Describe what this rule does"
             />
+            {fieldErrors.description && (
+              <p className="text-red-600 text-sm mt-1">{fieldErrors.description}</p>
+            )}
           </div>
 
-          {/* New Rule Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Metric Information */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Metric
               </label>
               <input
                 type="text"
                 value={formData.metric}
-                onChange={(e) => setFormData(prev => ({ ...prev, metric: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900"
-                placeholder="e.g., vibration, temperature, pressure"
+                onChange={(e) => handleInputChange('metric', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="e.g., temperature, humidity"
               />
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Metric Value
               </label>
               <input
                 type="text"
                 value={formData.metricValue}
-                onChange={(e) => setFormData(prev => ({ ...prev, metricValue: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900"
-                placeholder="e.g., 2.5 mm/s, 25°C"
+                onChange={(e) => handleInputChange('metricValue', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="e.g., 25.5"
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Threshold
               </label>
               <input
                 type="text"
                 value={formData.threshold}
-                onChange={(e) => setFormData(prev => ({ ...prev, threshold: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900"
-                placeholder="e.g., Vibration > 2.5 mm/s"
+                onChange={(e) => handleInputChange('threshold', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="e.g., > 30"
               />
             </div>
+          </div>
+
+          {/* Condition and Action */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Consequence
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Condition *
               </label>
-              <input
-                type="text"
-                value={formData.consequence}
-                onChange={(e) => setFormData(prev => ({ ...prev, consequence: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900"
-                placeholder="e.g., Mechanical damage, safety risk"
+              <textarea
+                value={formData.condition}
+                onChange={(e) => handleInputChange('condition', e.target.value)}
+                rows={3}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  fieldErrors.condition ? 'border-red-300' : 'border-gray-300'
+                }`}
+                placeholder="e.g., temperature > 30°C"
               />
+              {fieldErrors.condition && (
+                <p className="text-red-600 text-sm mt-1">{fieldErrors.condition}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Action *
+              </label>
+              <textarea
+                value={formData.action}
+                onChange={(e) => handleInputChange('action', e.target.value)}
+                rows={3}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  fieldErrors.action ? 'border-red-300' : 'border-gray-300'
+                }`}
+                placeholder="e.g., Send notification, Turn on fan"
+              />
+              {fieldErrors.action && (
+                <p className="text-red-600 text-sm mt-1">{fieldErrors.action}</p>
+              )}
             </div>
           </div>
 
-          {/* Conditions */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">Conditions *</h3>
-              <Button
-                type="button"
-                onClick={addCondition}
-                className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Condition
-              </Button>
-            </div>
-
-            <div className="space-y-4">
-              {formData.conditions.map((condition, index) => (
-                <div key={condition.id} className="p-4 border border-slate-200 rounded-lg bg-slate-50">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium text-slate-900">Condition {index + 1}</h4>
-                    {formData.conditions.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeCondition(index)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    {index > 0 && (
-                      <div>
-                        <label className="block text-xs font-medium text-slate-600 mb-1">Logic</label>
-                        <select
-                          value={condition.logicOperator || 'AND'}
-                          onChange={(e) => updateCondition(index, 'logicOperator', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm"
-                        >
-                          <option value="AND">AND</option>
-                          <option value="OR">OR</option>
-                        </select>
-                      </div>
-                    )}
-                    
-                    <div className={index === 0 ? 'col-span-1' : ''}>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Device *</label>
-                      <select
-                        value={condition.deviceId || ''}
-                        onChange={(e) => updateCondition(index, 'deviceId', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm"
-                        required
-                      >
-                        <option value="">Select device</option>
-                        {devices.map(device => (
-                          <option key={device.id} value={device.id}>{device.name}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Metric</label>
-                      <select
-                        value={condition.metric || ''}
-                        onChange={(e) => updateCondition(index, 'metric', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm"
-                      >
-                        <option value="temperature">Temperature</option>
-                        <option value="humidity">Humidity</option>
-                        <option value="pressure">Pressure</option>
-                        <option value="light">Light</option>
-                        <option value="motion">Motion</option>
-                        <option value="status">Status</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Operator</label>
-                      <select
-                        value={condition.operator}
-                        onChange={(e) => updateCondition(index, 'operator', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm"
-                      >
-                        <option value=">">Greater than</option>
-                        <option value="<">Less than</option>
-                        <option value="=">Equals</option>
-                        <option value="!=">Not equal</option>
-                        <option value=">=">Greater than or equal</option>
-                        <option value="<=">Less than or equal</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Value</label>
-                      <input
-                        type="number"
-                        value={condition.value}
-                        onChange={(e) => updateCondition(index, 'value', parseFloat(e.target.value))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm"
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {fieldErrors.conditions && (
-              <p className="text-xs text-red-500 mt-2">{fieldErrors.conditions}</p>
-            )}
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Consequence
+            </label>
+            <input
+              type="text"
+              value={formData.consequence}
+              onChange={(e) => handleInputChange('consequence', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="e.g., System shutdown, Alert notification"
+            />
           </div>
 
-          {/* Actions */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">Actions *</h3>
-              <Button
-                type="button"
-                onClick={addAction}
-                className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          {/* Settings */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Priority
+              </label>
+              <select
+                value={formData.priority}
+                onChange={(e) => handleInputChange('priority', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <Plus className="w-4 h-4" />
-                Add Action
-              </Button>
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+              </select>
             </div>
 
-            <div className="space-y-4">
-              {formData.actions.map((action, index) => (
-                <div key={action.id} className="p-4 border border-slate-200 rounded-lg bg-slate-50">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium text-slate-900">Action {index + 1}</h4>
-                    {formData.actions.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeAction(index)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Action Type</label>
-                      <select
-                        value={action.type}
-                        onChange={(e) => updateAction(index, 'type', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm"
-                      >
-                        <option value="notification">Send Notification</option>
-                        <option value="email">Send Email</option>
-                        <option value="sms">Send SMS</option>
-                        <option value="webhook">Webhook</option>
-                        <option value="device_control">Device Control</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Channels</label>
-                      <div className="flex gap-3">
-                        <label className="flex items-center">
-                          <input 
-                            type="checkbox" 
-                            defaultChecked 
-                            className="mr-1 text-blue-600 border-slate-300 rounded focus:ring-blue-500" 
-                          />
-                          <span className="text-sm text-slate-700">Email</span>
-                        </label>
-                        <label className="flex items-center">
-                          <input 
-                            type="checkbox" 
-                            className="mr-1 text-blue-600 border-slate-300 rounded focus:ring-blue-500" 
-                          />
-                          <span className="text-sm text-slate-700">Slack</span>
-                        </label>
-                        <label className="flex items-center">
-                          <input 
-                            type="checkbox" 
-                            className="mr-1 text-blue-600 border-slate-300 rounded focus:ring-blue-500" 
-                          />
-                          <span className="text-sm text-slate-700">Teams</span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Status
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => handleInputChange('status', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+              </select>
             </div>
-            {fieldErrors.actions && (
-              <p className="text-xs text-red-500 mt-2">{fieldErrors.actions}</p>
-            )}
           </div>
 
-          {/* Submit */}
-          <div className="flex justify-end gap-4 pt-4 border-t border-slate-200">
+          {/* Form Actions */}
+          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
             <Button
               type="button"
+              variant="outline"
               onClick={onClose}
-              className="px-4 py-2 text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || !isFormValid()}
-              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              disabled={isSubmitting}
+              className="min-w-[100px]"
             >
               {isSubmitting ? (
-                <>
+                <div className="flex items-center gap-2">
                   <LoadingSpinner size="sm" />
                   Saving...
-                </>
+                </div>
               ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  {rule ? 'Update Rule' : 'Create Rule'}
-                </>
+                rule ? 'Update Rule' : 'Create Rule'
               )}
             </Button>
           </div>

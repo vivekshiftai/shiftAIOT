@@ -1,7 +1,7 @@
 import React, { useState, Component, ErrorInfo, ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { IoTProvider } from './contexts/IoTContext';
+import { IoTProvider, useIoT } from './contexts/IoTContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { logError } from './utils/logger';
 
@@ -21,9 +21,8 @@ import './styles/colors.css';
 
 import { AlertTriangle } from 'lucide-react';
 import RulesPage from './sections/RulesPage';
-import MaintenancePage from './sections/MaintenancePage';
-import SafetyPage from './sections/SafetyPage';
 import { SettingsSection } from './sections/SettingsSection';
+import { AppLoadingScreen, TabLoadingScreen } from './components/Loading/LoadingComponents';
 
 // Error Boundary Component
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error?: Error }> {
@@ -78,12 +77,15 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading: authLoading } = useAuth();
+  
   if (authLoading) {
-    return null;
+    return <AppLoadingScreen />;
   }
+  
   if (!user) {
     return <Navigate to="/login" replace />;
   }
+  
   return <>{children}</>;
 };
 
@@ -91,6 +93,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const MainAppLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { loading: iotLoading } = useIoT();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,6 +118,11 @@ const MainAppLayout: React.FC = () => {
   const handleSectionChange = (section: string) => {
     navigate(`/${section}`);
   };
+
+  // Show loading screen while IoT data is being loaded
+  if (iotLoading) {
+    return <TabLoadingScreen />;
+  }
 
   return (
     <div className="h-screen bg-secondary flex overflow-hidden">
@@ -155,8 +163,6 @@ const MainAppLayout: React.FC = () => {
             <Route path="/users" element={<UsersSection />} />
             <Route path="/settings" element={<SettingsSection />} />
             <Route path="/rules" element={<RulesPage />} />
-            <Route path="/maintenance" element={<MaintenancePage />} />
-            <Route path="/safety" element={<SafetyPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
           
@@ -173,7 +179,7 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <Router>
+        <Router basename="/">
           <AuthProvider>
             <IoTProvider>
               <AppWithToast />

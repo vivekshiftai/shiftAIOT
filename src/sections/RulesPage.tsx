@@ -19,25 +19,11 @@ import {
   Wrench
 } from 'lucide-react';
 import Button from '../components/UI/Button';
-import Modal from '../components/UI/Modal';
-import Skeleton from '../components/UI/Skeleton';
-import { RuleForm } from '../components/Forms';
-import { getApiConfig } from '../config/api';
 
-interface Rule {
-  id: string;
-  name: string;
-  description?: string;
-  conditions: RuleCondition[];
-  actions: RuleAction[];
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  lastTriggered?: string;
-  triggerCount: number;
-  type: string;
-  priority: string;
-}
+import Skeleton from '../components/UI/Skeleton';
+import { RuleForm, MaintenanceForm, SafetyForm } from '../components/Forms';
+import { getApiConfig } from '../config/api';
+import { Rule, MaintenanceTask, DeviceSafetyPrecaution } from '../types';
 
 interface RuleCondition {
   id: string;
@@ -65,41 +51,7 @@ interface RuleFormData {
   isActive: boolean;
 }
 
-interface MaintenanceTask {
-  id: string;
-  taskName: string;
-  description?: string;
-  deviceId: string;
-  deviceName: string;
-  frequency: string;
-  lastMaintenance?: string;
-  nextMaintenance: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'overdue';
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  assignedTo?: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
-interface SafetyPrecaution {
-  id: string;
-  deviceId: string;
-  deviceName?: string;
-  title: string;
-  description: string;
-  type: 'warning' | 'procedure' | 'caution' | 'note';
-  category: string;
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  recommendedAction?: string;
-  aboutReaction?: string;
-  causes?: string;
-  howToAvoid?: string;
-  safetyInfo?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
 
 type TabType = 'rules' | 'maintenance' | 'safety';
 
@@ -122,11 +74,11 @@ const RulesPage: React.FC = () => {
   const [editingMaintenance, setEditingMaintenance] = useState<MaintenanceTask | null>(null);
   
   // Safety state
-  const [safetyPrecautions, setSafetyPrecautions] = useState<SafetyPrecaution[]>([]);
+  const [safetyPrecautions, setSafetyPrecautions] = useState<DeviceSafetyPrecaution[]>([]);
   const [safetyLoading, setSafetyLoading] = useState(true);
   const [safetyError, setSafetyError] = useState<string | null>(null);
   const [showSafetyModal, setShowSafetyModal] = useState(false);
-  const [editingSafety, setEditingSafety] = useState<SafetyPrecaution | null>(null);
+  const [editingSafety, setEditingSafety] = useState<DeviceSafetyPrecaution | null>(null);
   
   // Common state
   const [searchTerm, setSearchTerm] = useState('');
@@ -166,33 +118,10 @@ const RulesPage: React.FC = () => {
 
       // Fetch safety precautions data
       try {
-        // Get all devices first to fetch safety precautions for each
-        const devicesResponse = await fetch(`${getApiConfig().BACKEND_BASE_URL}/api/devices`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (devicesResponse.ok) {
-          const devices = await devicesResponse.json();
-          let allSafetyPrecautions: any[] = [];
-          
-          // Fetch safety precautions for each device
-          for (const device of devices) {
-            try {
-              const safetyResponse = await deviceSafetyPrecautionsAPI.getAllByDevice(device.id);
-              const deviceSafety = safetyResponse.data || [];
-              allSafetyPrecautions = [...allSafetyPrecautions, ...deviceSafety];
-            } catch (err) {
-              console.warn(`Error fetching safety precautions for device ${device.id}:`, err);
-            }
-          }
-          
-          setSafetyPrecautions(allSafetyPrecautions);
-          console.log('Total safety precautions loaded:', allSafetyPrecautions.length);
-        }
+        const safetyResponse = await deviceSafetyPrecautionsAPI.getAll();
+        const safetyData = safetyResponse.data || [];
+        setSafetyPrecautions(safetyData);
+        console.log('Total safety precautions loaded:', safetyData.length);
       } catch (err) {
         console.error('Error fetching safety precautions:', err);
         setSafetyError('Failed to fetch safety precautions');
@@ -223,8 +152,8 @@ const RulesPage: React.FC = () => {
     const matchesSearch = rule.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          rule.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || 
-                         (filterStatus === 'active' && rule.isActive) ||
-                         (filterStatus === 'inactive' && !rule.isActive);
+                         (filterStatus === 'active' && rule.status === 'ACTIVE') ||
+                         (filterStatus === 'inactive' && rule.status === 'INACTIVE');
     return matchesSearch && matchesStatus;
   });
 
@@ -232,8 +161,8 @@ const RulesPage: React.FC = () => {
     const matchesSearch = task.taskName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          task.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || 
-                         (filterStatus === 'active' && task.status !== 'completed') ||
-                         (filterStatus === 'inactive' && task.status === 'completed');
+                         (filterStatus === 'active' && task.status !== 'COMPLETED') ||
+                         (filterStatus === 'inactive' && task.status === 'COMPLETED');
     return matchesSearch && matchesStatus;
   });
 
@@ -281,7 +210,7 @@ const RulesPage: React.FC = () => {
   };
 
   // Handle safety operations
-  const handleEditSafety = (precaution: SafetyPrecaution) => {
+  const handleEditSafety = (precaution: DeviceSafetyPrecaution) => {
     setEditingSafety(precaution);
     setShowSafetyModal(true);
   };
@@ -394,10 +323,10 @@ const RulesPage: React.FC = () => {
           {filteredRules.map((rule) => (
             <div key={rule.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${rule.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
-                  <h3 className="font-semibold text-gray-900">{rule.name}</h3>
-                </div>
+                                 <div className="flex items-center gap-2">
+                   <div className={`w-2 h-2 rounded-full ${rule.status === 'ACTIVE' ? 'bg-green-500' : 'bg-gray-400'}`} />
+                   <h3 className="font-semibold text-gray-900">{rule.name}</h3>
+                 </div>
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
@@ -422,11 +351,11 @@ const RulesPage: React.FC = () => {
               )}
               
               <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-sm">
-                  <Target className="w-4 h-4 text-blue-600" />
-                  <span className="text-gray-600">Type:</span>
-                  <span className="font-medium text-gray-900 capitalize">{rule.type || 'General'}</span>
-                </div>
+                                 <div className="flex items-center gap-2 text-sm">
+                   <Target className="w-4 h-4 text-blue-600" />
+                   <span className="text-gray-600">Category:</span>
+                   <span className="font-medium text-gray-900 capitalize">{rule.category || 'General'}</span>
+                 </div>
                 
                 <div className="flex items-center gap-2 text-sm">
                   <AlertTriangle className="w-4 h-4 text-yellow-600" />
@@ -672,13 +601,13 @@ const RulesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Device Management</h1>
-          <p className="text-gray-600">Manage rules, maintenance, and safety precautions</p>
-        </div>
-      </div>
+             {/* Header */}
+       <div className="flex items-center justify-between">
+         <div>
+           <h1 className="text-3xl font-bold text-gray-900">DeviceCare Center</h1>
+           <p className="text-gray-600">Manage rules, maintenance, and safety precautions</p>
+         </div>
+       </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
@@ -765,88 +694,74 @@ const RulesPage: React.FC = () => {
             setEditingRule(null);
           }}
           rule={editingRule || undefined}
-          onSubmit={async (ruleData) => {
-            try {
-              if (editingRule) {
-                await ruleAPI.update(editingRule.id, ruleData);
-              } else {
-                await ruleAPI.create(ruleData);
-              }
-              setShowRuleModal(false);
-              setEditingRule(null);
-              fetchAllData();
-            } catch (error) {
-              console.error('Failed to save rule:', error);
-            }
-          }}
+                     onSubmit={async (ruleData: any) => {
+             try {
+               if (editingRule) {
+                 await ruleAPI.update(editingRule.id, ruleData);
+               } else {
+                 await ruleAPI.create(ruleData);
+               }
+               setShowRuleModal(false);
+               setEditingRule(null);
+               fetchAllData();
+             } catch (error) {
+               console.error('Failed to save rule:', error);
+             }
+           }}
         />
       )}
 
-      {/* Maintenance Modal - Placeholder for now */}
-      {showMaintenanceModal && (
-        <Modal
-          isOpen={showMaintenanceModal}
-          onClose={() => {
-            setShowMaintenanceModal(false);
-            setEditingMaintenance(null);
-          }}
-          title={editingMaintenance ? 'Edit Maintenance Task' : 'Add Maintenance Task'}
-        >
-          <div className="p-6">
-            <p className="text-gray-600">Maintenance form will be implemented here.</p>
-            <div className="flex justify-end gap-3 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowMaintenanceModal(false);
-                  setEditingMaintenance(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={() => {
-                setShowMaintenanceModal(false);
-                setEditingMaintenance(null);
-              }}>
-                Save
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
+             {/* Maintenance Modal */}
+       {showMaintenanceModal && (
+         <MaintenanceForm
+           isOpen={showMaintenanceModal}
+           onClose={() => {
+             setShowMaintenanceModal(false);
+             setEditingMaintenance(null);
+           }}
+           maintenance={editingMaintenance || undefined}
+           onSubmit={async (maintenanceData: Omit<MaintenanceTask, 'id' | 'createdAt' | 'updatedAt'>) => {
+             try {
+               if (editingMaintenance) {
+                 await maintenanceAPI.update(editingMaintenance.id, maintenanceData);
+               } else {
+                 await maintenanceAPI.create(maintenanceData);
+               }
+               setShowMaintenanceModal(false);
+               setEditingMaintenance(null);
+               fetchAllData();
+             } catch (error) {
+               console.error('Failed to save maintenance task:', error);
+             }
+           }}
+         />
+       )}
 
-      {/* Safety Modal - Placeholder for now */}
-      {showSafetyModal && (
-        <Modal
-          isOpen={showSafetyModal}
-          onClose={() => {
-            setShowSafetyModal(false);
-            setEditingSafety(null);
-          }}
-          title={editingSafety ? 'Edit Safety Precaution' : 'Add Safety Precaution'}
-        >
-          <div className="p-6">
-            <p className="text-gray-600">Safety precaution form will be implemented here.</p>
-            <div className="flex justify-end gap-3 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowSafetyModal(false);
-                  setEditingSafety(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={() => {
-                setShowSafetyModal(false);
-                setEditingSafety(null);
-              }}>
-                Save
-              </Button>
-            </div>
-          </div>
-        </Modal>
-      )}
+       {/* Safety Modal */}
+       {showSafetyModal && (
+         <SafetyForm
+           isOpen={showSafetyModal}
+           onClose={() => {
+             setShowSafetyModal(false);
+             setEditingSafety(null);
+           }}
+           safety={editingSafety || undefined}
+           onSubmit={async (safetyData: Omit<DeviceSafetyPrecaution, 'id' | 'createdAt' | 'updatedAt' | 'organizationId'>) => {
+             try {
+               if (editingSafety) {
+                 await deviceSafetyPrecautionsAPI.update(editingSafety.id, safetyData);
+               } else {
+                 await deviceSafetyPrecautionsAPI.create(safetyData);
+               }
+               setShowSafetyModal(false);
+               setEditingSafety(null);
+               fetchAllData();
+             } catch (error) {
+               console.error('Failed to save safety precaution:', error);
+             }
+           }}
+         />
+       )}
     </div>
   );
 };

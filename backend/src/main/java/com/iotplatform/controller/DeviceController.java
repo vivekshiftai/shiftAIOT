@@ -39,6 +39,7 @@ import com.iotplatform.model.Device;
 import com.iotplatform.model.Device.Protocol;
 import com.iotplatform.model.User;
 import com.iotplatform.service.DeviceService;
+import com.iotplatform.service.DeviceSafetyPrecautionService;
 import com.iotplatform.service.FileStorageService;
 import com.iotplatform.service.TelemetryService;
 import com.iotplatform.service.UnifiedOnboardingService;
@@ -76,6 +77,7 @@ public class DeviceController {
     private final FileStorageService fileStorageService;
     private final PDFProcessingService pdfProcessingService;
     private final UnifiedOnboardingService unifiedOnboardingService;
+    private final DeviceSafetyPrecautionService deviceSafetyPrecautionService;
     private final RuleRepository ruleRepository;
     private final RuleConditionRepository ruleConditionRepository;
     private final DeviceMaintenanceRepository deviceMaintenanceRepository;
@@ -83,12 +85,13 @@ public class DeviceController {
     private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
 
-    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository) {
+    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.fileStorageService = fileStorageService;
         this.pdfProcessingService = pdfProcessingService;
         this.unifiedOnboardingService = unifiedOnboardingService;
+        this.deviceSafetyPrecautionService = deviceSafetyPrecautionService;
         this.ruleRepository = ruleRepository;
         this.ruleConditionRepository = ruleConditionRepository;
         this.deviceMaintenanceRepository = deviceMaintenanceRepository;
@@ -722,7 +725,9 @@ public class DeviceController {
                 return ResponseEntity.notFound().build();
             }
             
-            List<DeviceSafetyPrecaution> safetyPrecautions = pdfProcessingService.getDeviceSafetyPrecautions(id);
+            // Use the proper service method that includes organization filtering
+            List<DeviceSafetyPrecaution> safetyPrecautions = deviceSafetyPrecautionService.getAllSafetyPrecautionsByDevice(id, organizationId);
+            logger.info("Found {} safety precautions for device: {} in organization: {}", safetyPrecautions.size(), id, organizationId);
             return ResponseEntity.ok(safetyPrecautions);
             
         } catch (Exception e) {

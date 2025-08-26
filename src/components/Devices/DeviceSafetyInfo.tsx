@@ -49,12 +49,15 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
       
       // Use device safety precautions API to get safety precautions for this specific device
       const safetyResponse = await deviceSafetyPrecautionsAPI.getByDevice(deviceId);
+      console.log('🔧 DeviceSafetyInfo: Raw safety response:', safetyResponse);
+      
       const safetyData = safetyResponse.data || [];
+      console.log('🔧 DeviceSafetyInfo: Safety data:', safetyData);
       
       // Transform the data to match the expected format
       const transformedPrecautions: DeviceSafetyPrecaution[] = safetyData.map((precaution: any) => ({
         id: precaution.id || precaution.safety_id || `safety_${Math.random()}`,
-        deviceId: deviceId,
+        deviceId: precaution.deviceId || deviceId,
         title: precaution.title || 'Unnamed Safety Precaution',
         description: precaution.description || 'No description available',
         type: precaution.type || 'warning',
@@ -176,7 +179,10 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading safety precautions...</p>
+        </div>
       </div>
     );
   }
