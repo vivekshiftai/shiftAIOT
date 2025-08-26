@@ -8,6 +8,7 @@ public class JwtResponse {
     private String email;
     private String role;
     private String organizationId;
+    private String refreshToken;
 
     public JwtResponse(String accessToken, String id, String name, String email, String role, String organizationId) {
         this.token = accessToken;
@@ -16,6 +17,16 @@ public class JwtResponse {
         this.email = email;
         this.role = role;
         this.organizationId = organizationId;
+    }
+
+    public JwtResponse(String accessToken, String id, String name, String email, String role, String organizationId, String refreshToken) {
+        this.token = accessToken;
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.role = role;
+        this.organizationId = organizationId;
+        this.refreshToken = refreshToken;
     }
 
     // Getters and Setters
@@ -39,4 +50,7 @@ public class JwtResponse {
 
     public String getOrganizationId() { return organizationId; }
     public void setOrganizationId(String organizationId) { this.organizationId = organizationId; }
+
+    public String getRefreshToken() { return refreshToken; }
+    public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
 }

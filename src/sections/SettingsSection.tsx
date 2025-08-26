@@ -253,16 +253,23 @@ export const SettingsSection: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
+      console.log('🔧 Saving profile for user:', userProfile.id);
+      
       const payload: Partial<UserProfile> = {
         firstName: userProfile.firstName,
         lastName: userProfile.lastName,
         email: userProfile.email,
         phone: userProfile.phone
       };
+      
+      console.log('🔧 Profile payload:', payload);
       const res = await userAPI.update(userProfile.id, payload);
+      console.log('✅ Profile saved successfully:', res.data);
+      
       setUserProfile(prev => ({ ...prev, ...res.data }));
       setIsEditing(false);
     } catch (e: any) {
+      console.error('❌ Profile save failed:', e);
       setError(handleAuthError(e, 'Failed to save profile'));
     } finally {
       setIsLoading(false);

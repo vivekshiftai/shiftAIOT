@@ -27,7 +27,7 @@ import com.iotplatform.security.CustomUserDetails;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 public class UserController {
 
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
@@ -85,32 +85,69 @@ public class UserController {
     public ResponseEntity<User> updateUser(@PathVariable String id, 
                                          @RequestBody User updatedUser, 
                                          @AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🔧 User update request for ID: {} from user: {}", id, 
+                   userDetails != null ? userDetails.getUsername() : "unknown");
+        
         if (userDetails == null || userDetails.getUser() == null) {
+            logger.warn("❌ Unauthorized user update attempt - no user details");
             return ResponseEntity.status(401).build();
         }
         User currentUser = userDetails.getUser();
         if (id == null || id.trim().isEmpty()) {
+            logger.warn("❌ Invalid user update request - empty ID");
             return ResponseEntity.badRequest().build();
         }
         try {
             return userRepository.findById(id)
                 .map(existingUser -> {
                     if (!existingUser.getOrganizationId().equals(currentUser.getOrganizationId())) {
+                        logger.warn("❌ Forbidden user update - organization mismatch: {} vs {}", 
+                                  existingUser.getOrganizationId(), currentUser.getOrganizationId());
                         return ResponseEntity.status(403).<User>build();
                     }
                     if (!currentUser.getRole().equals(User.Role.ADMIN) && 
                         updatedUser.getRole() != null && !updatedUser.getRole().equals(existingUser.getRole())) {
+                        logger.warn("❌ Forbidden user update - role change attempt by non-admin: {}", currentUser.getEmail());
                         return ResponseEntity.status(403).<User>build();
                     }
-                    if (updatedUser.getFirstName() != null) existingUser.setFirstName(updatedUser.getFirstName());
-                    if (updatedUser.getLastName() != null) existingUser.setLastName(updatedUser.getLastName());
-                    if (updatedUser.getEmail() != null) existingUser.setEmail(updatedUser.getEmail());
-                    if (updatedUser.getPhone() != null) existingUser.setPhone(updatedUser.getPhone());
-                    if (updatedUser.getRole() != null) existingUser.setRole(updatedUser.getRole());
-                    existingUser.setEnabled(updatedUser.isEnabled());
-                    User savedUser = userRepository.save(existingUser);
-                    savedUser.setPassword(null);
-                    return ResponseEntity.ok(savedUser);
+                    
+                    // Update user fields
+                    boolean hasChanges = false;
+                    if (updatedUser.getFirstName() != null && !updatedUser.getFirstName().equals(existingUser.getFirstName())) {
+                        existingUser.setFirstName(updatedUser.getFirstName());
+                        hasChanges = true;
+                    }
+                    if (updatedUser.getLastName() != null && !updatedUser.getLastName().equals(existingUser.getLastName())) {
+                        existingUser.setLastName(updatedUser.getLastName());
+                        hasChanges = true;
+                    }
+                    if (updatedUser.getEmail() != null && !updatedUser.getEmail().equals(existingUser.getEmail())) {
+                        existingUser.setEmail(updatedUser.getEmail());
+                        hasChanges = true;
+                    }
+                    if (updatedUser.getPhone() != null && !updatedUser.getPhone().equals(existingUser.getPhone())) {
+                        existingUser.setPhone(updatedUser.getPhone());
+                        hasChanges = true;
+                    }
+                    if (updatedUser.getRole() != null && !updatedUser.getRole().equals(existingUser.getRole())) {
+                        existingUser.setRole(updatedUser.getRole());
+                        hasChanges = true;
+                    }
+                    if (updatedUser.isEnabled() != existingUser.isEnabled()) {
+                        existingUser.setEnabled(updatedUser.isEnabled());
+                        hasChanges = true;
+                    }
+                    
+                    if (hasChanges) {
+                        User savedUser = userRepository.save(existingUser);
+                        savedUser.setPassword(null);
+                        logger.info("✅ User updated successfully: {} by user: {}", savedUser.getEmail(), currentUser.getEmail());
+                        return ResponseEntity.ok(savedUser);
+                    } else {
+                        logger.info("ℹ️ No changes detected for user: {}", existingUser.getEmail());
+                        existingUser.setPassword(null);
+                        return ResponseEntity.ok(existingUser);
+                    }
                 })
                 .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {

@@ -347,16 +347,16 @@ export const deviceConnectionAPI = {
 
 // User API
 export const userAPI = {
-  getAll: () => api.get('/users'),
-  getById: (id: string) => api.get(`/users/${id}`),
-  update: (id: string, user: any) => api.put(`/users/${id}`, user),
-  delete: (id: string) => api.delete(`/users/${id}`),
+  getAll: () => api.get('/api/users'),
+  getById: (id: string) => api.get(`/api/users/${id}`),
+  update: (id: string, user: any) => api.put(`/api/users/${id}`, user),
+  delete: (id: string) => api.delete(`/api/users/${id}`),
   getProfile: () => api.get('/api/users/profile'),
   changePassword: (payload: { currentPassword: string; newPassword: string; confirmPassword: string }) => 
-    api.post('/users/change-password', payload),
+    api.post('/api/users/change-password', payload),
   // Preferences
-  getPreferences: () => api.get('/user-preferences'),
-  savePreferences: (prefs: any) => api.post('/user-preferences', prefs),
+  getPreferences: () => api.get('/api/user-preferences'),
+  savePreferences: (prefs: any) => api.post('/api/user-preferences', prefs),
 };
 
 // PDF Processing API - All calls go through backend

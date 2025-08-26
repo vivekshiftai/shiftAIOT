@@ -189,7 +189,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(true);
     try {
       const response = await authAPI.login({ email, password });
-      const { token, id, name, email: userEmail, role, organizationId } = response.data;
+      const { token, id, name, email: userEmail, role, organizationId, refreshToken } = response.data;
 
       const user: User = {
         id,
@@ -206,7 +206,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
-      tokenService.setAxiosAuthHeader(token);
+      tokenService.setToken(token, refreshToken);
 
       window.dispatchEvent(new Event('storageChange'));
       setUser(user);

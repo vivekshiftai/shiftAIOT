@@ -89,10 +89,12 @@ public class SecurityConfig {
                 .requestMatchers("/query").permitAll()
                 .requestMatchers("/pdfs/**").permitAll()
                 .requestMatchers("/api/devices/health").permitAll()
+                .requestMatchers("/devices/health").permitAll()
 
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                // Documentation and monitoring
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/websocket/**").permitAll()
-                .requestMatchers("/health/**").permitAll()
+                .requestMatchers("/health/**", "/actuator/health/**").permitAll()
                 .requestMatchers("/api/health/**").permitAll()
                 
                 // Admin endpoints (admin role required)

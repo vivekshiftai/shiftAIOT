@@ -42,16 +42,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             logger.info("🔐 JWT Filter - URI: {}, Method: {}, Content-Type: {}", 
                        requestURI, method, contentType);
             
-            if (requestURI.startsWith("/api/auth/") || 
-                requestURI.startsWith("/auth/") ||
-                requestURI.startsWith("/api/health") ||
-                requestURI.startsWith("/health") ||
-                requestURI.startsWith("/swagger-ui") ||
-                requestURI.startsWith("/v3/api-docs") ||
-                requestURI.equals("/api/devices/health")) {
-                logger.debug("Skipping JWT authentication for public endpoint: {}", requestURI);
-                filterChain.doFilter(request, response);
-                return;
+            // Define public endpoints that don't require authentication
+            String[] publicEndpoints = {
+                "/api/auth/",
+                "/auth/",
+                "/api/health",
+                "/health",
+                "/swagger-ui",
+                "/v3/api-docs",
+                "/api/devices/health",
+                "/knowledge/",
+                "/upload-pdf",
+                "/query",
+                "/pdfs/"
+            };
+            
+            for (String endpoint : publicEndpoints) {
+                if (requestURI.startsWith(endpoint)) {
+                    logger.debug("Skipping JWT authentication for public endpoint: {}", requestURI);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
             }
 
             String jwt = getJwtFromRequest(request);
@@ -60,7 +71,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(jwt)) {
                 boolean isValid = tokenProvider.validateToken(jwt);
-                logger.info("🔐 JWT validation result: {}", isValid);
+                boolean isExpired = tokenProvider.isTokenExpired(jwt);
+                logger.info("🔐 JWT validation result: {}, expired: {}", isValid, isExpired);
                 
                 if (isValid) {
                     String username = tokenProvider.getUsernameFromToken(jwt);

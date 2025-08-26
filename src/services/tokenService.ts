@@ -29,14 +29,18 @@ class TokenService {
   }
 
   // Set token in localStorage and axios headers
-  public setToken(token: string): void {
+  public setToken(token: string, refreshToken?: string): void {
     localStorage.setItem(TOKEN_KEY, token);
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken);
+    }
     this.setAxiosAuthHeader(token);
   }
 
   // Remove token from localStorage and axios headers
   public removeToken(): void {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem(USER_KEY);
     delete this.axiosInstance.defaults.headers.common.Authorization;
   }
@@ -88,10 +92,18 @@ class TokenService {
     }
   }
 
+  // Get refresh token from localStorage
+  public getRefreshToken(): string | null {
+    return localStorage.getItem('refreshToken');
+  }
+
   // Refresh token with retry logic
   public async refreshToken(): Promise<string | null> {
     const currentToken = this.getToken();
-    if (!currentToken) {
+    const refreshToken = this.getRefreshToken();
+    
+    if (!currentToken || !refreshToken) {
+      console.warn('No token or refresh token available for refresh');
       return null;
     }
 
@@ -100,7 +112,7 @@ class TokenService {
       return this.tokenRefreshPromise;
     }
 
-    this.tokenRefreshPromise = this.performTokenRefresh(currentToken);
+    this.tokenRefreshPromise = this.performTokenRefresh(refreshToken);
     
     try {
       const newToken = await this.tokenRefreshPromise;
@@ -110,15 +122,16 @@ class TokenService {
     }
   }
 
-  private async performTokenRefresh(currentToken: string): Promise<string | null> {
+  private async performTokenRefresh(refreshToken: string): Promise<string | null> {
     try {
       console.log('🔄 Attempting token refresh...');
-      const response = await this.axiosInstance.post('/api/auth/refresh', { token: currentToken });
+      const response = await this.axiosInstance.post('/api/auth/refresh', { token: refreshToken });
       const newToken = response.data?.token;
+      const newRefreshToken = response.data?.refreshToken;
       
       if (newToken) {
         console.log('✅ Token refresh successful');
-        this.setToken(newToken);
+        this.setToken(newToken, newRefreshToken);
         return newToken;
       }
       

@@ -1,5 +1,7 @@
 package com.iotplatform.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -34,6 +36,8 @@ import java.util.Map;
 @RequestMapping("/auth")
 public class AuthController {
 
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
+
     @Autowired
     private AuthenticationManager authenticationManager;
 
@@ -50,9 +54,13 @@ public class AuthController {
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtTokenProvider.generateToken(authentication);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(authentication);
 
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         User user = userDetails.getUser();
+
+        logger.info("User {} successfully authenticated with roles: {}", 
+                   user.getEmail(), user.getRole().name());
 
         return ResponseEntity.ok(new JwtResponse(
                 jwt,
@@ -60,7 +68,8 @@ public class AuthController {
                 user.getFirstName() + " " + user.getLastName(),
                 user.getEmail(),
                 user.getRole().name(),
-                user.getOrganizationId()
+                user.getOrganizationId(),
+                refreshToken
         ));
     }
 
@@ -75,6 +84,10 @@ public class AuthController {
             
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = jwtTokenProvider.generateToken(authentication);
+            String refreshToken = jwtTokenProvider.generateRefreshToken(authentication);
+
+            logger.info("User {} successfully registered and authenticated with roles: {}", 
+                       user.getEmail(), user.getRole().name());
 
             return ResponseEntity.ok(new JwtResponse(
                     jwt,
@@ -82,7 +95,8 @@ public class AuthController {
                     user.getFirstName() + " " + user.getLastName(),
                     user.getEmail(),
                     user.getRole().name(),
-                    user.getOrganizationId()
+                    user.getOrganizationId(),
+                    refreshToken
             ));
         } catch (Exception e) {
             String errorMessage = e.getMessage();
@@ -135,8 +149,11 @@ public class AuthController {
             Authentication authentication = new UsernamePasswordAuthenticationToken(
                 userDetails, null, userDetails.getAuthorities());
             
-            // Generate new token
+            // Generate new token and refresh token
             String newJwt = jwtTokenProvider.generateToken(authentication);
+            String newRefreshToken = jwtTokenProvider.generateRefreshToken(authentication);
+            
+            logger.info("Token refreshed successfully for user: {}", user.getEmail());
             
             return ResponseEntity.ok(new JwtResponse(
                     newJwt,
@@ -144,11 +161,18 @@ public class AuthController {
                     user.getFirstName() + " " + user.getLastName(),
                     user.getEmail(),
                     user.getRole().name(),
-                    user.getOrganizationId()
+                    user.getOrganizationId(),
+                    newRefreshToken
             ));
         } catch (Exception e) {
             return ResponseEntity.status(401).body("Token refresh failed: " + e.getMessage());
         }
+    }
+
+    @PostMapping("/api/auth/refresh")
+    public ResponseEntity<?> refreshTokenApi(@RequestBody RefreshTokenRequest refreshRequest) {
+        // Delegate to the existing refresh method for consistency
+        return refreshToken(refreshRequest);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

@@ -29,6 +29,9 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration}")
     private long jwtExpirationInMs;
 
+    @Value("${jwt.refresh-expiration:604800000}")
+    private long jwtRefreshExpirationInMs;
+
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
@@ -38,12 +41,36 @@ public class JwtTokenProvider {
 
         Date expiryDate = new Date(System.currentTimeMillis() + jwtExpirationInMs);
 
-        return Jwts.builder()
+        String token = Jwts.builder()
                 .subject(userPrincipal.getUsername())
                 .issuedAt(new Date())
                 .expiration(expiryDate)
                 .signWith(getSigningKey())
                 .compact();
+
+        logger.info("Generated JWT token for user: {} with expiration: {}", 
+                   userPrincipal.getUsername(), expiryDate);
+        
+        return token;
+    }
+
+    public String generateRefreshToken(Authentication authentication) {
+        UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
+
+        Date expiryDate = new Date(System.currentTimeMillis() + jwtRefreshExpirationInMs);
+
+        String refreshToken = Jwts.builder()
+                .subject(userPrincipal.getUsername())
+                .issuedAt(new Date())
+                .expiration(expiryDate)
+                .claim("type", "refresh")
+                .signWith(getSigningKey())
+                .compact();
+
+        logger.info("Generated refresh token for user: {} with expiration: {}", 
+                   userPrincipal.getUsername(), expiryDate);
+        
+        return refreshToken;
     }
 
     public String getUsernameFromToken(String token) {
@@ -88,18 +115,38 @@ public class JwtTokenProvider {
                 .verifyWith(getSigningKey())
                 .build()
                 .parseSignedClaims(authToken);
+            
+            logger.debug("JWT token validation successful");
             return true;
         } catch (SecurityException ex) {
-            logger.error("Invalid JWT signature", ex);
+            logger.warn("Invalid JWT signature for token: {}", authToken != null ? authToken.substring(0, Math.min(20, authToken.length())) + "..." : "null");
         } catch (MalformedJwtException ex) {
-            logger.error("Invalid JWT token", ex);
+            logger.warn("Malformed JWT token: {}", ex.getMessage());
         } catch (ExpiredJwtException ex) {
-            logger.error("Expired JWT token", ex);
+            logger.warn("Expired JWT token for user: {}", ex.getClaims().getSubject());
         } catch (UnsupportedJwtException ex) {
-            logger.error("Unsupported JWT token", ex);
+            logger.warn("Unsupported JWT token: {}", ex.getMessage());
         } catch (IllegalArgumentException ex) {
-            logger.error("JWT claims string is empty.", ex);
+            logger.warn("JWT claims string is empty: {}", ex.getMessage());
+        } catch (Exception ex) {
+            logger.warn("Unexpected error validating JWT token: {}", ex.getMessage());
         }
         return false;
+    }
+
+    public boolean isTokenExpired(String authToken) {
+        try {
+            Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(authToken);
+            return false; // Token is valid, not expired
+        } catch (ExpiredJwtException ex) {
+            logger.debug("JWT token is expired for user: {}", ex.getClaims().getSubject());
+            return true;
+        } catch (Exception ex) {
+            logger.debug("Error checking token expiration: {}", ex.getMessage());
+            return false; // Assume not expired if we can't determine
+        }
     }
 }
