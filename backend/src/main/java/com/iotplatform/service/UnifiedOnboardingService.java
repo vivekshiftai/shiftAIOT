@@ -12,6 +12,8 @@ import com.iotplatform.repository.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -37,10 +39,11 @@ import java.util.regex.Pattern;
  * @author IoT Platform Team
  * @version 1.0
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UnifiedOnboardingService {
+
+    private static final Logger log = LoggerFactory.getLogger(UnifiedOnboardingService.class);
 
     private final DeviceService deviceService;
     private final PDFProcessingService pdfProcessingService;

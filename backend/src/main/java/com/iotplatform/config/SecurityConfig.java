@@ -90,6 +90,7 @@ public class SecurityConfig {
                 .requestMatchers("/pdfs/**").permitAll()
                 .requestMatchers("/api/devices/health").permitAll()
                 .requestMatchers("/devices/health").permitAll()
+                .requestMatchers("/api/organizations").permitAll() // Allow organization listing for signup
 
                 // Documentation and monitoring
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
@@ -107,6 +108,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/rules/**").authenticated()
                 .requestMatchers("/api/maintenance/**").authenticated()
                 .requestMatchers("/api/users/**").authenticated()
+                .requestMatchers("/api/organizations/**").authenticated()
                 .requestMatchers("/api/analytics/**").authenticated()
                 .requestMatchers("/api/logs/**").authenticated()
                 .requestMatchers("/api/conversation-configs/**").authenticated()

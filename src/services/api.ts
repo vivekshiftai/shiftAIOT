@@ -354,9 +354,28 @@ export const userAPI = {
   getProfile: () => api.get('/api/users/profile'),
   changePassword: (payload: { currentPassword: string; newPassword: string; confirmPassword: string }) => 
     api.post('/api/users/change-password', payload),
+  // User search and stats
+  search: (params: { name?: string; email?: string; role?: string }) => 
+    api.get('/api/users/search', { params }),
+  getStats: () => api.get('/api/users/stats'),
   // Preferences
   getPreferences: () => api.get('/api/user-preferences'),
   savePreferences: (prefs: any) => api.post('/api/user-preferences', prefs),
+};
+
+// Organization API
+export const organizationAPI = {
+  getAll: () => api.get('/api/organizations'),
+  getActive: () => api.get('/api/organizations/active'),
+  getById: (id: string) => api.get(`/api/organizations/${id}`),
+  create: (organization: any) => api.post('/api/organizations', organization),
+  update: (id: string, organization: any) => api.put(`/api/organizations/${id}`, organization),
+  delete: (id: string) => api.delete(`/api/organizations/${id}`),
+  activate: (id: string) => api.put(`/api/organizations/${id}/activate`),
+  deactivate: (id: string) => api.put(`/api/organizations/${id}/deactivate`),
+  getBySubscriptionPlan: (plan: string) => api.get('/api/organizations/by-plan', { params: { plan } }),
+  getStats: () => api.get('/api/organizations/stats'),
+  getDefault: () => api.get('/api/organizations/default'),
 };
 
 // PDF Processing API - All calls go through backend

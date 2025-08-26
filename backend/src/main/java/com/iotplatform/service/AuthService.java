@@ -107,8 +107,8 @@ public class AuthService {
             user.setRole(User.Role.USER);
         }
         
-        // Generate organization ID (in a real app, this might come from the signup process)
-        user.setOrganizationId(UUID.randomUUID().toString());
+        // Use a consistent organization ID for all users (as requested)
+        user.setOrganizationId("shiftAIOT-org-2024");
         
         // Set default IoT connection settings
         user.setConnectionType(User.ConnectionType.MQTT);

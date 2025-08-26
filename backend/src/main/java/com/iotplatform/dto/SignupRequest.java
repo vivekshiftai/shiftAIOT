@@ -31,6 +31,11 @@ public class SignupRequest {
     private String password;
 
     private User.Role role = User.Role.USER; // Default to USER role
+    
+    // Organization selection
+    private String organizationId; // If provided, user joins existing organization
+    private String organizationName; // If provided, creates new organization
+    private String organizationDescription; // Optional description for new organization
 
     // Getters and Setters
     public String getFirstName() { return firstName; }
@@ -47,4 +52,13 @@ public class SignupRequest {
 
     public User.Role getRole() { return role; }
     public void setRole(User.Role role) { this.role = role; }
+    
+    public String getOrganizationId() { return organizationId; }
+    public void setOrganizationId(String organizationId) { this.organizationId = organizationId; }
+    
+    public String getOrganizationName() { return organizationName; }
+    public void setOrganizationName(String organizationName) { this.organizationName = organizationName; }
+    
+    public String getOrganizationDescription() { return organizationDescription; }
+    public void setOrganizationDescription(String organizationDescription) { this.organizationDescription = organizationDescription; }
 }

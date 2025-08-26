@@ -10,6 +10,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (data: { firstName: string; lastName: string; email: string; password: string; role: 'ADMIN' | 'USER' }) => Promise<void>;
   logout: () => void;
+  clearAuthData: () => void;
   isAdmin: () => boolean;
   isUser: () => boolean;
   hasPermission: (permission: string) => boolean;
@@ -228,6 +229,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logInfo('Auth', '🚪 User explicitly logged out via logout button');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('refreshToken'); // Clear refresh token too
+    tokenService.removeToken();
+    setUser(null);
+    window.dispatchEvent(new Event('storageChange'));
+  };
+
+  // Clear all authentication data (for fixing JWT issues)
+  const clearAuthData = () => {
+    logInfo('Auth', '🧹 Clearing all authentication data');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('refreshToken');
     tokenService.removeToken();
     setUser(null);
     window.dispatchEvent(new Event('storageChange'));
@@ -269,6 +282,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       login, 
       signup, 
       logout, 
+      clearAuthData,
       isAdmin, 
       isUser, 
       hasPermission,

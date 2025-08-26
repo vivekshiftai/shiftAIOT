@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.iotplatform.dto.ChangePasswordRequest;
@@ -40,43 +41,79 @@ public class UserController {
 
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🔍 User list request received");
+        
         if (userDetails == null || userDetails.getUser() == null) {
-            logger.error("No authenticated user found");
+            logger.error("❌ No authenticated user found for user list request");
             return ResponseEntity.status(401).build();
         }
+        
         User currentUser = userDetails.getUser();
-        logger.info("User {} requesting all users for organization: {}", 
-                   currentUser.getEmail(), currentUser.getOrganizationId());
+        logger.info("👤 User {} (Role: {}) requesting all users for organization: {}", 
+                   currentUser.getEmail(), currentUser.getRole(), currentUser.getOrganizationId());
+        
         try {
+            // Fetch all users from the same organization
             List<User> users = userRepository.findByOrganizationId(currentUser.getOrganizationId());
-            users.forEach(user -> user.setPassword(null));
+            
+            // Remove sensitive information (passwords) from all users
+            users.forEach(user -> {
+                user.setPassword(null);
+                // Also remove other sensitive fields if needed
+                user.setApiKey(null);
+                user.setMqttPassword(null);
+            });
+            
+            logger.info("✅ Successfully fetched {} users for organization: {} by user: {}", 
+                       users.size(), currentUser.getOrganizationId(), currentUser.getEmail());
+            
             return ResponseEntity.ok(users);
+            
         } catch (Exception e) {
-            logger.error("Error fetching users for organization: {}", currentUser.getOrganizationId(), e);
+            logger.error("❌ Error fetching users for organization: {} by user: {}", 
+                        currentUser.getOrganizationId(), currentUser.getEmail(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<User> getUserById(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🔍 User details request for ID: {}", id);
+        
         if (userDetails == null || userDetails.getUser() == null) {
+            logger.error("❌ No authenticated user found for user details request");
             return ResponseEntity.status(401).build();
         }
+        
         User currentUser = userDetails.getUser();
+        
         if (id == null || id.trim().isEmpty()) {
+            logger.warn("❌ Invalid user ID provided: {}", id);
             return ResponseEntity.badRequest().build();
         }
+        
         try {
             return userRepository.findById(id)
                 .map(user -> {
+                    // Check if user belongs to the same organization
                     if (!user.getOrganizationId().equals(currentUser.getOrganizationId())) {
+                        logger.warn("❌ Forbidden access attempt - user {} trying to access user {} from different organization: {} vs {}", 
+                                  currentUser.getEmail(), user.getEmail(), 
+                                  currentUser.getOrganizationId(), user.getOrganizationId());
                         return ResponseEntity.status(403).<User>build();
                     }
+                    
+                    // Remove sensitive information
                     user.setPassword(null);
+                    user.setApiKey(null);
+                    user.setMqttPassword(null);
+                    
+                    logger.info("✅ User details retrieved for: {} by user: {}", user.getEmail(), currentUser.getEmail());
                     return ResponseEntity.ok(user);
                 })
                 .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
+            logger.error("❌ Error fetching user with ID: {} by user: {}", id, currentUser.getEmail(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -215,6 +252,109 @@ public class UserController {
             "updatedAt", user.getUpdatedAt(),
             "lastLogin", user.getLastLogin()
         ));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<User>> searchUsers(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) String role,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🔍 User search request - name: {}, email: {}, role: {}", name, email, role);
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            logger.error("❌ No authenticated user found for user search request");
+            return ResponseEntity.status(401).build();
+        }
+        
+        User currentUser = userDetails.getUser();
+        
+        try {
+            List<User> allUsers = userRepository.findByOrganizationId(currentUser.getOrganizationId());
+            
+            // Filter users based on search criteria
+            List<User> filteredUsers = allUsers.stream()
+                .filter(user -> {
+                    boolean matches = true;
+                    
+                    // Filter by name (first name or last name)
+                    if (name != null && !name.trim().isEmpty()) {
+                        String searchName = name.toLowerCase();
+                        String fullName = (user.getFirstName() + " " + user.getLastName()).toLowerCase();
+                        matches = matches && fullName.contains(searchName);
+                    }
+                    
+                    // Filter by email
+                    if (email != null && !email.trim().isEmpty()) {
+                        String searchEmail = email.toLowerCase();
+                        matches = matches && user.getEmail().toLowerCase().contains(searchEmail);
+                    }
+                    
+                    // Filter by role
+                    if (role != null && !role.trim().isEmpty()) {
+                        matches = matches && user.getRole().name().equalsIgnoreCase(role);
+                    }
+                    
+                    return matches;
+                })
+                .peek(user -> {
+                    // Remove sensitive information
+                    user.setPassword(null);
+                    user.setApiKey(null);
+                    user.setMqttPassword(null);
+                })
+                .toList();
+            
+            logger.info("✅ User search completed for organization: {} by user: {} - Found {} users", 
+                       currentUser.getOrganizationId(), currentUser.getEmail(), filteredUsers.size());
+            
+            return ResponseEntity.ok(filteredUsers);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error searching users for organization: {} by user: {}", 
+                        currentUser.getOrganizationId(), currentUser.getEmail(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getUserStats(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("📊 User stats request received");
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            logger.error("❌ No authenticated user found for user stats request");
+            return ResponseEntity.status(401).build();
+        }
+        
+        User currentUser = userDetails.getUser();
+        
+        try {
+            List<User> allUsers = userRepository.findByOrganizationId(currentUser.getOrganizationId());
+            
+            long totalUsers = allUsers.size();
+            long activeUsers = allUsers.stream().filter(User::isEnabled).count();
+            long adminUsers = allUsers.stream().filter(user -> User.Role.ADMIN.equals(user.getRole())).count();
+            long regularUsers = allUsers.stream().filter(user -> User.Role.USER.equals(user.getRole())).count();
+            
+            Map<String, Object> stats = Map.of(
+                "totalUsers", totalUsers,
+                "activeUsers", activeUsers,
+                "inactiveUsers", totalUsers - activeUsers,
+                "adminUsers", adminUsers,
+                "regularUsers", regularUsers,
+                "organizationId", currentUser.getOrganizationId()
+            );
+            
+            logger.info("✅ User stats retrieved for organization: {} by user: {} - Total: {}, Active: {}, Admins: {}", 
+                       currentUser.getOrganizationId(), currentUser.getEmail(), totalUsers, activeUsers, adminUsers);
+            
+            return ResponseEntity.ok(stats);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error fetching user stats for organization: {} by user: {}", 
+                        currentUser.getOrganizationId(), currentUser.getEmail(), e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @PostMapping("/change-password")

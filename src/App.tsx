@@ -5,6 +5,39 @@ import { IoTProvider, useIoT } from './contexts/IoTContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { logError } from './utils/logger';
 
+// Clear old authentication data on app start to fix JWT issues
+const clearOldAuthData = () => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    // Check if token looks like it might be old (basic check)
+    try {
+      const tokenParts = token.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(atob(tokenParts[1]));
+        const tokenAge = Date.now() - (payload.iat * 1000);
+        const oneDay = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        
+        // If token is older than 1 day, clear it
+        if (tokenAge > oneDay) {
+          console.log('🧹 Clearing old authentication data to fix JWT issues');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          localStorage.removeItem('refreshToken');
+          return true;
+        }
+      }
+    } catch (error) {
+      // If we can't parse the token, it might be corrupted, so clear it
+      console.log('🧹 Clearing corrupted authentication data');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('refreshToken');
+      return true;
+    }
+  }
+  return false;
+};
+
 import { LoginForm } from './components/Auth/LoginForm';
 import { SignupForm } from './components/Auth/SignupForm';
 import Sidebar from './components/Layout/Sidebar';
@@ -176,6 +209,14 @@ const MainAppLayout: React.FC = () => {
 };
 
 function App() {
+  // Clear old authentication data on app start
+  React.useEffect(() => {
+    const wasCleared = clearOldAuthData();
+    if (wasCleared) {
+      console.log('🔄 Old authentication data cleared. Please log in again.');
+    }
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider>
