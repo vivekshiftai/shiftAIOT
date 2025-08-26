@@ -50,5 +50,17 @@ public class SafetyGenerationResponse {
         
         @JsonProperty("mitigation")
         private String mitigation;
+        
+        @JsonProperty("about_reaction")
+        private String aboutReaction;
+        
+        @JsonProperty("causes")
+        private String causes;
+        
+        @JsonProperty("how_to_avoid")
+        private String howToAvoid;
+        
+        @JsonProperty("safety_info")
+        private String safetyInfo;
     }
 }

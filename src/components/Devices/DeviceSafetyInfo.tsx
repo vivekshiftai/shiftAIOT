@@ -3,6 +3,7 @@ import { AlertTriangle, Shield, AlertCircle, Info, Plus, Edit, Trash2, Filter, S
 import { deviceSafetyPrecautionsAPI } from '../../services/api';
 import { unifiedOnboardingService } from '../../services/unifiedOnboardingService';
 import Button from '../UI/Button';
+import { SafetyForm } from '../Forms/SafetyForm';
 import { logInfo, logError, logWarn } from '../../utils/logger';
 
 interface DeviceSafetyPrecaution {
@@ -19,6 +20,7 @@ interface DeviceSafetyPrecaution {
   howToAvoid?: string;
   safetyInfo?: string;
   isActive: boolean;
+  organizationId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -55,30 +57,51 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
       console.log('🔧 DeviceSafetyInfo: Safety data:', safetyData);
       
       // Transform the data to match the expected format
-      const transformedPrecautions: DeviceSafetyPrecaution[] = safetyData.map((precaution: any) => ({
-        id: precaution.id || precaution.safety_id || `safety_${Math.random()}`,
-        deviceId: precaution.deviceId || deviceId,
-        title: precaution.title || 'Unnamed Safety Precaution',
-        description: precaution.description || 'No description available',
-        type: precaution.type || 'warning',
-        category: precaution.category || 'general',
-        severity: precaution.severity || 'MEDIUM',
-        recommendedAction: precaution.recommendedAction || precaution.recommended_action,
-        aboutReaction: precaution.aboutReaction || precaution.about_reaction,
-        causes: precaution.causes,
-        howToAvoid: precaution.howToAvoid || precaution.how_to_avoid,
-        safetyInfo: precaution.safetyInfo || precaution.safety_info,
-        isActive: precaution.isActive !== false, // Default to true
-        createdAt: precaution.createdAt || precaution.created_at || new Date().toISOString(),
-        updatedAt: precaution.updatedAt || precaution.updated_at || new Date().toISOString()
-      }));
+      const transformedPrecautions: DeviceSafetyPrecaution[] = safetyData.map((precaution: any) => {
+        const transformed = {
+          id: precaution.id || precaution.safety_id || `safety_${Math.random()}`,
+          deviceId: precaution.deviceId || deviceId,
+          title: precaution.title || 'Unnamed Safety Precaution',
+          description: precaution.description || 'No description available',
+          type: precaution.type || 'warning',
+          category: precaution.category || 'general',
+          severity: precaution.severity || 'MEDIUM',
+          recommendedAction: precaution.recommendedAction || precaution.recommended_action,
+          aboutReaction: precaution.aboutReaction || precaution.about_reaction,
+          causes: precaution.causes,
+          howToAvoid: precaution.howToAvoid || precaution.how_to_avoid,
+          safetyInfo: precaution.safetyInfo || precaution.safety_info,
+          isActive: precaution.isActive !== false, // Default to true
+          organizationId: precaution.organizationId || 'default',
+          createdAt: precaution.createdAt || precaution.created_at || new Date().toISOString(),
+          updatedAt: precaution.updatedAt || precaution.updated_at || new Date().toISOString()
+        };
+        
+        // Log the transformation for debugging
+        console.log('🔧 DeviceSafetyInfo: Transformed precaution:', {
+          original: precaution,
+          transformed: transformed,
+          hasAboutReaction: !!transformed.aboutReaction,
+          hasCauses: !!transformed.causes,
+          hasHowToAvoid: !!transformed.howToAvoid,
+          hasSafetyInfo: !!transformed.safetyInfo
+        });
+        
+        return transformed;
+      });
       
       setSafetyPrecautions(transformedPrecautions);
       setError(null);
       
       logInfo('DeviceSafetyInfo', 'Safety precautions loaded successfully', { 
         deviceId, 
-        precautionsCount: transformedPrecautions.length 
+        precautionsCount: transformedPrecautions.length,
+        fieldsWithData: {
+          aboutReaction: transformedPrecautions.filter(p => p.aboutReaction).length,
+          causes: transformedPrecautions.filter(p => p.causes).length,
+          howToAvoid: transformedPrecautions.filter(p => p.howToAvoid).length,
+          safetyInfo: transformedPrecautions.filter(p => p.safetyInfo).length
+        }
       });
       console.log(`🔧 DeviceSafetyInfo: Loaded ${transformedPrecautions.length} safety precautions for device ${deviceId}`);
     } catch (err) {
@@ -384,6 +407,44 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
           ))
         )}
       </div>
+      
+      {/* Safety Form Modal */}
+      {showAddForm && (
+        <SafetyForm
+          isOpen={showAddForm}
+          onClose={() => setShowAddForm(false)}
+          deviceId={deviceId}
+          onSubmit={async (safetyData) => {
+            try {
+              await deviceSafetyPrecautionsAPI.create(safetyData);
+              await loadSafetyPrecautions();
+              setShowAddForm(false);
+            } catch (err) {
+              console.error('Error creating safety precaution:', err);
+              setError('Failed to create safety precaution');
+            }
+          }}
+        />
+      )}
+      
+      {editingPrecaution && (
+        <SafetyForm
+          isOpen={!!editingPrecaution}
+          onClose={() => setEditingPrecaution(null)}
+          safety={editingPrecaution}
+          deviceId={deviceId}
+          onSubmit={async (safetyData) => {
+            try {
+              await deviceSafetyPrecautionsAPI.update(editingPrecaution.id, safetyData);
+              await loadSafetyPrecautions();
+              setEditingPrecaution(null);
+            } catch (err) {
+              console.error('Error updating safety precaution:', err);
+              setError('Failed to update safety precaution');
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

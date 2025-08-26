@@ -55,12 +55,13 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   className = ''
 }) => {
   const colors = colorClasses[color];
+  const isClickable = !!onClick;
 
   return (
     <div
       onClick={onClick}
       className={`card p-6 ${
-        onClick ? 'cursor-pointer hover-lift' : ''
+        isClickable ? 'cursor-pointer hover-lift' : ''
       } ${className}`}
     >
       <div className="flex items-center justify-between">

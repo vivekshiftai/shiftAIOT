@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { chatService, ChatMessage } from '../../services/chatService';
 import { logInfo, logError } from '../../utils/logger';
+import ChatImageDisplay from './ChatImageDisplay';
+import ChatTableDisplay from './ChatTableDisplay';
 
 interface DeviceChatInterfaceProps {
   deviceName: string;
@@ -194,6 +196,23 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
                   <div className="text-sm leading-relaxed whitespace-pre-wrap">
                     {message.content}
                   </div>
+                  
+                  {/* Display Images */}
+                  {message.images && message.images.length > 0 && (
+                    <ChatImageDisplay 
+                      images={message.images} 
+                      className="mt-3"
+                    />
+                  )}
+                  
+                  {/* Display Tables */}
+                  {message.tables && message.tables.length > 0 && (
+                    <ChatTableDisplay 
+                      tables={message.tables} 
+                      className="mt-3"
+                    />
+                  )}
+                  
                   {message.error && (
                     <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
                       <p className="text-xs text-red-600">

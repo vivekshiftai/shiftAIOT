@@ -155,6 +155,17 @@ export const SafetyForm: React.FC<SafetyFormProps> = ({
         isActive: formData.isActive
       };
 
+      // Log the safety data being submitted
+      logInfo('SafetyForm', 'Submitting safety data with enhanced fields', {
+        isEdit: !!safety,
+        deviceId,
+        title: formData.title,
+        hasAboutReaction: !!formData.aboutReaction,
+        hasCauses: !!formData.causes,
+        hasHowToAvoid: !!formData.howToAvoid,
+        hasSafetyInfo: !!formData.safetyInfo
+      });
+
       await onSubmit(safetyData);
       
       setSuccess(safety ? 'Safety precaution updated successfully!' : 'Safety precaution created successfully!');
@@ -257,15 +268,20 @@ export const SafetyForm: React.FC<SafetyFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Category *
               </label>
-              <input
-                type="text"
+              <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   fieldErrors.category ? 'border-red-300' : 'border-gray-300'
                 }`}
-                placeholder="e.g., thermal_hazard, electrical_hazard"
-              />
+              >
+                <option value="thermal_hazard">Thermal Hazard</option>
+                <option value="electrical_hazard">Electrical Hazard</option>
+                <option value="mechanical_hazard">Mechanical Hazard</option>
+                <option value="emergency_procedures">Emergency Procedures</option>
+                <option value="ppe_requirements">PPE Requirements</option>
+                <option value="general">General</option>
+              </select>
               {fieldErrors.category && (
                 <p className="text-red-600 text-sm mt-1">{fieldErrors.category}</p>
               )}
@@ -332,8 +348,9 @@ export const SafetyForm: React.FC<SafetyFormProps> = ({
                 onChange={(e) => setFormData({ ...formData, aboutReaction: e.target.value })}
                 rows={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="What happens if this precaution is not followed?"
+                placeholder="What happens if this precaution is not followed? (e.g., Equipment surfaces can reach dangerously high temperatures during operation, causing severe burns)"
               />
+              <p className="text-xs text-gray-500 mt-1">Describe the potential consequences of not following this safety precaution.</p>
             </div>
 
             <div>
@@ -345,8 +362,9 @@ export const SafetyForm: React.FC<SafetyFormProps> = ({
                 onChange={(e) => setFormData({ ...formData, causes: e.target.value })}
                 rows={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="What causes this hazard?"
+                placeholder="What causes this hazard? (e.g., Continuous operation, lack of cooling, mechanical friction, electrical resistance)"
               />
+              <p className="text-xs text-gray-500 mt-1">List the factors that can lead to this safety hazard.</p>
             </div>
 
             <div>
@@ -358,8 +376,9 @@ export const SafetyForm: React.FC<SafetyFormProps> = ({
                 onChange={(e) => setFormData({ ...formData, howToAvoid: e.target.value })}
                 rows={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="How can this hazard be avoided?"
+                placeholder="How can this hazard be avoided? (e.g., Monitor temperature sensors, ensure proper ventilation, follow operating procedures)"
               />
+              <p className="text-xs text-gray-500 mt-1">Provide specific steps to prevent this safety hazard.</p>
             </div>
 
             <div>
@@ -371,8 +390,9 @@ export const SafetyForm: React.FC<SafetyFormProps> = ({
                 onChange={(e) => setFormData({ ...formData, safetyInfo: e.target.value })}
                 rows={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Additional safety information..."
+                placeholder="Additional safety information... (e.g., Wear heat-resistant PPE, maintain safe distance, implement temperature monitoring)"
               />
+              <p className="text-xs text-gray-500 mt-1">Include any additional safety measures, PPE requirements, or emergency procedures.</p>
             </div>
           </div>
 

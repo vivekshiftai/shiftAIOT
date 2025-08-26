@@ -63,6 +63,20 @@ export const Edit: ComponentType<IconProps>;
 export const Trash2: ComponentType<IconProps>;
 export const Filter: ComponentType<IconProps>;
 export const Search: ComponentType<IconProps>;
+export const Cpu: ComponentType<IconProps>;
+export const Wifi: ComponentType<IconProps>;
+export const Zap: ComponentType<IconProps>;
+export const Wrench: ComponentType<IconProps>;
+export const Activity: ComponentType<IconProps>;
+export const Bell: ComponentType<IconProps>;
+export const BarChart3: ComponentType<IconProps>;
+export const Mail: ComponentType<IconProps>;
+export const Calendar: ComponentType<IconProps>;
+export const Save: ComponentType<IconProps>;
+export const Zap: ComponentType<IconProps>;
+export const X: ComponentType<IconProps>;
+export const Phone: ComponentType<IconProps>;
+export const Key: ComponentType<IconProps>;
 }
 
 declare namespace JSX {

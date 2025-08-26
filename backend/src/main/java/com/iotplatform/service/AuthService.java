@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -22,6 +24,8 @@ import com.iotplatform.security.JwtTokenProvider;
 
 @Service
 public class AuthService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -75,18 +79,24 @@ public class AuthService {
     }
 
     public User signup(SignupRequest signupRequest) {
+        logger.info("🚀 Starting user signup process for email: {}", signupRequest.getEmail());
+        
         // Check if email already exists
         if (userRepository.existsByEmail(signupRequest.getEmail())) {
+            logger.warn("❌ Signup failed: Email already exists: {}", signupRequest.getEmail());
             throw new RuntimeException("Email is already in use!");
         }
 
         // Validate password strength
         String password = signupRequest.getPassword();
         if (password.length() < 3) {
+            logger.warn("❌ Signup failed: Password too short for email: {}", signupRequest.getEmail());
             throw new RuntimeException("Password must be at least 3 characters long");
         }
         // Removed complex password validation to match frontend requirements
         // Users can now use simpler passwords as per the updated requirements
+
+        logger.info("✅ Password validation passed for email: {}", signupRequest.getEmail());
 
         User user = new User();
         user.setId(UUID.randomUUID().toString());
@@ -110,9 +120,20 @@ public class AuthService {
         // Use a consistent organization ID for all users (as requested)
         user.setOrganizationId("shiftAIOT-org-2024");
         
+        logger.info("📝 User object prepared for database save: ID={}, Email={}, Role={}, Organization={}", 
+                   user.getId(), user.getEmail(), user.getRole(), user.getOrganizationId());
+        
         // User is ready to be saved
-
-        return userRepository.save(user);
+        try {
+            User savedUser = userRepository.save(user);
+            logger.info("✅ User successfully saved to database: ID={}, Email={}", 
+                       savedUser.getId(), savedUser.getEmail());
+            return savedUser;
+        } catch (Exception e) {
+            logger.error("❌ Failed to save user to database: Email={}, Error={}", 
+                        signupRequest.getEmail(), e.getMessage(), e);
+            throw new RuntimeException("Failed to save user to database: " + e.getMessage());
+        }
     }
 
     public Optional<User> getUserByEmail(String email) {

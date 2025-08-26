@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -643,29 +644,56 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                         safety.setDeviceId(deviceId);
                         safety.setOrganizationId(organizationId);
                         safety.setIsActive(true);
-                        safety.setCreatedAt(LocalDateTime.now());
-                        safety.setUpdatedAt(LocalDateTime.now());
-                        
-                        log.debug("Created safety precaution from external data: ID={}, Title={}, Type={}, Category={}", 
-                            safety.getId(), safety.getTitle(), safety.getType(), safety.getCategory());
-                        
-                        // Store additional safety information
+                        // Store additional safety information in separate fields
+                        String aboutReaction = (String) externalPrecaution.get("about_reaction");
                         String causes = (String) externalPrecaution.get("causes");
                         String howToAvoid = (String) externalPrecaution.get("how_to_avoid");
                         String safetyInfo = (String) externalPrecaution.get("safety_info");
                         
-                        // Combine all safety information into description
-                        StringBuilder fullDescription = new StringBuilder();
-                        fullDescription.append("About: ").append(externalPrecaution.get("about_reaction")).append("\n");
-                        if (causes != null) fullDescription.append("Causes: ").append(causes).append("\n");
-                        if (howToAvoid != null) fullDescription.append("How to Avoid: ").append(howToAvoid).append("\n");
-                        if (safetyInfo != null) fullDescription.append("Safety Info: ").append(safetyInfo);
+                        // Set individual fields
+                        safety.setAboutReaction(aboutReaction);
+                        safety.setCauses(causes);
+                        safety.setHowToAvoid(howToAvoid);
+                        safety.setSafetyInfo(safetyInfo);
                         
-                        safety.setDescription(fullDescription.toString());
+                        // Set description to about_reaction for backward compatibility
+                        safety.setDescription(aboutReaction != null ? aboutReaction : "No description available");
+                        
+                        safety.setCreatedAt(LocalDateTime.now());
+                        safety.setUpdatedAt(LocalDateTime.now());
+                        
+                        // Log the complete safety precaution after all fields are set
+                        log.debug("Created safety precaution from external data: ID={}, Title={}, Type={}, Category={}, AboutReaction={}, Causes={}, HowToAvoid={}, SafetyInfo={}", 
+                            safety.getId(), safety.getTitle(), safety.getType(), safety.getCategory(),
+                            safety.getAboutReaction() != null ? safety.getAboutReaction().substring(0, Math.min(50, safety.getAboutReaction().length())) + "..." : "null",
+                            safety.getCauses() != null ? safety.getCauses().substring(0, Math.min(50, safety.getCauses().length())) + "..." : "null",
+                            safety.getHowToAvoid() != null ? safety.getHowToAvoid().substring(0, Math.min(50, safety.getHowToAvoid().length())) + "..." : "null",
+                            safety.getSafetyInfo() != null ? safety.getSafetyInfo().substring(0, Math.min(50, safety.getSafetyInfo().length())) + "..." : "null");
+                        
+                        // Validate the safety precaution before saving
+                        if (!safety.isValid()) {
+                            List<String> validationErrors = safety.getValidationErrors();
+                            log.warn("Safety precaution validation failed, skipping: ID={}, Errors: {}", 
+                                safety.getId(), validationErrors);
+                            continue;
+                        }
+                        
+                        if (safety.getDescription() == null || safety.getDescription().trim().isEmpty()) {
+                            log.warn("Safety precaution has empty description, setting default: {}", safety.getId());
+                            safety.setDescription("No description available");
+                        }
                         
                         // Store safety precaution in database
-                        deviceSafetyPrecautionRepository.save(safety);
-                        safetyPrecautions.add(safety);
+                        try {
+                            DeviceSafetyPrecaution savedSafety = deviceSafetyPrecautionRepository.save(safety);
+                            safetyPrecautions.add(savedSafety);
+                            log.debug("Successfully saved safety precaution to database: ID={}, Title={}", 
+                                savedSafety.getId(), savedSafety.getTitle());
+                        } catch (Exception e) {
+                            log.error("Failed to save safety precaution to database: ID={}, Title={}, Error: {}", 
+                                safety.getId(), safety.getTitle(), e.getMessage(), e);
+                            // Continue with other precautions even if one fails
+                        }
                     }
                     // Convert to DTO format
                     List<SafetyGenerationResponse.SafetyPrecaution> dtoPrecautions = new ArrayList<>();
@@ -675,6 +703,10 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                         dtoPrecaution.setDescription(safety.getDescription());
                         dtoPrecaution.setCategory(safety.getCategory());
                         dtoPrecaution.setSeverity(safety.getSeverity());
+                        dtoPrecaution.setAboutReaction(safety.getAboutReaction());
+                        dtoPrecaution.setCauses(safety.getCauses());
+                        dtoPrecaution.setHowToAvoid(safety.getHowToAvoid());
+                        dtoPrecaution.setSafetyInfo(safety.getSafetyInfo());
                         dtoPrecautions.add(dtoPrecaution);
                     }
                     safetyResponse.setSafetyPrecautions(dtoPrecautions);
@@ -682,6 +714,36 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                 
                 log.info("Safety precautions generated and stored successfully for device: {}, precautions count: {}", 
                     deviceId, safetyResponse.getSafetyPrecautions() != null ? safetyResponse.getSafetyPrecautions().size() : 0);
+                
+                // Log detailed summary of stored data
+                if (safetyResponse.getSafetyPrecautions() != null && !safetyResponse.getSafetyPrecautions().isEmpty()) {
+                    log.info("Safety precautions summary for device {}: {}", deviceId, 
+                        safetyResponse.getSafetyPrecautions().stream()
+                            .map(sp -> String.format("Title='%s', HasAboutReaction=%s, HasCauses=%s, HasHowToAvoid=%s, HasSafetyInfo=%s", 
+                                sp.getTitle(),
+                                sp.getAboutReaction() != null && !sp.getAboutReaction().trim().isEmpty(),
+                                sp.getCauses() != null && !sp.getCauses().trim().isEmpty(),
+                                sp.getHowToAvoid() != null && !sp.getHowToAvoid().trim().isEmpty(),
+                                sp.getSafetyInfo() != null && !sp.getSafetyInfo().trim().isEmpty()))
+                            .collect(Collectors.joining("; ")));
+                }
+                
+                // Verify data was stored correctly by retrieving from database
+                try {
+                    List<DeviceSafetyPrecaution> storedPrecautions = deviceSafetyPrecautionRepository.findByDeviceIdAndOrganizationId(deviceId, organizationId);
+                    log.info("Verification: Retrieved {} safety precautions from database for device: {}", storedPrecautions.size(), deviceId);
+                    
+                    for (DeviceSafetyPrecaution stored : storedPrecautions) {
+                        log.debug("Stored safety precaution verification: ID={}, Title={}, AboutReaction={}, Causes={}, HowToAvoid={}, SafetyInfo={}", 
+                            stored.getId(), stored.getTitle(),
+                            stored.getAboutReaction() != null ? "Present" : "Missing",
+                            stored.getCauses() != null ? "Present" : "Missing",
+                            stored.getHowToAvoid() != null ? "Present" : "Missing",
+                            stored.getSafetyInfo() != null ? "Present" : "Missing");
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not verify stored safety precautions: {}", e.getMessage());
+                }
             } else {
                 throw new PDFProcessingException("Safety generation failed: External service returned success=false");
             }

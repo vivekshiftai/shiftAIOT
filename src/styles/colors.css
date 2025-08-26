@@ -315,23 +315,4 @@
 .text-error-300 { color: var(--error-300); }
 .text-error-400 { color: var(--error-400); }
 
-/* Dark Theme Support */
-[data-theme="dark"] {
-  /* Dark Theme Colors */
-  --bg-primary: #111827;
-  --bg-secondary: #1F2937;
-  --bg-tertiary: #374151;
-  --bg-card: #1F2937;
-  --bg-overlay: rgba(0, 0, 0, 0.3);
 
-  /* Text Colors for Dark Theme */
-  --text-primary: #F9FAFB;
-  --text-secondary: #D1D5DB;
-  --text-tertiary: #9CA3AF;
-  --text-inverse: #111827;
-
-  /* Border Colors for Dark Theme */
-  --border-light: #374151;
-  --border-medium: #4B5563;
-  --border-dark: #6B7280;
-}

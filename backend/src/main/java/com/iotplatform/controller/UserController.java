@@ -145,32 +145,77 @@ public class UserController {
                         return ResponseEntity.status(403).<User>build();
                     }
                     
-                    // Update user fields
+                    // Update user fields - Comprehensive update
                     boolean hasChanges = false;
+                    
+                    // Basic Information
                     if (updatedUser.getFirstName() != null && !updatedUser.getFirstName().equals(existingUser.getFirstName())) {
                         existingUser.setFirstName(updatedUser.getFirstName());
                         hasChanges = true;
+                        logger.info("✅ Updated firstName for user: {}", existingUser.getEmail());
                     }
                     if (updatedUser.getLastName() != null && !updatedUser.getLastName().equals(existingUser.getLastName())) {
                         existingUser.setLastName(updatedUser.getLastName());
                         hasChanges = true;
+                        logger.info("✅ Updated lastName for user: {}", existingUser.getEmail());
                     }
                     if (updatedUser.getEmail() != null && !updatedUser.getEmail().equals(existingUser.getEmail())) {
                         existingUser.setEmail(updatedUser.getEmail());
                         hasChanges = true;
+                        logger.info("✅ Updated email for user: {}", existingUser.getEmail());
                     }
-                    if (updatedUser.getPhone() != null && !updatedUser.getPhone().equals(existingUser.getPhone())) {
-                        existingUser.setPhone(updatedUser.getPhone());
-                        hasChanges = true;
+                                         if (updatedUser.getPhone() != null && !updatedUser.getPhone().equals(existingUser.getPhone())) {
+                         existingUser.setPhone(updatedUser.getPhone());
+                         hasChanges = true;
+                         logger.info("✅ Updated phone for user: {}", existingUser.getEmail());
+                     } else if (updatedUser.getPhone() == null && existingUser.getPhone() != null) {
+                         existingUser.setPhone(null);
+                         hasChanges = true;
+                         logger.info("✅ Cleared phone for user: {}", existingUser.getEmail());
+                     }
+                    
+                    // Role and Status (Admin only)
+                    if (currentUser.getRole().equals(User.Role.ADMIN)) {
+                        if (updatedUser.getRole() != null && !updatedUser.getRole().equals(existingUser.getRole())) {
+                            existingUser.setRole(updatedUser.getRole());
+                            hasChanges = true;
+                            logger.info("✅ Updated role to {} for user: {}", updatedUser.getRole(), existingUser.getEmail());
+                        }
+                        if (updatedUser.isEnabled() != existingUser.isEnabled()) {
+                            existingUser.setEnabled(updatedUser.isEnabled());
+                            hasChanges = true;
+                            logger.info("✅ Updated enabled status to {} for user: {}", updatedUser.isEnabled(), existingUser.getEmail());
+                        }
                     }
-                    if (updatedUser.getRole() != null && !updatedUser.getRole().equals(existingUser.getRole())) {
-                        existingUser.setRole(updatedUser.getRole());
-                        hasChanges = true;
-                    }
-                    if (updatedUser.isEnabled() != existingUser.isEnabled()) {
-                        existingUser.setEnabled(updatedUser.isEnabled());
-                        hasChanges = true;
-                    }
+                    
+                                         // Integration IDs - Handle null values properly
+                     if (updatedUser.getGmailId() != null && !updatedUser.getGmailId().equals(existingUser.getGmailId())) {
+                         existingUser.setGmailId(updatedUser.getGmailId());
+                         hasChanges = true;
+                         logger.info("✅ Updated Gmail ID for user: {}", existingUser.getEmail());
+                     } else if (updatedUser.getGmailId() == null && existingUser.getGmailId() != null) {
+                         existingUser.setGmailId(null);
+                         hasChanges = true;
+                         logger.info("✅ Cleared Gmail ID for user: {}", existingUser.getEmail());
+                     }
+                     if (updatedUser.getSlackId() != null && !updatedUser.getSlackId().equals(existingUser.getSlackId())) {
+                         existingUser.setSlackId(updatedUser.getSlackId());
+                         hasChanges = true;
+                         logger.info("✅ Updated Slack ID for user: {}", existingUser.getEmail());
+                     } else if (updatedUser.getSlackId() == null && existingUser.getSlackId() != null) {
+                         existingUser.setSlackId(null);
+                         hasChanges = true;
+                         logger.info("✅ Cleared Slack ID for user: {}", existingUser.getEmail());
+                     }
+                     if (updatedUser.getTeamId() != null && !updatedUser.getTeamId().equals(existingUser.getTeamId())) {
+                         existingUser.setTeamId(updatedUser.getTeamId());
+                         hasChanges = true;
+                         logger.info("✅ Updated Team ID for user: {}", existingUser.getEmail());
+                     } else if (updatedUser.getTeamId() == null && existingUser.getTeamId() != null) {
+                         existingUser.setTeamId(null);
+                         hasChanges = true;
+                         logger.info("✅ Cleared Team ID for user: {}", existingUser.getEmail());
+                     }
                     
                     if (hasChanges) {
                         User savedUser = userRepository.save(existingUser);
@@ -185,6 +230,7 @@ public class UserController {
                 })
                 .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
+            logger.error("❌ Error updating user: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -242,6 +288,7 @@ public class UserController {
         profile.put("firstName", user.getFirstName());
         profile.put("lastName", user.getLastName());
         profile.put("email", user.getEmail());
+        profile.put("phone", user.getPhone());
         profile.put("role", user.getRole());
         profile.put("organizationId", user.getOrganizationId());
         profile.put("enabled", user.isEnabled());
@@ -253,6 +300,75 @@ public class UserController {
         profile.put("teamId", user.getTeamId());
         
         return ResponseEntity.ok(profile);
+    }
+
+    /**
+     * Get comprehensive user profile with all editable fields
+     */
+    @GetMapping("/profile/comprehensive")
+    public ResponseEntity<?> getComprehensiveUserProfile(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🔍 Comprehensive user profile endpoint called");
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            logger.warn("❌ No user details found in comprehensive profile request");
+            return ResponseEntity.status(401).body(Map.of(
+                "error", "User not authenticated",
+                "timestamp", new Date()
+            ));
+        }
+        
+        User user = userDetails.getUser();
+        logger.info("✅ Comprehensive user profile retrieved for: {}", user.getEmail());
+        
+        Map<String, Object> comprehensiveProfile = new HashMap<>();
+        
+        // Basic Information
+        Map<String, Object> basicInfo = new HashMap<>();
+        basicInfo.put("id", user.getId());
+        basicInfo.put("firstName", user.getFirstName());
+        basicInfo.put("lastName", user.getLastName());
+        basicInfo.put("email", user.getEmail());
+        basicInfo.put("phone", user.getPhone());
+        basicInfo.put("fullName", user.getFirstName() + " " + user.getLastName());
+        comprehensiveProfile.put("basicInfo", basicInfo);
+        
+        // Account Information
+        Map<String, Object> accountInfo = new HashMap<>();
+        accountInfo.put("role", user.getRole());
+        accountInfo.put("organizationId", user.getOrganizationId());
+        accountInfo.put("enabled", user.isEnabled());
+        accountInfo.put("createdAt", user.getCreatedAt());
+        accountInfo.put("updatedAt", user.getUpdatedAt());
+        accountInfo.put("lastLogin", user.getLastLogin());
+        comprehensiveProfile.put("accountInfo", accountInfo);
+        
+        // Integration Information
+        Map<String, Object> integrationInfo = new HashMap<>();
+        integrationInfo.put("gmailId", user.getGmailId());
+        integrationInfo.put("slackId", user.getSlackId());
+        integrationInfo.put("teamId", user.getTeamId());
+        comprehensiveProfile.put("integrationInfo", integrationInfo);
+        
+        // Integration Status
+        Map<String, Object> integrationStatus = new HashMap<>();
+        integrationStatus.put("gmailConnected", user.getGmailId() != null && !user.getGmailId().trim().isEmpty());
+        integrationStatus.put("slackConnected", user.getSlackId() != null && !user.getSlackId().trim().isEmpty());
+        integrationStatus.put("teamsConnected", user.getTeamId() != null && !user.getTeamId().trim().isEmpty());
+        integrationStatus.put("totalConnected", 
+            (user.getGmailId() != null && !user.getGmailId().trim().isEmpty() ? 1 : 0) +
+            (user.getSlackId() != null && !user.getSlackId().trim().isEmpty() ? 1 : 0) +
+            (user.getTeamId() != null && !user.getTeamId().trim().isEmpty() ? 1 : 0)
+        );
+        comprehensiveProfile.put("integrationStatus", integrationStatus);
+        
+        // Permissions
+        Map<String, Object> permissions = new HashMap<>();
+        permissions.put("isAdmin", user.getRole().equals(User.Role.ADMIN));
+        permissions.put("canEditRole", user.getRole().equals(User.Role.ADMIN));
+        permissions.put("canEditStatus", user.getRole().equals(User.Role.ADMIN));
+        comprehensiveProfile.put("permissions", permissions);
+        
+        return ResponseEntity.ok(comprehensiveProfile);
     }
 
     @GetMapping("/search")

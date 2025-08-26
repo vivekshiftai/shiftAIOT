@@ -3,6 +3,8 @@ package com.iotplatform.model;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "device_safety_precautions")
@@ -207,5 +209,47 @@ public class DeviceSafetyPrecaution {
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+    
+    /**
+     * Validates the safety precaution data before saving
+     * @return true if valid, false otherwise
+     */
+    public boolean isValid() {
+        return id != null && !id.trim().isEmpty() &&
+               deviceId != null && !deviceId.trim().isEmpty() &&
+               title != null && !title.trim().isEmpty() &&
+               type != null && !type.trim().isEmpty() &&
+               category != null && !category.trim().isEmpty() &&
+               organizationId != null && !organizationId.trim().isEmpty();
+    }
+    
+    /**
+     * Gets a summary of validation issues
+     * @return List of validation error messages
+     */
+    public List<String> getValidationErrors() {
+        List<String> errors = new ArrayList<>();
+        
+        if (id == null || id.trim().isEmpty()) {
+            errors.add("ID is required");
+        }
+        if (deviceId == null || deviceId.trim().isEmpty()) {
+            errors.add("Device ID is required");
+        }
+        if (title == null || title.trim().isEmpty()) {
+            errors.add("Title is required");
+        }
+        if (type == null || type.trim().isEmpty()) {
+            errors.add("Type is required");
+        }
+        if (category == null || category.trim().isEmpty()) {
+            errors.add("Category is required");
+        }
+        if (organizationId == null || organizationId.trim().isEmpty()) {
+            errors.add("Organization ID is required");
+        }
+        
+        return errors;
     }
 }

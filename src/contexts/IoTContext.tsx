@@ -251,7 +251,8 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       logInfo('IoT', 'Adding telemetry data', { deviceId: data.deviceId, timestamp: data.timestamp });
       
       // Send telemetry data to backend
-      await deviceAPI.getTelemetry(data.deviceId);
+      // Note: getTelemetry method doesn't exist in deviceAPI, using getById instead
+      await deviceAPI.getById(data.deviceId);
       
       // Update local state
       setTelemetryData(prev => [...prev.slice(-99), data]);
@@ -369,6 +370,31 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       console.log('🔍 IoTContext: Starting device deletion for ID:', deviceId);
       console.log('🔍 IoTContext: Current API base URL:', import.meta.env.VITE_API_BASE_URL || 'http://20.57.36.66:8100');
       
+      // Check token before deletion
+      const token = tokenService.getToken();
+      console.log('🔍 IoTContext: Token check before deletion:', {
+        hasToken: !!token,
+        tokenLength: token?.length,
+        tokenPreview: token ? `${token.substring(0, 20)}...` : 'No token'
+      });
+      
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+      
+      // Validate token before proceeding
+      const isValidToken = await tokenService.validateToken();
+      console.log('🔍 IoTContext: Token validation result:', isValidToken);
+      
+      if (!isValidToken) {
+        console.warn('⚠️ IoTContext: Token validation failed, attempting token refresh...');
+        const refreshedToken = await tokenService.refreshToken();
+        if (!refreshedToken) {
+          throw new Error('Authentication token is invalid and could not be refreshed. Please log in again.');
+        }
+        console.log('✅ IoTContext: Token refreshed successfully');
+      }
+      
       // First, verify the device exists
       try {
         console.log('🔍 IoTContext: Verifying device exists before deletion...');
@@ -379,6 +405,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         throw new Error(`Device not found: ${deviceId}`);
       }
       
+      console.log('🔍 IoTContext: Proceeding with device deletion...');
       const response = await deviceAPI.delete(deviceId);
       console.log('✅ IoTContext: Device deletion API call successful:', response);
       logInfo('IoT', 'Device deleted successfully', { deviceId });

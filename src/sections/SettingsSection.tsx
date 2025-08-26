@@ -19,24 +19,11 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { userAPI } from '../services/api';
 import { ConversationConfigTab } from '../components/Settings/ConversationConfigTab';
+import { ComprehensiveProfileEditor } from '../components/Settings/ComprehensiveProfileEditor';
 import { handleAuthError } from '../utils/authUtils';
 import { AuthDebugger } from '../components/Debug/AuthDebugger';
 
-interface UserProfile {
-  id?: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-  role: string;
-  organization?: string;
-  location?: string;
-  timezone?: string;
-  avatar?: string;
-  gmailId?: string;
-  slackId?: string;
-  teamId?: string;
-}
+
 
 interface NotificationSettings {
   emailNotifications: boolean;
@@ -72,17 +59,7 @@ export const SettingsSection: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [userProfile, setUserProfile] = useState<UserProfile>({
-    id: undefined,
-    firstName: '',
-    lastName: '',
-    email: '',
-                phone: undefined,
-    role: '',
-    organization: '',
-    location: '',
-    timezone: 'America/New_York'
-  });
+
 
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
     emailNotifications: true,
@@ -114,32 +91,14 @@ export const SettingsSection: React.FC = () => {
     confirmPassword: ''
   });
 
-  // Load profile and settings on mount
+  // Load settings on mount
   useEffect(() => {
-    const loadData = async () => {
+    const loadSettings = async () => {
       if (!user) return;
       setIsLoading(true);
       setError(null);
       
       try {
-        // Try to load profile from backend
-        const res = await userAPI.getProfile();
-        const profile = res.data;
-        setUserProfile({
-          id: profile.id,
-          firstName: profile.firstName || '',
-          lastName: profile.lastName || '',
-          email: profile.email || '',
-          phone: profile.phone || '',
-          role: profile.role || user.role,
-          organization: profile.organizationId,
-          location: '',
-          timezone: 'America/New_York',
-          gmailId: profile.gmailId || '',
-          slackId: profile.slackId || '',
-          teamId: profile.teamId || ''
-        });
-
         // Try load preferences from backend first
         try {
           const prefRes = await userAPI.getPreferences();
@@ -168,44 +127,24 @@ export const SettingsSection: React.FC = () => {
           });
         } catch (prefError: any) {
           // Fallback to localStorage if backend prefs missing
-          const notifKey = `settings:notifications:${profile.id}`;
-          const dashKey = `settings:dashboard:${profile.id}`;
+          const notifKey = `settings:notifications:${user.id}`;
+          const dashKey = `settings:dashboard:${user.id}`;
           const savedNotif = localStorage.getItem(notifKey);
           const savedDash = localStorage.getItem(dashKey);
           if (savedNotif) setNotificationSettings(JSON.parse(savedNotif));
           if (savedDash) setDashboardSettings(JSON.parse(savedDash));
         }
       } catch (e: any) {
-        // If backend profile loading fails, use cached user data
-        if (e.response?.status === 401) {
-          console.warn('Profile loading failed due to authentication, using cached user data');
-          setUserProfile({
-            id: user.id,
-            firstName: user.firstName || '',
-            lastName: user.lastName || '',
-            email: user.email || '',
-            phone: undefined,
-            role: user.role,
-            organization: user.organizationId || '',
-            location: '',
-            timezone: 'America/New_York',
-            gmailId: user.gmailId || '',
-            slackId: user.slackId || '',
-            teamId: user.teamId || ''
-          });
-          // Don't show error for 401, just use cached data
-        } else {
-          setError(e?.message || 'Failed to load profile');
-        }
+        setError(e?.message || 'Failed to load settings');
       } finally {
         setIsLoading(false);
       }
     };
-    loadData();
+    loadSettings();
   }, [user]);
 
   const persistNotificationSettings = async () => {
-    if (!userProfile.id) return;
+    if (!user?.id) return;
     try {
       await userAPI.savePreferences({
         ...notificationSettings,
@@ -219,11 +158,11 @@ export const SettingsSection: React.FC = () => {
         },
       });
     } catch {
-      localStorage.setItem(`settings:notifications:${userProfile.id}`, JSON.stringify(notificationSettings));
+      localStorage.setItem(`settings:notifications:${user.id}`, JSON.stringify(notificationSettings));
     }
   };
   const persistDashboardSettings = async () => {
-    if (!userProfile.id) return;
+    if (!user?.id) return;
     try {
       await userAPI.savePreferences({
         ...notificationSettings,
@@ -237,7 +176,7 @@ export const SettingsSection: React.FC = () => {
         },
       });
     } catch {
-      localStorage.setItem(`settings:dashboard:${userProfile.id}`, JSON.stringify(dashboardSettings));
+      localStorage.setItem(`settings:dashboard:${user.id}`, JSON.stringify(dashboardSettings));
     }
   };
 
@@ -257,49 +196,7 @@ export const SettingsSection: React.FC = () => {
     { id: 'debug', label: 'Debug', icon: Info }
   ];
 
-  const handleSaveProfile = async () => {
-    if (!userProfile.id) return;
-    try {
-      setIsLoading(true);
-      setError(null);
-      console.log('🔧 Saving profile for user:', userProfile.id);
-      
-      const payload: Partial<UserProfile> = {
-        firstName: userProfile.firstName,
-        lastName: userProfile.lastName,
-        email: userProfile.email,
-        phone: userProfile.phone
-      };
-      
-      // Handle integration IDs separately
-      const integrationPayload = {
-        gmailId: userProfile.gmailId || null,
-        slackId: userProfile.slackId || null,
-        teamId: userProfile.teamId || null
-      };
-      
-      console.log('🔧 Profile payload:', payload);
-      const res = await userAPI.update(userProfile.id, payload);
-      console.log('✅ Profile saved successfully:', res.data);
-      
-      // Update integration IDs
-      try {
-        await userAPI.updateIntegrationIds(integrationPayload);
-        console.log('✅ Integration IDs updated successfully');
-      } catch (integrationError) {
-        console.warn('⚠️ Integration IDs update failed:', integrationError);
-        // Continue with profile update even if integration IDs fail
-      }
-      
-      setUserProfile(prev => ({ ...prev, ...res.data }));
-      setIsEditing(false);
-    } catch (e: any) {
-      console.error('❌ Profile save failed:', e);
-      setError(handleAuthError(e, 'Failed to save profile'));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
 
   const handleSaveNotifications = async () => {
     await persistNotificationSettings();
@@ -350,137 +247,7 @@ export const SettingsSection: React.FC = () => {
     return icons[key as keyof typeof icons] || Bell;
   };
 
-  const renderProfileTab = () => (
-    <div className="space-y-6">
-      {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
-      )}
-      <div className="flex items-center justify-between">
-        <h3 className="text-xl font-semibold gradient-text">Personal Information</h3>
-        <button
-          onClick={() => setIsEditing(!isEditing)}
-          className="flex items-center gap-2 px-4 py-2 btn-secondary"
-        >
-          <Edit className="w-4 h-4" />
-          {isEditing ? 'Cancel' : 'Edit Profile'}
-        </button>
-      </div>
 
-      <div className="card p-6 glass">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">First Name</label>
-            <input
-              type="text"
-              value={userProfile.firstName}
-              onChange={(e) => setUserProfile(prev => ({ ...prev, firstName: e.target.value }))}
-              disabled={!isEditing}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Last Name</label>
-            <input
-              type="text"
-              value={userProfile.lastName}
-              onChange={(e) => setUserProfile(prev => ({ ...prev, lastName: e.target.value }))}
-              disabled={!isEditing}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
-            <input
-              type="email"
-              value={userProfile.email}
-              onChange={(e) => setUserProfile(prev => ({ ...prev, email: e.target.value }))}
-              disabled={!isEditing}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Phone</label>
-            <input
-              type="tel"
-              value={userProfile.phone ?? ''}
-              onChange={(e) => setUserProfile(prev => ({ ...prev, phone: e.target.value }))}
-              disabled={!isEditing}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Role</label>
-            <input
-              type="text"
-              value={userProfile.role}
-              disabled
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-100 text-slate-600"
-            />
-          </div>
-        </div>
-
-        {/* Integration IDs Section */}
-        <div className="mt-8">
-          <h4 className="text-lg font-medium text-slate-800 mb-4">Integration IDs</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Gmail ID</label>
-              <input
-                type="text"
-                value={userProfile.gmailId ?? ''}
-                onChange={(e) => setUserProfile(prev => ({ ...prev, gmailId: e.target.value }))}
-                disabled={!isEditing}
-                placeholder="Enter your Gmail ID"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Slack ID</label>
-              <input
-                type="text"
-                value={userProfile.slackId ?? ''}
-                onChange={(e) => setUserProfile(prev => ({ ...prev, slackId: e.target.value }))}
-                disabled={!isEditing}
-                placeholder="Enter your Slack ID"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Team ID</label>
-              <input
-                type="text"
-                value={userProfile.teamId ?? ''}
-                onChange={(e) => setUserProfile(prev => ({ ...prev, teamId: e.target.value }))}
-                disabled={!isEditing}
-                placeholder="Enter your Team ID"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
-              />
-            </div>
-          </div>
-        </div>
-
-        {isEditing && (
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              onClick={() => setIsEditing(false)}
-              className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
-              disabled={isLoading}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSaveProfile}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all disabled:opacity-50"
-              disabled={isLoading}
-            >
-              <Save className="w-4 h-4" />
-              {isLoading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
 
   const renderNotificationsTab = () => (
     <div className="space-y-6">
@@ -718,7 +485,7 @@ export const SettingsSection: React.FC = () => {
           {isLoading && (
             <div className="text-sm text-slate-500 mb-3">Loading...</div>
           )}
-          {activeTab === 'profile' && renderProfileTab()}
+          {activeTab === 'profile' && <ComprehensiveProfileEditor />}
           {activeTab === 'notifications' && renderNotificationsTab()}
           {activeTab === 'dashboard' && renderDashboardTab()}
           {activeTab === 'conversation' && renderConversationTab()}

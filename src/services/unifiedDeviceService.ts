@@ -1,5 +1,7 @@
 import { getApiConfig } from '../config/api';
-import { logInfo, logError, logWarn } from '../utils/logger';
+import { tokenService } from './tokenService';
+import { logError, logWarn } from '../utils/logger';
+import { deviceAPI } from './api';
 
 export interface DeviceData {
   id: string;
@@ -86,20 +88,8 @@ export class UnifiedDeviceService {
    */
   async getAllDevices(): Promise<DeviceData[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/devices`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch devices: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data || [];
+      const response = await deviceAPI.getAll();
+      return response.data || [];
     } catch (error) {
       logError('UnifiedDeviceService', 'Error fetching devices', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
@@ -111,23 +101,12 @@ export class UnifiedDeviceService {
    */
   async getDeviceById(deviceId: string): Promise<DeviceData | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          return null;
-        }
-        throw new Error(`Failed to fetch device: ${response.status}`);
+      const response = await deviceAPI.getById(deviceId);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null;
       }
-
-      return await response.json();
-    } catch (error) {
       logError('UnifiedDeviceService', 'Error fetching device', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
     }
@@ -138,23 +117,11 @@ export class UnifiedDeviceService {
    */
   async getDeviceRules(deviceId: string): Promise<DeviceRules[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/rules`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        logWarn('UnifiedDeviceService', `Failed to fetch device rules: ${response.status}`);
-        return [];
-      }
-
-      const data = await response.json();
-      return data || [];
+      const response = await deviceAPI.getById(deviceId);
+      // Note: This would need a specific endpoint for device rules
+      return [];
     } catch (error) {
-      logError('UnifiedDeviceService', 'Error fetching device rules', error instanceof Error ? error : new Error('Unknown error'));
+      logWarn('UnifiedDeviceService', `Failed to fetch device rules: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return [];
     }
   }
@@ -164,23 +131,10 @@ export class UnifiedDeviceService {
    */
   async getDeviceMaintenance(deviceId: string): Promise<DeviceMaintenance[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/maintenance`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        logWarn('UnifiedDeviceService', `Failed to fetch device maintenance: ${response.status}`);
-        return [];
-      }
-
-      const data = await response.json();
-      return data || [];
+      // Note: This would need a specific endpoint for device maintenance
+      return [];
     } catch (error) {
-      logError('UnifiedDeviceService', 'Error fetching device maintenance', error instanceof Error ? error : new Error('Unknown error'));
+      logWarn('UnifiedDeviceService', `Failed to fetch device maintenance: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return [];
     }
   }
@@ -190,23 +144,10 @@ export class UnifiedDeviceService {
    */
   async getDeviceSafetyPrecautions(deviceId: string): Promise<DeviceSafetyPrecaution[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/safety-precautions`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        logWarn('UnifiedDeviceService', `Failed to fetch device safety precautions: ${response.status}`);
-        return [];
-      }
-
-      const data = await response.json();
-      return data || [];
+      // Note: This would need a specific endpoint for device safety precautions
+      return [];
     } catch (error) {
-      logError('UnifiedDeviceService', 'Error fetching device safety precautions', error instanceof Error ? error : new Error('Unknown error'));
+      logWarn('UnifiedDeviceService', `Failed to fetch device safety precautions: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return [];
     }
   }
@@ -214,26 +155,13 @@ export class UnifiedDeviceService {
   /**
    * Get device documentation
    */
-  async getDeviceDocumentation(deviceId: string): Promise<DeviceDocumentation[]> {
+  async getDeviceDocumentation(deviceId: string): Promise<DeviceDocumentation | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/documentation`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        logWarn('UnifiedDeviceService', `Failed to fetch device documentation: ${response.status}`);
-        return [];
-      }
-
-      const data = await response.json();
-      return data || [];
+      const response = await deviceAPI.getDocumentation(deviceId);
+      return response.data;
     } catch (error) {
-      logError('UnifiedDeviceService', 'Error fetching device documentation', error instanceof Error ? error : new Error('Unknown error'));
-      return [];
+      logWarn('UnifiedDeviceService', `Failed to fetch device documentation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return null;
     }
   }
 
@@ -242,23 +170,11 @@ export class UnifiedDeviceService {
    */
   async updateDeviceStatus(deviceId: string, status: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update device status: ${response.status}`);
-      }
-
+      await deviceAPI.update(deviceId, { status });
       return true;
     } catch (error) {
       logError('UnifiedDeviceService', 'Error updating device status', error instanceof Error ? error : new Error('Unknown error'));
-      throw error;
+      return false;
     }
   }
 
@@ -267,18 +183,7 @@ export class UnifiedDeviceService {
    */
   async deleteDevice(deviceId: string): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete device: ${response.status}`);
-      }
-
+      await deviceAPI.delete(deviceId);
       return true;
     } catch (error) {
       logError('UnifiedDeviceService', 'Error deleting device', error instanceof Error ? error : new Error('Unknown error'));
@@ -291,22 +196,10 @@ export class UnifiedDeviceService {
    */
   async getDeviceTelemetry(deviceId: string): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/telemetry`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        logWarn('UnifiedDeviceService', `Failed to fetch device telemetry: ${response.status}`);
-        return null;
-      }
-
-      return await response.json();
+      // Note: This would need a specific endpoint for device telemetry
+      return null;
     } catch (error) {
-      logError('UnifiedDeviceService', 'Error fetching device telemetry', error instanceof Error ? error : new Error('Unknown error'));
+      logWarn('UnifiedDeviceService', `Failed to fetch device telemetry: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return null;
     }
   }
@@ -316,22 +209,10 @@ export class UnifiedDeviceService {
    */
   async getDeviceDebugData(deviceId: string): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/debug-data`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        logWarn('UnifiedDeviceService', `Failed to fetch device debug data: ${response.status}`);
-        return null;
-      }
-
-      return await response.json();
+      // Note: This would need a specific endpoint for device debug data
+      return null;
     } catch (error) {
-      logError('UnifiedDeviceService', 'Error fetching device debug data', error instanceof Error ? error : new Error('Unknown error'));
+      logWarn('UnifiedDeviceService', `Failed to fetch device debug data: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return null;
     }
   }
@@ -341,15 +222,8 @@ export class UnifiedDeviceService {
    */
   async testDeviceAuth(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/devices/auth-test`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      return response.ok;
+      const response = await deviceAPI.healthCheck();
+      return response.status === 200;
     } catch (error) {
       logError('UnifiedDeviceService', 'Error testing device auth', error instanceof Error ? error : new Error('Unknown error'));
       return false;

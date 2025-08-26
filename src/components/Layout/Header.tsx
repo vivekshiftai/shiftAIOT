@@ -8,7 +8,7 @@ import {
   Search, 
   Settings, 
   User, 
-  AlertTriangle,
+  Info,
   Trash2
 } from 'lucide-react';
 import Button from '../UI/Button';
@@ -20,7 +20,6 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const { success } = useToast();
   const navigate = useNavigate();
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
@@ -36,6 +35,16 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
       console.error('Logout error:', error);
     }
   };
+
+  // Log header component updates
+  React.useEffect(() => {
+    console.log('Header component updated:', {
+      darkModeRemoved: true,
+      helpIconChanged: 'AlertTriangle -> Info',
+      signOutButtonColor: 'dark red (text-red-700)',
+      themeToggleRemoved: true
+    });
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,19 +85,9 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           onToggle={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
         />
 
-        {/* Theme Toggle */}
-        <IconButton
-          icon={<Settings className="w-5 h-5" />}
-          variant="ghost"
-          size="sm"
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-          className="text-secondary hover:text-primary transition-colors"
-        />
-
         {/* Help */}
         <IconButton
-          icon={<AlertTriangle className="w-5 h-5" />}
+          icon={<Info className="w-5 h-5" />}
           variant="ghost"
           size="sm"
           onClick={() => {
@@ -182,7 +181,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                     setUserDropdownOpen(false);
                     handleLogout();
                   }}
-                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-error-500 hover:bg-error-500/10 transition-colors"
+                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-700 hover:bg-red-50 transition-colors font-medium"
                 >
                   <Trash2 className="w-4 h-4" />
                   Sign out

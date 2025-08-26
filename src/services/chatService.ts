@@ -3,6 +3,16 @@ import { tokenService } from './tokenService';
 import { logInfo, logError } from '../utils/logger';
 
 /**
+ * PDF Image interface
+ */
+export interface PDFImage {
+  filename: string;
+  data: string; // Base64 encoded image data
+  mime_type: string;
+  size: number;
+}
+
+/**
  * Chat message interface for frontend display
  */
 export interface ChatMessage {
@@ -16,6 +26,8 @@ export interface ChatMessage {
   chunksUsed?: string[];
   status?: string;
   error?: string;
+  images?: PDFImage[];
+  tables?: string[];
 }
 
 /**
@@ -36,8 +48,8 @@ export interface PDFQueryResponse {
   response: string;
   chunks_used: string[];
   processing_time: string;
-  images?: any[];
-  tables?: any[];
+  images?: PDFImage[];
+  tables?: string[];
 }
 
 /**

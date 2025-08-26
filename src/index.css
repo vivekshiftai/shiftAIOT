@@ -148,19 +148,7 @@
   transition: all 0.2s ease-in-out;
 }
 
-/* Dark Mode Variables */
-[data-theme="dark"] {
-  --bg-primary: var(--gray-900);
-  --bg-secondary: var(--gray-800);
-  --bg-tertiary: var(--gray-700);
-  --text-primary: var(--gray-50);
-  --text-secondary: var(--gray-300);
-  --text-muted: var(--gray-400);
-  --border-color: var(--gray-700);
-  --border-light: var(--gray-600);
-}
-
-/* Light Mode Variables */
+/* Light Mode Variables Only */
 [data-theme="light"] {
   --bg-primary: #ffffff;
   --bg-secondary: var(--gray-50);

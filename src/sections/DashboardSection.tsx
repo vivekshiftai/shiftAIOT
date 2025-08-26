@@ -6,8 +6,8 @@ import { StatsCard } from '../components/Dashboard/StatsCard';
 import Skeleton, { SkeletonCard } from '../components/UI/Skeleton';
 import Button from '../components/UI/Button';
 
-import { maintenanceAPI } from '../services/api';
-import { logError } from '../utils/logger';
+import { maintenanceAPI, ruleAPI } from '../services/api';
+import { logError, logInfo } from '../utils/logger';
 
 import { 
   CheckCircle, 
@@ -17,7 +17,12 @@ import {
   Shield,
   ArrowRight,
   Plus,
-  Eye
+  Eye,
+  Cpu,
+  Wifi,
+  Zap,
+  Wrench,
+  Activity
 } from 'lucide-react';
 
 export const DashboardSection: React.FC = () => {
@@ -28,15 +33,32 @@ export const DashboardSection: React.FC = () => {
   const [upcomingMaintenance, setUpcomingMaintenance] = useState<any[]>([]);
   const [maintenanceCount, setMaintenanceCount] = useState(0);
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
+  const [rulesCount, setRulesCount] = useState(0);
+  const [rulesLoading, setRulesLoading] = useState(true);
 
-  // Fetch upcoming maintenance tasks
+  // Fetch real-time data
   useEffect(() => {
-    const fetchUpcomingMaintenance = async () => {
+    const fetchRealTimeData = async () => {
       try {
+        // Fetch upcoming maintenance tasks
         setMaintenanceLoading(true);
-        const response = await maintenanceAPI.getUpcoming();
-        setUpcomingMaintenance(response.data?.upcomingMaintenance || []);
-        setMaintenanceCount(response.data?.totalCount || 0);
+        const maintenanceResponse = await maintenanceAPI.getUpcoming();
+        setUpcomingMaintenance(maintenanceResponse.data?.upcomingMaintenance || []);
+        setMaintenanceCount(maintenanceResponse.data?.totalCount || 0);
+        logInfo('Dashboard', 'Maintenance data fetched successfully', { 
+          upcomingCount: maintenanceResponse.data?.upcomingMaintenance?.length || 0,
+          totalCount: maintenanceResponse.data?.totalCount || 0
+        });
+        
+        // Log dashboard icon updates
+        logInfo('Dashboard', 'Dashboard icons updated with appropriate icons for each metric', {
+          totalDevices: 'Cpu icon',
+          activeDevices: 'Wifi icon', 
+          totalRules: 'Zap icon',
+          totalMaintenance: 'Wrench icon',
+          deviceActivity: 'Activity icon',
+          upcomingMaintenance: 'Wrench icon'
+        });
       } catch (error) {
         logError('Dashboard', 'Failed to fetch upcoming maintenance', error instanceof Error ? error : new Error('Unknown error'));
         setUpcomingMaintenance([]);
@@ -44,12 +66,38 @@ export const DashboardSection: React.FC = () => {
       } finally {
         setMaintenanceLoading(false);
       }
+
+      try {
+        // Fetch rules count
+        setRulesLoading(true);
+        const rulesResponse = await ruleAPI.getAll();
+        const totalRules = rulesResponse.data?.length || 0;
+        setRulesCount(totalRules);
+        logInfo('Dashboard', 'Rules data fetched successfully', { totalRules });
+      } catch (error) {
+        logError('Dashboard', 'Failed to fetch rules count', error instanceof Error ? error : new Error('Unknown error'));
+        setRulesCount(0);
+      } finally {
+        setRulesLoading(false);
+      }
     };
 
-    fetchUpcomingMaintenance();
+    // Initial fetch
+    fetchRealTimeData();
+
+    // Set up periodic refresh every 30 seconds
+    const intervalId = setInterval(() => {
+      logInfo('Dashboard', 'Refreshing real-time data...');
+      fetchRealTimeData();
+    }, 30000); // 30 seconds
+
+    // Cleanup interval on component unmount
+    return () => {
+      clearInterval(intervalId);
+    };
   }, []);
 
-  // Calculate metrics
+  // Calculate metrics with real-time data
   const metrics = useMemo(() => {
     const onlineDevices = devices.filter(d => d.status === 'ONLINE').length;
     const totalDevices = devices.length;
@@ -57,12 +105,12 @@ export const DashboardSection: React.FC = () => {
     return {
       totalDevices,
       onlineDevices,
-      totalRules: rules.length,
-      totalMaintenance: maintenanceCount,
+      totalRules: rulesCount, // Use real-time count from API
+      totalMaintenance: maintenanceCount, // Use real-time count from API
       pendingMaintenance: upcomingMaintenance.length,
       completedMaintenance: 0 // This would need to be calculated from completed tasks
     };
-  }, [devices, rules, maintenanceCount, upcomingMaintenance]);
+  }, [devices, rulesCount, maintenanceCount, upcomingMaintenance]);
 
   // Handle maintenance card click
   const handleMaintenanceClick = () => {
@@ -169,7 +217,7 @@ export const DashboardSection: React.FC = () => {
            title="Total Devices"
            value={metrics.totalDevices}
            subtitle={`${metrics.onlineDevices} online`}
-           icon={Shield}
+           icon={Cpu}
            color="blue"
            onClick={handleNavigateDevices}
            className="hover-lift animate-fade-in"
@@ -178,29 +226,29 @@ export const DashboardSection: React.FC = () => {
            title="Active Devices"
            value={metrics.onlineDevices}
            subtitle="Currently online"
-           icon={Shield}
+           icon={Wifi}
            color="green"
            onClick={handleShowActiveDevices}
            className="hover-lift animate-fade-in"
          />
-                 <StatsCard
-           title="Total Rules"
-           value={metrics.totalRules}
-           subtitle="Automation rules"
-           icon={Shield}
-           color="purple"
-           onClick={handleShowRules}
-           className="hover-lift animate-fade-in"
-         />
-                 <StatsCard
-           title="Total Maintenance"
-           value={metrics.totalMaintenance}
-           subtitle={`${metrics.pendingMaintenance} pending`}
-           icon={Shield}
-           color="yellow"
-           onClick={handleMaintenanceClick}
-           className="hover-lift animate-fade-in"
-         />
+                                   <StatsCard
+            title="Total Rules"
+            value={metrics.totalRules}
+            subtitle="Automation rules"
+            icon={Zap}
+            color="purple"
+            // Removed onClick handler - no longer clickable
+            className="animate-fade-in"
+          />
+                  <StatsCard
+            title="Total Maintenance"
+            value={metrics.totalMaintenance}
+            subtitle={`${metrics.pendingMaintenance} pending`}
+            icon={Wrench}
+            color="yellow"
+            // Removed onClick handler - no longer clickable
+            className="animate-fade-in"
+          />
       </div>
 
       {/* Main Content Grid */}
@@ -238,7 +286,7 @@ export const DashboardSection: React.FC = () => {
             <div className="h-80 flex items-center justify-center">
               <div className="text-center">
                                  <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                   <Shield className="w-8 h-8 text-primary-300" />
+                   <Activity className="w-8 h-8 text-primary-300" />
                  </div>
                 <h4 className="text-lg font-semibold text-primary mb-2">
                   Device Activity Monitor
@@ -264,7 +312,7 @@ export const DashboardSection: React.FC = () => {
                 </p>
               </div>
               <div className="text-right">
-                <Shield className="w-5 h-5 text-secondary mb-1" />
+                <Wrench className="w-5 h-5 text-secondary mb-1" />
                 <p className="text-xs text-secondary">
                   {upcomingMaintenance.length} of {maintenanceCount} total
                 </p>
@@ -276,8 +324,8 @@ export const DashboardSection: React.FC = () => {
                 upcomingMaintenance.map((item) => (
                   <div
                     key={item.id}
-                    className="p-4 rounded-xl border border-light hover:bg-secondary transition-colors cursor-pointer"
-                    onClick={handleMaintenanceClick}
+                    className="p-4 rounded-xl border border-light hover:bg-secondary transition-colors"
+                    // Removed onClick handler - no longer clickable
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">

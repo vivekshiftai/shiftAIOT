@@ -34,12 +34,15 @@ import { DeviceChatInterface } from '../components/Devices/DeviceChatInterface';
 import DeviceSafetyInfo from '../components/Devices/DeviceSafetyInfo';
 import { DeviceRules } from '../components/Devices/DeviceRules';
 import { DeviceConnectionManager } from '../components/Devices/DeviceConnectionManager';
+import ChatImageDisplay from '../components/Devices/ChatImageDisplay';
+import ChatTableDisplay from '../components/Devices/ChatTableDisplay';
 import { deviceAPI } from '../services/api';
 import { pdfAPI } from '../services/api';
 import { pdfProcessingService, PDFListResponse } from '../services/pdfprocess';
 import { DeviceStatsService, DeviceStats } from '../services/deviceStatsService';
 import { logInfo, logError } from '../utils/logger';
 import { TabLoadingScreen, DataLoadingState, LoadingSpinner } from '../components/Loading/LoadingComponents';
+import { PDFImage } from '../services/chatService';
 
 interface DocumentationInfo {
   deviceId: string;
@@ -56,6 +59,8 @@ interface ChatMessage {
   type: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  images?: PDFImage[];
+  tables?: string[];
 }
 
 interface KnowledgeDocument {
@@ -120,26 +125,59 @@ export const DeviceDetailsSection: React.FC = () => {
 
     const device = devices.find(d => d.id === deviceId);
 
+  // Debug logging
+  console.log('🔍 DeviceDetailsSection Debug:', {
+    deviceId,
+    devicesCount: devices.length,
+    deviceFound: !!device,
+    isInitialLoading,
+    device: device
+  });
+
   // Show loading screen while initial data is being fetched
   if (isInitialLoading) {
+    console.log('🔄 Showing initial loading screen');
     return <TabLoadingScreen />;
   }
 
-  useEffect(() => {
-    if (!device && devices.length > 0) {
-      // If device not found, redirect to devices list
-      navigate('/devices');
-    }
-  }, [device, devices, navigate]);
+  // Show loading if devices are still being loaded
+  if (devices.length === 0) {
+    console.log('🔄 Devices array is empty, showing loading screen');
+    return <TabLoadingScreen />;
+  }
+
+  // Redirect if device not found
+  if (!device) {
+    console.log('❌ Device not found, redirecting to devices list');
+    navigate('/devices');
+    return null;
+  }
 
   useEffect(() => {
     if (device) {
+      console.log('🚀 Starting data loading for device:', device.id);
       setIsInitialLoading(true);
-      Promise.all([
+      
+      // Add timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.warn('⚠️ Data loading timeout, forcing completion');
+        setIsInitialLoading(false);
+      }, 30000); // 30 second timeout
+      
+      Promise.allSettled([
         fetchDocumentationInfo(),
         loadDevicePDFs(),
         fetchRealTimeData()
-      ]).finally(() => {
+      ]).then((results) => {
+        console.log('📊 Data loading results:', results);
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            console.error(`❌ Data loading failed for index ${index}:`, result.reason);
+          }
+        });
+      }).finally(() => {
+        console.log('✅ Data loading completed');
+        clearTimeout(timeoutId);
         setIsInitialLoading(false);
       });
     }
@@ -198,17 +236,13 @@ export const DeviceDetailsSection: React.FC = () => {
     }
   };
 
-  // Load real-time data only when device changes
-  useEffect(() => {
-    if (device) {
-      fetchRealTimeData();
-    }
-  }, [device?.id]);
+
 
   const loadDevicePDFs = async () => {
     if (!device) return;
     
     try {
+      console.log('📄 Loading PDFs for device:', device.id);
       // Load all PDFs from backend API
       const pdfListResponse = await pdfAPI.listPDFs(0, 100); // Use backend API
       
@@ -257,6 +291,12 @@ export const DeviceDetailsSection: React.FC = () => {
         setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. How can I help you with this device?`);
       }
       
+      console.log('✅ Device PDFs loaded successfully:', { 
+        deviceId: device.id, 
+        totalPDFs: pdfListResponse.data.pdfs.length,
+        filteredPDFs: filteredPDFs.length 
+      });
+      
       logInfo('DeviceDetails', 'Device PDFs loaded successfully', { 
         deviceId: device.id, 
         totalPDFs: pdfListResponse.data.pdfs.length,
@@ -264,6 +304,7 @@ export const DeviceDetailsSection: React.FC = () => {
       });
       
     } catch (error) {
+      console.error('❌ Failed to load device PDFs:', error);
       logError('DeviceDetails', 'Failed to load device PDFs', error instanceof Error ? error : new Error('Unknown error'));
       setDevicePDFs([]);
     }
@@ -279,13 +320,15 @@ export const DeviceDetailsSection: React.FC = () => {
   const fetchDocumentationInfo = async () => {
     if (!device) return;
     try {
-      setLoading(true);
+      console.log('📚 Fetching documentation info for device:', device.id);
       const response = await deviceAPI.getDocumentation(device.id);
       setDocumentationInfo(response.data);
+      console.log('✅ Documentation info loaded:', response.data);
     } catch (error) {
+      console.error('❌ Failed to fetch documentation info:', error);
       logError('DeviceDetails', 'Failed to fetch documentation info', error instanceof Error ? error : new Error('Unknown error'));
-    } finally {
-      setLoading(false);
+      // Set empty documentation info on error
+      setDocumentationInfo(null);
     }
   };
 
@@ -479,7 +522,9 @@ export const DeviceDetailsSection: React.FC = () => {
             id: (Date.now() + 1).toString(),
             type: 'assistant',
             content: queryResponse.response || `I found relevant information in the "${selectedPDF.name}" document. ${queryResponse.chunks_used.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 300) + '...' : 'Would you like me to search for more specific information?'}`,
-            timestamp: new Date()
+            timestamp: new Date(),
+            images: queryResponse.images || [],
+            tables: queryResponse.tables || []
           };
           setChatMessages(prev => [...prev, assistantMessage]);
         } catch (queryError) {
@@ -1033,6 +1078,23 @@ export const DeviceDetailsSection: React.FC = () => {
                       }`}
                     >
                       <p className="text-sm leading-relaxed">{message.content}</p>
+                      
+                      {/* Display Images */}
+                      {message.images && message.images.length > 0 && (
+                        <ChatImageDisplay 
+                          images={message.images} 
+                          className="mt-3"
+                        />
+                      )}
+                      
+                      {/* Display Tables */}
+                      {message.tables && message.tables.length > 0 && (
+                        <ChatTableDisplay 
+                          tables={message.tables} 
+                          className="mt-3"
+                        />
+                      )}
+                      
                       <p className={`text-xs mt-1 ${
                         message.type === 'user' ? 'text-blue-100' : 'text-slate-500'
                       }`}>

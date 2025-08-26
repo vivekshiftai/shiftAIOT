@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -84,10 +85,14 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@Valid @RequestBody SignupRequest signupRequest) {
+        logger.info("🎯 Signup request received for email: {}", signupRequest.getEmail());
         try {
             User user = authService.signup(signupRequest);
+            logger.info("✅ User created successfully in database: ID={}, Email={}", 
+                       user.getId(), user.getEmail());
             
             // Authenticate the newly registered user
+            logger.info("🔐 Attempting to authenticate newly registered user: {}", signupRequest.getEmail());
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(signupRequest.getEmail(), signupRequest.getPassword()));
             
@@ -95,7 +100,7 @@ public class AuthController {
             String jwt = jwtTokenProvider.generateToken(authentication);
             String refreshToken = jwtTokenProvider.generateRefreshToken(authentication);
 
-            logger.info("User {} successfully registered and authenticated with roles: {}", 
+            logger.info("✅ User {} successfully registered and authenticated with roles: {}", 
                        user.getEmail(), user.getRole().name());
 
             return ResponseEntity.ok(new JwtResponse(
@@ -108,6 +113,7 @@ public class AuthController {
                     refreshToken
             ));
         } catch (Exception e) {
+            logger.error("❌ Signup failed for email: {}, Error: {}", signupRequest.getEmail(), e.getMessage(), e);
             String errorMessage = e.getMessage();
             
             // Convert technical error messages to user-friendly ones
@@ -123,6 +129,7 @@ public class AuthController {
                 errorMessage = "Please check the length requirements for your input.";
             }
             
+            logger.warn("📝 Returning user-friendly error message: {}", errorMessage);
             return ResponseEntity.badRequest().body(Map.of(
                 "error", errorMessage,
                 "success", false
@@ -371,6 +378,28 @@ public class AuthController {
         response.put("loginEndpoint", "/auth/signin");
         response.put("loginMethod", "POST");
         response.put("exampleLogin", exampleLogin);
+        
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, Object>> healthCheck() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "UP");
+        response.put("timestamp", LocalDateTime.now());
+        response.put("service", "IoT Platform Auth Service");
+        
+        // Add database connectivity check
+        try {
+            long userCount = userRepository.count();
+            response.put("database", "CONNECTED");
+            response.put("userCount", userCount);
+            logger.info("✅ Database health check passed. User count: {}", userCount);
+        } catch (Exception e) {
+            response.put("database", "DISCONNECTED");
+            response.put("databaseError", e.getMessage());
+            logger.error("❌ Database health check failed: {}", e.getMessage(), e);
+        }
         
         return ResponseEntity.ok(response);
     }
