@@ -182,6 +182,9 @@ ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS pdf_name VARCHAR(255);
 -- Add new column to pdf_documents table for external PDF processing response
 ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS pdf_name VARCHAR(255);
 
+-- Fix rule_conditions table column name to avoid reserved keyword
+ALTER TABLE rule_conditions RENAME COLUMN IF EXISTS value TO condition_value;
+
 -- Device Tags table
 CREATE TABLE IF NOT EXISTS device_tags (
     device_id VARCHAR(255) NOT NULL,
@@ -225,7 +228,7 @@ CREATE TABLE IF NOT EXISTS rule_conditions (
     device_id VARCHAR(255),
     metric VARCHAR(100),
     operator VARCHAR(50), -- 'GREATER_THAN', 'LESS_THAN', 'EQUALS', 'GREATER_THAN_OR_EQUAL', 'LESS_THAN_OR_EQUAL'
-    value VARCHAR(255),
+    condition_value VARCHAR(255), -- Changed from 'value' to 'condition_value' to avoid reserved keyword
     logic_operator VARCHAR(20) DEFAULT 'AND', -- 'AND', 'OR'
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (rule_id) REFERENCES rules(id) ON DELETE CASCADE,
@@ -463,7 +466,7 @@ SELECT
 WHERE NOT EXISTS (SELECT 1 FROM rules WHERE id = 'rule-001');
 
 -- Insert sample rule conditions
-INSERT INTO rule_conditions (id, rule_id, type, device_id, metric, operator, value)
+INSERT INTO rule_conditions (id, rule_id, type, device_id, metric, operator, condition_value)
 SELECT 
     'condition-001',
     'rule-001',

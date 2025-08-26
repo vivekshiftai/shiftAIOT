@@ -27,7 +27,8 @@ public interface DeviceDocumentationRepository extends JpaRepository<DeviceDocum
     @Query("SELECT d FROM DeviceDocumentation d WHERE d.deviceId IN (SELECT dev.id FROM Device dev WHERE dev.organizationId = :organizationId) AND d.documentType = :documentType")
     List<DeviceDocumentation> findByOrganizationIdAndDocumentType(@Param("organizationId") String organizationId, @Param("documentType") String documentType);
     
-    Optional<DeviceDocumentation> findByIdAndDeviceOrganizationId(String id, String organizationId);
+    @Query("SELECT d FROM DeviceDocumentation d WHERE d.id = :id AND d.deviceId IN (SELECT dev.id FROM Device dev WHERE dev.organizationId = :organizationId)")
+    Optional<DeviceDocumentation> findByIdAndDeviceOrganizationId(@Param("id") String id, @Param("organizationId") String organizationId);
     
     @Query("SELECT COUNT(d) FROM DeviceDocumentation d WHERE d.deviceId = :deviceId")
     long countByDeviceId(@Param("deviceId") String deviceId);

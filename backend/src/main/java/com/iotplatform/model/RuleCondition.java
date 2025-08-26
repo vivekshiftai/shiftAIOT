@@ -21,6 +21,7 @@ public class RuleCondition {
     @Enumerated(EnumType.STRING)
     private Operator operator;
 
+    @Column(name = "condition_value")
     private String value;
 
     @Enumerated(EnumType.STRING)
