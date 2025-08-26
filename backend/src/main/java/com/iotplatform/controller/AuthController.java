@@ -17,6 +17,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 
 import com.iotplatform.dto.JwtResponse;
 import com.iotplatform.dto.LoginRequest;
@@ -26,10 +27,14 @@ import com.iotplatform.model.User;
 import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.security.JwtTokenProvider;
 import com.iotplatform.service.AuthService;
+import com.iotplatform.repository.UserRepository;
 
 import jakarta.validation.Valid;
 
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import jakarta.servlet.http.HttpServletRequest;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -46,6 +51,9 @@ public class AuthController {
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
@@ -138,51 +146,13 @@ public class AuthController {
                 return ResponseEntity.status(401).body("Invalid token - cannot extract user information");
             }
             
-            // Extract user information from the token instead of querying database
-            String userId = jwtTokenProvider.getUserIdFromToken(refreshRequest.getToken());
-            String userRole = jwtTokenProvider.getUserRoleFromToken(refreshRequest.getToken());
-            String organizationId = jwtTokenProvider.getOrganizationIdFromToken(refreshRequest.getToken());
-            String userFullName = jwtTokenProvider.getUserFullNameFromToken(refreshRequest.getToken());
+            logger.info("🔄 Token refresh requested for user: {}", username);
             
-            // Debug logging to see what's extracted from token
-            logger.info("Token extraction debug - username: {}, userId: {}, userRole: {}, organizationId: {}, userFullName: {}", 
-                       username, userId, userRole, organizationId, userFullName);
-            
-            User user;
-            
-            // Validate required fields
-            if (userId == null || userRole == null || organizationId == null) {
-                logger.warn("Missing required user information in token for user: {}, attempting database lookup as fallback", username);
-                
-                // Fallback to database lookup for old tokens
-                User userFromDb = authService.findUserByEmail(username);
-                if (userFromDb == null) {
-                    logger.error("User not found in database for username: {}", username);
-                    return ResponseEntity.status(401).body("User not found");
-                }
-                
-                // Use database user information
-                user = userFromDb;
-                logger.info("Using database user information for token refresh: {}", username);
-            } else {
-                // Create a simple user object from token data
-                user = new User();
-                user.setId(userId);
-                user.setEmail(username);
-                user.setRole(User.Role.valueOf(userRole));
-                user.setOrganizationId(organizationId);
-                
-                // Handle userFullName with null check and fallback
-                if (userFullName != null && !userFullName.trim().isEmpty()) {
-                    String[] nameParts = userFullName.trim().split(" ", 2);
-                    user.setFirstName(nameParts[0]);
-                    user.setLastName(nameParts.length > 1 ? nameParts[1] : "");
-                } else {
-                    // Fallback to username if full name is not available
-                    user.setFirstName(username.split("@")[0]); // Use part before @ as first name
-                    user.setLastName("");
-                    logger.warn("User full name not found in token for user: {}, using fallback", username);
-                }
+            // Get user from database - must exist
+            User user = authService.findUserByEmail(username);
+            if (user == null) {
+                logger.error("❌ User not found in database for: {}", username);
+                return ResponseEntity.status(401).body("User not found in database: " + username);
             }
             
             // Create authentication object using CustomUserDetails as principal
@@ -194,7 +164,7 @@ public class AuthController {
             String newJwt = jwtTokenProvider.generateToken(authentication);
             String newRefreshToken = jwtTokenProvider.generateRefreshToken(authentication);
             
-            logger.info("Token refreshed successfully for user: {} using token validation only", username);
+            logger.info("✅ Token refreshed successfully for user: {}", username);
             
             return ResponseEntity.ok(new JwtResponse(
                     newJwt,
@@ -206,7 +176,7 @@ public class AuthController {
                     newRefreshToken
             ));
         } catch (Exception e) {
-            logger.error("Token refresh failed: {}", e.getMessage());
+            logger.error("❌ Token refresh failed: {}", e.getMessage());
             return ResponseEntity.status(401).body("Token refresh failed: " + e.getMessage());
         }
     }
@@ -215,6 +185,189 @@ public class AuthController {
     public ResponseEntity<?> refreshTokenApi(@RequestBody RefreshTokenRequest refreshRequest) {
         // Delegate to the existing refresh method for consistency
         return refreshToken(refreshRequest);
+    }
+
+    @GetMapping("/api/auth/debug/users")
+    public ResponseEntity<?> debugUsers() {
+        try {
+            List<User> users = userRepository.findAll();
+            List<Map<String, Object>> userList = users.stream()
+                .map(user -> Map.of(
+                    "id", user.getId(),
+                    "email", user.getEmail(),
+                    "firstName", user.getFirstName(),
+                    "lastName", user.getLastName(),
+                    "role", user.getRole().name(),
+                    "organizationId", user.getOrganizationId(),
+                    "enabled", user.isEnabled(),
+                    "createdAt", user.getCreatedAt(),
+                    "lastLogin", user.getLastLogin()
+                ))
+                .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "totalUsers", userList.size(),
+                "users", userList
+            ));
+        } catch (Exception e) {
+            logger.error("Error fetching users for debug: {}", e.getMessage());
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "error", "Failed to fetch users: " + e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/api/auth/debug/current-user")
+    public ResponseEntity<?> debugCurrentUser() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            
+            if (authentication == null) {
+                return ResponseEntity.ok(Map.of(
+                    "success", false,
+                    "message", "No authentication found in SecurityContext",
+                    "authentication", null
+                ));
+            }
+            
+            Map<String, Object> authInfo = Map.of(
+                "authenticated", authentication.isAuthenticated(),
+                "principal", authentication.getPrincipal() != null ? authentication.getPrincipal().toString() : "null",
+                "authorities", authentication.getAuthorities().stream()
+                    .map(Object::toString)
+                    .collect(Collectors.toList()),
+                "details", authentication.getDetails() != null ? authentication.getDetails().toString() : "null",
+                "name", authentication.getName() != null ? authentication.getName() : "null"
+            );
+            
+            // If it's a CustomUserDetails, add more information
+            if (authentication.getPrincipal() instanceof CustomUserDetails) {
+                CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+                User user = userDetails.getUser();
+                
+                Map<String, Object> userInfo = Map.of(
+                    "userId", user.getId(),
+                    "email", user.getEmail(),
+                    "firstName", user.getFirstName(),
+                    "lastName", user.getLastName(),
+                    "role", user.getRole().name(),
+                    "organizationId", user.getOrganizationId(),
+                    "enabled", user.isEnabled(),
+                    "createdAt", user.getCreatedAt(),
+                    "lastLogin", user.getLastLogin()
+                );
+                
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Current user information",
+                    "authentication", authInfo,
+                    "user", userInfo
+                ));
+            }
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Authentication found but not CustomUserDetails",
+                "authentication", authInfo
+            ));
+            
+        } catch (Exception e) {
+            logger.error("Error getting current user debug info: {}", e.getMessage());
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "error", "Failed to get current user info: " + e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/api/auth/debug/token-info")
+    public ResponseEntity<?> debugTokenInfo(HttpServletRequest request) {
+        try {
+            String bearerToken = request.getHeader("Authorization");
+            Map<String, Object> tokenInfo = new java.util.HashMap<>();
+            
+            if (bearerToken == null || !bearerToken.startsWith("Bearer ")) {
+                tokenInfo.put("tokenPresent", false);
+                tokenInfo.put("message", "No Bearer token found in Authorization header");
+            } else {
+                String token = bearerToken.substring(7);
+                tokenInfo.put("tokenPresent", true);
+                tokenInfo.put("tokenLength", token.length());
+                tokenInfo.put("tokenSample", token.length() > 50 ? token.substring(0, 50) + "..." : token);
+                
+                // Try to extract information from token
+                try {
+                    String username = jwtTokenProvider.getUsernameFromToken(token);
+                    String userId = jwtTokenProvider.getUserIdFromToken(token);
+                    String userRole = jwtTokenProvider.getUserRoleFromToken(token);
+                    String organizationId = jwtTokenProvider.getOrganizationIdFromToken(token);
+                    String userFullName = jwtTokenProvider.getUserFullNameFromToken(token);
+                    boolean isValid = jwtTokenProvider.validateToken(token);
+                    boolean isExpired = jwtTokenProvider.isTokenExpired(token);
+                    
+                    tokenInfo.put("username", username);
+                    tokenInfo.put("userId", userId);
+                    tokenInfo.put("userRole", userRole);
+                    tokenInfo.put("organizationId", organizationId);
+                    tokenInfo.put("userFullName", userFullName);
+                    tokenInfo.put("isValid", isValid);
+                    tokenInfo.put("isExpired", isExpired);
+                    
+                    // Try to load user from database
+                    if (username != null) {
+                        try {
+                            User user = userRepository.findByEmail(username).orElse(null);
+                            if (user != null) {
+                                tokenInfo.put("userInDatabase", true);
+                                tokenInfo.put("userEnabled", user.isEnabled());
+                                tokenInfo.put("userRoleInDb", user.getRole().name());
+                                tokenInfo.put("userOrgInDb", user.getOrganizationId());
+                            } else {
+                                tokenInfo.put("userInDatabase", false);
+                                tokenInfo.put("userEnabled", null);
+                                tokenInfo.put("userRoleInDb", null);
+                                tokenInfo.put("userOrgInDb", null);
+                            }
+                        } catch (Exception e) {
+                            tokenInfo.put("userInDatabase", "error");
+                            tokenInfo.put("databaseError", e.getMessage());
+                        }
+                    }
+                    
+                } catch (Exception e) {
+                    tokenInfo.put("tokenParsingError", e.getMessage());
+                }
+            }
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "tokenInfo", tokenInfo
+            ));
+            
+        } catch (Exception e) {
+            logger.error("Error getting token debug info: {}", e.getMessage());
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "error", "Failed to get token info: " + e.getMessage()
+            ));
+        }
+    }
+
+    @PostMapping("/api/auth/logout")
+    public ResponseEntity<?> logout() {
+        // This endpoint helps users logout and clear their tokens
+        return ResponseEntity.ok(Map.of(
+            "message", "Logout successful. Please clear your browser's local storage and login again.",
+            "action", "Clear localStorage and login with existing user credentials",
+            "loginEndpoint", "/auth/signin",
+            "loginMethod", "POST",
+            "exampleLogin", Map.of(
+                "email", "user@shiftaiot.com",
+                "password", "user123"
+            )
+        ));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
