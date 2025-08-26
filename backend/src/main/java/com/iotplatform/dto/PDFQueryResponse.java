@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.List;
 
 /**
  * Response from PDF query operation.
@@ -28,4 +29,10 @@ public class PDFQueryResponse {
     
     @JsonProperty("processing_time")
     private String processingTime;
+    
+    @JsonProperty("images")
+    private List<PDFProcessingDTOs.PDFImage> images;
+    
+    @JsonProperty("tables")
+    private List<String> tables;
 }

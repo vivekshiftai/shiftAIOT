@@ -153,6 +153,8 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             
             log.info("PDF query completed successfully for document: {}", request.getPdfName());
             
+
+            
             return queryResponse;
 
         } catch (Exception e) {
@@ -193,6 +195,8 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             
             log.info("PDF query with device context completed successfully for document: {} device: {}", 
                 request.getPdfName(), deviceId);
+            
+
             
             return queryResponse;
 

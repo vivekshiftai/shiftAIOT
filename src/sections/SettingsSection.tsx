@@ -489,8 +489,8 @@ export const SettingsSection: React.FC = () => {
           {activeTab === 'notifications' && renderNotificationsTab()}
           {activeTab === 'dashboard' && renderDashboardTab()}
           {activeTab === 'conversation' && renderConversationTab()}
-          {activeTab === 'security' && renderSecurityTab()}
-          {activeTab === 'debug' && <AuthDebugger />}
+                     {activeTab === 'security' && renderSecurityTab()}
+           {activeTab === 'debug' && <AuthDebugger />}
         </div>
       </div>
     </div>

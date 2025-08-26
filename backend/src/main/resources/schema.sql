@@ -170,10 +170,14 @@ CREATE TABLE IF NOT EXISTS device_safety_precautions (
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS organization_id VARCHAR(255) NOT NULL DEFAULT 'default';
 
 -- Add new columns to device_safety_precautions table if they don't exist
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS type VARCHAR(50) NOT NULL DEFAULT 'warning';
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS about_reaction TEXT;
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS causes TEXT;
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS how_to_avoid TEXT;
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS safety_info TEXT;
+
+-- Update any existing records that might have NULL type values
+UPDATE device_safety_precautions SET type = 'warning' WHERE type IS NULL;
 
 -- Add new columns to device_documentation table for external PDF processing response
 ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS collection_name VARCHAR(255);
@@ -504,16 +508,18 @@ SELECT
 WHERE NOT EXISTS (SELECT 1 FROM device_maintenance WHERE id = 'maintenance-001');
 
 -- Insert sample safety precautions for device-001
-INSERT INTO device_safety_precautions (id, device_id, title, description, severity, category, recommended_action, is_active)
+INSERT INTO device_safety_precautions (id, device_id, title, description, type, severity, category, recommended_action, is_active, organization_id)
 SELECT 
     'safety-001',
     'device-001',
     'High Temperature Warning',
     'Device may reach high temperatures during operation',
+    'warning',
     'HIGH',
     'thermal_hazard',
     'Ensure proper ventilation and monitor temperature readings',
-    true
+    true,
+    'default'
 WHERE NOT EXISTS (SELECT 1 FROM device_safety_precautions WHERE id = 'safety-001');
 
 -- Insert default user account for testing

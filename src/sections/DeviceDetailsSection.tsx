@@ -123,7 +123,7 @@ export const DeviceDetailsSection: React.FC = () => {
   const [editedDevice, setEditedDevice] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-    const device = devices.find(d => d.id === deviceId);
+  const device = devices.find(d => d.id === deviceId);
 
   // Debug logging
   console.log('🔍 DeviceDetailsSection Debug:', {
@@ -133,12 +133,6 @@ export const DeviceDetailsSection: React.FC = () => {
     isInitialLoading,
     device: device
   });
-
-  // Show loading screen while initial data is being fetched
-  if (isInitialLoading) {
-    console.log('🔄 Showing initial loading screen');
-    return <TabLoadingScreen />;
-  }
 
   // Show loading if devices are still being loaded
   if (devices.length === 0) {
@@ -153,8 +147,14 @@ export const DeviceDetailsSection: React.FC = () => {
     return null;
   }
 
+  // Show loading screen while initial data is being fetched
+  if (isInitialLoading) {
+    console.log('🔄 Showing initial loading screen');
+    return <TabLoadingScreen />;
+  }
+
   useEffect(() => {
-    if (device) {
+    if (device && deviceId) {
       console.log('🚀 Starting data loading for device:', device.id);
       setIsInitialLoading(true);
       
@@ -180,8 +180,12 @@ export const DeviceDetailsSection: React.FC = () => {
         clearTimeout(timeoutId);
         setIsInitialLoading(false);
       });
+    } else if (deviceId && devices.length > 0) {
+      // Device not found but devices are loaded, stop loading
+      console.log('❌ Device not found in devices array, stopping loading');
+      setIsInitialLoading(false);
     }
-  }, [device?.id]);
+  }, [deviceId, devices.length, device?.id]);
 
   // Real-time data fetching
   const fetchRealTimeData = async () => {

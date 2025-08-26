@@ -42,7 +42,23 @@ export const DashboardSection: React.FC = () => {
       try {
         // Fetch upcoming maintenance tasks
         setMaintenanceLoading(true);
-        const maintenanceResponse = await maintenanceAPI.getUpcoming();
+        logInfo('Dashboard', 'Attempting to fetch maintenance data...');
+        
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Maintenance API timeout')), 10000); // 10 second timeout
+        });
+        
+        const maintenanceResponse = await Promise.race([
+          maintenanceAPI.getUpcoming(),
+          timeoutPromise
+        ]) as any;
+        
+        logInfo('Dashboard', 'Maintenance API response received', { 
+          status: maintenanceResponse.status,
+          data: maintenanceResponse.data 
+        });
+        
         setUpcomingMaintenance(maintenanceResponse.data?.upcomingMaintenance || []);
         setMaintenanceCount(maintenanceResponse.data?.totalCount || 0);
         logInfo('Dashboard', 'Maintenance data fetched successfully', { 
@@ -60,7 +76,19 @@ export const DashboardSection: React.FC = () => {
           upcomingMaintenance: 'Wrench icon'
         });
       } catch (error) {
-        logError('Dashboard', 'Failed to fetch upcoming maintenance', error instanceof Error ? error : new Error('Unknown error'));
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorDetails = error instanceof Error ? error.stack : 'No stack trace';
+        
+        logError('Dashboard', 'Failed to fetch upcoming maintenance', new Error(errorMessage));
+        
+        console.error('Maintenance API Error Details:', {
+          message: errorMessage,
+          details: errorDetails,
+          error: error,
+          timestamp: new Date().toISOString(),
+          endpoint: '/api/devices/maintenance/upcoming'
+        });
+        
         setUpcomingMaintenance([]);
         setMaintenanceCount(0);
       } finally {
@@ -242,8 +270,8 @@ export const DashboardSection: React.FC = () => {
           />
                   <StatsCard
             title="Total Maintenance"
-            value={metrics.totalMaintenance}
-            subtitle={`${metrics.pendingMaintenance} pending`}
+            value={maintenanceLoading ? '...' : (metrics.totalMaintenance > 0 ? metrics.totalMaintenance : '0')}
+            subtitle={maintenanceLoading ? 'Loading...' : (metrics.totalMaintenance > 0 ? `${metrics.pendingMaintenance} pending` : 'No maintenance tasks')}
             icon={Wrench}
             color="yellow"
             // Removed onClick handler - no longer clickable
