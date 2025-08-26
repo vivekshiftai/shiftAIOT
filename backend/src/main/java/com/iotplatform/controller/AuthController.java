@@ -144,14 +144,46 @@ public class AuthController {
             String organizationId = jwtTokenProvider.getOrganizationIdFromToken(refreshRequest.getToken());
             String userFullName = jwtTokenProvider.getUserFullNameFromToken(refreshRequest.getToken());
             
-            // Create a simple user object from token data
-            User user = new User();
-            user.setId(userId);
-            user.setEmail(username);
-            user.setRole(User.Role.valueOf(userRole));
-            user.setOrganizationId(organizationId);
-            user.setFirstName(userFullName.split(" ")[0]);
-            user.setLastName(userFullName.split(" ").length > 1 ? userFullName.split(" ")[1] : "");
+            // Debug logging to see what's extracted from token
+            logger.info("Token extraction debug - username: {}, userId: {}, userRole: {}, organizationId: {}, userFullName: {}", 
+                       username, userId, userRole, organizationId, userFullName);
+            
+            User user;
+            
+            // Validate required fields
+            if (userId == null || userRole == null || organizationId == null) {
+                logger.warn("Missing required user information in token for user: {}, attempting database lookup as fallback", username);
+                
+                // Fallback to database lookup for old tokens
+                User userFromDb = authService.findUserByEmail(username);
+                if (userFromDb == null) {
+                    logger.error("User not found in database for username: {}", username);
+                    return ResponseEntity.status(401).body("User not found");
+                }
+                
+                // Use database user information
+                user = userFromDb;
+                logger.info("Using database user information for token refresh: {}", username);
+            } else {
+                // Create a simple user object from token data
+                user = new User();
+                user.setId(userId);
+                user.setEmail(username);
+                user.setRole(User.Role.valueOf(userRole));
+                user.setOrganizationId(organizationId);
+                
+                // Handle userFullName with null check and fallback
+                if (userFullName != null && !userFullName.trim().isEmpty()) {
+                    String[] nameParts = userFullName.trim().split(" ", 2);
+                    user.setFirstName(nameParts[0]);
+                    user.setLastName(nameParts.length > 1 ? nameParts[1] : "");
+                } else {
+                    // Fallback to username if full name is not available
+                    user.setFirstName(username.split("@")[0]); // Use part before @ as first name
+                    user.setLastName("");
+                    logger.warn("User full name not found in token for user: {}, using fallback", username);
+                }
+            }
             
             // Create authentication object using CustomUserDetails as principal
             CustomUserDetails userDetails = new CustomUserDetails(user);
