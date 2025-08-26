@@ -134,71 +134,7 @@ export const DeviceDetailsSection: React.FC = () => {
     device: device
   });
 
-  // Clear loading state if device is found and we're still loading
-  useEffect(() => {
-    if (device && deviceId && isInitialLoading) {
-      console.log('🔄 Device found, clearing initial loading state');
-      setIsInitialLoading(false);
-    }
-  }, [device, deviceId, isInitialLoading]);
-
-  // Main data loading effect
-  useEffect(() => {
-    console.log('🔄 useEffect triggered with:', { deviceId, devicesLength: devices.length, deviceFound: !!device });
-    
-    if (device && deviceId) {
-      console.log('🚀 Starting data loading for device:', device.id);
-      setIsInitialLoading(true);
-      
-      // Add timeout to prevent infinite loading
-      const timeoutId = setTimeout(() => {
-        console.warn('⚠️ Data loading timeout, forcing completion');
-        setIsInitialLoading(false);
-      }, 15000); // 15 second timeout
-      
-      Promise.allSettled([
-        fetchDocumentationInfo(),
-        loadDevicePDFs(),
-        fetchRealTimeData()
-      ]).then((results) => {
-        console.log('📊 Data loading results:', results);
-        results.forEach((result, index) => {
-          if (result.status === 'rejected') {
-            console.error(`❌ Data loading failed for index ${index}:`, result.reason);
-          }
-        });
-      }).finally(() => {
-        console.log('✅ Data loading completed');
-        clearTimeout(timeoutId);
-        setIsInitialLoading(false);
-      });
-    } else if (deviceId && devices.length > 0) {
-      // Device not found but devices are loaded, stop loading
-      console.log('❌ Device not found in devices array, stopping loading');
-      setIsInitialLoading(false);
-    }
-  }, [deviceId, devices.length, device]);
-
-  // Show loading if devices are still being loaded
-  if (devices.length === 0) {
-    console.log('🔄 Devices array is empty, showing loading screen');
-    return <TabLoadingScreen />;
-  }
-
-  // Redirect if device not found
-  if (!device) {
-    console.log('❌ Device not found, redirecting to devices list');
-    navigate('/devices');
-    return null;
-  }
-
-  // Show loading screen while initial data is being fetched
-  if (isInitialLoading) {
-    console.log('🔄 Showing initial loading screen');
-    return <TabLoadingScreen />;
-  }
-
-  // Real-time data fetching
+  // Function definitions - must be before useEffect that calls them
   const fetchRealTimeData = async () => {
     if (!device) return;
     
@@ -263,8 +199,6 @@ export const DeviceDetailsSection: React.FC = () => {
       setIsRealTimeLoading(false);
     }
   };
-
-
 
   const loadDevicePDFs = async () => {
     if (!device) return;
@@ -342,13 +276,6 @@ export const DeviceDetailsSection: React.FC = () => {
     }
   };
 
-  const handleTabChange = (tabId: string) => {
-    setIsTabLoading(true);
-    setActiveTab(tabId);
-    // Simulate loading for better UX
-    setTimeout(() => setIsTabLoading(false), 100);
-  };
-
   const fetchDocumentationInfo = async () => {
     if (!device) return;
     try {
@@ -366,6 +293,77 @@ export const DeviceDetailsSection: React.FC = () => {
       // Set empty documentation info on error
       setDocumentationInfo(null);
     }
+  };
+
+  // Clear loading state if device is found and we're still loading
+  useEffect(() => {
+    if (device && deviceId && isInitialLoading) {
+      console.log('🔄 Device found, clearing initial loading state');
+      setIsInitialLoading(false);
+    }
+  }, [device, deviceId, isInitialLoading]);
+
+  // Main data loading effect
+  useEffect(() => {
+    console.log('🔄 useEffect triggered with:', { deviceId, devicesLength: devices.length, deviceFound: !!device });
+    
+    if (device && deviceId) {
+      console.log('🚀 Starting data loading for device:', device.id);
+      setIsInitialLoading(true);
+      
+      // Add timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.warn('⚠️ Data loading timeout, forcing completion');
+        setIsInitialLoading(false);
+      }, 15000); // 15 second timeout
+      
+      Promise.allSettled([
+        fetchDocumentationInfo(),
+        loadDevicePDFs(),
+        fetchRealTimeData()
+      ]).then((results) => {
+        console.log('📊 Data loading results:', results);
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            console.error(`❌ Data loading failed for index ${index}:`, result.reason);
+          }
+        });
+      }).finally(() => {
+        console.log('✅ Data loading completed');
+        clearTimeout(timeoutId);
+        setIsInitialLoading(false);
+      });
+    } else if (deviceId && devices.length > 0) {
+      // Device not found but devices are loaded, stop loading
+      console.log('❌ Device not found in devices array, stopping loading');
+      setIsInitialLoading(false);
+    }
+  }, [deviceId, devices.length, device]);
+
+  // Show loading if devices are still being loaded
+  if (devices.length === 0) {
+    console.log('🔄 Devices array is empty, showing loading screen');
+    return <TabLoadingScreen />;
+  }
+
+  // Redirect if device not found
+  if (!device) {
+    console.log('❌ Device not found, redirecting to devices list');
+    navigate('/devices');
+    return null;
+  }
+
+  // Show loading screen while initial data is being fetched
+  if (isInitialLoading) {
+    console.log('🔄 Showing initial loading screen');
+    return <TabLoadingScreen />;
+  }
+
+  const handleTabChange = (tabId: string) => {
+    setIsTabLoading(true);
+    setActiveTab(tabId);
+    // Simulate loading for better UX
+    setTimeout(() => setIsTabLoading(false), 100);
   };
 
   const downloadDocumentation = async (type: 'manual' | 'datasheet' | 'certificate') => {
