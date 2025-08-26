@@ -50,5 +50,11 @@ public class MaintenanceGenerationResponse {
         
         @JsonProperty("required_tools")
         private String requiredTools;
+        
+        @JsonProperty("category")
+        private String category;
+        
+        @JsonProperty("safety_notes")
+        private String safetyNotes;
     }
 }

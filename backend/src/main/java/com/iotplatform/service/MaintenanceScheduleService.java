@@ -201,18 +201,29 @@ public class MaintenanceScheduleService {
     
     /**
      * Create maintenance tasks from PDF with enhanced data processing and validation.
+     * Skips tasks without task_name and uses default values for missing fields.
      */
     public void createMaintenanceFromPDF(List<MaintenanceGenerationResponse.MaintenanceTask> maintenanceTasks, String deviceId, String organizationId) {
         log.info("Creating maintenance tasks from PDF for device: {} in organization: {}", deviceId, organizationId);
         
+        int processedCount = 0;
+        int skippedCount = 0;
+        
         for (MaintenanceGenerationResponse.MaintenanceTask maintenanceData : maintenanceTasks) {
             try {
+                // Validate required fields - skip if task_name is missing
+                if (maintenanceData.getTaskName() == null || maintenanceData.getTaskName().trim().isEmpty()) {
+                    log.warn("Skipping maintenance task - task_name is missing or empty");
+                    skippedCount++;
+                    continue;
+                }
+                
                 DeviceMaintenance maintenance = new DeviceMaintenance();
                 maintenance.setId(UUID.randomUUID().toString());
                 maintenance.setDeviceName("Device " + deviceId);
                 maintenance.setOrganizationId(organizationId);
                 
-                // Enhanced data processing and validation
+                // Enhanced data processing and validation with default values
                 maintenance.setTaskName(processTaskName(maintenanceData.getTaskName()));
                 maintenance.setDescription(processDescription(maintenanceData.getDescription()));
                 maintenance.setFrequency(processFrequency(maintenanceData.getFrequency()));
@@ -232,17 +243,21 @@ public class MaintenanceScheduleService {
                 maintenance.setUpdatedAt(LocalDateTime.now());
                 
                 deviceMaintenanceRepository.save(maintenance);
+                processedCount++;
                 
                 log.info("Created maintenance task: '{}' with next maintenance date: {} (frequency: {})", 
                         maintenance.getTaskName(), nextMaintenance, maintenance.getFrequency());
                         
             } catch (Exception e) {
-                log.error("Failed to create maintenance task from PDF data: {}", maintenanceData.getTaskName(), e);
+                log.error("Failed to create maintenance task from PDF data: {}", 
+                    maintenanceData.getTaskName() != null ? maintenanceData.getTaskName() : "Unknown", e);
+                skippedCount++;
                 // Continue with next task instead of failing completely
             }
         }
         
-        log.info("Successfully created {} maintenance tasks from PDF for device: {}", maintenanceTasks.size(), deviceId);
+        log.info("Maintenance task creation completed for device: {} - Processed: {}, Skipped: {}", 
+            deviceId, processedCount, skippedCount);
     }
     
     /**
@@ -284,8 +299,8 @@ public class MaintenanceScheduleService {
      */
     public LocalDate calculateNextMaintenanceDate(String frequency) {
         if (frequency == null || frequency.trim().isEmpty()) {
-            log.warn("Frequency is null or empty, defaulting to monthly");
-            return LocalDate.now().plusMonths(1);
+            log.warn("Frequency is null or empty, defaulting to daily");
+            return LocalDate.now().plusDays(1);
         }
         
         String normalizedFrequency = frequency.toLowerCase().trim();
@@ -340,12 +355,12 @@ public class MaintenanceScheduleService {
                 return today.plusDays(days);
             }
             
-            log.warn("Unknown frequency format: '{}', defaulting to monthly", frequency);
-            return today.plusMonths(1);
+            log.warn("Unknown frequency format: '{}', defaulting to daily", frequency);
+            return today.plusDays(1);
             
         } catch (Exception e) {
             log.error("Error calculating next maintenance date for frequency: {}", frequency, e);
-            return today.plusMonths(1);
+            return today.plusDays(1);
         }
     }
     
@@ -451,34 +466,72 @@ public class MaintenanceScheduleService {
     
     /**
      * Process and normalize frequency string
+     * Handles numeric string values and converts them to descriptive frequency strings.
      */
     private String processFrequency(String frequency) {
         if (frequency == null || frequency.trim().isEmpty()) {
-            return "monthly";
+            log.debug("Frequency not provided, defaulting to 'daily'");
+            return "daily";
         }
         
-        String processed = frequency.trim().toLowerCase();
+        String processed = frequency.trim();
         
-        // Normalize common frequency patterns
-        if (processed.contains("every") && processed.contains("hour")) {
-            return processed; // Keep as is for hour-based frequencies
-        } else if (processed.contains("daily") || processed.contains("every day")) {
+        // First, try to parse as numeric string (new format)
+        try {
+            int numericFreq = Integer.parseInt(processed);
+            String descriptiveFreq = convertNumericFrequencyToDescriptive(numericFreq);
+            log.debug("Converted numeric frequency {} to descriptive: {}", numericFreq, descriptiveFreq);
+            return descriptiveFreq;
+        } catch (NumberFormatException e) {
+            // If not numeric, process as text (legacy format)
+            log.debug("Frequency is not numeric, processing as text: {}", processed);
+        }
+        
+        String normalizedFreq = processed.toLowerCase();
+        
+        // Normalize common frequency patterns (legacy text format)
+        if (normalizedFreq.contains("every") && normalizedFreq.contains("hour")) {
+            return normalizedFreq; // Keep as is for hour-based frequencies
+        } else if (normalizedFreq.contains("daily") || normalizedFreq.contains("every day")) {
             return "daily";
-        } else if (processed.contains("weekly") || processed.contains("every week")) {
+        } else if (normalizedFreq.contains("weekly") || normalizedFreq.contains("every week")) {
             return "weekly";
-        } else if (processed.contains("monthly") || processed.contains("every month")) {
+        } else if (normalizedFreq.contains("monthly") || normalizedFreq.contains("every month")) {
             return "monthly";
-        } else if (processed.contains("quarterly") || processed.contains("every 3 months")) {
+        } else if (normalizedFreq.contains("quarterly") || normalizedFreq.contains("every 3 months")) {
             return "quarterly";
-        } else if (processed.contains("semi-annual") || processed.contains("every 6 months")) {
+        } else if (normalizedFreq.contains("semi-annual") || normalizedFreq.contains("every 6 months")) {
             return "semi-annual";
-        } else if (processed.contains("annual") || processed.contains("yearly") || processed.contains("every year")) {
+        } else if (normalizedFreq.contains("annual") || normalizedFreq.contains("yearly") || normalizedFreq.contains("every year")) {
             return "annual";
-        } else if (processed.contains("bi-annual") || processed.contains("every 2 years")) {
+        } else if (normalizedFreq.contains("bi-annual") || normalizedFreq.contains("every 2 years")) {
             return "bi-annual";
         }
         
         return processed; // Return as is if no pattern matches
+    }
+
+    /**
+     * Convert numeric frequency values to descriptive frequency strings.
+     */
+    private String convertNumericFrequencyToDescriptive(int numericFreq) {
+        switch (numericFreq) {
+            case 1:
+                return "daily";
+            case 7:
+                return "weekly";
+            case 30:
+                return "monthly";
+            case 90:
+                return "quarterly";
+            case 180:
+                return "semi-annual";
+            case 365:
+                return "annual";
+            default:
+                log.warn("Unknown numeric frequency: {}, defaulting to daily", numericFreq);
+                return "daily";
+        }
     }
     
     /**

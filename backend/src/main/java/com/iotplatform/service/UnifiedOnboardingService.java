@@ -225,31 +225,71 @@ public class UnifiedOnboardingService {
     }
 
     /**
-     * Store maintenance items in database
+     * Store maintenance items in database with validation and default values.
+     * Skips tasks without task_name and uses default values for missing fields.
      */
     private void storeMaintenance(List<MaintenanceGenerationResponse.MaintenanceTask> maintenanceItems, String deviceId, String organizationId) {
         try {
             List<DeviceMaintenance> maintenanceToSave = new ArrayList<>();
+            int processedCount = 0;
+            int skippedCount = 0;
             
             for (var maintenanceData : maintenanceItems) {
-                DeviceMaintenance maintenance = new DeviceMaintenance();
-                maintenance.setId(UUID.randomUUID().toString());
-                maintenance.setOrganizationId(organizationId);
-                maintenance.setComponentName(maintenanceData.getTaskName());
-                maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
-                maintenance.setFrequency(maintenanceData.getFrequency());
-                maintenance.setDescription(maintenanceData.getDescription());
-                maintenance.setLastMaintenance(LocalDate.now());
-                maintenance.setNextMaintenance(calculateNextMaintenanceDate(LocalDate.now(), maintenanceData.getFrequency()));
-                maintenance.setStatus(DeviceMaintenance.Status.PENDING);
-                maintenance.setCreatedAt(LocalDateTime.now());
-                maintenance.setUpdatedAt(LocalDateTime.now());
-                
-                maintenanceToSave.add(maintenance);
+                try {
+                    // Validate required fields - skip if task_name is missing
+                    if (maintenanceData.getTaskName() == null || maintenanceData.getTaskName().trim().isEmpty()) {
+                        log.warn("Skipping maintenance task - task_name is missing or empty");
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    DeviceMaintenance maintenance = new DeviceMaintenance();
+                    maintenance.setId(UUID.randomUUID().toString());
+                    maintenance.setOrganizationId(organizationId);
+                    
+                    // Set required fields with validation
+                    maintenance.setTaskName(maintenanceData.getTaskName().trim());
+                    maintenance.setComponentName(maintenanceData.getTaskName().trim());
+                    maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
+                    
+                    // Process optional fields with default values
+                    maintenance.setFrequency(processFrequencyWithDefault(maintenanceData.getFrequency()));
+                    maintenance.setDescription(processDescriptionWithDefault(maintenanceData.getDescription()));
+                    maintenance.setPriority(processPriorityWithDefault(maintenanceData.getPriority()));
+                    maintenance.setEstimatedDuration(processDurationWithDefault(maintenanceData.getEstimatedDuration()));
+                    maintenance.setRequiredTools(processToolsWithDefault(maintenanceData.getRequiredTools()));
+                    maintenance.setSafetyNotes(processSafetyNotesWithDefault(maintenanceData.getSafetyNotes()));
+                    maintenance.setComponentName(processCategoryWithDefault(maintenanceData.getCategory()));
+                    
+                    // Set dates
+                    maintenance.setLastMaintenance(LocalDate.now());
+                    maintenance.setNextMaintenance(calculateNextMaintenanceDate(LocalDate.now(), maintenance.getFrequency()));
+                    maintenance.setStatus(DeviceMaintenance.Status.PENDING);
+                    maintenance.setCreatedAt(LocalDateTime.now());
+                    maintenance.setUpdatedAt(LocalDateTime.now());
+                    
+                    maintenanceToSave.add(maintenance);
+                    processedCount++;
+                    
+                    log.debug("Processed maintenance task: {} with frequency: {}", 
+                        maintenance.getTaskName(), maintenance.getFrequency());
+                        
+                } catch (Exception e) {
+                    log.error("Failed to process maintenance task: {}", 
+                        maintenanceData.getTaskName() != null ? maintenanceData.getTaskName() : "Unknown", e);
+                    skippedCount++;
+                    // Continue with next task instead of failing completely
+                }
             }
             
-            maintenanceRepository.saveAll(maintenanceToSave);
-            log.info("Successfully stored {} maintenance items for device: {}", maintenanceToSave.size(), deviceId);
+            if (!maintenanceToSave.isEmpty()) {
+                maintenanceRepository.saveAll(maintenanceToSave);
+                log.info("Successfully stored {} maintenance items for device: {} (skipped: {})", 
+                    processedCount, deviceId, skippedCount);
+            } else {
+                log.warn("No valid maintenance items to store for device: {} (all {} items were skipped)", 
+                    deviceId, maintenanceItems.size());
+            }
             
         } catch (Exception e) {
             log.error("Error storing maintenance for device: {}", deviceId, e);
@@ -452,7 +492,7 @@ public class UnifiedOnboardingService {
             // Set default dates if parsing fails
             LocalDate today = LocalDate.now();
             maintenance.setLastMaintenance(today);
-            maintenance.setNextMaintenance(today.plusMonths(6)); // Default to 6 months
+            maintenance.setNextMaintenance(today.plusDays(1)); // Default to daily
         }
     }
 
@@ -461,7 +501,7 @@ public class UnifiedOnboardingService {
      */
     private LocalDate calculateNextMaintenanceDate(LocalDate lastMaintenance, String frequency) {
         if (frequency == null || frequency.isEmpty()) {
-            return lastMaintenance.plusMonths(6); // Default to 6 months
+            return lastMaintenance.plusDays(1); // Default to daily
         }
         
         String lowerFrequency = frequency.toLowerCase();
@@ -504,6 +544,150 @@ public class UnifiedOnboardingService {
         }
         
         // Default fallback
-        return lastMaintenance.plusMonths(6);
+        return lastMaintenance.plusDays(1);
+    }
+
+    /**
+     * Process frequency with default value "daily".
+     * Handles numeric string values and converts them to descriptive frequency strings.
+     */
+    private String processFrequencyWithDefault(String frequency) {
+        if (frequency == null || frequency.trim().isEmpty()) {
+            log.debug("Frequency not provided, defaulting to 'daily'");
+            return "daily";
+        }
+        String freq = frequency.trim();
+        if (freq.isEmpty()) {
+            log.debug("Frequency is empty, defaulting to 'daily'");
+            return "daily";
+        }
+        
+        // First, try to parse as numeric string (new format)
+        try {
+            int numericFreq = Integer.parseInt(freq);
+            String descriptiveFreq = convertNumericFrequencyToDescriptive(numericFreq);
+            log.debug("Converted numeric frequency {} to descriptive: {}", numericFreq, descriptiveFreq);
+            return descriptiveFreq;
+        } catch (NumberFormatException e) {
+            // If not numeric, process as text (legacy format)
+            log.debug("Frequency is not numeric, processing as text: {}", freq);
+        }
+        
+        // Normalize common frequency values (legacy text format)
+        String normalizedFreq = freq.toLowerCase();
+        if (normalizedFreq.contains("daily") || normalizedFreq.contains("every day")) {
+            return "daily";
+        } else if (normalizedFreq.contains("weekly") || normalizedFreq.contains("every week")) {
+            return "weekly";
+        } else if (normalizedFreq.contains("monthly") || normalizedFreq.contains("every month")) {
+            return "monthly";
+        } else if (normalizedFreq.contains("quarterly") || normalizedFreq.contains("every 3 months")) {
+            return "quarterly";
+        } else if (normalizedFreq.contains("semi-annual") || normalizedFreq.contains("every 6 months")) {
+            return "semi-annual";
+        } else if (normalizedFreq.contains("annual") || normalizedFreq.contains("yearly") || normalizedFreq.contains("every year")) {
+            return "annual";
+        } else if (normalizedFreq.contains("bi-annual") || normalizedFreq.contains("every 2 years")) {
+            return "bi-annual";
+        }
+        
+        // Return original value if not recognized
+        log.debug("Using original frequency value: {}", freq);
+        return freq;
+    }
+
+    /**
+     * Convert numeric frequency values to descriptive frequency strings.
+     */
+    private String convertNumericFrequencyToDescriptive(int numericFreq) {
+        switch (numericFreq) {
+            case 1:
+                return "daily";
+            case 7:
+                return "weekly";
+            case 30:
+                return "monthly";
+            case 90:
+                return "quarterly";
+            case 180:
+                return "semi-annual";
+            case 365:
+                return "annual";
+            default:
+                log.warn("Unknown numeric frequency: {}, defaulting to daily", numericFreq);
+                return "daily";
+        }
+    }
+
+    /**
+     * Process description with default value.
+     */
+    private String processDescriptionWithDefault(String description) {
+        if (description == null || description.trim().isEmpty()) {
+            return "Maintenance task for device component";
+        }
+        String desc = description.trim();
+        return desc.isEmpty() ? "Maintenance task for device component" : desc;
+    }
+
+    /**
+     * Process priority with default value MEDIUM.
+     */
+    private DeviceMaintenance.Priority processPriorityWithDefault(String priority) {
+        if (priority == null || priority.trim().isEmpty()) {
+            return DeviceMaintenance.Priority.MEDIUM;
+        }
+        String prio = priority.trim().toUpperCase();
+        
+        try {
+            return DeviceMaintenance.Priority.valueOf(prio);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid priority value: {}, defaulting to MEDIUM", prio);
+            return DeviceMaintenance.Priority.MEDIUM;
+        }
+    }
+
+    /**
+     * Process estimated duration with default value.
+     */
+    private String processDurationWithDefault(String duration) {
+        if (duration == null || duration.trim().isEmpty()) {
+            return "1 hour";
+        }
+        String dur = duration.trim();
+        return dur.isEmpty() ? "1 hour" : dur;
+    }
+
+    /**
+     * Process required tools with default value.
+     */
+    private String processToolsWithDefault(String tools) {
+        if (tools == null || tools.trim().isEmpty()) {
+            return "Standard maintenance tools";
+        }
+        String toolsStr = tools.trim();
+        return toolsStr.isEmpty() ? "Standard maintenance tools" : toolsStr;
+    }
+
+    /**
+     * Process safety notes with default value.
+     */
+    private String processSafetyNotesWithDefault(String safetyNotes) {
+        if (safetyNotes == null || safetyNotes.trim().isEmpty()) {
+            return "Follow standard safety procedures";
+        }
+        String notes = safetyNotes.trim();
+        return notes.isEmpty() ? "Follow standard safety procedures" : notes;
+    }
+
+    /**
+     * Process category with default value.
+     */
+    private String processCategoryWithDefault(String category) {
+        if (category == null || category.trim().isEmpty()) {
+            return "General";
+        }
+        String cat = category.trim();
+        return cat.isEmpty() ? "General" : cat;
     }
 }

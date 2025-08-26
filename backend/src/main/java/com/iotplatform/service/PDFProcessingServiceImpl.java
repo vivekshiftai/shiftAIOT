@@ -29,6 +29,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -531,37 +532,40 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                 maintenanceResponse.setSuccess(true);
                 maintenanceResponse.setProcessingTime((String) responseBody.get("processing_time"));
                 
-                // Convert maintenance tasks from external format to our format
+                // Convert maintenance tasks from external format to our format with validation and default values
                 List<Map<String, Object>> externalTasks = (List<Map<String, Object>>) responseBody.get("maintenance_tasks");
-                if (externalTasks != null) {
+                if (externalTasks != null && !externalTasks.isEmpty()) {
                     List<DeviceMaintenance> maintenanceTasks = new ArrayList<>();
-                    for (Map<String, Object> externalTask : externalTasks) {
-                        DeviceMaintenance maintenance = new DeviceMaintenance();
-                        maintenance.setTaskName((String) externalTask.get("task_name"));
-                        maintenance.setDescription((String) externalTask.get("description"));
-                        maintenance.setDeviceId(deviceId);
-                        maintenance.setOrganizationId(organizationId);
-                        maintenance.setStatus(DeviceMaintenance.Status.PENDING);
-                        maintenance.setCreatedAt(LocalDateTime.now());
-                        maintenance.setUpdatedAt(LocalDateTime.now());
-                        
-                        // Store maintenance task in database
-                        deviceMaintenanceRepository.save(maintenance);
-                        maintenanceTasks.add(maintenance);
-                    }
-                    // Convert to DTO format
                     List<MaintenanceGenerationResponse.MaintenanceTask> dtoTasks = new ArrayList<>();
-                    for (DeviceMaintenance maintenance : maintenanceTasks) {
-                        MaintenanceGenerationResponse.MaintenanceTask dtoTask = new MaintenanceGenerationResponse.MaintenanceTask();
-                        dtoTask.setTaskName(maintenance.getTaskName());
-                        dtoTask.setDescription(maintenance.getDescription());
-                        dtoTask.setFrequency(maintenance.getFrequency());
-                        dtoTask.setPriority(maintenance.getPriority() != null ? maintenance.getPriority().name() : "MEDIUM");
-                        dtoTask.setEstimatedDuration(maintenance.getEstimatedDuration());
-                        dtoTask.setRequiredTools(maintenance.getRequiredTools());
-                        dtoTasks.add(dtoTask);
+                    
+                    for (Map<String, Object> externalTask : externalTasks) {
+                        try {
+                            // Validate and process maintenance task with default values
+                            DeviceMaintenance maintenance = processMaintenanceTaskFromExternalResponse(externalTask, deviceId, organizationId);
+                            
+                            if (maintenance != null) {
+                                // Store maintenance task in database
+                                deviceMaintenanceRepository.save(maintenance);
+                                maintenanceTasks.add(maintenance);
+                                
+                                // Convert to DTO format
+                                MaintenanceGenerationResponse.MaintenanceTask dtoTask = convertToMaintenanceTaskDTO(maintenance);
+                                dtoTasks.add(dtoTask);
+                                
+                                log.debug("Successfully processed maintenance task: {}", maintenance.getTaskName());
+                            }
+                        } catch (Exception e) {
+                            log.warn("Failed to process maintenance task, skipping: {}", externalTask, e);
+                            // Continue processing other tasks instead of failing completely
+                        }
                     }
+                    
                     maintenanceResponse.setMaintenanceTasks(dtoTasks);
+                    log.info("Successfully processed {} out of {} maintenance tasks for device: {}", 
+                        dtoTasks.size(), externalTasks.size(), deviceId);
+                } else {
+                    log.warn("No maintenance tasks found in external service response for device: {}", deviceId);
+                    maintenanceResponse.setMaintenanceTasks(new ArrayList<>());
                 }
                 
                 log.info("Maintenance tasks generated and stored successfully for device: {}, tasks count: {}", 
@@ -955,5 +959,308 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             .fileSize(document.getFileSize())
             .status(document.getStatus().toString())
             .build();
+    }
+
+    /**
+     * Process and validate maintenance task from external service response with default values.
+     * Handles the actual external service response structure with 'task' field instead of 'task_name'.
+     * If task is missing, the task will be skipped.
+     */
+    private DeviceMaintenance processMaintenanceTaskFromExternalResponse(Map<String, Object> externalTask, String deviceId, String organizationId) {
+        // Validate required fields - external service uses 'task' field
+        String taskName = (String) externalTask.get("task");
+        if (taskName == null || taskName.trim().isEmpty()) {
+            log.warn("Skipping maintenance task - task field is missing or empty: {}", externalTask);
+            return null;
+        }
+
+        DeviceMaintenance maintenance = new DeviceMaintenance();
+        
+        // Set required fields with validation
+        maintenance.setTaskName(taskName.trim());
+        maintenance.setDeviceId(deviceId);
+        maintenance.setOrganizationId(organizationId);
+        
+        // Set default values for required fields
+        maintenance.setStatus(DeviceMaintenance.Status.PENDING);
+        maintenance.setCreatedAt(LocalDateTime.now());
+        maintenance.setUpdatedAt(LocalDateTime.now());
+        
+        // Process optional fields with default values from external response structure
+        maintenance.setDescription(processDescription(externalTask.get("description")));
+        maintenance.setFrequency(processFrequency(externalTask.get("frequency")));
+        maintenance.setPriority(processPriority(externalTask.get("priority")));
+        maintenance.setEstimatedDuration(processDuration(externalTask.get("estimated_duration")));
+        maintenance.setRequiredTools(processTools(externalTask.get("required_tools")));
+        maintenance.setSafetyNotes(processSafetyNotes(externalTask.get("safety_notes")));
+        maintenance.setComponentName(processComponentName(externalTask.get("category")));
+        maintenance.setMaintenanceType(processMaintenanceType(externalTask.get("maintenance_type")));
+        
+        // Calculate next maintenance date based on frequency
+        LocalDate nextMaintenance = calculateNextMaintenanceDate(maintenance.getFrequency());
+        maintenance.setNextMaintenance(nextMaintenance);
+        
+        // Set last maintenance to null (first time maintenance)
+        maintenance.setLastMaintenance(null);
+        
+        log.debug("Processed maintenance task: {} with frequency: {}, priority: {}", 
+            taskName, maintenance.getFrequency(), maintenance.getPriority());
+        
+        return maintenance;
+    }
+
+    /**
+     * Process and validate maintenance task from internal DTO format with default values.
+     * If task_name is missing, the task will be skipped.
+     */
+    private DeviceMaintenance processMaintenanceTask(Map<String, Object> externalTask, String deviceId, String organizationId) {
+        // Validate required fields
+        String taskName = (String) externalTask.get("task_name");
+        if (taskName == null || taskName.trim().isEmpty()) {
+            log.warn("Skipping maintenance task - task_name is missing or empty: {}", externalTask);
+            return null;
+        }
+
+        DeviceMaintenance maintenance = new DeviceMaintenance();
+        
+        // Set required fields with validation
+        maintenance.setTaskName(taskName.trim());
+        maintenance.setDeviceId(deviceId);
+        maintenance.setOrganizationId(organizationId);
+        
+        // Set default values for required fields
+        maintenance.setStatus(DeviceMaintenance.Status.PENDING);
+        maintenance.setCreatedAt(LocalDateTime.now());
+        maintenance.setUpdatedAt(LocalDateTime.now());
+        
+        // Process optional fields with default values
+        maintenance.setDescription(processDescription(externalTask.get("description")));
+        maintenance.setFrequency(processFrequency(externalTask.get("frequency")));
+        maintenance.setPriority(processPriority(externalTask.get("priority")));
+        maintenance.setEstimatedDuration(processDuration(externalTask.get("estimated_duration")));
+        maintenance.setRequiredTools(processTools(externalTask.get("required_tools")));
+        maintenance.setComponentName(processComponentName(externalTask.get("component_name")));
+        maintenance.setMaintenanceType(processMaintenanceType(externalTask.get("maintenance_type")));
+        
+        // Calculate next maintenance date based on frequency
+        LocalDate nextMaintenance = calculateNextMaintenanceDate(maintenance.getFrequency());
+        maintenance.setNextMaintenance(nextMaintenance);
+        
+        // Set last maintenance to null (first time maintenance)
+        maintenance.setLastMaintenance(null);
+        
+        log.debug("Processed maintenance task: {} with frequency: {}, priority: {}", 
+            taskName, maintenance.getFrequency(), maintenance.getPriority());
+        
+        return maintenance;
+    }
+
+    /**
+     * Convert DeviceMaintenance entity to DTO format.
+     */
+    private MaintenanceGenerationResponse.MaintenanceTask convertToMaintenanceTaskDTO(DeviceMaintenance maintenance) {
+        return MaintenanceGenerationResponse.MaintenanceTask.builder()
+            .taskName(maintenance.getTaskName())
+            .description(maintenance.getDescription())
+            .frequency(maintenance.getFrequency())
+            .priority(maintenance.getPriority() != null ? maintenance.getPriority().name() : "MEDIUM")
+            .estimatedDuration(maintenance.getEstimatedDuration())
+            .requiredTools(maintenance.getRequiredTools())
+            .category(maintenance.getComponentName())
+            .safetyNotes(maintenance.getSafetyNotes())
+            .build();
+    }
+
+    /**
+     * Process description with default value.
+     */
+    private String processDescription(Object description) {
+        if (description == null) {
+            return "Maintenance task for device component";
+        }
+        String desc = String.valueOf(description).trim();
+        return desc.isEmpty() ? "Maintenance task for device component" : desc;
+    }
+
+    /**
+     * Process frequency with default value "daily".
+     * Handles numeric string values and converts them to descriptive frequency strings.
+     */
+    private String processFrequency(Object frequency) {
+        if (frequency == null) {
+            log.debug("Frequency not provided, defaulting to 'daily'");
+            return "daily";
+        }
+        String freq = String.valueOf(frequency).trim();
+        if (freq.isEmpty()) {
+            log.debug("Frequency is empty, defaulting to 'daily'");
+            return "daily";
+        }
+        
+        // First, try to parse as numeric string (new format)
+        try {
+            int numericFreq = Integer.parseInt(freq);
+            String descriptiveFreq = convertNumericFrequencyToDescriptive(numericFreq);
+            log.debug("Converted numeric frequency {} to descriptive: {}", numericFreq, descriptiveFreq);
+            return descriptiveFreq;
+        } catch (NumberFormatException e) {
+            // If not numeric, process as text (legacy format)
+            log.debug("Frequency is not numeric, processing as text: {}", freq);
+        }
+        
+        // Normalize common frequency values (legacy text format)
+        String normalizedFreq = freq.toLowerCase();
+        if (normalizedFreq.contains("daily") || normalizedFreq.contains("every day")) {
+            return "daily";
+        } else if (normalizedFreq.contains("weekly") || normalizedFreq.contains("every week")) {
+            return "weekly";
+        } else if (normalizedFreq.contains("monthly") || normalizedFreq.contains("every month")) {
+            return "monthly";
+        } else if (normalizedFreq.contains("quarterly") || normalizedFreq.contains("every 3 months")) {
+            return "quarterly";
+        } else if (normalizedFreq.contains("semi-annual") || normalizedFreq.contains("every 6 months")) {
+            return "semi-annual";
+        } else if (normalizedFreq.contains("annual") || normalizedFreq.contains("yearly") || normalizedFreq.contains("every year")) {
+            return "annual";
+        } else if (normalizedFreq.contains("bi-annual") || normalizedFreq.contains("every 2 years")) {
+            return "bi-annual";
+        }
+        
+        // Return original value if not recognized
+        log.debug("Using original frequency value: {}", freq);
+        return freq;
+    }
+
+    /**
+     * Convert numeric frequency values to descriptive frequency strings.
+     */
+    private String convertNumericFrequencyToDescriptive(int numericFreq) {
+        switch (numericFreq) {
+            case 1:
+                return "daily";
+            case 7:
+                return "weekly";
+            case 30:
+                return "monthly";
+            case 90:
+                return "quarterly";
+            case 180:
+                return "semi-annual";
+            case 365:
+                return "annual";
+            default:
+                log.warn("Unknown numeric frequency: {}, defaulting to daily", numericFreq);
+                return "daily";
+        }
+    }
+
+    /**
+     * Process priority with default value MEDIUM.
+     */
+    private DeviceMaintenance.Priority processPriority(Object priority) {
+        if (priority == null) {
+            return DeviceMaintenance.Priority.MEDIUM;
+        }
+        String prio = String.valueOf(priority).trim().toUpperCase();
+        
+        try {
+            return DeviceMaintenance.Priority.valueOf(prio);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid priority value: {}, defaulting to MEDIUM", prio);
+            return DeviceMaintenance.Priority.MEDIUM;
+        }
+    }
+
+    /**
+     * Process estimated duration with default value.
+     */
+    private String processDuration(Object duration) {
+        if (duration == null) {
+            return "1 hour";
+        }
+        String dur = String.valueOf(duration).trim();
+        return dur.isEmpty() ? "1 hour" : dur;
+    }
+
+    /**
+     * Process required tools with default value.
+     */
+    private String processTools(Object tools) {
+        if (tools == null) {
+            return "Standard maintenance tools";
+        }
+        String toolsStr = String.valueOf(tools).trim();
+        return toolsStr.isEmpty() ? "Standard maintenance tools" : toolsStr;
+    }
+
+    /**
+     * Process safety notes with default value.
+     */
+    private String processSafetyNotes(Object safetyNotes) {
+        if (safetyNotes == null) {
+            return "Follow standard safety procedures";
+        }
+        String notes = String.valueOf(safetyNotes).trim();
+        return notes.isEmpty() ? "Follow standard safety procedures" : notes;
+    }
+
+    /**
+     * Process component name with default value.
+     */
+    private String processComponentName(Object componentName) {
+        if (componentName == null) {
+            return "General";
+        }
+        String comp = String.valueOf(componentName).trim();
+        return comp.isEmpty() ? "General" : comp;
+    }
+
+    /**
+     * Process maintenance type with default value GENERAL.
+     */
+    private DeviceMaintenance.MaintenanceType processMaintenanceType(Object maintenanceType) {
+        if (maintenanceType == null) {
+            return DeviceMaintenance.MaintenanceType.GENERAL;
+        }
+        String type = String.valueOf(maintenanceType).trim().toUpperCase();
+        
+        try {
+            return DeviceMaintenance.MaintenanceType.valueOf(type);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid maintenance type: {}, defaulting to GENERAL", type);
+            return DeviceMaintenance.MaintenanceType.GENERAL;
+        }
+    }
+
+    /**
+     * Calculate next maintenance date based on frequency.
+     */
+    private LocalDate calculateNextMaintenanceDate(String frequency) {
+        if (frequency == null || frequency.trim().isEmpty()) {
+            return LocalDate.now().plusDays(1); // Default to daily
+        }
+        
+        String normalizedFreq = frequency.toLowerCase().trim();
+        LocalDate today = LocalDate.now();
+        
+        switch (normalizedFreq) {
+            case "daily":
+                return today.plusDays(1);
+            case "weekly":
+                return today.plusWeeks(1);
+            case "monthly":
+                return today.plusMonths(1);
+            case "quarterly":
+                return today.plusMonths(3);
+            case "semi-annual":
+                return today.plusMonths(6);
+            case "annual":
+                return today.plusYears(1);
+            case "bi-annual":
+                return today.plusYears(2);
+            default:
+                log.warn("Unknown frequency: {}, defaulting to daily", frequency);
+                return today.plusDays(1);
+        }
     }
 }
