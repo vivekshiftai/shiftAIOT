@@ -182,22 +182,24 @@ public class KnowledgeController {
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("pdfs", paginatedDocuments.stream().map(doc -> Map.of(
-                "id", doc.getId().toString(),
-                "filename", doc.getName(),
-                "size_bytes", doc.getSize(),
-                "uploaded_at", doc.getUploadedAt(),
-                "status", doc.getStatus(),
-                "device_id", doc.getDeviceId(),
-                "device_name", doc.getDeviceName(),
-                "vectorized", doc.getVectorized()
-            )).collect(Collectors.toList()));
-            response.put("pagination", Map.of(
-                "page", page,
-                "limit", limit,
-                "total", documents.size(),
-                "total_pages", (int) Math.ceil((double) documents.size() / limit)
-            ));
+            response.put("pdfs", paginatedDocuments.stream().map(doc -> {
+                Map<String, Object> docMap = new HashMap<>();
+                docMap.put("id", doc.getId().toString());
+                docMap.put("filename", doc.getName());
+                docMap.put("size_bytes", doc.getSize());
+                docMap.put("uploaded_at", doc.getUploadedAt());
+                docMap.put("status", doc.getStatus());
+                docMap.put("device_id", doc.getDeviceId());
+                docMap.put("device_name", doc.getDeviceName());
+                docMap.put("vectorized", doc.getVectorized());
+                return docMap;
+            }).collect(Collectors.toList()));
+            Map<String, Object> pagination = new HashMap<>();
+            pagination.put("page", page);
+            pagination.put("limit", limit);
+            pagination.put("total", documents.size());
+            pagination.put("total_pages", (int) Math.ceil((double) documents.size() / limit));
+            response.put("pagination", pagination);
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -360,38 +362,23 @@ public class KnowledgeController {
             String pdfName = (String) request.get("pdf_name");
             String deviceId = (String) request.get("device_id");
             
-            // Mock rules generation from technical documentation
+            // TODO: Implement actual AI-based rule generation from PDF content
+            // This should integrate with a proper AI service to analyze PDF content
+            // and generate meaningful rules based on the device documentation
+            
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("pdf_name", pdfName);
             response.put("device_id", deviceId);
-            response.put("rules", List.of(
-                Map.of(
-                    "id", "rule_001",
-                    "name", "Temperature Threshold Alert",
-                    "condition", "temperature > 25°C",
-                    "action", "send_alert",
-                    "description", "Alert when temperature exceeds 25°C",
-                    "severity", "medium"
-                ),
-                Map.of(
-                    "id", "rule_002", 
-                    "name", "Humidity Monitoring",
-                    "condition", "humidity < 30% OR humidity > 70%",
-                    "action", "log_event",
-                    "description", "Log humidity events outside normal range",
-                    "severity", "low"
-                )
-            ));
-            response.put("total_rules_generated", 2);
-            response.put("processing_time_ms", 2100);
+            response.put("message", "Rule generation endpoint is under development. Please implement AI integration for actual PDF analysis.");
+            response.put("status", "not_implemented");
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "error", e.getMessage()
-            ));
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
 

@@ -9,30 +9,37 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.iotplatform.model.DeviceDocumentation;
-import com.iotplatform.model.DeviceDocumentation.DocumentType;
 
 @Repository
 public interface DeviceDocumentationRepository extends JpaRepository<DeviceDocumentation, String> {
     
     List<DeviceDocumentation> findByDeviceId(String deviceId);
     
-    List<DeviceDocumentation> findByDeviceIdAndDocumentType(String deviceId, DocumentType documentType);
+    List<DeviceDocumentation> findByDeviceIdAndDocumentType(String deviceId, String documentType);
     
-    List<DeviceDocumentation> findByDeviceIdAndIsPublicTrue(String deviceId);
+    List<DeviceDocumentation> findByProcessingStatus(String processingStatus);
     
-    @Query("SELECT d FROM DeviceDocumentation d WHERE d.device.organizationId = :organizationId")
+    List<DeviceDocumentation> findByDeviceIdAndProcessingStatus(String deviceId, String processingStatus);
+    
+    @Query("SELECT d FROM DeviceDocumentation d WHERE d.deviceId IN (SELECT dev.id FROM Device dev WHERE dev.organizationId = :organizationId)")
     List<DeviceDocumentation> findByOrganizationId(@Param("organizationId") String organizationId);
     
-    @Query("SELECT d FROM DeviceDocumentation d WHERE d.device.organizationId = :organizationId AND d.documentType = :documentType")
-    List<DeviceDocumentation> findByOrganizationIdAndDocumentType(@Param("organizationId") String organizationId, @Param("documentType") DocumentType documentType);
+    @Query("SELECT d FROM DeviceDocumentation d WHERE d.deviceId IN (SELECT dev.id FROM Device dev WHERE dev.organizationId = :organizationId) AND d.documentType = :documentType")
+    List<DeviceDocumentation> findByOrganizationIdAndDocumentType(@Param("organizationId") String organizationId, @Param("documentType") String documentType);
     
     Optional<DeviceDocumentation> findByIdAndDeviceOrganizationId(String id, String organizationId);
     
-    @Query("SELECT COUNT(d) FROM DeviceDocumentation d WHERE d.device.id = :deviceId")
+    @Query("SELECT COUNT(d) FROM DeviceDocumentation d WHERE d.deviceId = :deviceId")
     long countByDeviceId(@Param("deviceId") String deviceId);
     
-    @Query("SELECT COUNT(d) FROM DeviceDocumentation d WHERE d.device.organizationId = :organizationId AND d.documentType = :documentType")
-    long countByOrganizationIdAndDocumentType(@Param("organizationId") String organizationId, @Param("documentType") DocumentType documentType);
+    @Query("SELECT COUNT(d) FROM DeviceDocumentation d WHERE d.deviceId IN (SELECT dev.id FROM Device dev WHERE dev.organizationId = :organizationId) AND d.documentType = :documentType")
+    long countByOrganizationIdAndDocumentType(@Param("organizationId") String organizationId, @Param("documentType") String documentType);
     
     void deleteByDeviceId(String deviceId);
+    
+    // Find by collection name (from external service)
+    List<DeviceDocumentation> findByCollectionName(String collectionName);
+    
+    // Find by PDF name (from external service)
+    List<DeviceDocumentation> findByPdfName(String pdfName);
 }

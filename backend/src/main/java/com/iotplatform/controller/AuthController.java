@@ -31,6 +31,7 @@ import com.iotplatform.repository.UserRepository;
 
 import jakarta.validation.Valid;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -192,30 +193,32 @@ public class AuthController {
         try {
             List<User> users = userRepository.findAll();
             List<Map<String, Object>> userList = users.stream()
-                .map(user -> Map.of(
-                    "id", user.getId(),
-                    "email", user.getEmail(),
-                    "firstName", user.getFirstName(),
-                    "lastName", user.getLastName(),
-                    "role", user.getRole().name(),
-                    "organizationId", user.getOrganizationId(),
-                    "enabled", user.isEnabled(),
-                    "createdAt", user.getCreatedAt(),
-                    "lastLogin", user.getLastLogin()
-                ))
+                .map(user -> {
+                    Map<String, Object> userMap = new HashMap<>();
+                    userMap.put("id", user.getId());
+                    userMap.put("email", user.getEmail());
+                    userMap.put("firstName", user.getFirstName());
+                    userMap.put("lastName", user.getLastName());
+                    userMap.put("role", user.getRole().name());
+                    userMap.put("organizationId", user.getOrganizationId());
+                    userMap.put("enabled", user.isEnabled());
+                    userMap.put("createdAt", user.getCreatedAt());
+                    userMap.put("lastLogin", user.getLastLogin());
+                    return userMap;
+                })
                 .collect(Collectors.toList());
             
-            return ResponseEntity.ok(Map.of(
-                "success", true,
-                "totalUsers", userList.size(),
-                "users", userList
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("totalUsers", userList.size());
+            response.put("users", userList);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             logger.error("Error fetching users for debug: {}", e.getMessage());
-            return ResponseEntity.status(500).body(Map.of(
-                "success", false,
-                "error", "Failed to fetch users: " + e.getMessage()
-            ));
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", "Failed to fetch users: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
         }
     }
 
@@ -225,60 +228,60 @@ public class AuthController {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
             
             if (authentication == null) {
-                return ResponseEntity.ok(Map.of(
-                    "success", false,
-                    "message", "No authentication found in SecurityContext",
-                    "authentication", null
-                ));
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "No authentication found in SecurityContext");
+                response.put("authentication", null);
+                return ResponseEntity.ok(response);
             }
             
-            Map<String, Object> authInfo = Map.of(
-                "authenticated", authentication.isAuthenticated(),
-                "principal", authentication.getPrincipal() != null ? authentication.getPrincipal().toString() : "null",
-                "authorities", authentication.getAuthorities().stream()
-                    .map(Object::toString)
-                    .collect(Collectors.toList()),
-                "details", authentication.getDetails() != null ? authentication.getDetails().toString() : "null",
-                "name", authentication.getName() != null ? authentication.getName() : "null"
-            );
+            List<String> authoritiesList = authentication.getAuthorities().stream()
+                .map(Object::toString)
+                .collect(Collectors.toList());
+            
+            Map<String, Object> authInfo = new HashMap<>();
+            authInfo.put("authenticated", authentication.isAuthenticated());
+            authInfo.put("principal", authentication.getPrincipal() != null ? authentication.getPrincipal().toString() : "null");
+            authInfo.put("authorities", authoritiesList);
+            authInfo.put("details", authentication.getDetails() != null ? authentication.getDetails().toString() : "null");
+            authInfo.put("name", authentication.getName() != null ? authentication.getName() : "null");
             
             // If it's a CustomUserDetails, add more information
             if (authentication.getPrincipal() instanceof CustomUserDetails) {
                 CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
                 User user = userDetails.getUser();
                 
-                Map<String, Object> userInfo = Map.of(
-                    "userId", user.getId(),
-                    "email", user.getEmail(),
-                    "firstName", user.getFirstName(),
-                    "lastName", user.getLastName(),
-                    "role", user.getRole().name(),
-                    "organizationId", user.getOrganizationId(),
-                    "enabled", user.isEnabled(),
-                    "createdAt", user.getCreatedAt(),
-                    "lastLogin", user.getLastLogin()
-                );
+                Map<String, Object> userInfo = new HashMap<>();
+                userInfo.put("userId", user.getId());
+                userInfo.put("email", user.getEmail());
+                userInfo.put("firstName", user.getFirstName());
+                userInfo.put("lastName", user.getLastName());
+                userInfo.put("role", user.getRole().name());
+                userInfo.put("organizationId", user.getOrganizationId());
+                userInfo.put("enabled", user.isEnabled());
+                userInfo.put("createdAt", user.getCreatedAt());
+                userInfo.put("lastLogin", user.getLastLogin());
                 
-                return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Current user information",
-                    "authentication", authInfo,
-                    "user", userInfo
-                ));
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "Current user information");
+                response.put("authentication", authInfo);
+                response.put("user", userInfo);
+                return ResponseEntity.ok(response);
             }
             
-            return ResponseEntity.ok(Map.of(
-                "success", true,
-                "message", "Authentication found but not CustomUserDetails",
-                "authentication", authInfo
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Authentication found but not CustomUserDetails");
+            response.put("authentication", authInfo);
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             logger.error("Error getting current user debug info: {}", e.getMessage());
-            return ResponseEntity.status(500).body(Map.of(
-                "success", false,
-                "error", "Failed to get current user info: " + e.getMessage()
-            ));
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", "Failed to get current user info: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
         }
     }
 
@@ -341,33 +344,35 @@ public class AuthController {
                 }
             }
             
-            return ResponseEntity.ok(Map.of(
-                "success", true,
-                "tokenInfo", tokenInfo
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("tokenInfo", tokenInfo);
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             logger.error("Error getting token debug info: {}", e.getMessage());
-            return ResponseEntity.status(500).body(Map.of(
-                "success", false,
-                "error", "Failed to get token info: " + e.getMessage()
-            ));
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", "Failed to get token info: " + e.getMessage());
+            return ResponseEntity.status(500).body(errorResponse);
         }
     }
 
     @PostMapping("/api/auth/logout")
     public ResponseEntity<?> logout() {
         // This endpoint helps users logout and clear their tokens
-        return ResponseEntity.ok(Map.of(
-            "message", "Logout successful. Please clear your browser's local storage and login again.",
-            "action", "Clear localStorage and login with existing user credentials",
-            "loginEndpoint", "/auth/signin",
-            "loginMethod", "POST",
-            "exampleLogin", Map.of(
-                "email", "user@shiftaiot.com",
-                "password", "user123"
-            )
-        ));
+        Map<String, Object> exampleLogin = new HashMap<>();
+        exampleLogin.put("email", "user@shiftaiot.com");
+        exampleLogin.put("password", "user123");
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Logout successful. Please clear your browser's local storage and login again.");
+        response.put("action", "Clear localStorage and login with existing user credentials");
+        response.put("loginEndpoint", "/auth/signin");
+        response.put("loginMethod", "POST");
+        response.put("exampleLogin", exampleLogin);
+        
+        return ResponseEntity.ok(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -378,9 +383,9 @@ public class AuthController {
             errorMessage.append(error.getDefaultMessage()).append("; ");
         });
         
-        return ResponseEntity.badRequest().body(Map.of(
-            "error", errorMessage.toString().trim(),
-            "success", false
-        ));
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("error", errorMessage.toString().trim());
+        errorResponse.put("success", false);
+        return ResponseEntity.badRequest().body(errorResponse);
     }
 }

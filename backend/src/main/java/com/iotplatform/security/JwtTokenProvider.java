@@ -259,7 +259,8 @@ public class JwtTokenProvider {
             Claims claims = Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
-                .parseSignedClaims(authToken);
+                .parseSignedClaims(authToken)
+                .getPayload();
             
             // Additional validation checks
             String subject = claims.getSubject();
@@ -313,7 +314,8 @@ public class JwtTokenProvider {
             Claims claims = Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
-                .parseSignedClaims(authToken);
+                .parseSignedClaims(authToken)
+                .getPayload();
             
             Date expiration = claims.getExpiration();
             boolean isExpired = expiration != null && expiration.before(new Date());

@@ -53,14 +53,15 @@ public class TelemetryService {
     }
 
     public String getTelemetryData(String deviceId, String timeRange) {
-        // For demo purposes, return mock data
-        // In production, query InfluxDB and return actual time-series data
-        return """
-            [
-                {"time": "2025-01-13T10:00:00Z", "temperature": 22.5, "humidity": 45.0},
-                {"time": "2025-01-13T10:01:00Z", "temperature": 22.7, "humidity": 44.8},
-                {"time": "2025-01-13T10:02:00Z", "temperature": 22.3, "humidity": 45.2}
-            ]
-            """;
+        try (InfluxDBClient client = getInfluxDBClient()) {
+            // TODO: Implement actual InfluxDB query based on deviceId and timeRange
+            // This should query the InfluxDB bucket for actual telemetry data
+            // Example query: from(bucket: "iot_telemetry") |> range(start: -1h) |> filter(fn: (r) => r["device_id"] == deviceId)
+            
+            return "[]"; // Return empty array until InfluxDB query is implemented
+        } catch (Exception e) {
+            System.out.println("Failed to retrieve telemetry data from InfluxDB: " + e.getMessage());
+            return "[]"; // Return empty array on error
+        }
     }
 }

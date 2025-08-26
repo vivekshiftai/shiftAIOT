@@ -1,5 +1,7 @@
 package com.iotplatform.controller;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -235,141 +237,33 @@ public class RuleController {
                 List.of("monitoring", "maintenance", "alert"));
             
             if (pdfFilename == null || pdfFilename.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "error", "PDF filename is required"
-                ));
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("error", "PDF filename is required");
+                return ResponseEntity.badRequest().body(errorResponse);
             }
             
-            // Simulate AI processing time
-            Thread.sleep(3000);
+            // TODO: Implement actual AI-based rule generation from PDF content
+            // This endpoint should integrate with a proper AI service to analyze PDF content
+            // and generate meaningful rules based on the device documentation
             
-            // Generate mock rules based on PDF content
-            List<Map<String, Object>> iotRules = generateMockIoTRules(pdfFilename);
-            List<Map<String, Object>> maintenanceData = generateMockMaintenanceData(pdfFilename);
-            List<Map<String, Object>> safetyPrecautions = generateMockSafetyPrecautions(pdfFilename);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("pdf_filename", pdfFilename);
+            response.put("message", "Rule generation endpoint is under development. Please implement AI integration for actual PDF analysis.");
+            response.put("status", "not_implemented");
             
-            return ResponseEntity.ok(Map.of(
-                "success", true,
-                "pdf_filename", pdfFilename,
-                "total_pages", 50,
-                "processed_chunks", 4,
-                "processing_time", 45.2,
-                "iot_rules", iotRules,
-                "maintenance_data", maintenanceData,
-                "safety_precautions", safetyPrecautions,
-                "summary", String.format("Generated %d IoT rules, %d maintenance records, and %d safety precautions from your device documentation.", 
-                    iotRules.size(), maintenanceData.size(), safetyPrecautions.size())
-            ));
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "error", e.getMessage()
-            ));
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
         }
     }
     
-    private List<Map<String, Object>> generateMockIoTRules(String pdfFilename) {
-        String deviceName = pdfFilename.replace(".pdf", "");
-        return List.of(
-            Map.of(
-                "device_name", deviceName,
-                "rule_type", "monitoring",
-                "condition", "Temperature exceeds 85°C",
-                "action", "Send alert to maintenance team",
-                "priority", "high",
-                "frequency", "hourly",
-                "description", "Monitor equipment temperature to prevent overheating"
-            ),
-            Map.of(
-                "device_name", deviceName,
-                "rule_type", "maintenance",
-                "condition", "Operating hours reach 1000",
-                "action", "Schedule preventive maintenance",
-                "priority", "medium",
-                "frequency", "weekly",
-                "description", "Regular maintenance schedule for motor components"
-            ),
-            Map.of(
-                "device_name", deviceName,
-                "rule_type", "alert",
-                "condition", "Pressure drops below 2.5 bar",
-                "action", "Activate backup pump system",
-                "priority", "high",
-                "frequency", "real-time",
-                "description", "Critical pressure monitoring for system safety"
-            ),
-            Map.of(
-                "device_name", deviceName,
-                "rule_type", "monitoring",
-                "condition", "Vibration exceeds 5.0 g",
-                "action", "Initiate emergency shutdown",
-                "priority", "critical",
-                "frequency", "real-time",
-                "description", "Vibration monitoring for equipment safety"
-            ),
-            Map.of(
-                "device_name", deviceName,
-                "rule_type", "maintenance",
-                "condition", "Oil level below 20%",
-                "action", "Schedule oil change",
-                "priority", "medium",
-                "frequency", "daily",
-                "description", "Oil level monitoring for proper lubrication"
-            )
-        );
-    }
-    
-    private List<Map<String, Object>> generateMockMaintenanceData(String pdfFilename) {
-        return List.of(
-            Map.of(
-                "component_name", "Filter Assembly",
-                "maintenance_type", "preventive",
-                "frequency", "Every 3 months",
-                "last_maintenance", "2024-01-15",
-                "next_maintenance", "2024-04-15",
-                "description", "Replace air filters to maintain optimal performance"
-            ),
-            Map.of(
-                "component_name", "Motor Bearings",
-                "maintenance_type", "preventive",
-                "frequency", "Every 6 months",
-                "last_maintenance", "2023-12-01",
-                "next_maintenance", "2024-06-01",
-                "description", "Lubricate and inspect motor bearings for wear"
-            ),
-            Map.of(
-                "component_name", "Control Panel",
-                "maintenance_type", "inspection",
-                "frequency", "Monthly",
-                "last_maintenance", "2024-02-01",
-                "next_maintenance", "2024-03-01",
-                "description", "Inspect control panel for proper operation and calibration"
-            )
-        );
-    }
-    
-    private List<Map<String, Object>> generateMockSafetyPrecautions(String pdfFilename) {
-        return List.of(
-            Map.of(
-                "id", "safety-1",
-                "title", "High Temperature Warning",
-                "description", "Equipment may reach dangerous temperatures during operation",
-                "severity", "high",
-                "category", "Thermal Safety",
-                "recommended_action", "Ensure proper ventilation and monitor temperature sensors"
-            ),
-            Map.of(
-                "id", "safety-2",
-                "title", "Electrical Safety",
-                "description", "High voltage components require proper grounding",
-                "severity", "critical",
-                "category", "Electrical Safety",
-                "recommended_action", "Verify grounding connections before operation"
-            )
-        );
-    }
+
 
     private RuleCondition convertToRuleCondition(com.iotplatform.dto.RuleConditionRequest dto) {
         RuleCondition condition = new RuleCondition();

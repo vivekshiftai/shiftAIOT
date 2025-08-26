@@ -26,12 +26,16 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.concurrent.CompletableFuture;
 import java.util.Map;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Optional;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpEntity;
-import org.springframework.http.MediaType;
 import org.springframework.web.client.RestTemplate;
 import com.iotplatform.config.PDFProcessingConfig;
+import com.iotplatform.dto.PDFProcessingResponse;
+import com.iotplatform.model.DeviceDocumentation;
+import com.iotplatform.service.DeviceDocumentationService;
 
 /**
  * REST Controller for PDF processing operations.
@@ -52,11 +56,13 @@ import com.iotplatform.config.PDFProcessingConfig;
 @RequestMapping("/api/pdf")
 @RequiredArgsConstructor
 @Tag(name = "PDF Processing", description = "PDF document processing and management operations")
+@CrossOrigin(origins = "*", maxAge = 3600)
 public class PDFProcessingController {
 
     private final PDFProcessingService pdfProcessingService;
     private final PDFProcessingConfig config;
     private final RestTemplate restTemplate;
+    private final DeviceDocumentationService deviceDocumentationService;
 
     /**
      * Upload a PDF file for processing and storage (Authenticated endpoint).
@@ -1096,5 +1102,146 @@ public class PDFProcessingController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ErrorResponse.of("Failed to get service info from external service"));
         }
+    }
+
+    /**
+     * Callback endpoint to receive PDF processing results from external service
+     * This endpoint should be called by the external PDF processing service
+     */
+    @PostMapping("/callback")
+    public ResponseEntity<?> handlePDFProcessingCallback(@RequestBody PDFProcessingResponse response) {
+        try {
+            log.info("📄 Received PDF processing callback: {}", response);
+            
+            if (response.getSuccess() == null || !response.getSuccess()) {
+                log.error("❌ PDF processing failed: {}", response.getMessage());
+                return ResponseEntity.badRequest().body(createErrorResponse("PDF processing failed", response.getMessage()));
+            }
+            
+            // Extract PDF name from response
+            String pdfName = response.getPdfName();
+            if (pdfName == null || pdfName.trim().isEmpty()) {
+                log.error("❌ PDF name is missing in processing response");
+                return ResponseEntity.badRequest().body(createErrorResponse("PDF name is missing", "PDF name is required"));
+            }
+            
+            // Find device documentation by PDF name
+            // Note: You might need to implement a more sophisticated lookup mechanism
+            // depending on how you associate the PDF with the device documentation
+            Optional<DeviceDocumentation> documentationOpt = findDeviceDocumentationByPdfName(pdfName);
+            
+            if (documentationOpt.isPresent()) {
+                DeviceDocumentation documentation = documentationOpt.get();
+                
+                // Update the device documentation with processing results
+                DeviceDocumentation updated = deviceDocumentationService.updateProcessingResponse(
+                    documentation.getId(),
+                    response.getPdfName(),
+                    response.getChunksProcessed(),
+                    response.getProcessingTime(),
+                    response.getCollectionName()
+                );
+                
+                log.info("✅ Successfully updated device documentation: {} for device: {}", 
+                           updated.getId(), updated.getDeviceId());
+                
+                Map<String, Object> successResponse = new HashMap<>();
+                successResponse.put("success", true);
+                successResponse.put("message", "Device documentation updated successfully");
+                successResponse.put("documentationId", updated.getId());
+                successResponse.put("deviceId", updated.getDeviceId());
+                
+                return ResponseEntity.ok(successResponse);
+                
+            } else {
+                log.warn("⚠️ No device documentation found for PDF: {}", pdfName);
+                
+                // You might want to create a new device documentation entry
+                // or handle this case differently based on your requirements
+                Map<String, Object> warningResponse = new HashMap<>();
+                warningResponse.put("success", false);
+                warningResponse.put("message", "No device documentation found for PDF: " + pdfName);
+                warningResponse.put("pdfName", pdfName);
+                
+                return ResponseEntity.ok(warningResponse);
+            }
+            
+        } catch (Exception e) {
+            log.error("❌ Error handling PDF processing callback", e);
+            return ResponseEntity.internalServerError().body(createErrorResponse("Internal server error", e.getMessage()));
+        }
+    }
+    
+    /**
+     * Endpoint to manually trigger PDF processing status update
+     * This can be used for testing or manual updates
+     */
+    @PostMapping("/update-status")
+    public ResponseEntity<?> updateProcessingStatus(@RequestBody Map<String, Object> request) {
+        try {
+            String documentationId = (String) request.get("documentationId");
+            String pdfName = (String) request.get("pdfName");
+            Integer chunksProcessed = (Integer) request.get("chunksProcessed");
+            String processingTime = (String) request.get("processingTime");
+            String collectionName = (String) request.get("collectionName");
+            
+            if (documentationId == null || documentationId.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(createErrorResponse("Missing documentationId", "Documentation ID is required"));
+            }
+            
+            Optional<DeviceDocumentation> documentationOpt = deviceDocumentationService.getById(documentationId);
+            if (documentationOpt.isPresent()) {
+                DeviceDocumentation updated = deviceDocumentationService.updateProcessingResponse(
+                    documentationId, pdfName, chunksProcessed, processingTime, collectionName
+                );
+                
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("message", "Processing status updated successfully");
+                response.put("documentation", updated);
+                
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+            
+        } catch (Exception e) {
+            log.error("❌ Error updating processing status", e);
+            return ResponseEntity.internalServerError().body(createErrorResponse("Internal server error", e.getMessage()));
+        }
+    }
+    
+    /**
+     * Helper method to find device documentation by PDF name
+     * This is a simple implementation - you might need to enhance this based on your requirements
+     */
+    private Optional<DeviceDocumentation> findDeviceDocumentationByPdfName(String pdfName) {
+        // First try to find by PDF name (if it was already set)
+        var docsByPdfName = deviceDocumentationService.getByPdfName(pdfName);
+        if (!docsByPdfName.isEmpty()) {
+            return Optional.of(docsByPdfName.get(0));
+        }
+        
+        // If not found by PDF name, try to find by filename or original filename
+        // This is a fallback mechanism - you might need to implement a more sophisticated lookup
+        var allDocs = deviceDocumentationService.getByProcessingStatus("PENDING");
+        for (DeviceDocumentation doc : allDocs) {
+            if (pdfName.equals(doc.getFilename()) || pdfName.equals(doc.getOriginalFilename())) {
+                return Optional.of(doc);
+            }
+        }
+        
+        return Optional.empty();
+    }
+    
+    /**
+     * Helper method to create error response
+     */
+    private Map<String, Object> createErrorResponse(String error, String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", false);
+        response.put("error", error);
+        response.put("message", message);
+        return response;
     }
 }

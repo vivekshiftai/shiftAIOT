@@ -642,21 +642,22 @@ public class DeviceController {
                 User user = userOpt.get();
                 logger.info("✅ User found in database: {}", user.getEmail());
                 
-                return ResponseEntity.ok(Map.of(
-                    "status", "found",
-                    "user", Map.of(
-                        "id", user.getId(),
-                        "email", user.getEmail(),
-                        "firstName", user.getFirstName(),
-                        "lastName", user.getLastName(),
-                        "role", user.getRole(),
-                        "organizationId", user.getOrganizationId(),
-                        "enabled", user.isEnabled(),
-                        "createdAt", user.getCreatedAt(),
-                        "updatedAt", user.getUpdatedAt()
-                    ),
-                    "timestamp", new Date()
-                ));
+                Map<String, Object> userMap = new HashMap<>();
+                userMap.put("id", user.getId());
+                userMap.put("email", user.getEmail());
+                userMap.put("firstName", user.getFirstName());
+                userMap.put("lastName", user.getLastName());
+                userMap.put("role", user.getRole());
+                userMap.put("organizationId", user.getOrganizationId());
+                userMap.put("enabled", user.isEnabled());
+                userMap.put("createdAt", user.getCreatedAt());
+                userMap.put("updatedAt", user.getUpdatedAt());
+                
+                Map<String, Object> response = new HashMap<>();
+                response.put("status", "found");
+                response.put("user", userMap);
+                response.put("timestamp", new Date());
+                return ResponseEntity.ok(response);
             } else {
                 logger.warn("❌ User not found in database for email: {}", email);
                 return ResponseEntity.status(404).body(Map.of(
@@ -712,22 +713,23 @@ public class DeviceController {
         User user = userDetails.getUser();
         logger.info("✅ User authenticated successfully: {}", user.getEmail());
         
-        return ResponseEntity.ok(Map.of(
-            "status", "authenticated",
-            "user", Map.of(
-                "id", user.getId(),
-                "email", user.getEmail(),
-                "firstName", user.getFirstName(),
-                "lastName", user.getLastName(),
-                "role", user.getRole(),
-                "organizationId", user.getOrganizationId(),
-                "enabled", user.isEnabled()
-            ),
-            "authorities", userDetails.getAuthorities().stream()
-                .map(Object::toString)
-                .collect(java.util.stream.Collectors.toList()),
-            "timestamp", new Date()
-        ));
+        Map<String, Object> userMap = new HashMap<>();
+        userMap.put("id", user.getId());
+        userMap.put("email", user.getEmail());
+        userMap.put("firstName", user.getFirstName());
+        userMap.put("lastName", user.getLastName());
+        userMap.put("role", user.getRole());
+        userMap.put("organizationId", user.getOrganizationId());
+        userMap.put("enabled", user.isEnabled());
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "authenticated");
+        response.put("user", userMap);
+        response.put("authorities", userDetails.getAuthorities().stream()
+            .map(Object::toString)
+            .collect(java.util.stream.Collectors.toList()));
+        response.put("timestamp", new Date());
+        return ResponseEntity.ok(response);
     }
 
     /**

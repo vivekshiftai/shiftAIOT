@@ -104,7 +104,9 @@ CREATE TABLE IF NOT EXISTS device_documentation (
     processing_summary TEXT,
     total_pages INTEGER,
     processed_chunks INTEGER,
-    processing_time DOUBLE PRECISION,
+    processing_time VARCHAR(100), -- Changed to VARCHAR to store time as string (e.g., "12.45s")
+    collection_name VARCHAR(255), -- Added to store collection name from external service
+    pdf_name VARCHAR(255), -- Added to store PDF name from external service
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
@@ -172,6 +174,13 @@ ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS about_reaction TE
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS causes TEXT;
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS how_to_avoid TEXT;
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS safety_info TEXT;
+
+-- Add new columns to device_documentation table for external PDF processing response
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS collection_name VARCHAR(255);
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS pdf_name VARCHAR(255);
+
+-- Add new column to pdf_documents table for external PDF processing response
+ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS pdf_name VARCHAR(255);
 
 -- Device Tags table
 CREATE TABLE IF NOT EXISTS device_tags (
@@ -287,6 +296,7 @@ CREATE TABLE IF NOT EXISTS pdf_documents (
     chunks_processed INTEGER,
     processing_time VARCHAR(100),
     collection_name VARCHAR(255),
+    pdf_name VARCHAR(255), -- Added to store PDF name from external service
     status VARCHAR(50) NOT NULL DEFAULT 'UPLOADING',
     organization_id VARCHAR(255) NOT NULL,
     uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -13,7 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
-// import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 @Entity
@@ -24,117 +24,150 @@ public class DeviceDocumentation {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
     
-    @ManyToOne
-    @JoinColumn(name = "device_id", nullable = false)
-    private Device device;
+    @NotNull
+    @Column(name = "device_id", nullable = false)
+    private String deviceId;
     
     @NotBlank
-    @Size(max = 100)
-    @Column(name = "title", nullable = false)
-    private String title;
-    
-    @Enumerated(EnumType.STRING)
+    @Size(max = 50)
     @Column(name = "document_type", nullable = false)
-    private DocumentType documentType;
+    private String documentType; // 'manual', 'datasheet', 'certificate'
+    
+    @NotBlank
+    @Size(max = 255)
+    @Column(name = "filename", nullable = false)
+    private String filename;
+    
+    @NotBlank
+    @Size(max = 255)
+    @Column(name = "original_filename", nullable = false)
+    private String originalFilename;
+    
+    @NotNull
+    @Column(name = "file_size", nullable = false)
+    private Long fileSize;
     
     @NotBlank
     @Size(max = 500)
     @Column(name = "file_path", nullable = false)
     private String filePath;
     
-    @Size(max = 100)
-    @Column(name = "file_name")
-    private String fileName;
-    
-    @Column(name = "file_size")
-    private Long fileSize;
-    
     @Size(max = 50)
-    @Column(name = "file_type")
-    private String fileType;
+    @Column(name = "processing_status")
+    private String processingStatus = "PENDING"; // 'PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'
     
-    @Size(max = 1000)
-    @Column(name = "description")
-    private String description;
+    @Column(name = "processing_summary")
+    private String processingSummary;
     
-    @Size(max = 200)
-    @Column(name = "version")
-    private String version;
+    @Column(name = "total_pages")
+    private Integer totalPages;
     
-    @Column(name = "upload_date", nullable = false)
-    private LocalDateTime uploadDate;
+    @Column(name = "processed_chunks")
+    private Integer processedChunks;
     
-    @Column(name = "is_public")
-    private Boolean isPublic = false;
+    @Size(max = 100)
+    @Column(name = "processing_time")
+    private String processingTime; // Store as string (e.g., "12.45s")
     
-    @Size(max = 200)
-    @Column(name = "uploaded_by")
-    private String uploadedBy;
+    @Size(max = 255)
+    @Column(name = "collection_name")
+    private String collectionName; // From external service response
     
-    public enum DocumentType {
-        MANUAL,
-        DATASHEET,
-        CERTIFICATE,
-        INSTALLATION_GUIDE,
-        MAINTENANCE_GUIDE,
-        TROUBLESHOOTING_GUIDE,
-        SAFETY_GUIDE,
-        WARRANTY_CARD,
-        QUICK_START_GUIDE,
-        API_DOCUMENTATION,
-        FIRMWARE_UPDATE_NOTES,
-        COMPLIANCE_CERTIFICATE,
-        OTHER
-    }
+    @Size(max = 255)
+    @Column(name = "pdf_name")
+    private String pdfName; // From external service response
+    
+    @Column(name = "created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
+    
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt = LocalDateTime.now();
     
     // Constructors
     public DeviceDocumentation() {}
     
-    public DeviceDocumentation(Device device, String title, DocumentType documentType, String filePath) {
-        this.device = device;
-        this.title = title;
+    public DeviceDocumentation(String deviceId, String documentType, String filename, String originalFilename, 
+                              Long fileSize, String filePath) {
+        this.deviceId = deviceId;
         this.documentType = documentType;
+        this.filename = filename;
+        this.originalFilename = originalFilename;
+        this.fileSize = fileSize;
         this.filePath = filePath;
-        this.uploadDate = LocalDateTime.now();
+        this.processingStatus = "PENDING";
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
     
     // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     
-    public Device getDevice() { return device; }
-    public void setDevice(Device device) { this.device = device; }
+    public String getDeviceId() { return deviceId; }
+    public void setDeviceId(String deviceId) { this.deviceId = deviceId; }
     
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
+    public String getDocumentType() { return documentType; }
+    public void setDocumentType(String documentType) { this.documentType = documentType; }
     
-    public DocumentType getDocumentType() { return documentType; }
-    public void setDocumentType(DocumentType documentType) { this.documentType = documentType; }
+    public String getFilename() { return filename; }
+    public void setFilename(String filename) { this.filename = filename; }
     
-    public String getFilePath() { return filePath; }
-    public void setFilePath(String filePath) { this.filePath = filePath; }
-    
-    public String getFileName() { return fileName; }
-    public void setFileName(String fileName) { this.fileName = fileName; }
+    public String getOriginalFilename() { return originalFilename; }
+    public void setOriginalFilename(String originalFilename) { this.originalFilename = originalFilename; }
     
     public Long getFileSize() { return fileSize; }
     public void setFileSize(Long fileSize) { this.fileSize = fileSize; }
     
-    public String getFileType() { return fileType; }
-    public void setFileType(String fileType) { this.fileType = fileType; }
+    public String getFilePath() { return filePath; }
+    public void setFilePath(String filePath) { this.filePath = filePath; }
     
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public String getProcessingStatus() { return processingStatus; }
+    public void setProcessingStatus(String processingStatus) { this.processingStatus = processingStatus; }
     
-    public String getVersion() { return version; }
-    public void setVersion(String version) { this.version = version; }
+    public String getProcessingSummary() { return processingSummary; }
+    public void setProcessingSummary(String processingSummary) { this.processingSummary = processingSummary; }
     
-    public LocalDateTime getUploadDate() { return uploadDate; }
-    public void setUploadDate(LocalDateTime uploadDate) { this.uploadDate = uploadDate; }
+    public Integer getTotalPages() { return totalPages; }
+    public void setTotalPages(Integer totalPages) { this.totalPages = totalPages; }
     
-    public Boolean getIsPublic() { return isPublic; }
-    public void setIsPublic(Boolean isPublic) { this.isPublic = isPublic; }
+    public Integer getProcessedChunks() { return processedChunks; }
+    public void setProcessedChunks(Integer processedChunks) { this.processedChunks = processedChunks; }
     
-    public String getUploadedBy() { return uploadedBy; }
-    public void setUploadedBy(String uploadedBy) { this.uploadedBy = uploadedBy; }
+    public String getProcessingTime() { return processingTime; }
+    public void setProcessingTime(String processingTime) { this.processingTime = processingTime; }
+    
+    public String getCollectionName() { return collectionName; }
+    public void setCollectionName(String collectionName) { this.collectionName = collectionName; }
+    
+    public String getPdfName() { return pdfName; }
+    public void setPdfName(String pdfName) { this.pdfName = pdfName; }
+    
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    
+    // Method to update processing status and details from external service response
+    public void updateFromProcessingResponse(String pdfName, Integer chunksProcessed, String processingTime, String collectionName) {
+        this.pdfName = pdfName;
+        this.processedChunks = chunksProcessed;
+        this.processingTime = processingTime;
+        this.collectionName = collectionName;
+        this.processingStatus = "COMPLETED";
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    // Method to mark processing as failed
+    public void markProcessingFailed(String errorMessage) {
+        this.processingStatus = "FAILED";
+        this.processingSummary = errorMessage;
+        this.updatedAt = LocalDateTime.now();
+    }
+    
+    // Method to mark processing as in progress
+    public void markProcessingInProgress() {
+        this.processingStatus = "PROCESSING";
+        this.updatedAt = LocalDateTime.now();
+    }
 }
