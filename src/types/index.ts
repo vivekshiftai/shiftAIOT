@@ -10,6 +10,9 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   lastLogin?: string;
+  gmailId?: string;
+  slackId?: string;
+  teamId?: string;
 }
 
 // Device Types - Updated to match backend schema

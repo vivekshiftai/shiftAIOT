@@ -361,6 +361,9 @@ export const userAPI = {
   // Preferences
   getPreferences: () => api.get('/api/user-preferences'),
   savePreferences: (prefs: any) => api.post('/api/user-preferences', prefs),
+  // Integration IDs
+  updateIntegrationIds: (integrationIds: { gmailId?: string | null; slackId?: string | null; teamId?: string | null }) => 
+    api.post('/api/users/update-integration-ids', integrationIds),
 };
 
 // Organization API

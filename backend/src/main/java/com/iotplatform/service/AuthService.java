@@ -110,13 +110,7 @@ public class AuthService {
         // Use a consistent organization ID for all users (as requested)
         user.setOrganizationId("shiftAIOT-org-2024");
         
-        // Set default IoT connection settings
-        user.setConnectionType(User.ConnectionType.MQTT);
-        user.setMqttBrokerUrl("mqtt.broker.com");
-        user.setMqttUsername("iot_user");
-        user.setMqttPassword("iot_password");
-        user.setApiKey(UUID.randomUUID().toString());
-        user.setWebhookUrl("https://webhook.site/your-unique-url");
+        // User is ready to be saved
 
         return userRepository.save(user);
     }

@@ -1,6 +1,7 @@
 package com.iotplatform.controller;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -59,9 +60,7 @@ public class UserController {
             // Remove sensitive information (passwords) from all users
             users.forEach(user -> {
                 user.setPassword(null);
-                // Also remove other sensitive fields if needed
-                user.setApiKey(null);
-                user.setMqttPassword(null);
+                // Remove sensitive fields
             });
             
             logger.info("✅ Successfully fetched {} users for organization: {} by user: {}", 
@@ -105,8 +104,6 @@ public class UserController {
                     
                     // Remove sensitive information
                     user.setPassword(null);
-                    user.setApiKey(null);
-                    user.setMqttPassword(null);
                     
                     logger.info("✅ User details retrieved for: {} by user: {}", user.getEmail(), currentUser.getEmail());
                     return ResponseEntity.ok(user);
@@ -240,18 +237,22 @@ public class UserController {
         User user = userDetails.getUser();
         logger.info("✅ User profile retrieved for: {}", user.getEmail());
         
-        return ResponseEntity.ok(Map.of(
-            "id", user.getId(),
-            "firstName", user.getFirstName(),
-            "lastName", user.getLastName(),
-            "email", user.getEmail(),
-            "role", user.getRole(),
-            "organizationId", user.getOrganizationId(),
-            "enabled", user.isEnabled(),
-            "createdAt", user.getCreatedAt(),
-            "updatedAt", user.getUpdatedAt(),
-            "lastLogin", user.getLastLogin()
-        ));
+        Map<String, Object> profile = new HashMap<>();
+        profile.put("id", user.getId());
+        profile.put("firstName", user.getFirstName());
+        profile.put("lastName", user.getLastName());
+        profile.put("email", user.getEmail());
+        profile.put("role", user.getRole());
+        profile.put("organizationId", user.getOrganizationId());
+        profile.put("enabled", user.isEnabled());
+        profile.put("createdAt", user.getCreatedAt());
+        profile.put("updatedAt", user.getUpdatedAt());
+        profile.put("lastLogin", user.getLastLogin());
+        profile.put("gmailId", user.getGmailId());
+        profile.put("slackId", user.getSlackId());
+        profile.put("teamId", user.getTeamId());
+        
+        return ResponseEntity.ok(profile);
     }
 
     @GetMapping("/search")
@@ -300,8 +301,6 @@ public class UserController {
                 .peek(user -> {
                     // Remove sensitive information
                     user.setPassword(null);
-                    user.setApiKey(null);
-                    user.setMqttPassword(null);
                 })
                 .toList();
             
@@ -379,6 +378,91 @@ public class UserController {
             return ResponseEntity.ok(Map.of("success", true));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/update-integration-ids")
+    public ResponseEntity<?> updateIntegrationIds(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                 @RequestBody Map<String, String> integrationIds) {
+        logger.info("🔧 Integration IDs update request from user: {}", 
+                   userDetails != null ? userDetails.getUsername() : "unknown");
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            logger.warn("❌ Unauthorized integration IDs update attempt - no user details");
+            return ResponseEntity.status(401).body(Map.of("error", "Unauthorized"));
+        }
+        
+        User currentUser = userDetails.getUser();
+        
+        try {
+            boolean hasChanges = false;
+            
+            // Update Gmail ID
+            if (integrationIds.containsKey("gmailId")) {
+                String gmailId = integrationIds.get("gmailId");
+                if (gmailId != null && !gmailId.trim().isEmpty()) {
+                    currentUser.setGmailId(gmailId.trim());
+                    hasChanges = true;
+                    logger.info("✅ Updated Gmail ID for user: {}", currentUser.getEmail());
+                } else {
+                    currentUser.setGmailId(null);
+                    hasChanges = true;
+                    logger.info("✅ Cleared Gmail ID for user: {}", currentUser.getEmail());
+                }
+            }
+            
+            // Update Slack ID
+            if (integrationIds.containsKey("slackId")) {
+                String slackId = integrationIds.get("slackId");
+                if (slackId != null && !slackId.trim().isEmpty()) {
+                    currentUser.setSlackId(slackId.trim());
+                    hasChanges = true;
+                    logger.info("✅ Updated Slack ID for user: {}", currentUser.getEmail());
+                } else {
+                    currentUser.setSlackId(null);
+                    hasChanges = true;
+                    logger.info("✅ Cleared Slack ID for user: {}", currentUser.getEmail());
+                }
+            }
+            
+            // Update Team ID
+            if (integrationIds.containsKey("teamId")) {
+                String teamId = integrationIds.get("teamId");
+                if (teamId != null && !teamId.trim().isEmpty()) {
+                    currentUser.setTeamId(teamId.trim());
+                    hasChanges = true;
+                    logger.info("✅ Updated Team ID for user: {}", currentUser.getEmail());
+                } else {
+                    currentUser.setTeamId(null);
+                    hasChanges = true;
+                    logger.info("✅ Cleared Team ID for user: {}", currentUser.getEmail());
+                }
+            }
+            
+            if (hasChanges) {
+                User savedUser = userRepository.save(currentUser);
+                logger.info("✅ Integration IDs updated successfully for user: {}", savedUser.getEmail());
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Integration IDs updated successfully",
+                    "gmailId", savedUser.getGmailId(),
+                    "slackId", savedUser.getSlackId(),
+                    "teamId", savedUser.getTeamId()
+                ));
+            } else {
+                logger.info("ℹ️ No changes detected for integration IDs update for user: {}", currentUser.getEmail());
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "No changes detected",
+                    "gmailId", currentUser.getGmailId(),
+                    "slackId", currentUser.getSlackId(),
+                    "teamId", currentUser.getTeamId()
+                ));
+            }
+            
+        } catch (Exception e) {
+            logger.error("❌ Error updating integration IDs for user: {}", currentUser.getEmail(), e);
+            return ResponseEntity.internalServerError().body(Map.of("error", "Failed to update integration IDs"));
         }
     }
 }

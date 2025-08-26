@@ -8,15 +8,24 @@ CREATE TABLE IF NOT EXISTS users (
     last_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    phone_number VARCHAR(20),
+    phone VARCHAR(20),
     role VARCHAR(50) DEFAULT 'USER',
     organization_id VARCHAR(255) DEFAULT 'default',
     avatar VARCHAR(255),
     enabled BOOLEAN DEFAULT true,
     last_login TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Integration IDs
+    gmail_id VARCHAR(255),
+    slack_id VARCHAR(255),
+    team_id VARCHAR(255)
 );
+
+-- Add missing columns to users table if they don't exist
+ALTER TABLE users ADD COLUMN IF NOT EXISTS gmail_id VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS slack_id VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS team_id VARCHAR(255);
 
 -- Add phone column to users table if it doesn't exist
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);

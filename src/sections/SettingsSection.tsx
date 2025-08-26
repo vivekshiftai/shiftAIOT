@@ -33,6 +33,9 @@ interface UserProfile {
   location?: string;
   timezone?: string;
   avatar?: string;
+  gmailId?: string;
+  slackId?: string;
+  teamId?: string;
 }
 
 interface NotificationSettings {
@@ -131,7 +134,10 @@ export const SettingsSection: React.FC = () => {
           role: profile.role || user.role,
           organization: profile.organizationId,
           location: '',
-          timezone: 'America/New_York'
+          timezone: 'America/New_York',
+          gmailId: profile.gmailId || '',
+          slackId: profile.slackId || '',
+          teamId: profile.teamId || ''
         });
 
         // Try load preferences from backend first
@@ -182,7 +188,10 @@ export const SettingsSection: React.FC = () => {
             role: user.role,
             organization: user.organizationId || '',
             location: '',
-            timezone: 'America/New_York'
+            timezone: 'America/New_York',
+            gmailId: user.gmailId || '',
+            slackId: user.slackId || '',
+            teamId: user.teamId || ''
           });
           // Don't show error for 401, just use cached data
         } else {
@@ -262,9 +271,25 @@ export const SettingsSection: React.FC = () => {
         phone: userProfile.phone
       };
       
+      // Handle integration IDs separately
+      const integrationPayload = {
+        gmailId: userProfile.gmailId || null,
+        slackId: userProfile.slackId || null,
+        teamId: userProfile.teamId || null
+      };
+      
       console.log('🔧 Profile payload:', payload);
       const res = await userAPI.update(userProfile.id, payload);
       console.log('✅ Profile saved successfully:', res.data);
+      
+      // Update integration IDs
+      try {
+        await userAPI.updateIntegrationIds(integrationPayload);
+        console.log('✅ Integration IDs updated successfully');
+      } catch (integrationError) {
+        console.warn('⚠️ Integration IDs update failed:', integrationError);
+        // Continue with profile update even if integration IDs fail
+      }
       
       setUserProfile(prev => ({ ...prev, ...res.data }));
       setIsEditing(false);
@@ -391,6 +416,46 @@ export const SettingsSection: React.FC = () => {
               disabled
               className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-100 text-slate-600"
             />
+          </div>
+        </div>
+
+        {/* Integration IDs Section */}
+        <div className="mt-8">
+          <h4 className="text-lg font-medium text-slate-800 mb-4">Integration IDs</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Gmail ID</label>
+              <input
+                type="text"
+                value={userProfile.gmailId ?? ''}
+                onChange={(e) => setUserProfile(prev => ({ ...prev, gmailId: e.target.value }))}
+                disabled={!isEditing}
+                placeholder="Enter your Gmail ID"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Slack ID</label>
+              <input
+                type="text"
+                value={userProfile.slackId ?? ''}
+                onChange={(e) => setUserProfile(prev => ({ ...prev, slackId: e.target.value }))}
+                disabled={!isEditing}
+                placeholder="Enter your Slack ID"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Team ID</label>
+              <input
+                type="text"
+                value={userProfile.teamId ?? ''}
+                onChange={(e) => setUserProfile(prev => ({ ...prev, teamId: e.target.value }))}
+                disabled={!isEditing}
+                placeholder="Enter your Team ID"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all disabled:bg-slate-100"
+              />
+            </div>
           </div>
         </div>
 

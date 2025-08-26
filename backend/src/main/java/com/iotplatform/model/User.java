@@ -70,32 +70,18 @@ public class User {
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
-    // IoT Device Connection Settings
-    @Column(name = "mqtt_broker_url")
-    private String mqttBrokerUrl;
+    // Integration IDs
+    @Column(name = "gmail_id")
+    private String gmailId;
 
-    @Column(name = "mqtt_username")
-    private String mqttUsername;
+    @Column(name = "slack_id")
+    private String slackId;
 
-    @Column(name = "mqtt_password")
-    private String mqttPassword;
-
-    @Column(name = "api_key")
-    private String apiKey;
-
-    @Column(name = "webhook_url")
-    private String webhookUrl;
-
-    @Column(name = "connection_type")
-    @Enumerated(EnumType.STRING)
-    private ConnectionType connectionType = ConnectionType.MQTT;
+    @Column(name = "team_id")
+    private String teamId;
 
     public enum Role {
         ADMIN, USER
-    }
-
-    public enum ConnectionType {
-        MQTT, HTTP, WEBSOCKET, COAP
     }
 
     @PrePersist
@@ -167,22 +153,13 @@ public class User {
     public LocalDateTime getLastLogin() { return lastLogin; }
     public void setLastLogin(LocalDateTime lastLogin) { this.lastLogin = lastLogin; }
 
-    // IoT Connection Settings
-    public String getMqttBrokerUrl() { return mqttBrokerUrl; }
-    public void setMqttBrokerUrl(String mqttBrokerUrl) { this.mqttBrokerUrl = mqttBrokerUrl; }
+    // Integration ID getters and setters
+    public String getGmailId() { return gmailId; }
+    public void setGmailId(String gmailId) { this.gmailId = gmailId; }
 
-    public String getMqttUsername() { return mqttUsername; }
-    public void setMqttUsername(String mqttUsername) { this.mqttUsername = mqttUsername; }
+    public String getSlackId() { return slackId; }
+    public void setSlackId(String slackId) { this.slackId = slackId; }
 
-    public String getMqttPassword() { return mqttPassword; }
-    public void setMqttPassword(String mqttPassword) { this.mqttPassword = mqttPassword; }
-
-    public String getApiKey() { return apiKey; }
-    public void setApiKey(String apiKey) { this.apiKey = apiKey; }
-
-    public String getWebhookUrl() { return webhookUrl; }
-    public void setWebhookUrl(String webhookUrl) { this.webhookUrl = webhookUrl; }
-
-    public ConnectionType getConnectionType() { return connectionType; }
-    public void setConnectionType(ConnectionType connectionType) { this.connectionType = connectionType; }
+    public String getTeamId() { return teamId; }
+    public void setTeamId(String teamId) { this.teamId = teamId; }
 }
