@@ -138,7 +138,7 @@ export class UnifiedDeviceService {
    */
   async getDeviceRules(deviceId: string): Promise<DeviceRules[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/pdf-results`, {
+      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/rules`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -152,7 +152,7 @@ export class UnifiedDeviceService {
       }
 
       const data = await response.json();
-      return data.rules || [];
+      return data || [];
     } catch (error) {
       logError('UnifiedDeviceService', 'Error fetching device rules', error instanceof Error ? error : new Error('Unknown error'));
       return [];
@@ -164,7 +164,7 @@ export class UnifiedDeviceService {
    */
   async getDeviceMaintenance(deviceId: string): Promise<DeviceMaintenance[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/pdf-results`, {
+      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/maintenance`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -178,7 +178,7 @@ export class UnifiedDeviceService {
       }
 
       const data = await response.json();
-      return data.maintenance || [];
+      return data || [];
     } catch (error) {
       logError('UnifiedDeviceService', 'Error fetching device maintenance', error instanceof Error ? error : new Error('Unknown error'));
       return [];
@@ -190,7 +190,7 @@ export class UnifiedDeviceService {
    */
   async getDeviceSafetyPrecautions(deviceId: string): Promise<DeviceSafetyPrecaution[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/pdf-results`, {
+      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/safety-precautions`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -204,7 +204,7 @@ export class UnifiedDeviceService {
       }
 
       const data = await response.json();
-      return data.safetyPrecautions || [];
+      return data || [];
     } catch (error) {
       logError('UnifiedDeviceService', 'Error fetching device safety precautions', error instanceof Error ? error : new Error('Unknown error'));
       return [];

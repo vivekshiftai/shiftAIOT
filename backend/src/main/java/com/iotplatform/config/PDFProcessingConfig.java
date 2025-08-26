@@ -47,13 +47,15 @@ public class PDFProcessingConfig {
 
     /**
      * Connection timeout for HTTP requests (in milliseconds)
+     * Set to 0 for no timeout
      */
-    private int connectionTimeout = 30000; // 30 seconds
+    private int connectionTimeout = 0; // No timeout
 
     /**
      * Read timeout for HTTP requests (in milliseconds)
+     * Set to 0 for no timeout
      */
-    private int readTimeout = 60000; // 60 seconds
+    private int readTimeout = 0; // No timeout
 
     /**
      * Maximum number of retries for failed requests
@@ -103,8 +105,16 @@ public class PDFProcessingConfig {
         log.info("Initializing PDF Processing Configuration");
         log.info("Base URL: {}", baseUrl);
         log.info("Max File Size: {} bytes ({} MB)", maxFileSize, maxFileSize / (1024 * 1024));
-        log.info("Connection Timeout: {} ms", connectionTimeout);
-        log.info("Read Timeout: {} ms", readTimeout);
+        if (connectionTimeout == 0) {
+            log.info("Connection Timeout: No timeout (infinite)");
+        } else {
+            log.info("Connection Timeout: {} ms", connectionTimeout);
+        }
+        if (readTimeout == 0) {
+            log.info("Read Timeout: No timeout (infinite)");
+        } else {
+            log.info("Read Timeout: {} ms", readTimeout);
+        }
         log.info("Max Retries: {}", maxRetries);
         log.info("Async Core Pool Size: {}", async.getCorePoolSize());
         log.info("Async Max Pool Size: {}", async.getMaxPoolSize());
@@ -125,12 +135,12 @@ public class PDFProcessingConfig {
             throw new IllegalStateException("Max file size must be positive");
         }
 
-        if (connectionTimeout <= 0) {
-            throw new IllegalStateException("Connection timeout must be positive");
+        if (connectionTimeout < 0) {
+            throw new IllegalStateException("Connection timeout cannot be negative");
         }
 
-        if (readTimeout <= 0) {
-            throw new IllegalStateException("Read timeout must be positive");
+        if (readTimeout < 0) {
+            throw new IllegalStateException("Read timeout cannot be negative");
         }
 
         if (maxRetries < 0) {
@@ -148,12 +158,22 @@ public class PDFProcessingConfig {
      */
     @Bean("pdfProcessingRestTemplate")
     public RestTemplate pdfProcessingRestTemplate() {
-        log.info("Creating PDF Processing RestTemplate with timeouts - Connect: {}ms, Read: {}ms", 
-            connectionTimeout, readTimeout);
+        if (connectionTimeout == 0 && readTimeout == 0) {
+            log.info("Creating PDF Processing RestTemplate with no timeouts (infinite wait)");
+        } else {
+            log.info("Creating PDF Processing RestTemplate with timeouts - Connect: {}ms, Read: {}ms", 
+                connectionTimeout, readTimeout);
+        }
 
         ClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        ((SimpleClientHttpRequestFactory) factory).setConnectTimeout(connectionTimeout);
-        ((SimpleClientHttpRequestFactory) factory).setReadTimeout(readTimeout);
+        
+        // Set timeouts only if they are greater than 0
+        if (connectionTimeout > 0) {
+            ((SimpleClientHttpRequestFactory) factory).setConnectTimeout(connectionTimeout);
+        }
+        if (readTimeout > 0) {
+            ((SimpleClientHttpRequestFactory) factory).setReadTimeout(readTimeout);
+        }
 
         RestTemplate restTemplate = new RestTemplate(factory);
         

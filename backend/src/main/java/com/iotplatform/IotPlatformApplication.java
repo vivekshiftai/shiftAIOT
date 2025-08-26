@@ -22,7 +22,7 @@ public class IotPlatformApplication {
             logger.info("shiftAIOT Platform Application started successfully!");
             logger.info("Database: PostgreSQL");
             logger.info("API Documentation: http://localhost:8100/swagger-ui.html");
-            logger.info("Frontend: http://localhost:5173");
+            // logger.info("Frontend: http://localhost:5173");
         } catch (Exception e) {
             logger.error("Failed to start shiftAIOT Platform Application: {}", e.getMessage(), e);
             System.exit(1);

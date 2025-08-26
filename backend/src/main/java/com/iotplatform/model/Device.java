@@ -66,6 +66,9 @@ public class Device {
     @Column(name = "assigned_user_id")
     private String assignedUserId;
 
+    @Column(name = "assigned_by")
+    private String assignedBy;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -135,86 +138,6 @@ public class Device {
     @Column(name = "coap_path")
     private String coapPath;
 
-    // Legacy fields (kept for backward compatibility, nullable)
-    @Size(max = 50)
-    @Column(name = "firmware")
-    private String firmware;
-
-    @Column(name = "last_seen")
-    private LocalDateTime lastSeen;
-
-    @Column(name = "battery_level")
-    private Integer batteryLevel;
-
-    @Column(name = "temperature")
-    private Double temperature;
-
-    @Column(name = "humidity")
-    private Double humidity;
-
-    @Size(max = 100)
-    @Column(name = "serial_number")
-    private String serialNumber;
-
-    @Size(max = 17)
-    @Column(name = "mac_address")
-    private String macAddress;
-
-    @Size(max = 500)
-    @Column(name = "manual_url")
-    private String manualUrl;
-
-    @Size(max = 500)
-    @Column(name = "datasheet_url")
-    private String datasheetUrl;
-
-    @Size(max = 500)
-    @Column(name = "certificate_url")
-    private String certificateUrl;
-
-    @Column(name = "installation_notes", columnDefinition = "TEXT")
-    private String installationNotes;
-
-    @Size(max = 500)
-    @Column(name = "maintenance_schedule")
-    private String maintenanceSchedule;
-
-    @Size(max = 500)
-    @Column(name = "warranty_info")
-    private String warrantyInfo;
-
-    @Size(max = 100)
-    @Column(name = "wifi_ssid")
-    private String wifiSsid;
-
-    @Size(max = 50)
-    @Column(name = "power_source")
-    private String powerSource;
-
-    @Min(value = 0, message = "Power consumption must be positive")
-    @Column(name = "power_consumption")
-    private Double powerConsumption;
-
-    @Min(value = -273, message = "Operating temperature minimum must be above absolute zero")
-    @Max(value = 1000, message = "Operating temperature minimum must be below 1000°C")
-    @Column(name = "operating_temperature_min")
-    private Double operatingTemperatureMin;
-
-    @Min(value = -273, message = "Operating temperature maximum must be above absolute zero")
-    @Max(value = 1000, message = "Operating temperature maximum must be below 1000°C")
-    @Column(name = "operating_temperature_max")
-    private Double operatingTemperatureMax;
-
-    @Min(value = 0, message = "Operating humidity minimum must be positive")
-    @Max(value = 100, message = "Operating humidity minimum must be below 100%")
-    @Column(name = "operating_humidity_min")
-    private Double operatingHumidityMin;
-
-    @Min(value = 0, message = "Operating humidity maximum must be positive")
-    @Max(value = 100, message = "Operating humidity maximum must be below 100%")
-    @Column(name = "operating_humidity_max")
-    private Double operatingHumidityMax;
-
     // Collections (nullable)
     @ElementCollection
     @CollectionTable(name = "device_tags", joinColumns = @JoinColumn(name = "device_id"))
@@ -244,7 +167,6 @@ public class Device {
         logger.debug("Creating new device: {}", name);
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        lastSeen = LocalDateTime.now();
     }
 
     @PreUpdate
@@ -285,6 +207,9 @@ public class Device {
 
     public String getAssignedUserId() { return assignedUserId; }
     public void setAssignedUserId(String assignedUserId) { this.assignedUserId = assignedUserId; }
+
+    public String getAssignedBy() { return assignedBy; }
+    public void setAssignedBy(String assignedBy) { this.assignedBy = assignedBy; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
@@ -341,70 +266,6 @@ public class Device {
 
     public String getCoapPath() { return coapPath; }
     public void setCoapPath(String coapPath) { this.coapPath = coapPath; }
-
-    // Legacy fields getters and setters
-    public String getFirmware() { return firmware; }
-    public void setFirmware(String firmware) { this.firmware = firmware; }
-
-    public LocalDateTime getLastSeen() { return lastSeen; }
-    public void setLastSeen(LocalDateTime lastSeen) { 
-        logger.debug("Device {} last seen updated to: {}", id, lastSeen);
-        this.lastSeen = lastSeen; 
-    }
-
-    public Integer getBatteryLevel() { return batteryLevel; }
-    public void setBatteryLevel(Integer batteryLevel) { this.batteryLevel = batteryLevel; }
-
-    public Double getTemperature() { return temperature; }
-    public void setTemperature(Double temperature) { this.temperature = temperature; }
-
-    public Double getHumidity() { return humidity; }
-    public void setHumidity(Double humidity) { this.humidity = humidity; }
-
-    public String getSerialNumber() { return serialNumber; }
-    public void setSerialNumber(String serialNumber) { this.serialNumber = serialNumber; }
-
-    public String getMacAddress() { return macAddress; }
-    public void setMacAddress(String macAddress) { this.macAddress = macAddress; }
-
-    public String getManualUrl() { return manualUrl; }
-    public void setManualUrl(String manualUrl) { this.manualUrl = manualUrl; }
-
-    public String getDatasheetUrl() { return datasheetUrl; }
-    public void setDatasheetUrl(String datasheetUrl) { this.datasheetUrl = datasheetUrl; }
-
-    public String getCertificateUrl() { return certificateUrl; }
-    public void setCertificateUrl(String certificateUrl) { this.certificateUrl = certificateUrl; }
-
-    public String getInstallationNotes() { return installationNotes; }
-    public void setInstallationNotes(String installationNotes) { this.installationNotes = installationNotes; }
-
-    public String getMaintenanceSchedule() { return maintenanceSchedule; }
-    public void setMaintenanceSchedule(String maintenanceSchedule) { this.maintenanceSchedule = maintenanceSchedule; }
-
-    public String getWarrantyInfo() { return warrantyInfo; }
-    public void setWarrantyInfo(String warrantyInfo) { this.warrantyInfo = warrantyInfo; }
-
-    public String getWifiSsid() { return wifiSsid; }
-    public void setWifiSsid(String wifiSsid) { this.wifiSsid = wifiSsid; }
-
-    public String getPowerSource() { return powerSource; }
-    public void setPowerSource(String powerSource) { this.powerSource = powerSource; }
-
-    public Double getPowerConsumption() { return powerConsumption; }
-    public void setPowerConsumption(Double powerConsumption) { this.powerConsumption = powerConsumption; }
-
-    public Double getOperatingTemperatureMin() { return operatingTemperatureMin; }
-    public void setOperatingTemperatureMin(Double operatingTemperatureMin) { this.operatingTemperatureMin = operatingTemperatureMin; }
-
-    public Double getOperatingTemperatureMax() { return operatingTemperatureMax; }
-    public void setOperatingTemperatureMax(Double operatingTemperatureMax) { this.operatingTemperatureMax = operatingTemperatureMax; }
-
-    public Double getOperatingHumidityMin() { return operatingHumidityMin; }
-    public void setOperatingHumidityMin(Double operatingHumidityMin) { this.operatingHumidityMin = operatingHumidityMin; }
-
-    public Double getOperatingHumidityMax() { return operatingHumidityMax; }
-    public void setOperatingHumidityMax(Double operatingHumidityMax) { this.operatingHumidityMax = operatingHumidityMax; }
 
     // Collections getters and setters
     public List<String> getTags() { return tags; }

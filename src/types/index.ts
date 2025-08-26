@@ -12,7 +12,7 @@ export interface User {
   lastLogin?: string;
 }
 
-// Device Types
+// Device Types - Updated to match backend schema
 export interface Device {
   id: string;
   name: string;
@@ -20,31 +20,40 @@ export interface Device {
   status: 'ONLINE' | 'OFFLINE' | 'WARNING' | 'ERROR';
   location: string;
   protocol: 'MQTT' | 'HTTP' | 'COAP';
-  firmware: string;
-  tags: string[];
-  manufacturer: string;
-  model: string;
-  serialNumber: string;
-  macAddress: string;
-  ipAddress: string;
-  port: number;
-  description: string;
-  installationNotes: string;
-  maintenanceSchedule: string;
-  warrantyInfo: string;
-  wifiSsid: string;
-  mqttBroker: string;
-  mqttTopic: string;
-  powerSource: string;
-  powerConsumption: number;
-  operatingTemperatureMin: number;
-  operatingTemperatureMax: number;
-  operatingHumidityMin: number;
-  operatingHumidityMax: number;
-  lastSeen: string;
+  organizationId: string;
   assignedUserId?: string;
+  assignedBy?: string;
   createdAt: string;
   updatedAt: string;
+  
+  // Basic device info (optional)
+  manufacturer?: string;
+  model?: string;
+  description?: string;
+  
+  // Connection details (optional)
+  ipAddress?: string;
+  port?: number;
+  
+  // MQTT specific fields (optional)
+  mqttBroker?: string;
+  mqttTopic?: string;
+  mqttUsername?: string;
+  mqttPassword?: string;
+  
+  // HTTP specific fields (optional)
+  httpEndpoint?: string;
+  httpMethod?: string;
+  httpHeaders?: string;
+  
+  // COAP specific fields (optional)
+  coapHost?: string;
+  coapPort?: number;
+  coapPath?: string;
+  
+  // Collections (optional)
+  tags?: string[];
+  config?: Record<string, string>;
 }
 
 // Notification Types

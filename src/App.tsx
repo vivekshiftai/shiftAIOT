@@ -7,7 +7,7 @@ import { logError } from './utils/logger';
 
 import { LoginForm } from './components/Auth/LoginForm';
 import { SignupForm } from './components/Auth/SignupForm';
-import { Sidebar } from './components/Layout/Sidebar';
+import Sidebar from './components/Layout/Sidebar';
 import { Header } from './components/Layout/Header';
 import { DashboardSection } from './sections/DashboardSection';
 import { DevicesSection } from './sections/DevicesSection';
@@ -22,6 +22,7 @@ import './styles/colors.css';
 import { AlertTriangle } from 'lucide-react';
 import RulesPage from './sections/RulesPage';
 import MaintenancePage from './sections/MaintenancePage';
+import SafetyPage from './sections/SafetyPage';
 import { SettingsSection } from './sections/SettingsSection';
 
 // Error Boundary Component
@@ -105,6 +106,7 @@ const MainAppLayout: React.FC = () => {
     if (path === '/settings') return 'settings';
     if (path === '/rules') return 'rules';
     if (path === '/maintenance') return 'maintenance';
+    if (path === '/safety') return 'safety';
     return 'dashboard';
   };
 
@@ -154,6 +156,7 @@ const MainAppLayout: React.FC = () => {
             <Route path="/settings" element={<SettingsSection />} />
             <Route path="/rules" element={<RulesPage />} />
             <Route path="/maintenance" element={<MaintenancePage />} />
+            <Route path="/safety" element={<SafetyPage />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
           

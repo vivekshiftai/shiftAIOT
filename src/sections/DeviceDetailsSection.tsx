@@ -73,10 +73,10 @@ interface KnowledgeDocument {
 
 const tabs = [
   { id: 'device-info', label: 'Device Information', icon: Settings },
-  { id: 'maintenance', label: 'Maintenance Details', icon: Settings },
+  { id: 'maintenance', label: 'Maintenance', icon: Settings },
   { id: 'rules', label: 'Rules', icon: FileText },
-  { id: 'safety', label: 'Safety Info', icon: Settings },
-  { id: 'chat', label: 'Chat History', icon: Settings }
+  { id: 'safety', label: 'Safety Info', icon: AlertTriangle },
+  { id: 'chat', label: 'Chat', icon: MessageSquare }
 ];
 
 export const DeviceDetailsSection: React.FC = () => {
@@ -84,8 +84,6 @@ export const DeviceDetailsSection: React.FC = () => {
   const navigate = useNavigate();
   const { devices, updateDeviceStatus } = useIoT();
   const { hasPermission } = useAuth();
-  const [showRules, setShowRules] = useState(false);
-  const [showConnections, setShowConnections] = useState(false);
   const [activeTab, setActiveTab] = useState('device-info');
   const [isTabLoading, setIsTabLoading] = useState(false);
   const [documentationInfo, setDocumentationInfo] = useState<DocumentationInfo | null>(null);
@@ -103,7 +101,7 @@ export const DeviceDetailsSection: React.FC = () => {
   ]);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [initialChatMessage, setInitialChatMessage] = useState<string | null>(null); // Added state for initial chat message
+  const [initialChatMessage, setInitialChatMessage] = useState<string | null>(null);
   
   // Real-time data states
   const [deviceStats, setDeviceStats] = useState<DeviceStats | null>(null);
@@ -814,13 +812,7 @@ export const DeviceDetailsSection: React.FC = () => {
                 >
                   Debug
                 </button>
-                <button
-                  onClick={() => setShowRules(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all"
-                >
-                  <Settings className="w-4 h-4" />
-                  Manage Rules
-                </button>
+
               </div>
             </div>
             
@@ -1179,26 +1171,7 @@ export const DeviceDetailsSection: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex gap-2">
-          {hasPermission('DEVICE_UPDATE') && (
-            <button
-              onClick={() => setShowConnections(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all"
-            >
-              <Settings className="w-4 h-4" />
-              Connections
-            </button>
-          )}
-          {hasPermission('RULE_READ') && (
-            <button
-              onClick={() => setShowRules(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all"
-            >
-              <Settings className="w-4 h-4" />
-              Rules
-            </button>
-          )}
-        </div>
+
       </div>
 
       {/* Tabs */}
@@ -1254,21 +1227,7 @@ export const DeviceDetailsSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Device Rules Modal */}
-      {showRules && hasPermission('RULE_READ') && (
-        <DeviceRules
-          device={device}
-          onClose={() => setShowRules(false)}
-        />
-      )}
 
-      {/* Device Connections Modal */}
-      {showConnections && hasPermission('DEVICE_WRITE') && (
-        <DeviceConnectionManager
-          deviceId={device.id}
-          onClose={() => setShowConnections(false)}
-        />
-      )}
     </div>
   );
 };

@@ -1,21 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
 import { 
-  Home, 
-  Cpu, 
-  BarChart3, 
   Settings, 
   Bell, 
-  Users, 
+  User, 
+  ChevronRight,
+  ChevronDown,
+  MoreHorizontal,
+  Target,
+  Wrench,
+  Shield,
+  BarChart3,
+  Cpu,
   BookOpen,
-  ChevronRight
+  Home
 } from 'lucide-react';
 
 interface SidebarProps {
-  activeSection: string;
-  onSectionChange: (section: string) => void;
-  collapsed: boolean;
+  activeSection?: string;
+  onSectionChange?: (section: string) => void;
+  collapsed?: boolean;
 }
 
 const menuItems = [
@@ -24,89 +28,113 @@ const menuItems = [
   { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
   { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen, path: '/knowledge' },
   { id: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
-  { id: 'users', label: 'Users', icon: Users, path: '/users' },
+  { id: 'users', label: 'Users', icon: User, path: '/users' },
   { id: 'settings', label: 'Settings', icon: Settings, path: '/settings' },
 ];
 
-export const Sidebar: React.FC<SidebarProps> = ({ 
-  activeSection, 
-  onSectionChange, 
-  collapsed 
-}) => {
+const moreMenuItems = [
+  { id: 'rules', label: 'Rules', icon: Target, path: '/rules' },
+  { id: 'maintenance', label: 'Maintenance', icon: Wrench, path: '/maintenance' },
+  { id: 'safety', label: 'Safety Info', icon: Shield, path: '/safety' },
+];
+
+const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange, collapsed = false }) => {
   const location = useLocation();
-  const { user } = useAuth();
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+
+  const getCurrentPage = () => {
+    const path = location.pathname;
+    if (path === '/dashboard') return 'dashboard';
+    if (path === '/devices') return 'devices';
+    if (path === '/analytics') return 'analytics';
+    if (path === '/knowledge') return 'knowledge';
+    if (path === '/notifications') return 'notifications';
+    if (path === '/users') return 'users';
+    if (path === '/settings') return 'settings';
+    if (path === '/rules') return 'rules';
+    if (path === '/maintenance') return 'maintenance';
+    if (path === '/safety') return 'safety';
+    return 'dashboard';
+  };
+
+  const currentPage = getCurrentPage();
+  const isMoreActive = moreMenuItems.some(item => item.id === currentPage);
 
   return (
-    <aside className={`bg-card text-primary transition-all duration-300 ${
-      collapsed ? 'w-16' : 'w-64'
-    } h-screen flex flex-col shadow-sm border-r border-light flex-shrink-0`}>
-      <div className="p-4 border-b border-light">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center shadow-sm">
-            <Cpu className="w-6 h-6 text-white" />
-          </div>
-          {!collapsed && (
-            <div>
-              <h1 className="font-bold text-lg text-primary">shiftAIOT Platform</h1>
-              <p className="text-secondary text-xs">Enterprise Edition</p>
+    <div className="bg-white border-r border-gray-200 w-64 min-h-screen p-4">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">IoT Platform</h1>
+      </div>
+      
+      <nav className="space-y-2">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = currentPage === item.id;
+          
+          return (
+            <Link
+              key={item.id}
+              to={item.path}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                  : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              {item.label}
+            </Link>
+          );
+        })}
+
+        {/* More Dropdown */}
+        <div className="pt-2">
+          <button
+            onClick={() => setIsMoreOpen(!isMoreOpen)}
+            className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isMoreActive
+                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <MoreHorizontal className="w-5 h-5" />
+              More
+            </div>
+            {isMoreOpen ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
+          </button>
+
+          {isMoreOpen && (
+            <div className="ml-6 mt-2 space-y-1">
+              {moreMenuItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = currentPage === item.id;
+                
+                return (
+                  <Link
+                    key={item.id}
+                    to={item.path}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>
-      </div>
-
-      <nav className="flex-1 p-4">
-        <ul className="space-y-2">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path || (location.pathname === '/' && item.path === '/dashboard');
-            
-            return (
-              <li key={item.id}>
-                <Link
-                  to={item.path}
-                  onClick={() => onSectionChange(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 ${
-                    isActive 
-                      ? 'bg-primary-500 text-white shadow-sm' 
-                      : 'text-secondary hover:bg-tertiary hover:text-primary'
-                  }`}
-                >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
-                  {!collapsed && (
-                    <>
-                      <span className="flex-1 text-left font-medium">{item.label}</span>
-                      {isActive && <ChevronRight className="w-4 h-4" />}
-                    </>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
       </nav>
-
-      <div className="p-4 border-t border-light">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center shadow-sm">
-            <span className="text-white text-sm font-medium">
-              {user?.firstName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
-            </span>
-          </div>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate text-primary">
-                {user?.firstName && user?.lastName 
-                  ? `${user.firstName} ${user.lastName}` 
-                  : user?.email || 'User'
-                }
-              </p>
-              <p className="text-xs text-secondary truncate capitalize">
-                {user?.role?.toLowerCase() || 'User'}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    </aside>
+    </div>
   );
 };
+
+export default Sidebar;

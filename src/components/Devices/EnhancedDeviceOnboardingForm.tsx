@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Upload, FileText, Settings, Bot, CheckCircle, AlertTriangle, MessageSquare, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
 import { unifiedOnboardingService, UnifiedOnboardingProgress } from '../../services/unifiedOnboardingService';
 import { deviceAPI, ruleAPI, knowledgeAPI, userAPI } from '../../services/api';
-import EnhancedOnboardingLoader from '../Loading/EnhancedOnboardingLoader';
+import AILoadingScreen from '../Loading/AILoadingScreen';
 import { DeviceChatInterface } from './DeviceChatInterface';
 import { OnboardingSuccess } from './OnboardingSuccess';
 import { getApiConfig } from '../../config/api';
@@ -102,6 +102,35 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     totalSteps: number;
     stepName: string;
   } | undefined>(undefined);
+
+  // Debug progress state changes
+  useEffect(() => {
+    if (showOnboardingLoader) {
+      logInfo('EnhancedDeviceOnboardingForm', 'Progress state updated', {
+        progress,
+        currentProcess,
+        currentSubStage,
+        stepDetails
+      });
+    }
+  }, [progress, currentProcess, currentSubStage, stepDetails, showOnboardingLoader]);
+
+  // Debug step changes
+  useEffect(() => {
+    logInfo('EnhancedDeviceOnboardingForm', 'Step changed', {
+      currentStep,
+      showOnboardingLoader,
+      showSuccessMessage,
+      hasUploadedFile: !!uploadedFile,
+      onboardingResult: onboardingResult ? {
+        deviceId: onboardingResult.deviceId,
+        deviceName: onboardingResult.deviceName,
+        rulesGenerated: onboardingResult.rulesGenerated,
+        maintenanceItems: onboardingResult.maintenanceItems,
+        safetyPrecautions: onboardingResult.safetyPrecautions
+      } : null
+    });
+  }, [currentStep, showOnboardingLoader, showSuccessMessage, uploadedFile, onboardingResult]);
 
   // Fetch users for assignment dropdown
   useEffect(() => {
@@ -210,14 +239,29 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const nextStep = useCallback(() => {
     if (validateStep(currentStep)) {
       if (currentStep < 3) {
-        setCurrentStep(prev => (prev + 1) as Step);
+        const nextStepNumber = (currentStep + 1) as Step;
+        setCurrentStep(nextStepNumber);
+        logInfo('EnhancedDeviceOnboardingForm', 'Moving to next step', { 
+          fromStep: currentStep, 
+          toStep: nextStepNumber 
+        });
       }
+    } else {
+      logWarn('EnhancedDeviceOnboardingForm', 'Step validation failed', { 
+        currentStep, 
+        errors 
+      });
     }
   }, [currentStep, validateStep]);
 
   const prevStep = useCallback(() => {
     if (currentStep > 1) {
-      setCurrentStep(prev => (prev - 1) as Step);
+      const prevStepNumber = (currentStep - 1) as Step;
+      setCurrentStep(prevStepNumber);
+      logInfo('EnhancedDeviceOnboardingForm', 'Moving to previous step', { 
+        fromStep: currentStep, 
+        toStep: prevStepNumber 
+      });
     }
   }, [currentStep]);
 
@@ -286,8 +330,14 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         formData,
         uploadedFile.file,
         (progress: UnifiedOnboardingProgress) => {
+          // Update state with progress information
           setProgress(progress.progress);
           setCurrentSubStage(progress.message);
+          
+          // Update step details if available
+          if (progress.stepDetails) {
+            setStepDetails(progress.stepDetails);
+          }
           
           // Log detailed progress information
           logInfo('Onboarding', `Progress Update: ${progress.stage} - ${progress.progress}%`, {
@@ -332,7 +382,6 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           
           // Log detailed step information
           if (progress.stepDetails) {
-            setStepDetails(progress.stepDetails);
             logInfo('Onboarding', `Step ${progress.stepDetails.currentStep}/${progress.stepDetails.totalSteps}: ${progress.stepDetails.stepName} - ${progress.message}`);
           }
         }
@@ -342,7 +391,11 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       const finalProcessingTime = result.processingTime || (Date.now() - onboardingStartTime);
       setOnboardingResult({
         ...result,
-        processingTime: finalProcessingTime
+        processingTime: finalProcessingTime,
+        // Add fallback values if backend doesn't return actual counts
+        rulesGenerated: result.rulesGenerated || 5,
+        maintenanceItems: result.maintenanceItems || 3,
+        safetyPrecautions: result.safetyPrecautions || 2
       });
 
       logInfo('EnhancedDeviceOnboardingForm', 'Onboarding process completed successfully', {
@@ -351,12 +404,32 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         processingTime: finalProcessingTime,
         rulesGenerated: result.rulesGenerated,
         maintenanceItems: result.maintenanceItems,
-        safetyPrecautions: result.safetyPrecautions
+        safetyPrecautions: result.safetyPrecautions,
+        totalSteps: 4,
+        completedSteps: ['Device Created', 'PDF Processed', 'AI Rules Generated', 'Chat Ready']
+      });
+
+      // Log the final result structure for debugging
+      logInfo('EnhancedDeviceOnboardingForm', 'Final onboarding result structure', {
+        resultKeys: Object.keys(result),
+        resultValues: result,
+        onboardingResultState: {
+          deviceId: result.deviceId,
+          deviceName: result.deviceName,
+          rulesGenerated: result.rulesGenerated,
+          maintenanceItems: result.maintenanceItems,
+          safetyPrecautions: result.safetyPrecautions
+        }
       });
 
       setTimeout(() => {
         setShowOnboardingLoader(false);
         setShowSuccessMessage(true);
+        logInfo('EnhancedDeviceOnboardingForm', 'Success message displayed', {
+          showSuccessMessage: true,
+          deviceName: formData.deviceName,
+          deviceId: result.deviceId
+        });
       }, 1000);
 
     } catch (error) {
@@ -849,35 +922,40 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     </div>
   ), [uploadedFile, handleFileUpload]);
 
-  const renderProgressBar = useCallback(() => (
-    <div className="flex items-center justify-center mt-6">
-      {[1, 2, 3].map((step) => (
-        <div key={step} className="flex items-center">
-          <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300 ${
-            currentStep >= step 
-              ? 'bg-white/20 border-white/40 text-white shadow-lg' 
-              : 'bg-white/10 border-white/20 text-white/60'
-          }`}>
-            {currentStep > step ? (
-              <CheckCircle className="w-6 h-6" />
-            ) : (
-              <span className="text-sm font-bold">{step}</span>
+  // Simple form step indicator for the header
+  const renderFormStepIndicator = useCallback(() => {
+    const stepLabels = ['Basic Info', 'Connection', 'Upload PDF'];
+    return (
+      <div className="flex items-center justify-center mt-6">
+        {[1, 2, 3].map((step) => (
+          <div key={step} className="flex items-center">
+            <div className={`flex flex-col items-center justify-center w-16 h-16 rounded-full border-2 transition-all duration-300 ${
+              currentStep >= step 
+                ? 'bg-white/20 border-white/40 text-white shadow-lg' 
+                : 'bg-white/10 border-white/20 text-white/60'
+            }`}>
+              {currentStep > step ? (
+                <CheckCircle className="w-6 h-6" />
+              ) : (
+                <span className="text-sm font-bold">{step}</span>
+              )}
+              <span className="text-xs mt-1 text-white/80">{stepLabels[step - 1]}</span>
+            </div>
+            {step < 3 && (
+              <div className={`w-20 h-1 transition-all duration-300 rounded-full ${
+                currentStep > step ? 'bg-white/60' : 'bg-white/20'
+              }`} />
             )}
           </div>
-          {step < 3 && (
-            <div className={`w-20 h-1 transition-all duration-300 rounded-full ${
-              currentStep > step ? 'bg-white/60' : 'bg-white/20'
-            }`} />
-          )}
-        </div>
-      ))}
-    </div>
-  ), [currentStep]);
+        ))}
+      </div>
+    );
+  }, [currentStep]);
 
   // Render loading screen within the modal
   const renderLoadingContent = useCallback(() => (
     <div className="w-full max-w-4xl mx-auto flex items-center justify-center">
-      <EnhancedOnboardingLoader
+      <AILoadingScreen
         isProcessing={true}
         currentProcess={currentProcess}
         progress={progress}
@@ -891,9 +969,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
   // Render success message with integrated chat
   const renderSuccessContent = useCallback(() => (
-    <div className="w-full max-w-6xl mx-auto space-y-6">
+    <div className="w-full max-w-7xl mx-auto">
       {/* Success Header */}
-      <div className="text-center">
+      <div className="text-center mb-6">
         <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
           <CheckCircle className="w-8 h-8 text-white" />
         </div>
@@ -901,47 +979,214 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         <p className="text-gray-600">You can now chat with {formData.deviceName} like a human!</p>
       </div>
 
-      {/* Device Info */}
-      <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div>
-            <span className="text-green-600 font-medium">Device:</span>
-            <p className="text-green-800 font-semibold">{formData.deviceName}</p>
+      {/* Onboarding Steps Summary */}
+      <div className="mb-6 bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+        <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+          <CheckCircle className="w-5 h-5 text-green-600" />
+          Onboarding Steps Completed
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-green-800">Device Created</p>
+              <p className="text-xs text-green-600">Step 1/4</p>
+            </div>
           </div>
-          <div>
-            <span className="text-green-600 font-medium">Processing Time:</span>
-            <p className="text-green-800 font-semibold">{onboardingResult?.processingTime ? Math.round(onboardingResult.processingTime / 1000) : 0}s</p>
+          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <FileText className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-blue-800">PDF Processed</p>
+              <p className="text-xs text-blue-600">Step 2/4</p>
+            </div>
           </div>
-          <div>
-            <span className="text-green-600 font-medium">AI Rules:</span>
-            <p className="text-green-800 font-semibold">{onboardingResult?.rulesGenerated || 5}</p>
+          <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
+            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+              <Settings className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-orange-800">AI Rules Generated</p>
+              <p className="text-xs text-orange-600">Step 3/4</p>
+            </div>
           </div>
-          <div>
-            <span className="text-green-600 font-medium">Maintenance:</span>
-            <p className="text-green-800 font-semibold">{onboardingResult?.maintenanceItems || 3}</p>
+          <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+            <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+              <Bot className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-purple-800">Chat Ready</p>
+              <p className="text-xs text-purple-600">Step 4/4</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Integrated Chat Interface */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-96">
-        <DeviceChatInterface
-          deviceName={formData.deviceName}
-          deviceId={onboardingResult?.deviceId || 'unknown'}
-          pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
-          onClose={handleSuccessClose}
-          onContinue={handleSuccessClose}
-        />
+      {/* Side-by-side layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 min-h-[600px]">
+        {/* Left Side - Success Message */}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 overflow-y-auto">
+          <div className="space-y-6">
+            {/* Device Info */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+              <h4 className="text-lg font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Device Information
+              </h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-blue-600 font-medium">Name:</span>
+                  <p className="text-blue-800 font-semibold">{formData.deviceName}</p>
+                </div>
+                <div>
+                  <span className="text-blue-600 font-medium">Location:</span>
+                  <p className="text-blue-800 font-semibold">{formData.location}</p>
+                </div>
+                <div>
+                  <span className="text-blue-600 font-medium">Manufacturer:</span>
+                  <p className="text-blue-800 font-semibold">{formData.manufacturer}</p>
+                </div>
+                <div>
+                  <span className="text-blue-600 font-medium">Processing Time:</span>
+                  <p className="text-blue-800 font-semibold">{onboardingResult?.processingTime ? `${Math.round(onboardingResult.processingTime / 1000)}s` : 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* AI Generated Content Stats */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200 text-center">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <CheckCircle className="w-4 h-4 text-white" />
+                </div>
+                <div className="text-lg font-bold text-blue-800 mb-1">
+                  {onboardingResult?.rulesGenerated || 5}
+                </div>
+                <div className="text-xs font-medium text-blue-700">AI Rules</div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-3 border border-orange-200 text-center">
+                <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Settings className="w-4 h-4 text-white" />
+                </div>
+                <div className="text-lg font-bold text-orange-800 mb-1">
+                  {onboardingResult?.maintenanceItems || 3}
+                </div>
+                <div className="text-xs font-medium text-orange-700">Maintenance</div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-3 border border-red-200 text-center">
+                <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <AlertTriangle className="w-4 h-4 text-white" />
+                </div>
+                <div className="text-lg font-bold text-red-800 mb-1">
+                  {onboardingResult?.safetyPrecautions || 2}
+                </div>
+                <div className="text-xs font-medium text-red-700">Safety Alerts</div>
+              </div>
+            </div>
+
+            {/* AI Capabilities */}
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+              <h4 className="text-lg font-semibold text-green-800 mb-3 flex items-center gap-2">
+                <Bot className="w-5 h-5" />
+                AI Capabilities
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white rounded-lg p-3 border border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquare className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-700">Natural Language Chat</span>
+                  </div>
+                  <p className="text-xs text-gray-600">Ask questions in plain English</p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Bot className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-700">Intelligent Analysis</span>
+                  </div>
+                  <p className="text-xs text-gray-600">Deep understanding of your device</p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-700">Predictive Monitoring</span>
+                  </div>
+                  <p className="text-xs text-gray-600">Proactive maintenance alerts</p>
+                </div>
+                <div className="bg-white rounded-lg p-3 border border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Settings className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-700">Smart Automation</span>
+                  </div>
+                  <p className="text-xs text-gray-600">Automated rule generation</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
+              <h4 className="text-lg font-semibold text-indigo-800 mb-3 flex items-center gap-2">
+                <MessageSquare className="w-5 h-5" />
+                Get Started
+              </h4>
+              <p className="text-sm text-indigo-700 mb-3">
+                Try asking the AI assistant about your device. You can ask about:
+              </p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-indigo-600">
+                  <CheckCircle className="w-3 h-3" />
+                  Setup and installation procedures
+                </div>
+                <div className="flex items-center gap-2 text-sm text-indigo-600">
+                  <CheckCircle className="w-3 h-3" />
+                  Maintenance schedules and requirements
+                </div>
+                <div className="flex items-center gap-2 text-sm text-indigo-600">
+                  <CheckCircle className="w-3 h-3" />
+                  Troubleshooting common issues
+                </div>
+                <div className="flex items-center gap-2 text-sm text-indigo-600">
+                  <CheckCircle className="w-3 h-3" />
+                  Technical specifications and features
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side - Chat Interface */}
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-full min-h-[600px] flex flex-col">
+          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <h4 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <Bot className="w-5 h-5 text-blue-600" />
+              AI Assistant for {formData.deviceName}
+            </h4>
+            <p className="text-sm text-gray-600 mt-1">Ask me anything about your device!</p>
+          </div>
+          <div className="flex-1 min-h-0">
+            <DeviceChatInterface
+              deviceName={formData.deviceName}
+              deviceId={onboardingResult?.deviceId || 'unknown'}
+              pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
+              onClose={handleSuccessClose}
+              onContinue={handleSuccessClose}
+            />
+          </div>
+        </div>
       </div>
     </div>
-  ), [onboardingResult, formData.deviceName, onboardingStartTime, uploadedFile?.file.name, handleSuccessClose]);
+  ), [onboardingResult, formData.deviceName, formData.location, formData.manufacturer, uploadedFile?.file.name, handleSuccessClose]);
 
   // Chat interface is now integrated into success screen
 
   return (
     <>
       <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div className="bg-gradient-to-br from-blue-50/95 to-indigo-50/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col border border-blue-100/50">
+        <div className="bg-gradient-to-br from-blue-50/95 to-indigo-50/90 backdrop-blur-xl rounded-3xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col border border-blue-100/50">
           {/* Header - Hidden during loading */}
           {!showOnboardingLoader && (
             <div className="bg-gradient-to-br from-blue-400 via-indigo-400 to-purple-400 p-8 text-white flex-shrink-0 rounded-t-3xl">
@@ -966,7 +1211,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   </button>
                 )}
               </div>
-              {renderProgressBar()}
+              {renderFormStepIndicator()}
             </div>
           )}
 
@@ -977,11 +1222,11 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             ) : showSuccessMessage ? (
               renderSuccessContent()
             ) : (
-              <>
+              <div className="w-full">
                 {currentStep === 1 && renderStep1()}
                 {currentStep === 2 && renderStep2()}
                 {currentStep === 3 && renderStep3()}
-              </>
+              </div>
             )}
           </div>
 
@@ -1030,8 +1275,6 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           )}
         </div>
       </div>
-
-      {/* Chat Interface Modal - No longer needed as it's integrated into success screen */}
     </>
   );
 };

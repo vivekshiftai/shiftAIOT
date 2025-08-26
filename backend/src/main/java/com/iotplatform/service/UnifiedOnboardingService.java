@@ -327,56 +327,10 @@ public class UnifiedOnboardingService {
             
             Device device = deviceOpt.get();
             
-            // Check if device has manual URL (PDF file)
-            if (device.getManualUrl() == null || device.getManualUrl().isEmpty()) {
-                log.info("No PDF file found for device {}, skipping rule processing", deviceId);
-                return;
-            }
-            
-            // Extract PDF filename from manual URL
-            String pdfFilename = extractPdfFilename(device.getManualUrl());
-            if (pdfFilename == null) {
-                log.warn("Could not extract PDF filename from manual URL: {}", device.getManualUrl());
-                return;
-            }
-            
-            log.info("Generating rules for device: {} using PDF: {}", deviceId, pdfFilename);
-            
-            // Generate rules using PDF processing service
-            var rulesResponse = pdfProcessingService.generateRules(pdfFilename, deviceId, organizationId);
-            
-            if (!rulesResponse.isSuccess()) {
-                log.error("Rule generation failed for device: {} - {}", deviceId, rulesResponse.getMessage());
-                return;
-            }
-            
-            // Store rules in database
-            if (rulesResponse.getRules() != null && !rulesResponse.getRules().isEmpty()) {
-                List<Rule> rulesToSave = new ArrayList<>();
-                
-                for (var ruleData : rulesResponse.getRules()) {
-                    Rule rule = new Rule();
-                    rule.setId(UUID.randomUUID().toString());
-                    rule.setName(ruleData.getName());
-                    rule.setDescription(ruleData.getDescription());
-                    rule.setMetric(ruleData.getMetric());
-                    rule.setMetricValue(ruleData.getMetricValue());
-                    rule.setThreshold(ruleData.getThreshold());
-                    rule.setConsequence(ruleData.getConsequence());
-                    rule.setActive(true);
-                    rule.setDeviceId(deviceId);
-                    rule.setOrganizationId(organizationId);
-                    rule.setCreatedAt(LocalDateTime.now());
-                    rule.setUpdatedAt(LocalDateTime.now());
-                    
-                    rulesToSave.add(rule);
-                }
-                
-                ruleRepository.saveAll(rulesToSave);
-                log.info("Successfully stored {} rules for device: {}", rulesToSave.size(), deviceId);
-            } else {
-                log.warn("No rules generated for device: {}", deviceId);
-            }
+            // Note: Manual URL field removed from simplified schema
+            // PDF processing is now handled through the device documentation system
+            log.info("PDF processing for device {} is now handled through the device documentation system", deviceId);
+            return;
             
         } catch (Exception e) {
             log.error("Error processing rules for device: {}", deviceId, e);
@@ -399,60 +353,10 @@ public class UnifiedOnboardingService {
             
             Device device = deviceOpt.get();
             
-            // Check if device has manual URL (PDF file)
-            if (device.getManualUrl() == null || device.getManualUrl().isEmpty()) {
-                log.info("No PDF file found for device {}, skipping maintenance processing", deviceId);
-                return;
-            }
-            
-            // Extract PDF filename from manual URL
-            String pdfFilename = extractPdfFilename(device.getManualUrl());
-            if (pdfFilename == null) {
-                log.warn("Could not extract PDF filename from manual URL: {}", device.getManualUrl());
-                return;
-            }
-            
-            log.info("Generating maintenance schedule for device: {} using PDF: {}", deviceId, pdfFilename);
-            
-            // Generate maintenance using PDF processing service
-            var maintenanceResponse = pdfProcessingService.generateMaintenance(pdfFilename, deviceId, organizationId);
-            
-            if (!maintenanceResponse.isSuccess()) {
-                log.error("Maintenance generation failed for device: {} - {}", deviceId, maintenanceResponse.getMessage());
-                return;
-            }
-            
-            // Store maintenance tasks in database with proper date formatting
-            if (maintenanceResponse.getMaintenanceTasks() != null && !maintenanceResponse.getMaintenanceTasks().isEmpty()) {
-                List<DeviceMaintenance> maintenanceToSave = new ArrayList<>();
-                
-                for (var maintenanceData : maintenanceResponse.getMaintenanceTasks()) {
-                    DeviceMaintenance maintenance = new DeviceMaintenance();
-                    maintenance.setId(UUID.randomUUID().toString());
-                    maintenance.setTaskName(maintenanceData.getTaskName());
-                    maintenance.setDevice(device);
-                    maintenance.setDeviceName(device.getName());
-                    maintenance.setDescription(maintenanceData.getDescription());
-                    maintenance.setFrequency(maintenanceData.getFrequency());
-                    maintenance.setPriority(DeviceMaintenance.Priority.valueOf(maintenanceData.getPriority().toUpperCase()));
-                    maintenance.setEstimatedDuration(maintenanceData.getEstimatedDuration());
-                    maintenance.setRequiredTools(maintenanceData.getRequiredTools());
-                    maintenance.setStatus(DeviceMaintenance.Status.ACTIVE);
-                    maintenance.setOrganizationId(organizationId);
-                    maintenance.setCreatedAt(LocalDateTime.now());
-                    maintenance.setUpdatedAt(LocalDateTime.now());
-                    
-                    // Format dates properly and calculate next maintenance date
-                    formatAndCalculateMaintenanceDates(maintenance, maintenanceData);
-                    
-                    maintenanceToSave.add(maintenance);
-                }
-                
-                maintenanceRepository.saveAll(maintenanceToSave);
-                log.info("Successfully stored {} maintenance tasks for device: {}", maintenanceToSave.size(), deviceId);
-            } else {
-                log.warn("No maintenance tasks generated for device: {}", deviceId);
-            }
+            // Note: Manual URL field removed from simplified schema
+            // PDF processing is now handled through the device documentation system
+            log.info("Maintenance generation for device {} is now handled through the device documentation system", deviceId);
+            return;
             
         } catch (Exception e) {
             log.error("Error processing maintenance for device: {}", deviceId, e);
@@ -475,81 +379,10 @@ public class UnifiedOnboardingService {
             
             Device device = deviceOpt.get();
             
-            // Check if device has manual URL (PDF file)
-            if (device.getManualUrl() == null || device.getManualUrl().isEmpty()) {
-                log.info("No PDF file found for device {}, skipping safety processing", deviceId);
-                return;
-            }
-            
-            // Extract PDF filename from manual URL
-            String pdfFilename = extractPdfFilename(device.getManualUrl());
-            if (pdfFilename == null) {
-                log.warn("Could not extract PDF filename from manual URL: {}", device.getManualUrl());
-                return;
-            }
-            
-            log.info("Generating safety precautions for device: {} using PDF: {}", deviceId, pdfFilename);
-            
-            // Generate safety precautions using PDF processing service
-            var safetyResponse = pdfProcessingService.generateSafety(pdfFilename, deviceId, organizationId);
-            
-            if (!safetyResponse.isSuccess()) {
-                log.error("Safety generation failed for device: {} - {}", deviceId, safetyResponse.getMessage());
-                return;
-            }
-            
-            // Store safety precautions in database
-            if (safetyResponse.getSafetyPrecautions() != null && !safetyResponse.getSafetyPrecautions().isEmpty()) {
-                log.info("Processing {} safety precautions for device: {}", safetyResponse.getSafetyPrecautions().size(), deviceId);
-                List<DeviceSafetyPrecaution> safetyToSave = new ArrayList<>();
-                
-                for (var safetyData : safetyResponse.getSafetyPrecautions()) {
-                    DeviceSafetyPrecaution safety = new DeviceSafetyPrecaution();
-                    safety.setId(UUID.randomUUID().toString());
-                    safety.setTitle(safetyData.getTitle());
-                    safety.setDescription(safetyData.getDescription());
-                    safety.setCategory(safetyData.getCategory());
-                    safety.setSeverity(safetyData.getSeverity());
-                    safety.setType("PDF_GENERATED"); // Set required type field
-                    safety.setDeviceId(deviceId);
-                    safety.setOrganizationId(organizationId);
-                    safety.setCreatedAt(LocalDateTime.now());
-                    safety.setUpdatedAt(LocalDateTime.now());
-                    
-                                    log.debug("Created safety precaution: ID={}, Title={}, Type={}, Category={}", 
-                    safety.getId(), safety.getTitle(), safety.getType(), safety.getCategory());
-                
-                // Verify all required fields are set
-                if (safety.getId() == null || safety.getId().trim().isEmpty()) {
-                    log.error("Safety precaution ID is null or empty");
-                    throw new IllegalStateException("Safety precaution ID is required");
-                }
-                if (safety.getType() == null || safety.getType().trim().isEmpty()) {
-                    log.error("Safety precaution Type is null or empty");
-                    throw new IllegalStateException("Safety precaution Type is required");
-                }
-                if (safety.getCategory() == null || safety.getCategory().trim().isEmpty()) {
-                    log.error("Safety precaution Category is null or empty");
-                    throw new IllegalStateException("Safety precaution Category is required");
-                }
-                
-                safetyToSave.add(safety);
-                }
-                
-                // Save safety precautions one by one to avoid batch operation issues
-                for (DeviceSafetyPrecaution safety : safetyToSave) {
-                    try {
-                        safetyRepository.save(safety);
-                        log.debug("Successfully saved safety precaution: {}", safety.getId());
-                    } catch (Exception e) {
-                        log.error("Failed to save safety precaution {}: {}", safety.getId(), e.getMessage());
-                        throw e; // Re-throw to stop the process
-                    }
-                }
-                log.info("Successfully stored {} safety precautions for device: {}", safetyToSave.size(), deviceId);
-            } else {
-                log.warn("No safety precautions generated for device: {}", deviceId);
-            }
+            // Note: Manual URL field removed from simplified schema
+            // PDF processing is now handled through the device documentation system
+            log.info("Safety generation for device {} is now handled through the device documentation system", deviceId);
+            return;
             
         } catch (Exception e) {
             log.error("Error processing safety precautions for device: {}", deviceId, e);

@@ -34,49 +34,6 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
   const [aiStatus, setAiStatus] = useState<'idle' | 'thinking' | 'responding'>('idle');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Generate animated particles
-  useEffect(() => {
-    const newParticles = Array.from({ length: 30 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      vx: (Math.random() - 0.5) * 1,
-      vy: (Math.random() - 0.5) * 1,
-      color: ['#3B82F6', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B'][Math.floor(Math.random() * 5)],
-      size: Math.random() * 2 + 1
-    }));
-    setParticles(newParticles);
-
-    // Generate floating AI icons
-    const iconList = [
-      Bot, Settings, AlertTriangle, CheckCircle,
-      FileText, Send, User, MessageSquare, Clock
-    ];
-
-    const newFloatingIcons = Array.from({ length: 15 }, (_, i) => ({
-      id: i,
-      icon: iconList[Math.floor(Math.random() * (iconList.length - 1))],
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      delay: Math.random() * 2000,
-      rotation: Math.random() * 360
-    }));
-    setFloatingIcons(newFloatingIcons);
-  }, []);
-
-  // Animate particles
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setParticles(prev => prev.map(particle => ({
-        ...particle,
-        x: (particle.x + particle.vx + 100) % 100,
-        y: (particle.y + particle.vy + 100) % 100
-      })));
-    }, 50);
-
-    return () => clearInterval(interval);
-  }, []);
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -128,6 +85,11 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Component mount logging
+  useEffect(() => {
+    logInfo('DeviceChatInterface', 'Component mounted successfully', { deviceId, deviceName });
+  }, [deviceId, deviceName]);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -191,8 +153,6 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     }
   };
 
-
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -201,33 +161,9 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-              <Bot className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">AI Assistant</h1>
-              <p className="text-white/90 text-sm flex items-center gap-2">
-                <CheckCircle className="w-3 h-3" />
-                Ask me anything about {deviceName}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-lg transition-all duration-300"
-          >
-            <span className="text-xl font-bold">×</span>
-          </button>
-        </div>
-      </div>
-
+    <div className="w-full h-full flex flex-col bg-white overflow-hidden">
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
         {messages.map((message) => (
           <div
             key={message.id}
@@ -242,39 +178,35 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
             >
               <div className="flex items-start gap-3">
                 {message.type === 'assistant' && (
-                  <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-center">
+                  <div className="w-6 h-6 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                     <Bot className="w-3 h-3 text-white" />
                   </div>
                 )}
                 <div className="flex-1">
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                    {message.content}
-                    
-                    {/* Show additional metadata for assistant messages */}
-                    {message.type === 'assistant' && message.processingTime && (
-                      <div className="text-xs text-gray-500 mt-2 italic">
-                        Processing time: {message.processingTime}
-                      </div>
-                    )}
-                    
-                    {/* Show error information if available */}
-                    {message.error && (
-                      <div className="text-xs text-red-500 mt-2 p-2 bg-red-50 rounded border-l-2 border-red-300">
-                        Error: {message.error}
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-medium opacity-70">
+                      {message.type === 'user' ? 'You' : 'AI Assistant'}
+                    </span>
+                    <span className="text-xs opacity-50">
+                      {message.timestamp.toLocaleTimeString()}
+                    </span>
                   </div>
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {message.content}
+                  </div>
+                  {message.error && (
+                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-xs text-red-600">
+                        Error: {message.error}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 {message.type === 'user' && (
-                  <div className="flex-shrink-0 w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                  <div className="w-6 h-6 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                     <User className="w-3 h-3 text-white" />
                   </div>
                 )}
-              </div>
-              <div className={`text-xs mt-2 ${
-                message.type === 'user' ? 'text-white/70' : 'text-gray-500'
-              }`}>
-                {message.timestamp.toLocaleTimeString()}
               </div>
             </div>
           </div>
@@ -283,7 +215,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-gray-200 p-4 bg-white">
+      <div className="border-t border-gray-200 p-4 bg-white flex-shrink-0">
         <div className="flex items-end gap-3">
           <div className="flex-1">
             <textarea
@@ -347,7 +279,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
       </div>
 
       {/* Footer */}
-      <div className="border-t border-gray-200 p-4 bg-white">
+      <div className="border-t border-gray-200 p-4 bg-white flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <FileText className="w-3 h-3" />

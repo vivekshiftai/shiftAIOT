@@ -974,14 +974,7 @@ public class DeviceController {
             return false;
         }
         
-        // Validate MAC address format if provided
-        if (request.getMacAddress() != null && !request.getMacAddress().trim().isEmpty()) {
-            String macPattern = "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$";
-            if (!request.getMacAddress().matches(macPattern)) {
-                logger.error("Invalid MAC address format: {}", request.getMacAddress());
-                return false;
-            }
-        }
+        // Note: MAC address field removed from simplified schema
         
         // Validate IP address format if provided
         if (request.getIpAddress() != null && !request.getIpAddress().trim().isEmpty()) {
@@ -1010,42 +1003,7 @@ public class DeviceController {
             }
         }
         
-        // Validate environmental specifications
-        if (request.getOperatingTemperatureMin() != null && request.getOperatingTemperatureMax() != null) {
-            if (request.getOperatingTemperatureMin() >= request.getOperatingTemperatureMax()) {
-                logger.error("Operating temperature min ({}) must be less than max ({})", 
-                    request.getOperatingTemperatureMin(), request.getOperatingTemperatureMax());
-                return false;
-            }
-            if (request.getOperatingTemperatureMin() < -273) {
-                logger.error("Operating temperature min cannot be below absolute zero: {}", 
-                    request.getOperatingTemperatureMin());
-                return false;
-            }
-            if (request.getOperatingTemperatureMax() > 1000) {
-                logger.error("Operating temperature max cannot exceed 1000°C: {}", 
-                    request.getOperatingTemperatureMax());
-                return false;
-            }
-        }
-        
-        if (request.getOperatingHumidityMin() != null && request.getOperatingHumidityMax() != null) {
-            if (request.getOperatingHumidityMin() >= request.getOperatingHumidityMax()) {
-                logger.error("Operating humidity min ({}) must be less than max ({})", 
-                    request.getOperatingHumidityMin(), request.getOperatingHumidityMax());
-                return false;
-            }
-            if (request.getOperatingHumidityMin() < 0 || request.getOperatingHumidityMax() > 100) {
-                logger.error("Operating humidity must be between 0% and 100%");
-                return false;
-            }
-        }
-        
-        // Validate power consumption if provided
-        if (request.getPowerConsumption() != null && request.getPowerConsumption() < 0) {
-            logger.error("Power consumption must be positive: {}", request.getPowerConsumption());
-            return false;
-        }
+        // Note: Environmental and power fields removed from simplified schema
         
         // Validate field lengths
         if (request.getName() != null && request.getName().length() > 100) {
@@ -1111,12 +1069,9 @@ public class DeviceController {
     }
     
     private String getDocumentationFilePath(Device device, String type) {
-        return switch (type) {
-            case "manual" -> device.getManualUrl();
-            case "datasheet" -> device.getDatasheetUrl();
-            case "certificate" -> device.getCertificateUrl();
-            default -> null;
-        };
+        // Note: Documentation fields removed from simplified schema
+        // Documentation is now handled through the device documentation system
+        return null;
     }
     
     private String getDocumentationFilename(String type) {
@@ -1136,9 +1091,11 @@ public class DeviceController {
         // Check which documentation files are available
         Map<String, Object> files = new HashMap<>();
         
-        files.put("manual", buildFileInfo(device.getManualUrl(), deviceId, "manual"));
-        files.put("datasheet", buildFileInfo(device.getDatasheetUrl(), deviceId, "datasheet"));
-        files.put("certificate", buildFileInfo(device.getCertificateUrl(), deviceId, "certificate"));
+        // Note: Documentation fields removed from simplified schema
+        // Documentation is now handled through the device documentation system
+        files.put("manual", Map.of("available", false));
+        files.put("datasheet", Map.of("available", false));
+        files.put("certificate", Map.of("available", false));
         
         documentationInfo.put("files", files);
         return documentationInfo;

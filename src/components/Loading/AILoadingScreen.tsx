@@ -6,7 +6,7 @@ interface StepDetails {
   stepName: string;
 }
 
-interface EnhancedOnboardingLoaderProps {
+interface AILoadingScreenProps {
   isProcessing: boolean;
   currentProcess: 'pdf' | 'rules' | 'knowledgebase';
   progress: number;
@@ -16,7 +16,7 @@ interface EnhancedOnboardingLoaderProps {
   stepDetails?: StepDetails;
 }
 
-const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
+const AILoadingScreen: React.FC<AILoadingScreenProps> = ({
   isProcessing,
   currentProcess,
   progress,
@@ -25,6 +25,14 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
   currentSubStage,
   stepDetails
 }) => {
+  // Debug logging
+  console.log('AILoadingScreen render:', {
+    isProcessing,
+    currentProcess,
+    progress,
+    currentSubStage,
+    stepDetails
+  });
 
   const getStepInfo = () => {
     switch (currentProcess) {
@@ -207,4 +215,4 @@ const EnhancedOnboardingLoader: React.FC<EnhancedOnboardingLoaderProps> = ({
   );
 };
 
-export default EnhancedOnboardingLoader;
+export default AILoadingScreen;

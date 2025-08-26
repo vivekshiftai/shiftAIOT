@@ -55,6 +55,9 @@ public class DeviceCreateRequest {
     // Assigned user field (optional)
     private String assignedUserId;
     
+    // Assigned by field (optional)
+    private String assignedBy;
+    
     // Getters and Setters
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -118,4 +121,7 @@ public class DeviceCreateRequest {
     
     public String getAssignedUserId() { return assignedUserId; }
     public void setAssignedUserId(String assignedUserId) { this.assignedUserId = assignedUserId; }
+    
+    public String getAssignedBy() { return assignedBy; }
+    public void setAssignedBy(String assignedBy) { this.assignedBy = assignedBy; }
 }

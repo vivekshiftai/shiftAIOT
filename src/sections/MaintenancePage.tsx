@@ -14,6 +14,7 @@ import {
 import Button from '../components/UI/Button';
 import Modal from '../components/UI/Modal';
 import Skeleton from '../components/UI/Skeleton';
+import { getApiConfig } from '../config/api';
 
 interface MaintenanceTask {
   id: string;
@@ -105,8 +106,33 @@ const MaintenancePage: React.FC = () => {
   const fetchMaintenanceTasks = async () => {
     try {
       setError(null);
-      const response = await maintenanceAPI.getAll();
-      setMaintenanceTasks(response.data || []);
+      
+      // First try to get AI-generated maintenance from PDF results
+      const aiMaintenanceResponse = await fetch(`${getApiConfig().BACKEND_BASE_URL}/api/devices/pdf-results`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      let aiMaintenance: any[] = [];
+      if (aiMaintenanceResponse.ok) {
+        const aiData = await aiMaintenanceResponse.json();
+        aiMaintenance = aiData.maintenance || [];
+        console.log('AI-generated maintenance found:', aiMaintenance.length);
+      }
+
+      // Also fetch manually created maintenance
+      const manualMaintenanceResponse = await maintenanceAPI.getAll();
+      const manualMaintenance = manualMaintenanceResponse.data || [];
+      console.log('Manual maintenance found:', manualMaintenance.length);
+
+      // Combine both types of maintenance
+      const allMaintenance = [...aiMaintenance, ...manualMaintenance];
+      setMaintenanceTasks(allMaintenance);
+      
+      console.log('Total maintenance tasks loaded:', allMaintenance.length);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch maintenance tasks');
       console.error('Error fetching maintenance tasks:', err);

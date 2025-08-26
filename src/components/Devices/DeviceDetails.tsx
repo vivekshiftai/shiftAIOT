@@ -258,10 +258,10 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
                         <label className="text-sm font-medium text-gray-600">Model</label>
                         <p className="text-gray-800">{device.model || 'Not specified'}</p>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Serial Number</label>
-                        <p className="text-gray-800">{device.serialNumber || 'Not specified'}</p>
-                      </div>
+                                              <div>
+                          <label className="text-sm font-medium text-gray-600">IP Address</label>
+                          <p className="text-gray-800">{device.ipAddress || 'Not specified'}</p>
+                        </div>
                       <div>
                         <label className="text-sm font-medium text-gray-600">Description</label>
                         <p className="text-gray-800">{device.description || 'No description available'}</p>

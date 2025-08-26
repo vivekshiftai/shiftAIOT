@@ -25,27 +25,35 @@ interface DeviceFormData {
   status: 'ONLINE' | 'OFFLINE' | 'WARNING' | 'ERROR';
   location: string;
   protocol: 'MQTT' | 'HTTP' | 'COAP';
-  firmware: string;
-  tags: string[];
-  manufacturer: string;
-  model: string;
-  serialNumber: string;
-  macAddress: string;
-  ipAddress: string;
-  port: number;
-  description: string;
-  installationNotes: string;
-  maintenanceSchedule: string;
-  warrantyInfo: string;
-  wifiSsid: string;
-  mqttBroker: string;
-  mqttTopic: string;
-  powerSource: string;
-  powerConsumption: number;
-  operatingTemperatureMin: number;
-  operatingTemperatureMax: number;
-  operatingHumidityMin: number;
-  operatingHumidityMax: number;
+  
+  // Basic device info (optional)
+  manufacturer?: string;
+  model?: string;
+  description?: string;
+  
+  // Connection details (optional)
+  ipAddress?: string;
+  port?: number;
+  
+  // MQTT specific fields (optional)
+  mqttBroker?: string;
+  mqttTopic?: string;
+  mqttUsername?: string;
+  mqttPassword?: string;
+  
+  // HTTP specific fields (optional)
+  httpEndpoint?: string;
+  httpMethod?: string;
+  httpHeaders?: string;
+  
+  // COAP specific fields (optional)
+  coapHost?: string;
+  coapPort?: number;
+  coapPath?: string;
+  
+  // Collections (optional)
+  tags?: string[];
+  config?: Record<string, string>;
 }
 
 interface FileUpload {
@@ -83,27 +91,15 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
     status: 'ONLINE',
     location: '',
     protocol: 'MQTT',
-    firmware: '',
-    tags: [],
     manufacturer: '',
     model: '',
-    serialNumber: '',
-    macAddress: '',
     ipAddress: '',
     port: 1883,
     description: '',
-    installationNotes: '',
-    maintenanceSchedule: '',
-    warrantyInfo: '',
-    wifiSsid: '',
     mqttBroker: '',
     mqttTopic: '',
-    powerSource: '',
-    powerConsumption: 0,
-    operatingTemperatureMin: -10,
-    operatingTemperatureMax: 50,
-    operatingHumidityMin: 10,
-    operatingHumidityMax: 90
+    tags: [],
+    config: {}
   });
 
   const [fileUploads, setFileUploads] = useState<FileUpload[]>([]);
@@ -150,14 +146,14 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
   };
 
   const addTag = () => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      setFormData(prev => ({ ...prev, tags: [...prev.tags, newTag.trim()] }));
+    if (newTag.trim() && !formData.tags?.includes(newTag.trim())) {
+      setFormData(prev => ({ ...prev, tags: [...(prev.tags || []), newTag.trim()] }));
       setNewTag('');
     }
   };
 
   const removeTag = (tagToRemove: string) => {
-    setFormData(prev => ({ ...prev, tags: prev.tags.filter(tag => tag !== tagToRemove) }));
+    setFormData(prev => ({ ...prev, tags: (prev.tags || []).filter(tag => tag !== tagToRemove) }));
   };
 
   const validateCurrentStep = (): boolean => {
@@ -171,10 +167,8 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
         if (!formData.status) newErrors.status = 'Device status is required';
         if (!formData.location.trim()) newErrors.location = 'Location is required';
         if (formData.location.length > 200) newErrors.location = 'Location must be less than 200 characters';
-        if (!formData.manufacturer.trim()) newErrors.manufacturer = 'Manufacturer is required';
-        if (formData.manufacturer.length > 100) newErrors.manufacturer = 'Manufacturer must be less than 100 characters';
-        if (!formData.model.trim()) newErrors.model = 'Model is required';
-        if (formData.model.length > 100) newErrors.model = 'Model must be less than 100 characters';
+        if (formData.manufacturer && formData.manufacturer.length > 100) newErrors.manufacturer = 'Manufacturer must be less than 100 characters';
+        if (formData.model && formData.model.length > 100) newErrors.model = 'Model must be less than 100 characters';
         
         // Validate description length
         if (formData.description && formData.description.length > 1000) {
@@ -184,13 +178,10 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
         
       case 2:
         // Network configuration validation
-        if (formData.macAddress && !/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(formData.macAddress)) {
-          newErrors.macAddress = 'Invalid MAC address format (use XX:XX:XX:XX:XX:XX)';
-        }
         if (formData.ipAddress && !/^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(formData.ipAddress)) {
           newErrors.ipAddress = 'Invalid IP address format';
         }
-        if (formData.port < 1 || formData.port > 65535) {
+        if (formData.port && (formData.port < 1 || formData.port > 65535)) {
           newErrors.port = 'Port must be between 1 and 65535';
         }
         
@@ -205,12 +196,6 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
         }
         
         // Field length validation
-        if (formData.serialNumber && formData.serialNumber.length > 100) {
-          newErrors.serialNumber = 'Serial number must be less than 100 characters';
-        }
-        if (formData.wifiSsid && formData.wifiSsid.length > 100) {
-          newErrors.wifiSsid = 'WiFi SSID must be less than 100 characters';
-        }
         if (formData.mqttBroker && formData.mqttBroker.length > 255) {
           newErrors.mqttBroker = 'MQTT broker must be less than 255 characters';
         }
@@ -220,41 +205,9 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
         break;
         
       case 3:
-        // Environmental settings validation
-        if (formData.operatingTemperatureMin >= formData.operatingTemperatureMax) {
-          newErrors.operatingTemperatureMin = 'Minimum temperature must be less than maximum temperature';
-        }
-        if (formData.operatingTemperatureMin < -273) {
-          newErrors.operatingTemperatureMin = 'Temperature cannot be below absolute zero (-273°C)';
-        }
-        if (formData.operatingTemperatureMax > 1000) {
-          newErrors.operatingTemperatureMax = 'Temperature cannot exceed 1000°C';
-        }
-        
-        if (formData.operatingHumidityMin >= formData.operatingHumidityMax) {
-          newErrors.operatingHumidityMin = 'Minimum humidity must be less than maximum humidity';
-        }
-        if (formData.operatingHumidityMin < 0 || formData.operatingHumidityMax > 100) {
-          newErrors.operatingHumidityMin = 'Humidity must be between 0% and 100%';
-        }
-        
-        // Power consumption validation
-        if (formData.powerConsumption < 0) {
-          newErrors.powerConsumption = 'Power consumption must be positive';
-        }
-        
-        // Field length validation
-        if (formData.powerSource && formData.powerSource.length > 50) {
-          newErrors.powerSource = 'Power source must be less than 50 characters';
-        }
-        if (formData.installationNotes && formData.installationNotes.length > 2000) {
-          newErrors.installationNotes = 'Installation notes must be less than 2000 characters';
-        }
-        if (formData.maintenanceSchedule && formData.maintenanceSchedule.length > 500) {
-          newErrors.maintenanceSchedule = 'Maintenance schedule must be less than 500 characters';
-        }
-        if (formData.warrantyInfo && formData.warrantyInfo.length > 500) {
-          newErrors.warrantyInfo = 'Warranty info must be less than 500 characters';
+        // Description validation
+        if (formData.description && formData.description.length > 1000) {
+          newErrors.description = 'Description must be less than 1000 characters';
         }
         break;
         
@@ -432,7 +385,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
     switch (step) {
       case 1: return 'Basic Information';
       case 2: return 'Network Configuration';
-      case 3: return 'Environmental Settings';
+      case 3: return 'Description & Tags';
       case 4: return 'Documentation Upload';
       case 5: return 'AI-Powered Rules';
     }
@@ -442,7 +395,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
     switch (step) {
       case 1: return 'Enter the basic details about your IoT device';
       case 2: return 'Configure network settings and connectivity';
-      case 3: return 'Set environmental operating parameters';
+      case 3: return 'Add description and tags';
       case 4: return 'Upload device documentation for AI analysis';
       case 5: return 'Review and select AI-generated rules for your device';
     }
@@ -574,40 +527,11 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Serial Number
-                </label>
-                <input
-                  type="text"
-                  value={formData.serialNumber}
-                  onChange={(e) => handleInputChange('serialNumber', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., SN123456789"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  MAC Address
-                </label>
-                <input
-                  type="text"
-                  value={formData.macAddress}
-                  onChange={(e) => handleInputChange('macAddress', e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.macAddress ? 'border-red-500' : 'border-slate-300'
-                  }`}
-                  placeholder="e.g., 00:11:22:33:44:55"
-                />
-                {errors.macAddress && <p className="text-red-500 text-sm mt-1">{errors.macAddress}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
                   IP Address
                 </label>
                 <input
                   type="text"
-                  value={formData.ipAddress}
+                  value={formData.ipAddress || ''}
                   onChange={(e) => handleInputChange('ipAddress', e.target.value)}
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     errors.ipAddress ? 'border-red-500' : 'border-slate-300'
@@ -623,7 +547,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                 </label>
                 <input
                   type="number"
-                  value={formData.port}
+                  value={formData.port || ''}
                   onChange={(e) => handleInputChange('port', parseInt(e.target.value))}
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     errors.port ? 'border-red-500' : 'border-slate-300'
@@ -637,24 +561,11 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  WiFi SSID
-                </label>
-                <input
-                  type="text"
-                  value={formData.wifiSsid}
-                  onChange={(e) => handleInputChange('wifiSsid', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., IoT_Network"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
                   MQTT Broker
                 </label>
                 <input
                   type="text"
-                  value={formData.mqttBroker}
+                  value={formData.mqttBroker || ''}
                   onChange={(e) => handleInputChange('mqttBroker', e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="e.g., mqtt.broker.com"
@@ -667,7 +578,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                 </label>
                 <input
                   type="text"
-                  value={formData.mqttTopic}
+                  value={formData.mqttTopic || ''}
                   onChange={(e) => handleInputChange('mqttTopic', e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="e.g., sensors/temperature/001"
@@ -676,14 +587,27 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Firmware Version
+                  MQTT Username
                 </label>
                 <input
                   type="text"
-                  value={formData.firmware}
-                  onChange={(e) => handleInputChange('firmware', e.target.value)}
+                  value={formData.mqttUsername || ''}
+                  onChange={(e) => handleInputChange('mqttUsername', e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., v2.1.0"
+                  placeholder="e.g., device_user"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  MQTT Password
+                </label>
+                <input
+                  type="password"
+                  value={formData.mqttPassword || ''}
+                  onChange={(e) => handleInputChange('mqttPassword', e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., device_password"
                 />
               </div>
             </div>
@@ -693,113 +617,59 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
       case 3:
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Power Source
-                </label>
-                <input
-                  type="text"
-                  value={formData.powerSource}
-                  onChange={(e) => handleInputChange('powerSource', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., 24V DC"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Power Consumption (W)
-                </label>
-                <input
-                  type="number"
-                  value={formData.powerConsumption}
-                  onChange={(e) => handleInputChange('powerConsumption', parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., 5.2"
-                  step="0.1"
-                  min="0"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Operating Temperature Min (°C)
-                </label>
-                <input
-                  type="number"
-                  value={formData.operatingTemperatureMin}
-                  onChange={(e) => handleInputChange('operatingTemperatureMin', parseFloat(e.target.value))}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.operatingTemperatureMin ? 'border-red-500' : 'border-slate-300'
-                  }`}
-                  placeholder="e.g., -10"
-                  step="0.1"
-                />
-                {errors.operatingTemperatureMin && <p className="text-red-500 text-sm mt-1">{errors.operatingTemperatureMin}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Operating Temperature Max (°C)
-                </label>
-                <input
-                  type="number"
-                  value={formData.operatingTemperatureMax}
-                  onChange={(e) => handleInputChange('operatingTemperatureMax', parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., 50"
-                  step="0.1"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Operating Humidity Min (%)
-                </label>
-                <input
-                  type="number"
-                  value={formData.operatingHumidityMin}
-                  onChange={(e) => handleInputChange('operatingHumidityMin', parseFloat(e.target.value))}
-                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.operatingHumidityMin ? 'border-red-500' : 'border-slate-300'
-                  }`}
-                  placeholder="e.g., 10"
-                  step="0.1"
-                  min="0"
-                  max="100"
-                />
-                {errors.operatingHumidityMin && <p className="text-red-500 text-sm mt-1">{errors.operatingHumidityMin}</p>}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Operating Humidity Max (%)
-                </label>
-                <input
-                  type="number"
-                  value={formData.operatingHumidityMax}
-                  onChange={(e) => handleInputChange('operatingHumidityMax', parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., 90"
-                  step="0.1"
-                  min="0"
-                  max="100"
-                />
-              </div>
-            </div>
-
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Description
               </label>
               <textarea
-                value={formData.description}
+                value={formData.description || ''}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 rows={3}
                 placeholder="Detailed description of the device and its purpose..."
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Tags
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Add a tag and press Enter"
+                />
+                <button
+                  type="button"
+                  onClick={addTag}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+              {formData.tags && formData.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {formData.tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="hover:bg-blue-200 rounded-full p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         );
@@ -898,7 +768,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
               <>
                 <div className="text-center mb-6">
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Sparkles className="w-8 h-8 text-green-600" />
+                    <Zap className="w-8 h-8 text-green-600" />
                   </div>
                   <h3 className="text-lg font-semibold text-slate-800 mb-2">AI-Generated Rules</h3>
                   <p className="text-slate-600">Review and select the rules you'd like to apply to your device</p>
@@ -983,7 +853,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
               onClick={onCancel}
               className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <XIcon className="w-5 h-5 text-slate-600" />
+              <X className="w-5 h-5 text-slate-600" />
             </button>
           </div>
 
@@ -1042,7 +912,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
               disabled={currentStep === 1}
               className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ArrowLeftIcon className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4" />
               Previous
             </button>
 
@@ -1064,7 +934,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader className="w-4 h-4 animate-spin" />
                       Adding Device...
                     </>
                   ) : (
@@ -1081,7 +951,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                   className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
                   Next
-                  <ArrowRightIcon className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               )}
             </div>

@@ -5,7 +5,7 @@
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(255) PRIMARY KEY,
     first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     phone_number VARCHAR(20),
@@ -24,6 +24,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
 -- Add assigned_user_id column to devices table if it doesn't exist
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS assigned_user_id VARCHAR(255);
 
+-- Add assigned_by column to devices table if it doesn't exist
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS assigned_by VARCHAR(255);
+
 -- Add new columns to rules table if they don't exist
 ALTER TABLE rules ADD COLUMN IF NOT EXISTS metric VARCHAR(100);
 ALTER TABLE rules ADD COLUMN IF NOT EXISTS metric_value VARCHAR(100);
@@ -39,7 +42,7 @@ CREATE TABLE IF NOT EXISTS user_permissions (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Devices table - Simplified schema with nullable fields and connection-specific columns
+-- Devices table - Cleaned up schema with only necessary fields used in onboarding
 CREATE TABLE IF NOT EXISTS devices (
     id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -49,55 +52,34 @@ CREATE TABLE IF NOT EXISTS devices (
     location VARCHAR(255) NOT NULL,
     organization_id VARCHAR(255) NOT NULL,
     assigned_user_id VARCHAR(255),
+    assigned_by VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
-    -- Basic device info (nullable)
+    -- Basic device info (nullable) - only fields used in onboarding form
     manufacturer VARCHAR(100),
     model VARCHAR(100),
     description TEXT,
     
-    -- Connection details (nullable)
+    -- Connection details (nullable) - only fields used in onboarding form
     ip_address VARCHAR(45),
     port INTEGER,
     
-    -- MQTT specific fields (nullable)
+    -- MQTT specific fields (nullable) - only fields used in onboarding form
     mqtt_broker VARCHAR(255),
     mqtt_topic VARCHAR(255),
     mqtt_username VARCHAR(100),
     mqtt_password VARCHAR(255),
     
-    -- HTTP specific fields (nullable)
+    -- HTTP specific fields (nullable) - only fields used in onboarding form
     http_endpoint VARCHAR(500),
     http_method VARCHAR(10) DEFAULT 'GET',
     http_headers TEXT, -- JSON string
     
-    -- COAP specific fields (nullable)
+    -- COAP specific fields (nullable) - only fields used in onboarding form
     coap_host VARCHAR(255),
     coap_port INTEGER,
-    coap_path VARCHAR(255),
-    
-    -- Legacy fields (kept for backward compatibility, nullable)
-    firmware VARCHAR(50),
-    last_seen TIMESTAMP,
-    battery_level INTEGER,
-    temperature DOUBLE PRECISION,
-    humidity DOUBLE PRECISION,
-    serial_number VARCHAR(100),
-    mac_address VARCHAR(17),
-    manual_url VARCHAR(500),
-    datasheet_url VARCHAR(500),
-    certificate_url VARCHAR(500),
-    installation_notes TEXT,
-    maintenance_schedule VARCHAR(500),
-    warranty_info VARCHAR(500),
-    wifi_ssid VARCHAR(100),
-    power_source VARCHAR(50),
-    power_consumption DOUBLE PRECISION,
-    operating_temperature_min DOUBLE PRECISION,
-    operating_temperature_max DOUBLE PRECISION,
-    operating_humidity_min DOUBLE PRECISION,
-    operating_humidity_max DOUBLE PRECISION
+    coap_path VARCHAR(255)
 );
 
 -- Device Documentation table for onboarding flow
@@ -338,6 +320,8 @@ CREATE TABLE IF NOT EXISTS pdf_queries (
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_organization ON users(organization_id);
 CREATE INDEX IF NOT EXISTS idx_devices_organization ON devices(organization_id);
+CREATE INDEX IF NOT EXISTS idx_devices_assigned_user ON devices(assigned_user_id);
+CREATE INDEX IF NOT EXISTS idx_devices_assigned_by ON devices(assigned_by);
 CREATE INDEX IF NOT EXISTS idx_rules_organization ON rules(organization_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_organization ON notifications(organization_id);
@@ -421,7 +405,7 @@ SELECT
 WHERE NOT EXISTS (SELECT 1 FROM user_permissions WHERE user_id = 'admin-001' AND permissions = 'USER_DELETE');
 
 -- Insert sample devices if not exists
-INSERT INTO devices (id, name, type, status, protocol, ip_address, port, location, organization_id)
+INSERT INTO devices (id, name, type, status, protocol, ip_address, port, location, organization_id, assigned_by)
 SELECT 
     'device-001',
     'Temperature Sensor 1',
@@ -431,10 +415,11 @@ SELECT
     '192.168.1.100',
     8100,
     'Building A - Floor 1',
-    'default'
+    'default',
+    'admin-001'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = 'device-001');
 
-INSERT INTO devices (id, name, type, status, protocol, ip_address, port, location, organization_id)
+INSERT INTO devices (id, name, type, status, protocol, ip_address, port, location, organization_id, assigned_by)
 SELECT 
     'device-002',
     'Humidity Sensor 1',
@@ -444,7 +429,8 @@ SELECT
     '192.168.1.101',
     8100,
     'Building A - Floor 1',
-    'default'
+    'default',
+    'admin-001'
 WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = 'device-002');
 
 -- Insert sample rules if not exists

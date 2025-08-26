@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, X, Save, AlertCircle, CheckCircle } from 'lucide-react';
-import { Rule, RuleCondition, RuleAction, Device } from '../../types';
+import { Plus, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Rule, Device } from '../../types';
 import { useIoT } from '../../contexts/IoTContext';
 import Button from '../UI/Button';
 import { LoadingSpinner } from '../Loading/LoadingComponents';
@@ -36,9 +36,11 @@ export const RuleForm: React.FC<RuleFormProps> = ({
     metricValue: string;
     threshold: string;
     consequence: string;
-    active: boolean;
-    conditions: RuleCondition[];
-    actions: RuleAction[];
+    status: 'ACTIVE' | 'INACTIVE';
+    condition: string;
+    action: string;
+    priority: 'LOW' | 'MEDIUM' | 'HIGH';
+    category: string;
   }>({
     name: rule?.name || '',
     description: rule?.description || '',
@@ -46,25 +48,11 @@ export const RuleForm: React.FC<RuleFormProps> = ({
     metricValue: rule?.metricValue || '',
     threshold: rule?.threshold || '',
     consequence: rule?.consequence || '',
-    active: rule?.active ?? true,
-    conditions: rule?.conditions || [
-      {
-        id: '1',
-        type: 'telemetry_threshold',
-        deviceId: deviceId || '',
-        metric: 'temperature',
-        operator: '>',
-        value: 30,
-        logicOperator: 'AND'
-      }
-    ],
-    actions: rule?.actions || [
-      {
-        id: '1',
-        type: 'notification',
-        config: { channels: ['email'] }
-      }
-    ]
+    status: rule?.status || 'ACTIVE',
+    condition: rule?.condition || '',
+    action: rule?.action || '',
+    priority: rule?.priority || 'MEDIUM',
+    category: rule?.category || 'General'
   });
 
   // Reset form when rule changes or deviceId changes
@@ -77,9 +65,11 @@ export const RuleForm: React.FC<RuleFormProps> = ({
         metricValue: rule.metricValue || '',
         threshold: rule.threshold || '',
         consequence: rule.consequence || '',
-        active: rule.active,
-        conditions: rule.conditions,
-        actions: rule.actions
+        status: rule.status,
+        condition: rule.condition,
+        action: rule.action,
+        priority: rule.priority,
+        category: rule.category
       });
     } else {
       setFormData({
@@ -89,25 +79,11 @@ export const RuleForm: React.FC<RuleFormProps> = ({
         metricValue: '',
         threshold: '',
         consequence: '',
-        active: true,
-        conditions: [
-          {
-            id: '1',
-            type: 'telemetry_threshold',
-            deviceId: deviceId || '',
-            metric: 'temperature',
-            operator: '>',
-            value: 30,
-            logicOperator: 'AND'
-          }
-        ],
-        actions: [
-          {
-            id: '1',
-            type: 'notification',
-            config: { channels: ['email'] }
-          }
-        ]
+        status: 'ACTIVE',
+        condition: '',
+        action: '',
+        priority: 'MEDIUM',
+        category: 'General'
       });
     }
     setError('');
@@ -303,9 +279,12 @@ export const RuleForm: React.FC<RuleFormProps> = ({
     try {
       // Log rule creation/update with device ID
       console.log('RuleForm: Creating/updating rule for device:', deviceId);
+      console.log('RuleForm: Form data:', formData);
+      console.log('RuleForm: Existing rule:', rule);
       
       if (onSubmit) {
         // Use custom onSubmit if provided
+        console.log('RuleForm: Using custom onSubmit');
         await onSubmit({
           name: formData.name,
           description: formData.description,
@@ -320,7 +299,8 @@ export const RuleForm: React.FC<RuleFormProps> = ({
         });
       } else if (rule) {
         // Update existing rule
-        await updateRule(rule.id, {
+        console.log('RuleForm: Updating existing rule with ID:', rule.id);
+        const updateData = {
           name: formData.name,
           description: formData.description,
           metric: formData.metric,
@@ -328,13 +308,18 @@ export const RuleForm: React.FC<RuleFormProps> = ({
           threshold: formData.threshold,
           consequence: formData.consequence,
           active: formData.active,
-          deviceId: deviceId, // Add device ID to the main rule
+          deviceId: deviceId || rule.deviceId, // Use existing deviceId if not provided
           conditions: formData.conditions,
-          actions: formData.actions
-        });
+          actions: formData.actions,
+          category: rule.category || 'General', // Preserve existing category
+          priority: rule.priority || 'MEDIUM' // Preserve existing priority
+        };
+        console.log('RuleForm: Update data:', updateData);
+        await updateRule(rule.id, updateData);
       } else {
         // Create new rule
-        await createRule({
+        console.log('RuleForm: Creating new rule');
+        const createData = {
           name: formData.name,
           description: formData.description,
           metric: formData.metric,
@@ -344,8 +329,12 @@ export const RuleForm: React.FC<RuleFormProps> = ({
           active: formData.active,
           deviceId: deviceId, // Add device ID to the main rule
           conditions: formData.conditions,
-          actions: formData.actions
-        });
+          actions: formData.actions,
+          category: 'General', // Default category
+          priority: 'MEDIUM' // Default priority
+        };
+        console.log('RuleForm: Create data:', createData);
+        await createRule(createData);
       }
       
       setSuccess(rule ? 'Rule updated successfully!' : 'Rule created successfully!');
@@ -358,8 +347,33 @@ export const RuleForm: React.FC<RuleFormProps> = ({
         onClose();
       }, 1500);
     } catch (error) {
-      console.error('Failed to save rule:', error);
-      setError(error instanceof Error ? error.message : 'Failed to save rule');
+      console.error('RuleForm: Failed to save rule:', error);
+      console.error('RuleForm: Error details:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        response: error instanceof Error && 'response' in error ? (error as any).response : undefined,
+        formData,
+        rule,
+        deviceId
+      });
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to save rule';
+      if (error instanceof Error) {
+        if (error.message.includes('401') || error.message.includes('403')) {
+          errorMessage = 'Permission denied. You do not have the required permissions to modify rules.';
+        } else if (error.message.includes('404')) {
+          errorMessage = 'Rule not found. It may have been deleted.';
+        } else if (error.message.includes('500')) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (error.message.includes('validation') || error.message.includes('invalid')) {
+          errorMessage = `Validation error: ${error.message}`;
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

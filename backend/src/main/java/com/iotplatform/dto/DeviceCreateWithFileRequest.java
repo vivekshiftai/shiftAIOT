@@ -30,32 +30,20 @@ public class DeviceCreateWithFileRequest {
     @NotNull(message = "Communication protocol is required")
     private Protocol protocol;
     
-    @Size(max = 50, message = "Firmware version must be less than 50 characters")
-    private String firmware;
-    
     // Status field
     private Device.DeviceStatus status;
     
-    private List<String> tags;
-    
-    private Map<String, String> config;
-    
-    // Device specifications - Required fields
-    @NotBlank(message = "Manufacturer is required")
+    // Basic device info (optional)
     @Size(max = 100, message = "Manufacturer must be less than 100 characters")
     private String manufacturer;
     
-    @NotBlank(message = "Model is required")
     @Size(max = 100, message = "Model must be less than 100 characters")
     private String model;
     
-    @Size(max = 100, message = "Serial number must be less than 100 characters")
-    private String serialNumber;
+    @Size(max = 1000, message = "Description must be less than 1000 characters")
+    private String description;
     
-    @Pattern(regexp = "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$", message = "Invalid MAC address format (use XX:XX:XX:XX:XX:XX)")
-    @Size(max = 17, message = "MAC address must be less than 17 characters")
-    private String macAddress;
-    
+    // Connection details (optional)
     @Pattern(regexp = "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$", message = "Invalid IP address format")
     @Size(max = 45, message = "IP address must be less than 45 characters")
     private String ipAddress;
@@ -64,31 +52,7 @@ public class DeviceCreateWithFileRequest {
     @Max(value = 65535, message = "Port must be between 1 and 65535")
     private Integer port;
     
-    // Documentation URLs (for existing files)
-    private String manualUrl;
-    private String datasheetUrl;
-    private String certificateUrl;
-    
-    // Additional metadata
-    @Size(max = 1000, message = "Description must be less than 1000 characters")
-    private String description;
-    
-    @Size(max = 2000, message = "Installation notes must be less than 2000 characters")
-    private String installationNotes;
-    
-    @Size(max = 500, message = "Maintenance schedule must be less than 500 characters")
-    private String maintenanceSchedule;
-    
-    @Size(max = 500, message = "Warranty info must be less than 500 characters")
-    private String warrantyInfo;
-    
-    // Connectivity details
-    @Size(max = 100, message = "WiFi SSID must be less than 100 characters")
-    private String wifiSsid;
-    
-    @Size(max = 255, message = "WiFi password must be less than 255 characters")
-    private String wifiPassword;
-    
+    // MQTT specific fields (optional)
     @Size(max = 255, message = "MQTT broker must be less than 255 characters")
     private String mqttBroker;
     
@@ -101,28 +65,27 @@ public class DeviceCreateWithFileRequest {
     @Size(max = 255, message = "MQTT password must be less than 255 characters")
     private String mqttPassword;
     
-    // Power and environmental
-    @Size(max = 50, message = "Power source must be less than 50 characters")
-    private String powerSource;
+    // HTTP specific fields (optional)
+    @Size(max = 500, message = "HTTP endpoint must be less than 500 characters")
+    private String httpEndpoint;
     
-    @Min(value = 0, message = "Power consumption must be positive")
-    private Double powerConsumption;
+    @Size(max = 10, message = "HTTP method must be less than 10 characters")
+    private String httpMethod;
     
-    @Min(value = -273, message = "Operating temperature minimum must be above absolute zero")
-    @Max(value = 1000, message = "Operating temperature minimum must be below 1000°C")
-    private Double operatingTemperatureMin;
+    private String httpHeaders;
     
-    @Min(value = -273, message = "Operating temperature maximum must be above absolute zero")
-    @Max(value = 1000, message = "Operating temperature maximum must be below 1000°C")
-    private Double operatingTemperatureMax;
+    // COAP specific fields (optional)
+    @Size(max = 255, message = "COAP host must be less than 255 characters")
+    private String coapHost;
     
-    @Min(value = 0, message = "Operating humidity minimum must be positive")
-    @Max(value = 100, message = "Operating humidity minimum must be below 100%")
-    private Double operatingHumidityMin;
+    private Integer coapPort;
     
-    @Min(value = 0, message = "Operating humidity maximum must be positive")
-    @Max(value = 100, message = "Operating humidity maximum must be below 100%")
-    private Double operatingHumidityMax;
+    @Size(max = 255, message = "COAP path must be less than 255 characters")
+    private String coapPath;
+    
+    // Collections (optional)
+    private List<String> tags;
+    private Map<String, String> config;
     
     // File upload information
     private String manualFileName;
@@ -259,17 +222,8 @@ public class DeviceCreateWithFileRequest {
     public Protocol getProtocol() { return protocol; }
     public void setProtocol(Protocol protocol) { this.protocol = protocol; }
     
-    public String getFirmware() { return firmware; }
-    public void setFirmware(String firmware) { this.firmware = firmware; }
-    
     public Device.DeviceStatus getStatus() { return status; }
     public void setStatus(Device.DeviceStatus status) { this.status = status; }
-    
-    public List<String> getTags() { return tags; }
-    public void setTags(List<String> tags) { this.tags = tags; }
-    
-    public Map<String, String> getConfig() { return config; }
-    public void setConfig(Map<String, String> config) { this.config = config; }
     
     public String getManufacturer() { return manufacturer; }
     public void setManufacturer(String manufacturer) { this.manufacturer = manufacturer; }
@@ -277,44 +231,14 @@ public class DeviceCreateWithFileRequest {
     public String getModel() { return model; }
     public void setModel(String model) { this.model = model; }
     
-    public String getSerialNumber() { return serialNumber; }
-    public void setSerialNumber(String serialNumber) { this.serialNumber = serialNumber; }
-    
-    public String getMacAddress() { return macAddress; }
-    public void setMacAddress(String macAddress) { this.macAddress = macAddress; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
     
     public String getIpAddress() { return ipAddress; }
     public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
     
     public Integer getPort() { return port; }
     public void setPort(Integer port) { this.port = port; }
-    
-    public String getManualUrl() { return manualUrl; }
-    public void setManualUrl(String manualUrl) { this.manualUrl = manualUrl; }
-    
-    public String getDatasheetUrl() { return datasheetUrl; }
-    public void setDatasheetUrl(String datasheetUrl) { this.datasheetUrl = datasheetUrl; }
-    
-    public String getCertificateUrl() { return certificateUrl; }
-    public void setCertificateUrl(String certificateUrl) { this.certificateUrl = certificateUrl; }
-    
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    
-    public String getInstallationNotes() { return installationNotes; }
-    public void setInstallationNotes(String installationNotes) { this.installationNotes = installationNotes; }
-    
-    public String getMaintenanceSchedule() { return maintenanceSchedule; }
-    public void setMaintenanceSchedule(String maintenanceSchedule) { this.maintenanceSchedule = maintenanceSchedule; }
-    
-    public String getWarrantyInfo() { return warrantyInfo; }
-    public void setWarrantyInfo(String warrantyInfo) { this.warrantyInfo = warrantyInfo; }
-    
-    public String getWifiSsid() { return wifiSsid; }
-    public void setWifiSsid(String wifiSsid) { this.wifiSsid = wifiSsid; }
-    
-    public String getWifiPassword() { return wifiPassword; }
-    public void setWifiPassword(String wifiPassword) { this.wifiPassword = wifiPassword; }
     
     public String getMqttBroker() { return mqttBroker; }
     public void setMqttBroker(String mqttBroker) { this.mqttBroker = mqttBroker; }
@@ -328,23 +252,29 @@ public class DeviceCreateWithFileRequest {
     public String getMqttPassword() { return mqttPassword; }
     public void setMqttPassword(String mqttPassword) { this.mqttPassword = mqttPassword; }
     
-    public String getPowerSource() { return powerSource; }
-    public void setPowerSource(String powerSource) { this.powerSource = powerSource; }
+    public String getHttpEndpoint() { return httpEndpoint; }
+    public void setHttpEndpoint(String httpEndpoint) { this.httpEndpoint = httpEndpoint; }
     
-    public Double getPowerConsumption() { return powerConsumption; }
-    public void setPowerConsumption(Double powerConsumption) { this.powerConsumption = powerConsumption; }
+    public String getHttpMethod() { return httpMethod; }
+    public void setHttpMethod(String httpMethod) { this.httpMethod = httpMethod; }
     
-    public Double getOperatingTemperatureMin() { return operatingTemperatureMin; }
-    public void setOperatingTemperatureMin(Double operatingTemperatureMin) { this.operatingTemperatureMin = operatingTemperatureMin; }
+    public String getHttpHeaders() { return httpHeaders; }
+    public void setHttpHeaders(String httpHeaders) { this.httpHeaders = httpHeaders; }
     
-    public Double getOperatingTemperatureMax() { return operatingTemperatureMax; }
-    public void setOperatingTemperatureMax(Double operatingTemperatureMax) { this.operatingTemperatureMax = operatingTemperatureMax; }
+    public String getCoapHost() { return coapHost; }
+    public void setCoapHost(String coapHost) { this.coapHost = coapHost; }
     
-    public Double getOperatingHumidityMin() { return operatingHumidityMin; }
-    public void setOperatingHumidityMin(Double operatingHumidityMin) { this.operatingHumidityMin = operatingHumidityMin; }
+    public Integer getCoapPort() { return coapPort; }
+    public void setCoapPort(Integer coapPort) { this.coapPort = coapPort; }
     
-    public Double getOperatingHumidityMax() { return operatingHumidityMax; }
-    public void setOperatingHumidityMax(Double operatingHumidityMax) { this.operatingHumidityMax = operatingHumidityMax; }
+    public String getCoapPath() { return coapPath; }
+    public void setCoapPath(String coapPath) { this.coapPath = coapPath; }
+    
+    public List<String> getTags() { return tags; }
+    public void setTags(List<String> tags) { this.tags = tags; }
+    
+    public Map<String, String> getConfig() { return config; }
+    public void setConfig(Map<String, String> config) { this.config = config; }
     
     public String getManualFileName() { return manualFileName; }
     public void setManualFileName(String manualFileName) { this.manualFileName = manualFileName; }

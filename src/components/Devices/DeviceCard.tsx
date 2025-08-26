@@ -310,7 +310,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               </span>
             </div>
             <p className="text-sm text-slate-600 mb-1 truncate">{deviceTypeInfo.label} • {device.location}</p>
-            <p className="text-xs text-slate-500">Last seen: {formatLastSeen(device.lastSeen)}</p>
+                          <p className="text-xs text-slate-500">Updated: {formatLastSeen(device.updatedAt)}</p>
           </div>
         </div>
 

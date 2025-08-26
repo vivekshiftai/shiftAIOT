@@ -88,12 +88,37 @@ export const DevicesSection: React.FC = () => {
   const handleDeleteDevice = useCallback(async (deviceId: string, deviceName: string) => {
     if (window.confirm(`Are you sure you want to delete the device "${deviceName}"? This will permanently remove the device and all its associated data including rules, maintenance schedules, safety precautions, and PDF documents.`)) {
       try {
+        console.log('DevicesSection: Deleting device:', { deviceId, deviceName });
+        
         await deleteDevice(deviceId);
+        console.log('DevicesSection: Device deleted successfully:', { deviceId, deviceName });
         setSuccessMessage(`Device "${deviceName}" has been successfully deleted!`);
         setTimeout(() => setSuccessMessage(''), 5000);
       } catch (error) {
-        console.error('Failed to delete device:', error);
-        alert('Failed to delete device. Please try again.');
+        console.error('DevicesSection: Failed to delete device:', error);
+        console.error('DevicesSection: Error details:', {
+          deviceId,
+          deviceName,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          response: error instanceof Error && 'response' in error ? (error as any).response : undefined
+        });
+        
+        // Provide more specific error messages
+        let errorMessage = 'Unknown error occurred';
+        if (error instanceof Error) {
+          if (error.message.includes('401') || error.message.includes('403')) {
+            errorMessage = 'Permission denied. You do not have the required permissions to delete devices.';
+          } else if (error.message.includes('404')) {
+            errorMessage = 'Device not found. It may have already been deleted.';
+          } else if (error.message.includes('500')) {
+            errorMessage = 'Server error. Please try again later.';
+          } else {
+            errorMessage = error.message;
+          }
+        }
+        
+        alert(`Failed to delete device "${deviceName}". ${errorMessage}`);
       }
     }
   }, [deleteDevice]);

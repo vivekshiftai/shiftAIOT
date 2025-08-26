@@ -202,48 +202,37 @@ public class DeviceService {
         device.setType(request.getType());
         device.setLocation(request.getLocation());
         device.setProtocol(request.getProtocol());
-        device.setFirmware(request.getFirmware());
         device.setTags(request.getTags());
         device.setConfig(request.getConfig());
         
         // Set device specifications
         device.setManufacturer(request.getManufacturer());
         device.setModel(request.getModel());
-        device.setSerialNumber(request.getSerialNumber());
+        device.setDescription(request.getDescription());
         
-        // Set MAC address and IP address directly (skip validation for now)
-        device.setMacAddress(request.getMacAddress());
+        // Set connection details
         device.setIpAddress(request.getIpAddress());
-        
         device.setPort(request.getPort());
         
-        // Set documentation URLs (if provided) - but don't store actual files
-        device.setManualUrl(request.getManualUrl());
-        device.setDatasheetUrl(request.getDatasheetUrl());
-        device.setCertificateUrl(request.getCertificateUrl());
-        
-        // Set additional metadata
-        device.setDescription(request.getDescription());
-        device.setInstallationNotes(request.getInstallationNotes());
-        device.setMaintenanceSchedule(request.getMaintenanceSchedule());
-        device.setWarrantyInfo(request.getWarrantyInfo());
-        
-        // Set connectivity details
-        device.setWifiSsid(request.getWifiSsid());
+        // Set MQTT specific fields
         device.setMqttBroker(request.getMqttBroker());
         device.setMqttTopic(request.getMqttTopic());
+        device.setMqttUsername(request.getMqttUsername());
+        device.setMqttPassword(request.getMqttPassword());
         
-        // Set power and environmental details
-        device.setPowerSource(request.getPowerSource());
-        device.setPowerConsumption(request.getPowerConsumption());
-        device.setOperatingTemperatureMin(request.getOperatingTemperatureMin());
-        device.setOperatingTemperatureMax(request.getOperatingTemperatureMax());
-        device.setOperatingHumidityMin(request.getOperatingHumidityMin());
-        device.setOperatingHumidityMax(request.getOperatingHumidityMax());
+        // Set HTTP specific fields
+        device.setHttpEndpoint(request.getHttpEndpoint());
+        device.setHttpMethod(request.getHttpMethod());
+        device.setHttpHeaders(request.getHttpHeaders());
+        
+        // Set COAP specific fields
+        device.setCoapHost(request.getCoapHost());
+        device.setCoapPort(request.getCoapPort());
+        device.setCoapPath(request.getCoapPath());
         
         // Log device details before saving for debugging
-        logger.debug("Creating device: name={}, type={}, location={}, macAddress={}, ipAddress={}", 
-            device.getName(), device.getType(), device.getLocation(), device.getMacAddress(), device.getIpAddress());
+        logger.debug("Creating device: name={}, type={}, location={}, ipAddress={}", 
+            device.getName(), device.getType(), device.getLocation(), device.getIpAddress());
         
         // Save the device (without storing PDF files)
         Device savedDevice;
@@ -290,48 +279,37 @@ public class DeviceService {
         device.setType(request.getType());
         device.setLocation(request.getLocation());
         device.setProtocol(request.getProtocol());
-        device.setFirmware(request.getFirmware());
         device.setTags(request.getTags());
         device.setConfig(request.getConfig());
         
         // Set device specifications
         device.setManufacturer(request.getManufacturer());
         device.setModel(request.getModel());
-        device.setSerialNumber(request.getSerialNumber());
+        device.setDescription(request.getDescription());
         
-        // Set MAC address and IP address directly (skip validation for now)
-        device.setMacAddress(request.getMacAddress());
+        // Set connection details
         device.setIpAddress(request.getIpAddress());
-        
         device.setPort(request.getPort());
         
-        // Set documentation URLs (if provided)
-        device.setManualUrl(request.getManualUrl());
-        device.setDatasheetUrl(request.getDatasheetUrl());
-        device.setCertificateUrl(request.getCertificateUrl());
-        
-        // Set additional metadata
-        device.setDescription(request.getDescription());
-        device.setInstallationNotes(request.getInstallationNotes());
-        device.setMaintenanceSchedule(request.getMaintenanceSchedule());
-        device.setWarrantyInfo(request.getWarrantyInfo());
-        
-        // Set connectivity details
-        device.setWifiSsid(request.getWifiSsid());
+        // Set MQTT specific fields
         device.setMqttBroker(request.getMqttBroker());
         device.setMqttTopic(request.getMqttTopic());
+        device.setMqttUsername(request.getMqttUsername());
+        device.setMqttPassword(request.getMqttPassword());
         
-        // Set power and environmental details
-        device.setPowerSource(request.getPowerSource());
-        device.setPowerConsumption(request.getPowerConsumption());
-        device.setOperatingTemperatureMin(request.getOperatingTemperatureMin());
-        device.setOperatingTemperatureMax(request.getOperatingTemperatureMax());
-        device.setOperatingHumidityMin(request.getOperatingHumidityMin());
-        device.setOperatingHumidityMax(request.getOperatingHumidityMax());
+        // Set HTTP specific fields
+        device.setHttpEndpoint(request.getHttpEndpoint());
+        device.setHttpMethod(request.getHttpMethod());
+        device.setHttpHeaders(request.getHttpHeaders());
+        
+        // Set COAP specific fields
+        device.setCoapHost(request.getCoapHost());
+        device.setCoapPort(request.getCoapPort());
+        device.setCoapPath(request.getCoapPath());
         
         // Log device details before saving for debugging
-        logger.debug("Creating device with files: name={}, type={}, location={}, macAddress={}, ipAddress={}", 
-            device.getName(), device.getType(), device.getLocation(), device.getMacAddress(), device.getIpAddress());
+        logger.debug("Creating device with files: name={}, type={}, location={}, ipAddress={}", 
+            device.getName(), device.getType(), device.getLocation(), device.getIpAddress());
         
         // Save the device first
         Device savedDevice;
@@ -343,48 +321,10 @@ public class DeviceService {
             throw new RuntimeException("Failed to create device: " + e.getMessage(), e);
         }
         
-        // Handle file uploads
-        boolean manualUploaded = false;
-        boolean datasheetUploaded = false;
-        boolean certificateUploaded = false;
+        // Note: File uploads are now handled separately through the device documentation system
+        // This method now only creates the device with basic information
         
-        if (manualFile != null && !manualFile.isEmpty()) {
-            try {
-                String manualPath = fileStorageService.storeFile(manualFile, savedDevice.getId());
-                savedDevice.setManualUrl(manualPath);
-                manualUploaded = true;
-            } catch (Exception e) {
-                // Log error but continue with device creation
-                System.err.println("Failed to upload manual file: " + e.getMessage());
-            }
-        }
-        
-        if (datasheetFile != null && !datasheetFile.isEmpty()) {
-            try {
-                String datasheetPath = fileStorageService.storeFile(datasheetFile, savedDevice.getId());
-                savedDevice.setDatasheetUrl(datasheetPath);
-                datasheetUploaded = true;
-            } catch (Exception e) {
-                // Log error but continue with device creation
-                System.err.println("Failed to upload datasheet file: " + e.getMessage());
-            }
-        }
-        
-        if (certificateFile != null && !certificateFile.isEmpty()) {
-            try {
-                String certificatePath = fileStorageService.storeFile(certificateFile, savedDevice.getId());
-                savedDevice.setCertificateUrl(certificatePath);
-                certificateUploaded = true;
-            } catch (Exception e) {
-                // Log error but continue with device creation
-                System.err.println("Failed to upload certificate file: " + e.getMessage());
-            }
-        }
-        
-        // Update device with file paths if files were uploaded
-        if (manualUploaded || datasheetUploaded || certificateUploaded) {
-            savedDevice = deviceRepository.save(savedDevice);
-        }
+        // Note: File upload handling removed from simplified schema
         
         // Process PDF results if provided
         if (request.getPdfResults() != null) {
@@ -405,36 +345,25 @@ public class DeviceService {
         response.setStatus(savedDevice.getStatus());
         response.setLocation(savedDevice.getLocation());
         response.setProtocol(savedDevice.getProtocol());
-        response.setFirmware(savedDevice.getFirmware());
         response.setTags(savedDevice.getTags());
         response.setConfig(savedDevice.getConfig());
         response.setManufacturer(savedDevice.getManufacturer());
         response.setModel(savedDevice.getModel());
-        response.setSerialNumber(savedDevice.getSerialNumber());
-        response.setMacAddress(savedDevice.getMacAddress());
+        response.setDescription(savedDevice.getDescription());
         response.setIpAddress(savedDevice.getIpAddress());
         response.setPort(savedDevice.getPort());
-        response.setManualUrl(savedDevice.getManualUrl());
-        response.setDatasheetUrl(savedDevice.getDatasheetUrl());
-        response.setCertificateUrl(savedDevice.getCertificateUrl());
-        response.setDescription(savedDevice.getDescription());
-        response.setInstallationNotes(savedDevice.getInstallationNotes());
-        response.setMaintenanceSchedule(savedDevice.getMaintenanceSchedule());
-        response.setWarrantyInfo(savedDevice.getWarrantyInfo());
-        response.setWifiSsid(savedDevice.getWifiSsid());
         response.setMqttBroker(savedDevice.getMqttBroker());
         response.setMqttTopic(savedDevice.getMqttTopic());
-        response.setPowerSource(savedDevice.getPowerSource());
-        response.setPowerConsumption(savedDevice.getPowerConsumption());
-        response.setOperatingTemperatureMin(savedDevice.getOperatingTemperatureMin());
-        response.setOperatingTemperatureMax(savedDevice.getOperatingTemperatureMax());
-        response.setOperatingHumidityMin(savedDevice.getOperatingHumidityMin());
-        response.setOperatingHumidityMax(savedDevice.getOperatingHumidityMax());
+        response.setMqttUsername(savedDevice.getMqttUsername());
+        response.setMqttPassword(savedDevice.getMqttPassword());
+        response.setHttpEndpoint(savedDevice.getHttpEndpoint());
+        response.setHttpMethod(savedDevice.getHttpMethod());
+        response.setHttpHeaders(savedDevice.getHttpHeaders());
+        response.setCoapHost(savedDevice.getCoapHost());
+        response.setCoapPort(savedDevice.getCoapPort());
+        response.setCoapPath(savedDevice.getCoapPath());
         response.setCreatedAt(savedDevice.getCreatedAt());
         response.setUpdatedAt(savedDevice.getUpdatedAt());
-        response.setManualUploaded(manualUploaded);
-        response.setDatasheetUploaded(datasheetUploaded);
-        response.setCertificateUploaded(certificateUploaded);
         
         return response;
     }
@@ -637,7 +566,7 @@ public class DeviceService {
             device.setAssignedUserId(deviceDetails.getAssignedUserId());
         }
 
-        device.setLastSeen(LocalDateTime.now());
+        // Note: lastSeen field removed from simplified schema
         return deviceRepository.save(device);
     }
 
@@ -646,7 +575,7 @@ public class DeviceService {
                 .orElseThrow(() -> new RuntimeException("Device not found"));
 
         device.setStatus(status);
-        device.setLastSeen(LocalDateTime.now());
+        // Note: lastSeen field removed from simplified schema
         return deviceRepository.save(device);
     }
 
@@ -655,17 +584,7 @@ public class DeviceService {
         Device device = deviceRepository.findByIdAndOrganizationId(deviceId, organizationId)
                 .orElseThrow(() -> new RuntimeException("Device not found"));
 
-        device.setLastSeen(LocalDateTime.now());
-        if (telemetryData.getMetrics().containsKey("temperature")) {
-            device.setTemperature(telemetryData.getMetrics().get("temperature"));
-        }
-        if (telemetryData.getMetrics().containsKey("humidity")) {
-            device.setHumidity(telemetryData.getMetrics().get("humidity"));
-        }
-        if (telemetryData.getMetrics().containsKey("batteryLevel")) {
-            device.setBatteryLevel(telemetryData.getMetrics().get("batteryLevel").intValue());
-        }
-
+        // Note: Device model simplified - telemetry data stored separately
         deviceRepository.save(device);
 
         // Store telemetry data
