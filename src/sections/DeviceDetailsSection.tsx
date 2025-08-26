@@ -142,25 +142,7 @@ export const DeviceDetailsSection: React.FC = () => {
     }
   }, [device, deviceId, isInitialLoading]);
 
-  // Show loading if devices are still being loaded
-  if (devices.length === 0) {
-    console.log('🔄 Devices array is empty, showing loading screen');
-    return <TabLoadingScreen />;
-  }
-
-  // Redirect if device not found
-  if (!device) {
-    console.log('❌ Device not found, redirecting to devices list');
-    navigate('/devices');
-    return null;
-  }
-
-  // Show loading screen while initial data is being fetched
-  if (isInitialLoading) {
-    console.log('🔄 Showing initial loading screen');
-    return <TabLoadingScreen />;
-  }
-
+  // Main data loading effect
   useEffect(() => {
     console.log('🔄 useEffect triggered with:', { deviceId, devicesLength: devices.length, deviceFound: !!device });
     
@@ -196,6 +178,25 @@ export const DeviceDetailsSection: React.FC = () => {
       setIsInitialLoading(false);
     }
   }, [deviceId, devices.length, device]);
+
+  // Show loading if devices are still being loaded
+  if (devices.length === 0) {
+    console.log('🔄 Devices array is empty, showing loading screen');
+    return <TabLoadingScreen />;
+  }
+
+  // Redirect if device not found
+  if (!device) {
+    console.log('❌ Device not found, redirecting to devices list');
+    navigate('/devices');
+    return null;
+  }
+
+  // Show loading screen while initial data is being fetched
+  if (isInitialLoading) {
+    console.log('🔄 Showing initial loading screen');
+    return <TabLoadingScreen />;
+  }
 
   // Real-time data fetching
   const fetchRealTimeData = async () => {
