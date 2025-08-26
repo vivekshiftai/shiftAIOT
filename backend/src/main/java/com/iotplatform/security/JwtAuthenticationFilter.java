@@ -80,8 +80,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     
                     if (username != null) {
                         try {
-                            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                            logger.info("🔐 User details loaded successfully for: {} with roles: {}", 
+                            // Extract user information from token instead of database query
+                            String userId = tokenProvider.getUserIdFromToken(jwt);
+                            String userRole = tokenProvider.getUserRoleFromToken(jwt);
+                            String organizationId = tokenProvider.getOrganizationIdFromToken(jwt);
+                            String userFullName = tokenProvider.getUserFullNameFromToken(jwt);
+                            
+                            // Create user object from token data
+                            com.iotplatform.model.User user = new com.iotplatform.model.User();
+                            user.setId(userId);
+                            user.setEmail(username);
+                            user.setRole(com.iotplatform.model.User.Role.valueOf(userRole));
+                            user.setOrganizationId(organizationId);
+                            
+                            // Split full name into first and last name
+                            String[] nameParts = userFullName != null ? userFullName.split(" ", 2) : new String[]{"", ""};
+                            user.setFirstName(nameParts[0]);
+                            user.setLastName(nameParts.length > 1 ? nameParts[1] : "");
+                            
+                            // Create CustomUserDetails from token data
+                            CustomUserDetails userDetails = new CustomUserDetails(user);
+                            logger.info("🔐 User details created from token for: {} with roles: {}", 
                                       username, userDetails.getAuthorities());
                             
                             // Check if user is admin and log it
@@ -96,7 +115,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                             SecurityContextHolder.getContext().setAuthentication(authentication);
-                            logger.info("✅ Authentication successful for user: {} on endpoint: {}", username, requestURI);
+                            logger.info("✅ Authentication successful for user: {} on endpoint: {} using token validation only", username, requestURI);
                         } catch (Exception userLoadError) {
                             logger.error("❌ Failed to load user details for username: {}", username, userLoadError);
                         }

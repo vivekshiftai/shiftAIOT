@@ -38,6 +38,7 @@ public class JwtTokenProvider {
 
     public String generateToken(Authentication authentication) {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
+        CustomUserDetails customUserDetails = (CustomUserDetails) userPrincipal;
 
         Date expiryDate = new Date(System.currentTimeMillis() + jwtExpirationInMs);
 
@@ -45,6 +46,10 @@ public class JwtTokenProvider {
                 .subject(userPrincipal.getUsername())
                 .issuedAt(new Date())
                 .expiration(expiryDate)
+                .claim("userId", customUserDetails.getUser().getId())
+                .claim("userRole", customUserDetails.getUser().getRole().name())
+                .claim("organizationId", customUserDetails.getUser().getOrganizationId())
+                .claim("userFullName", customUserDetails.getUser().getFirstName() + " " + customUserDetails.getUser().getLastName())
                 .signWith(getSigningKey())
                 .compact();
 
@@ -56,6 +61,7 @@ public class JwtTokenProvider {
 
     public String generateRefreshToken(Authentication authentication) {
         UserDetails userPrincipal = (UserDetails) authentication.getPrincipal();
+        CustomUserDetails customUserDetails = (CustomUserDetails) userPrincipal;
 
         Date expiryDate = new Date(System.currentTimeMillis() + jwtRefreshExpirationInMs);
 
@@ -64,6 +70,10 @@ public class JwtTokenProvider {
                 .issuedAt(new Date())
                 .expiration(expiryDate)
                 .claim("type", "refresh")
+                .claim("userId", customUserDetails.getUser().getId())
+                .claim("userRole", customUserDetails.getUser().getRole().name())
+                .claim("organizationId", customUserDetails.getUser().getOrganizationId())
+                .claim("userFullName", customUserDetails.getUser().getFirstName() + " " + customUserDetails.getUser().getLastName())
                 .signWith(getSigningKey())
                 .compact();
 
@@ -105,6 +115,78 @@ public class JwtTokenProvider {
             return ex.getClaims().getSubject();
         } catch (Exception ex) {
             logger.error("Error extracting username from expired token", ex);
+            return null;
+        }
+    }
+
+    public String getUserIdFromToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            return claims.get("userId", String.class);
+        } catch (ExpiredJwtException ex) {
+            // For expired tokens, we can still extract the user ID
+            return ex.getClaims().get("userId", String.class);
+        } catch (Exception ex) {
+            logger.error("Error extracting user ID from token", ex);
+            return null;
+        }
+    }
+
+    public String getUserRoleFromToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            return claims.get("userRole", String.class);
+        } catch (ExpiredJwtException ex) {
+            // For expired tokens, we can still extract the user role
+            return ex.getClaims().get("userRole", String.class);
+        } catch (Exception ex) {
+            logger.error("Error extracting user role from token", ex);
+            return null;
+        }
+    }
+
+    public String getOrganizationIdFromToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            return claims.get("organizationId", String.class);
+        } catch (ExpiredJwtException ex) {
+            // For expired tokens, we can still extract the organization ID
+            return ex.getClaims().get("organizationId", String.class);
+        } catch (Exception ex) {
+            logger.error("Error extracting organization ID from token", ex);
+            return null;
+        }
+    }
+
+    public String getUserFullNameFromToken(String token) {
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+
+            return claims.get("userFullName", String.class);
+        } catch (ExpiredJwtException ex) {
+            // For expired tokens, we can still extract the user full name
+            return ex.getClaims().get("userFullName", String.class);
+        } catch (Exception ex) {
+            logger.error("Error extracting user full name from token", ex);
             return null;
         }
     }

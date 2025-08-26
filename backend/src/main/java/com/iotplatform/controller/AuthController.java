@@ -138,11 +138,20 @@ public class AuthController {
                 return ResponseEntity.status(401).body("Invalid token - cannot extract user information");
             }
             
-            // Find user by email
-            User user = authService.findUserByEmail(username);
-            if (user == null) {
-                return ResponseEntity.status(401).body("User not found");
-            }
+            // Extract user information from the token instead of querying database
+            String userId = jwtTokenProvider.getUserIdFromToken(refreshRequest.getToken());
+            String userRole = jwtTokenProvider.getUserRoleFromToken(refreshRequest.getToken());
+            String organizationId = jwtTokenProvider.getOrganizationIdFromToken(refreshRequest.getToken());
+            String userFullName = jwtTokenProvider.getUserFullNameFromToken(refreshRequest.getToken());
+            
+            // Create a simple user object from token data
+            User user = new User();
+            user.setId(userId);
+            user.setEmail(username);
+            user.setRole(User.Role.valueOf(userRole));
+            user.setOrganizationId(organizationId);
+            user.setFirstName(userFullName.split(" ")[0]);
+            user.setLastName(userFullName.split(" ").length > 1 ? userFullName.split(" ")[1] : "");
             
             // Create authentication object using CustomUserDetails as principal
             CustomUserDetails userDetails = new CustomUserDetails(user);
@@ -153,7 +162,7 @@ public class AuthController {
             String newJwt = jwtTokenProvider.generateToken(authentication);
             String newRefreshToken = jwtTokenProvider.generateRefreshToken(authentication);
             
-            logger.info("Token refreshed successfully for user: {}", user.getEmail());
+            logger.info("Token refreshed successfully for user: {} using token validation only", username);
             
             return ResponseEntity.ok(new JwtResponse(
                     newJwt,
@@ -165,6 +174,7 @@ public class AuthController {
                     newRefreshToken
             ));
         } catch (Exception e) {
+            logger.error("Token refresh failed: {}", e.getMessage());
             return ResponseEntity.status(401).body("Token refresh failed: " + e.getMessage());
         }
     }
