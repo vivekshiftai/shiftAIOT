@@ -55,6 +55,7 @@ import './styles/colors.css';
 import { AlertTriangle } from 'lucide-react';
 import RulesPage from './sections/RulesPage';
 import { SettingsSection } from './sections/SettingsSection';
+
 import { AppLoadingScreen, TabLoadingScreen } from './components/Loading/LoadingComponents';
 
 // Error Boundary Component
@@ -140,7 +141,7 @@ const MainAppLayout: React.FC = () => {
     if (path === '/notifications') return 'notifications';
     if (path === '/users') return 'users';
     if (path === '/settings') return 'settings';
-    if (path === '/rules') return 'rules';
+    if (path === '/device-care') return 'device-care';
     if (path === '/maintenance') return 'maintenance';
     if (path === '/safety') return 'safety';
     return 'dashboard';
@@ -195,7 +196,8 @@ const MainAppLayout: React.FC = () => {
             <Route path="/analytics" element={<AnalyticsSection />} />
             <Route path="/users" element={<UsersSection />} />
             <Route path="/settings" element={<SettingsSection />} />
-            <Route path="/rules" element={<RulesPage />} />
+            <Route path="/device-care" element={<RulesPage />} />
+
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
           

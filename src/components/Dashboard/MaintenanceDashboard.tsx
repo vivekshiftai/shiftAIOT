@@ -6,40 +6,60 @@ import {
   CheckCircle, 
   AlertTriangle, 
   Clock, 
-  TrendingUp,
-  Target,
+  BarChart3,
   Activity
 } from 'lucide-react';
-import { useAppDispatch, useAppSelector } from '../../hooks/useRedux';
-import { fetchMaintenanceTasks, fetchMaintenanceStats } from '../../store/slices/maintenanceSlice';
 import { LoadingSpinner } from '../Loading/LoadingComponents';
 import { maintenanceAPI } from '../../services/api';
 import { MaintenanceTask } from '../../types';
+import { logInfo, logError } from '../../utils/logger';
 
 /**
  * Enhanced maintenance dashboard component with detailed statistics
  * Displays maintenance tasks, schedules, and performance metrics
  */
 export const MaintenanceDashboard: React.FC = () => {
-  const dispatch = useAppDispatch();
-  const { tasks, stats, loading, error } = useAppSelector(state => state.maintenance);
   const [todayTasks, setTodayTasks] = useState<MaintenanceTask[]>([]);
   const [todayLoading, setTodayLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState({
+    totalTasks: 0,
+    completedThisWeek: 0,
+    upcomingTasks: 0,
+    successRate: 0,
+    averageCompletionTime: 0
+  });
 
   useEffect(() => {
-    dispatch(fetchMaintenanceTasks());
-    dispatch(fetchMaintenanceStats());
     fetchTodayMaintenance();
-  }, [dispatch]);
+  }, []);
 
   const fetchTodayMaintenance = async () => {
     try {
       setTodayLoading(true);
+      logInfo('MaintenanceDashboard', 'Fetching today\'s maintenance tasks...');
       const response = await maintenanceAPI.getToday();
-      console.log('Today\'s maintenance tasks response:', response.data);
+      logInfo('MaintenanceDashboard', 'Today\'s maintenance tasks response received', {
+        dataLength: response.data?.length || 0,
+        hasData: !!response.data
+      });
+      
+      if (response.data && response.data.length > 0) {
+        logInfo('MaintenanceDashboard', 'Today\'s tasks details', response.data.map((task: any) => ({
+          id: task.id,
+          taskName: task.taskName,
+          deviceName: task.deviceName,
+          status: task.status,
+          nextMaintenance: task.nextMaintenance,
+          assignedTo: task.assignedTo
+        })));
+      }
+      
       setTodayTasks(response.data || []);
     } catch (error) {
-      console.error('Failed to fetch today\'s maintenance tasks:', error);
+      logError('MaintenanceDashboard', 'Failed to fetch today\'s maintenance tasks', error instanceof Error ? error : new Error('Unknown error'));
+      setError('Failed to fetch today\'s maintenance tasks');
     } finally {
       setTodayLoading(false);
     }
@@ -145,7 +165,7 @@ export const MaintenanceDashboard: React.FC = () => {
                 <p className="text-slate-500 text-sm mt-1">Task completion</p>
               </div>
               <div className="p-3 bg-green-50 rounded-xl">
-                <Target className="w-6 h-6 text-green-600" />
+                <BarChart3 className="w-6 h-6 text-green-600" />
               </div>
             </div>
           </div>
@@ -161,9 +181,19 @@ export const MaintenanceDashboard: React.FC = () => {
                 <Calendar className="w-5 h-5 text-orange-600" />
                 Today's Maintenance Tasks - Name, Device, Assigned To & Status
               </h3>
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <Clock className="w-4 h-4" />
-                <span>{new Date().toLocaleDateString()}</span>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                  <Clock className="w-4 h-4" />
+                  <span>{new Date().toLocaleDateString()}</span>
+                </div>
+                <button
+                  onClick={fetchTodayMaintenance}
+                  disabled={todayLoading}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Activity className="w-4 h-4" />
+                  {todayLoading ? 'Refreshing...' : 'Refresh'}
+                </button>
               </div>
             </div>
           </div>
@@ -240,7 +270,7 @@ export const MaintenanceDashboard: React.FC = () => {
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200">
             <div className="p-6 border-b border-slate-200">
               <h3 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-600" />
+                <BarChart3 className="w-5 h-5 text-green-600" />
                 Maintenance Performance
               </h3>
             </div>
@@ -273,18 +303,18 @@ export const MaintenanceDashboard: React.FC = () => {
             </div>
             <div className="p-6">
               <div className="space-y-3">
-                {tasks
-                  .filter(task => task.status === 'completed')
+                {todayTasks
+                  .filter((task: MaintenanceTask) => task.status === 'COMPLETED')
                   .slice(0, 4)
-                  .map((task, index) => (
+                  .map((task: MaintenanceTask, index: number) => (
                     <div key={task.id} className="flex items-center gap-3 p-2">
                       <CheckCircle className="w-4 h-4 text-green-500" />
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-800">{task.title}</p>
+                        <p className="text-sm font-medium text-slate-800">{task.taskName}</p>
                         <p className="text-xs text-slate-500">{task.deviceName}</p>
                       </div>
                       <span className="text-xs text-slate-500">
-                        {task.completedDate && new Date(task.completedDate).toLocaleDateString()}
+                        {task.nextMaintenance && new Date(task.nextMaintenance).toLocaleDateString()}
                       </span>
                     </div>
                   ))}

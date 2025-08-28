@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Download, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { PDFImage } from '../../services/chatService';
 import { logInfo, logError } from '../../utils/logger';
+import { getDisplayImageName } from '../../utils/imageUtils';
 
 interface ChatImageDisplayProps {
   images: PDFImage[];
@@ -37,15 +38,18 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
     setImageErrors(prev => new Set(prev).add(filename));
   };
 
-  const downloadImage = (image: PDFImage) => {
+  const downloadImage = (image: PDFImage, index: number) => {
     try {
       const link = document.createElement('a');
       link.href = `data:${image.mime_type};base64,${image.data}`;
-      link.download = image.filename;
+      // Use a cleaner filename for download
+      const cleanFilename = getDisplayImageName(image.filename, index).replace(/\s+/g, '_').toLowerCase();
+      const extension = image.mime_type.split('/')[1] || 'png';
+      link.download = `${cleanFilename}.${extension}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      logInfo('ChatImageDisplay', 'Image downloaded successfully', { filename: image.filename });
+      logInfo('ChatImageDisplay', 'Image downloaded successfully', { filename: cleanFilename });
     } catch (error) {
       logError('ChatImageDisplay', 'Failed to download image', error instanceof Error ? error : new Error('Unknown error'));
     }
@@ -81,7 +85,7 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
               <div className="px-3 py-2 bg-gray-100 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-800 truncate">
-                    {image.filename}
+                    {getDisplayImageName(image.filename, index)}
                   </p>
                   <p className="text-xs text-gray-500">
                     {formatFileSize(image.size)} • {image.mime_type}
@@ -100,7 +104,7 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
                     )}
                   </button>
                   <button
-                    onClick={() => downloadImage(image)}
+                    onClick={() => downloadImage(image, index)}
                     className="p-1 hover:bg-gray-200 rounded transition-colors"
                     title="Download image"
                   >
@@ -122,7 +126,7 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
                   } overflow-hidden`}>
                     <img
                       src={`data:${image.mime_type};base64,${image.data}`}
-                      alt={image.filename}
+                      alt={getDisplayImageName(image.filename, index)}
                       className={`w-full h-auto object-contain rounded ${
                         isExpanded ? 'max-h-80' : 'max-h-24'
                       }`}

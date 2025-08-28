@@ -23,7 +23,7 @@ import java.util.concurrent.Executors;
 @Service
 @RequiredArgsConstructor
 public class MaintenanceNotificationScheduler {
-
+    
     private final MaintenanceScheduleRepository maintenanceScheduleRepository;
     private final ConversationNotificationService conversationNotificationService;
     private final ExecutorService executorService = Executors.newFixedThreadPool(5);

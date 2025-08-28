@@ -48,6 +48,10 @@ public interface DeviceMaintenanceRepository extends JpaRepository<DeviceMainten
     @Query("SELECT COUNT(dm) FROM DeviceMaintenance dm WHERE dm.organizationId = :organizationId AND dm.status = :status")
     long countByOrganizationIdAndStatus(@Param("organizationId") String organizationId, @Param("status") DeviceMaintenance.Status status);
     
+    // Find by status and next maintenance less than or equal to a date
+    @Query("SELECT dm FROM DeviceMaintenance dm WHERE dm.status = :status AND dm.nextMaintenance <= :date")
+    List<DeviceMaintenance> findByStatusAndNextMaintenanceLessThanEqual(@Param("status") DeviceMaintenance.Status status, @Param("date") LocalDate date);
+    
     @Query("DELETE FROM DeviceMaintenance dm WHERE dm.device.id = :deviceId")
     void deleteByDeviceId(@Param("deviceId") String deviceId);
 }

@@ -4,11 +4,9 @@ import {
   Settings, 
   Bell, 
   User, 
-  Target,
+  Zap,
   BarChart3,
-  Cpu,
-  BookOpen,
-  Home
+  Cpu
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -18,10 +16,10 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: Home, path: '/dashboard' },
+  { id: 'dashboard', label: 'Dashboard', icon: BarChart3, path: '/dashboard' },
   { id: 'devices', label: 'Devices', icon: Cpu, path: '/devices' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
-  { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen, path: '/knowledge' },
+  { id: 'knowledge', label: 'Knowledge Base', icon: Bell, path: '/knowledge' },
   { id: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
   { id: 'users', label: 'Users', icon: User, path: '/users' },
 ];
@@ -40,12 +38,12 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
     if (path === '/notifications') return 'notifications';
     if (path === '/users') return 'users';
     if (path === '/settings') return 'settings';
-    if (path === '/rules') return 'rules';
+    if (path === '/device-care') return 'device-care';
     return 'dashboard';
   };
 
   const currentPage = getCurrentPage();
-  const isDeviceCareActive = currentPage === 'rules';
+  const isDeviceCareActive = currentPage === 'device-care';
 
   return (
     <div className="bg-white border-r border-gray-200 w-64 min-h-screen p-4">
@@ -77,14 +75,14 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
         {/* DeviceCare Center */}
         <div className="pt-2">
           <Link
-            to="/rules"
+            to="/device-care"
             className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               isDeviceCareActive
                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
                 : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
             }`}
           >
-            <Target className="w-5 h-5" />
+            <Zap className="w-5 h-5" />
             DeviceCare Center
           </Link>
         </div>

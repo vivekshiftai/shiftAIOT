@@ -82,9 +82,27 @@ public class DeviceMaintenance {
     @Column(name = "safety_notes", columnDefinition = "TEXT")
     private String safetyNotes;
 
+    @Size(max = 100)
+    @Column(name = "category")
+    private String category;
+
     @Size(max = 255)
     @Column(name = "assigned_to")
     private String assignedTo;
+
+    @Size(max = 255)
+    @Column(name = "assigned_by")
+    private String assignedBy;
+
+    @Column(name = "assigned_at")
+    private LocalDateTime assignedAt;
+
+    @Size(max = 255)
+    @Column(name = "completed_by")
+    private String completedBy;
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
@@ -168,14 +186,33 @@ public class DeviceMaintenance {
     public String getSafetyNotes() { return safetyNotes; }
     public void setSafetyNotes(String safetyNotes) { this.safetyNotes = safetyNotes; }
 
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
+
     public String getAssignedTo() { return assignedTo; }
     public void setAssignedTo(String assignedTo) { this.assignedTo = assignedTo; }
+
+    public String getAssignedBy() { return assignedBy; }
+    public void setAssignedBy(String assignedBy) { this.assignedBy = assignedBy; }
+
+    public LocalDateTime getAssignedAt() { return assignedAt; }
+    public void setAssignedAt(LocalDateTime assignedAt) { this.assignedAt = assignedAt; }
+
+    public String getCompletedBy() { return completedBy; }
+    public void setCompletedBy(String completedBy) { this.completedBy = completedBy; }
+
+    public LocalDateTime getCompletedAt() { return completedAt; }
+    public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
 
     public Status getStatus() { return status; }
     public void setStatus(Status status) { this.status = status; }
 
     public String getOrganizationId() { return organizationId; }
     public void setOrganizationId(String organizationId) { this.organizationId = organizationId; }
+
+    public String getDeviceId() {
+        return this.device != null ? this.device.getId() : null;
+    }
 
     public void setDeviceId(String deviceId) {
         if (this.device == null) {

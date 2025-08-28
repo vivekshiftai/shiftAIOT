@@ -18,7 +18,7 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class NotificationSettingsService {
-
+    
     private final UserPreferencesRepository userPreferencesRepository;
     @Lazy
     private final NotificationService notificationService;

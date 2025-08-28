@@ -129,6 +129,7 @@ CREATE TABLE IF NOT EXISTS device_maintenance (
     estimated_duration VARCHAR(100), -- New field for estimated duration
     required_tools TEXT, -- New field for required tools
     safety_notes TEXT, -- New field for safety notes
+    category VARCHAR(100), -- New field for maintenance category
     assigned_to VARCHAR(255),
     status VARCHAR(50) DEFAULT 'ACTIVE', -- 'ACTIVE', 'COMPLETED', 'CANCELLED', 'OVERDUE'
     organization_id VARCHAR(255) NOT NULL,
@@ -144,6 +145,15 @@ ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS organization_id VARCHAR(
 ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS estimated_duration VARCHAR(100);
 ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS required_tools TEXT;
 ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS safety_notes TEXT;
+
+-- Add new columns to device_maintenance for assignment tracking
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS assigned_by VARCHAR(255);
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMP;
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS completed_by VARCHAR(255);
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
+
+-- Add category column to device_maintenance if it doesn't exist
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS category VARCHAR(100);
 
 -- Device Safety Precautions table for onboarding flow - Updated to match new model
 CREATE TABLE IF NOT EXISTS device_safety_precautions (
@@ -297,6 +307,39 @@ CREATE TABLE IF NOT EXISTS knowledge_documents (
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE SET NULL
 );
 
+-- User Preferences table
+CREATE TABLE IF NOT EXISTS user_preferences (
+    id VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL UNIQUE,
+    
+    -- Notification settings
+    email_notifications BOOLEAN DEFAULT true,
+    push_notifications BOOLEAN DEFAULT true,
+    device_alerts BOOLEAN DEFAULT true,
+    system_updates BOOLEAN DEFAULT false,
+    weekly_reports BOOLEAN DEFAULT true,
+    critical_alerts BOOLEAN DEFAULT true,
+    performance_alerts BOOLEAN DEFAULT true,
+    security_alerts BOOLEAN DEFAULT true,
+    maintenance_alerts BOOLEAN DEFAULT false,
+    data_backup_alerts BOOLEAN DEFAULT true,
+    user_activity_alerts BOOLEAN DEFAULT false,
+    rule_trigger_alerts BOOLEAN DEFAULT true,
+    
+    -- Dashboard settings
+    dashboard_show_real_time_charts BOOLEAN DEFAULT true,
+    dashboard_auto_refresh BOOLEAN DEFAULT true,
+    dashboard_refresh_interval INTEGER DEFAULT 30,
+    dashboard_show_device_status BOOLEAN DEFAULT true,
+    dashboard_show_alerts BOOLEAN DEFAULT true,
+    dashboard_show_performance_metrics BOOLEAN DEFAULT true,
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- Conversation Configurations table
 CREATE TABLE IF NOT EXISTS conversation_configs (
     id VARCHAR(255) PRIMARY KEY,
@@ -379,177 +422,9 @@ CREATE INDEX IF NOT EXISTS idx_device_safety_device ON device_safety_precautions
 CREATE INDEX IF NOT EXISTS idx_device_safety_active ON device_safety_precautions(is_active);
 CREATE INDEX IF NOT EXISTS idx_conversation_configs_user ON conversation_configs(user_id);
 CREATE INDEX IF NOT EXISTS idx_conversation_configs_platform ON conversation_configs(platform_type);
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user ON user_preferences(user_id);
 CREATE INDEX IF NOT EXISTS idx_rule_conditions_rule ON rule_conditions(rule_id);
 CREATE INDEX IF NOT EXISTS idx_rule_conditions_device ON rule_conditions(device_id);
 CREATE INDEX IF NOT EXISTS idx_rule_actions_rule ON rule_actions(rule_id);
 
--- Insert default admin user if not exists
-INSERT INTO users (id, first_name, last_name, email, password, role, organization_id)
-SELECT 
-    'admin-001',
-    'Admin',
-    'User',
-    'admin@shiftaiot.com',
-    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: admin123
-    'ADMIN',
-    'default'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@shiftaiot.com');
-
--- Insert default permissions for admin user
-INSERT INTO user_permissions (user_id, permissions)
-SELECT 
-    'admin-001',
-    'DEVICE_READ'
-WHERE NOT EXISTS (SELECT 1 FROM user_permissions WHERE user_id = 'admin-001' AND permissions = 'DEVICE_READ');
-
-INSERT INTO user_permissions (user_id, permissions)
-SELECT 
-    'admin-001',
-    'DEVICE_WRITE'
-WHERE NOT EXISTS (SELECT 1 FROM user_permissions WHERE user_id = 'admin-001' AND permissions = 'DEVICE_WRITE');
-
-INSERT INTO user_permissions (user_id, permissions)
-SELECT 
-    'admin-001',
-    'DEVICE_DELETE'
-WHERE NOT EXISTS (SELECT 1 FROM user_permissions WHERE user_id = 'admin-001' AND permissions = 'DEVICE_DELETE');
-
-INSERT INTO user_permissions (user_id, permissions)
-SELECT 
-    'admin-001',
-    'RULE_READ'
-WHERE NOT EXISTS (SELECT 1 FROM user_permissions WHERE user_id = 'admin-001' AND permissions = 'RULE_READ');
-
-INSERT INTO user_permissions (user_id, permissions)
-SELECT 
-    'admin-001',
-    'RULE_WRITE'
-WHERE NOT EXISTS (SELECT 1 FROM user_permissions WHERE user_id = 'admin-001' AND permissions = 'RULE_WRITE');
-
-INSERT INTO user_permissions (user_id, permissions)
-SELECT 
-    'admin-001',
-    'RULE_DELETE'
-WHERE NOT EXISTS (SELECT 1 FROM user_permissions WHERE user_id = 'admin-001' AND permissions = 'RULE_DELETE');
-
-INSERT INTO user_permissions (user_id, permissions)
-SELECT 
-    'admin-001',
-    'USER_READ'
-WHERE NOT EXISTS (SELECT 1 FROM user_permissions WHERE user_id = 'admin-001' AND permissions = 'USER_READ');
-
-INSERT INTO user_permissions (user_id, permissions)
-SELECT 
-    'admin-001',
-    'USER_WRITE'
-WHERE NOT EXISTS (SELECT 1 FROM user_permissions WHERE user_id = 'admin-001' AND permissions = 'USER_WRITE');
-
-INSERT INTO user_permissions (user_id, permissions)
-SELECT 
-    'admin-001',
-    'USER_DELETE'
-WHERE NOT EXISTS (SELECT 1 FROM user_permissions WHERE user_id = 'admin-001' AND permissions = 'USER_DELETE');
-
--- Insert sample devices if not exists
-INSERT INTO devices (id, name, type, status, protocol, ip_address, port, location, organization_id, assigned_by)
-SELECT 
-    'device-001',
-    'Temperature Sensor 1',
-    'SENSOR',
-    'ONLINE',
-    'HTTP',
-    '192.168.1.100',
-    8100,
-    'Building A - Floor 1',
-    'default',
-    'admin-001'
-WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = 'device-001');
-
-INSERT INTO devices (id, name, type, status, protocol, ip_address, port, location, organization_id, assigned_by)
-SELECT 
-    'device-002',
-    'Humidity Sensor 1',
-    'SENSOR',
-    'ONLINE',
-    'HTTP',
-    '192.168.1.101',
-    8100,
-    'Building A - Floor 1',
-    'default',
-    'admin-001'
-WHERE NOT EXISTS (SELECT 1 FROM devices WHERE id = 'device-002');
-
--- Insert sample rules if not exists
-INSERT INTO rules (id, name, description, active, organization_id)
-SELECT 
-    'rule-001',
-    'High Temperature Alert',
-    'Alert when temperature exceeds 30°C',
-    true,
-    'default'
-WHERE NOT EXISTS (SELECT 1 FROM rules WHERE id = 'rule-001');
-
--- Insert sample rule conditions
-INSERT INTO rule_conditions (id, rule_id, type, device_id, metric, operator, condition_value)
-SELECT 
-    'condition-001',
-    'rule-001',
-    'TELEMETRY_THRESHOLD',
-    'device-001',
-    'temperature',
-    'GREATER_THAN',
-    '30'
-WHERE NOT EXISTS (SELECT 1 FROM rule_conditions WHERE id = 'condition-001');
-
--- Insert sample rule actions
-INSERT INTO rule_actions (id, rule_id, type, action_data)
-SELECT 
-    'action-001',
-    'rule-001',
-    'NOTIFICATION',
-    '{"notificationType": "EMAIL", "recipients": ["admin@shiftaiot.com"], "subject": "High Temperature Alert", "message": "Temperature has exceeded 30°C"}'
-WHERE NOT EXISTS (SELECT 1 FROM rule_actions WHERE id = 'action-001');
-
--- Insert sample maintenance data for device-001
-INSERT INTO device_maintenance (id, task_name, device_id, device_name, component_name, maintenance_type, frequency, next_maintenance, description, priority, status, organization_id)
-SELECT 
-    'maintenance-001',
-    'Temperature Sensor Calibration',
-    'device-001',
-    'Temperature Sensor 1',
-    'Temperature Sensor',
-    'PREVENTIVE',
-    'monthly',
-    CURRENT_DATE + INTERVAL '1 month',
-    'Calibrate temperature sensor to ensure accurate readings',
-    'MEDIUM',
-    'ACTIVE',
-    'default'
-WHERE NOT EXISTS (SELECT 1 FROM device_maintenance WHERE id = 'maintenance-001');
-
--- Insert sample safety precautions for device-001
-INSERT INTO device_safety_precautions (id, device_id, title, description, type, severity, category, recommended_action, is_active, organization_id)
-SELECT 
-    'safety-001',
-    'device-001',
-    'High Temperature Warning',
-    'Device may reach high temperatures during operation',
-    'warning',
-    'HIGH',
-    'thermal_hazard',
-    'Ensure proper ventilation and monitor temperature readings',
-    true,
-    'default'
-WHERE NOT EXISTS (SELECT 1 FROM device_safety_precautions WHERE id = 'safety-001');
-
--- Insert default user account for testing
-INSERT INTO users (id, first_name, last_name, email, password, role, organization_id)
-SELECT 
-    'user-001',
-    'Test',
-    'User',
-    'user@shiftaiot.com',
-    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: user123
-    'USER',
-    'default'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'user@shiftaiot.com');
+-- Note: Sample data has been removed. Users should be created through the application's user management system.

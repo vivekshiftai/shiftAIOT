@@ -60,7 +60,7 @@ import org.springframework.web.client.HttpServerErrorException;
 @Service
 @RequiredArgsConstructor
 public class PDFProcessingServiceImpl implements PDFProcessingService {
-
+    
     private final RestTemplate restTemplate;
     private final PDFProcessingConfig config;
     private final PDFDocumentRepository pdfDocumentRepository;

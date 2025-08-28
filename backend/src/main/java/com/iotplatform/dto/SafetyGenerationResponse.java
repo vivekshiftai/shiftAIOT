@@ -31,6 +31,27 @@ public class SafetyGenerationResponse {
     @JsonProperty("processing_time")
     private String processingTime;
     
+    // Explicit getter methods in case Lombok fails
+    public boolean isSuccess() {
+        return success;
+    }
+    
+    public String getMessage() {
+        return message;
+    }
+    
+    public List<SafetyPrecaution> getSafetyPrecautions() {
+        return safetyPrecautions;
+    }
+    
+    public List<SafetyPrecaution> getSafetyInformation() {
+        return safetyInformation;
+    }
+    
+    public String getProcessingTime() {
+        return processingTime;
+    }
+    
     @Data
     @Builder
     @NoArgsConstructor
@@ -62,5 +83,42 @@ public class SafetyGenerationResponse {
         
         @JsonProperty("safety_info")
         private String safetyInfo;
+        
+        // Explicit getter methods in case Lombok fails
+        public String getTitle() {
+            return title;
+        }
+        
+        public String getDescription() {
+            return description;
+        }
+        
+        public String getCategory() {
+            return category;
+        }
+        
+        public String getSeverity() {
+            return severity;
+        }
+        
+        public String getMitigation() {
+            return mitigation;
+        }
+        
+        public String getAboutReaction() {
+            return aboutReaction;
+        }
+        
+        public String getCauses() {
+            return causes;
+        }
+        
+        public String getHowToAvoid() {
+            return howToAvoid;
+        }
+        
+        public String getSafetyInfo() {
+            return safetyInfo;
+        }
     }
 }

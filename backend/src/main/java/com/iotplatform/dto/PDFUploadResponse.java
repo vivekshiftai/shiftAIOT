@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 /**
  * Response from PDF upload operation.
  */
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -31,4 +32,29 @@ public class PDFUploadResponse {
     
     @JsonProperty("collection_name")
     private String collectionName;
+    
+    // Explicit getter methods in case Lombok fails
+    public boolean isSuccess() {
+        return success;
+    }
+    
+    public String getMessage() {
+        return message;
+    }
+    
+    public String getPdfName() {
+        return pdfName;
+    }
+    
+    public Integer getChunksProcessed() {
+        return chunksProcessed;
+    }
+    
+    public String getProcessingTime() {
+        return processingTime;
+    }
+    
+    public String getCollectionName() {
+        return collectionName;
+    }
 }

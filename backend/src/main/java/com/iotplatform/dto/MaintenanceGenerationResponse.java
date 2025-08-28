@@ -28,11 +28,31 @@ public class MaintenanceGenerationResponse {
     @JsonProperty("processing_time")
     private String processingTime;
     
+    // Explicit getter methods in case Lombok fails
+    public boolean isSuccess() {
+        return success;
+    }
+    
+    public String getMessage() {
+        return message;
+    }
+    
+    public List<MaintenanceTask> getMaintenanceTasks() {
+        return maintenanceTasks;
+    }
+    
+    public String getProcessingTime() {
+        return processingTime;
+    }
+    
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class MaintenanceTask {
+        @JsonProperty("task")
+        private String task;
+        
         @JsonProperty("task_name")
         private String taskName;
         
@@ -56,5 +76,42 @@ public class MaintenanceGenerationResponse {
         
         @JsonProperty("safety_notes")
         private String safetyNotes;
+        
+        // Explicit getter methods in case Lombok fails
+        public String getTask() {
+            return task;
+        }
+        
+        public String getTaskName() {
+            return taskName;
+        }
+        
+        public String getDescription() {
+            return description;
+        }
+        
+        public String getFrequency() {
+            return frequency;
+        }
+        
+        public String getPriority() {
+            return priority;
+        }
+        
+        public String getEstimatedDuration() {
+            return estimatedDuration;
+        }
+        
+        public String getRequiredTools() {
+            return requiredTools;
+        }
+        
+        public String getCategory() {
+            return category;
+        }
+        
+        public String getSafetyNotes() {
+            return safetyNotes;
+        }
     }
 }

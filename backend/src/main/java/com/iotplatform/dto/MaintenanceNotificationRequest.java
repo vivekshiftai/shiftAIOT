@@ -46,4 +46,41 @@ public class MaintenanceNotificationRequest {
     
     @JsonProperty("organizationId")
     private String organizationId;
+    
+    // Explicit getter methods in case Lombok fails
+    public String getUserId() {
+        return userId;
+    }
+    
+    public String getDeviceName() {
+        return deviceName;
+    }
+    
+    public String getTask() {
+        return task;
+    }
+    
+    public LocalTime getDueTime() {
+        return dueTime;
+    }
+    
+    public String getPriority() {
+        return priority;
+    }
+    
+    public String getMaintenanceType() {
+        return maintenanceType;
+    }
+    
+    public String getDescription() {
+        return description;
+    }
+    
+    public String getAssignedTo() {
+        return assignedTo;
+    }
+    
+    public String getOrganizationId() {
+        return organizationId;
+    }
 }

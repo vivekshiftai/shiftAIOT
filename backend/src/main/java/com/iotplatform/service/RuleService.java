@@ -14,6 +14,7 @@ import com.iotplatform.controller.RuleController;
 import com.iotplatform.dto.TelemetryDataRequest;
 import com.iotplatform.dto.RulesGenerationResponse;
 import com.iotplatform.model.Device;
+import com.iotplatform.model.Notification;
 import com.iotplatform.model.Rule;
 import com.iotplatform.model.RuleAction;
 import com.iotplatform.model.RuleCondition;
@@ -52,6 +53,42 @@ public class RuleService {
         
         // Log successful save
         System.out.println("RuleService: Successfully saved rule '" + savedRule.getId() + "' for device: " + savedRule.getDeviceId());
+        
+        // Send notification to device assignee about new rule
+        if (rule.getDeviceId() != null && !rule.getDeviceId().trim().isEmpty()) {
+            try {
+                Optional<Device> deviceOpt = deviceRepository.findById(rule.getDeviceId());
+                if (deviceOpt.isPresent()) {
+                    Device device = deviceOpt.get();
+                    String deviceAssignee = device.getAssignedUserId();
+                    
+                    if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
+                        Notification notification = new Notification();
+                        notification.setUserId(deviceAssignee);
+                        notification.setTitle("New Monitoring Rule Created");
+                        notification.setMessage(String.format(
+                            "A new monitoring rule '%s' has been created for device '%s'. " +
+                            "Description: %s. Please review the monitoring configuration.",
+                            rule.getName(), device.getName(), rule.getDescription()
+                        ));
+                        notification.setType(Notification.NotificationType.INFO);
+                        notification.setOrganizationId(organizationId);
+                        notification.setDeviceId(rule.getDeviceId());
+                        notification.setRuleId(rule.getId());
+                        notification.setRead(false);
+                        
+                        Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(deviceAssignee, notification);
+                        if (createdNotification.isPresent()) {
+                            System.out.println("✅ Created rule creation notification for user: " + deviceAssignee + " for device: " + device.getName());
+                        } else {
+                            System.out.println("⚠️ Rule creation notification blocked by user preferences for user: " + deviceAssignee);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Failed to create rule creation notification: " + e.getMessage());
+            }
+        }
         
         return savedRule;
     }
@@ -138,6 +175,45 @@ public class RuleService {
                 System.err.println("Failed to create rule: " + e.getMessage());
                 e.printStackTrace();
                 // Continue with other rules
+            }
+        }
+        
+        // Send notification to device assignee about bulk rule creation
+        if (!createdRules.isEmpty()) {
+            try {
+                String deviceId = createdRules.get(0).getDeviceId();
+                if (deviceId != null && !deviceId.trim().isEmpty()) {
+                    Optional<Device> deviceOpt = deviceRepository.findById(deviceId);
+                    if (deviceOpt.isPresent()) {
+                        Device device = deviceOpt.get();
+                        String deviceAssignee = device.getAssignedUserId();
+                        
+                        if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
+                            Notification notification = new Notification();
+                            notification.setUserId(deviceAssignee);
+                            notification.setTitle("New Monitoring Rules Created");
+                            notification.setMessage(String.format(
+                                "%d new monitoring rules have been created for device '%s'. " +
+                                "Rules: %s. Please review the monitoring configuration.",
+                                createdRules.size(), device.getName(),
+                                createdRules.stream().map(Rule::getName).limit(3).collect(java.util.stream.Collectors.joining(", "))
+                            ));
+                            notification.setType(Notification.NotificationType.INFO);
+                            notification.setOrganizationId(organizationId);
+                            notification.setDeviceId(deviceId);
+                            notification.setRead(false);
+                            
+                            Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(deviceAssignee, notification);
+                            if (createdNotification.isPresent()) {
+                                System.out.println("✅ Created bulk rule creation notification for user: " + deviceAssignee + " for device: " + device.getName());
+                            } else {
+                                System.out.println("⚠️ Bulk rule creation notification blocked by user preferences for user: " + deviceAssignee);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Failed to create bulk rule creation notification: " + e.getMessage());
             }
         }
         

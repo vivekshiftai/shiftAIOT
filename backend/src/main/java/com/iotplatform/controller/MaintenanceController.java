@@ -1,6 +1,7 @@
 package com.iotplatform.controller;
 
 import com.iotplatform.model.DeviceMaintenance;
+import com.iotplatform.model.Notification;
 import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.service.MaintenanceScheduleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,6 +19,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import com.iotplatform.model.User;
+import com.iotplatform.service.NotificationService;
 
 /**
  * REST Controller for maintenance operations.
@@ -29,8 +33,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Tag(name = "Maintenance", description = "Maintenance task and schedule management")
 public class MaintenanceController {
-
+    
     private final MaintenanceScheduleService maintenanceScheduleService;
+    private final NotificationService notificationService;
 
     /**
      * Get today's maintenance tasks for the organization.
@@ -182,6 +187,39 @@ public class MaintenanceController {
 
             maintenance.setOrganizationId(userDetails.getUser().getOrganizationId());
             DeviceMaintenance createdMaintenance = maintenanceScheduleService.createMaintenance(maintenance);
+
+            // Send notification to assigned user if different from creator
+            if (maintenance.getAssignedTo() != null && !maintenance.getAssignedTo().trim().isEmpty() 
+                && !maintenance.getAssignedTo().equals(userDetails.getUser().getId())) {
+                try {
+                    Notification notification = new Notification();
+                    notification.setUserId(maintenance.getAssignedTo());
+                    notification.setTitle("New Maintenance Task Assigned");
+                    notification.setMessage(String.format(
+                        "You have been assigned maintenance task '%s' for device '%s'. " +
+                        "Priority: %s. Please review and schedule accordingly.",
+                        maintenance.getTaskName(), 
+                        maintenance.getDeviceName() != null ? maintenance.getDeviceName() : "Unknown Device",
+                        maintenance.getPriority() != null ? maintenance.getPriority().toString() : "Medium"
+                    ));
+                    notification.setType(Notification.NotificationType.INFO);
+                    notification.setOrganizationId(userDetails.getUser().getOrganizationId());
+                    notification.setDeviceId(maintenance.getDeviceId());
+                    notification.setRead(false);
+                    
+                    Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(maintenance.getAssignedTo(), notification);
+                    if (createdNotification.isPresent()) {
+                        log.info("✅ Created maintenance task notification for user: {} for task: {}", 
+                               maintenance.getAssignedTo(), maintenance.getTaskName());
+                    } else {
+                        log.warn("⚠️ Maintenance task notification blocked by user preferences for user: {}", 
+                               maintenance.getAssignedTo());
+                    }
+                } catch (Exception e) {
+                    log.error("❌ Failed to create maintenance task notification for user: {} task: {}", 
+                             maintenance.getAssignedTo(), maintenance.getTaskName(), e);
+                }
+            }
 
             log.info("Successfully created maintenance task: {} for device: {}", createdMaintenance.getId(), createdMaintenance.getDevice() != null ? createdMaintenance.getDevice().getId() : "null");
 
@@ -482,6 +520,127 @@ public class MaintenanceController {
             response.put("message", "Failed to fetch upcoming maintenance tasks: " + e.getMessage());
             
             return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
+     * Get day-wise maintenance tasks grouped by date ranges
+     */
+    @GetMapping("/daywise")
+    @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
+    public ResponseEntity<?> getDayWiseMaintenance(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        try {
+            String organizationId = user.getOrganizationId();
+            log.info("Fetching day-wise maintenance tasks for organization: {}", organizationId);
+            
+            Map<String, Object> response = new HashMap<>();
+            
+            // Get today's maintenance tasks
+            List<DeviceMaintenance> todayTasks = maintenanceScheduleService.getTodayMaintenance(organizationId);
+            response.put("today", todayTasks);
+            
+            // Get tomorrow's maintenance tasks
+            List<DeviceMaintenance> tomorrowTasks = maintenanceScheduleService.getTomorrowMaintenance(organizationId);
+            response.put("tomorrow", tomorrowTasks);
+            
+            // Get next 7 days maintenance tasks
+            List<DeviceMaintenance> next7DaysTasks = maintenanceScheduleService.getNextDaysMaintenance(organizationId, 7);
+            response.put("next7Days", next7DaysTasks);
+            
+            // Get next 30 days maintenance tasks
+            List<DeviceMaintenance> next30DaysTasks = maintenanceScheduleService.getNextDaysMaintenance(organizationId, 30);
+            response.put("next30Days", next30DaysTasks);
+            
+            // Get overdue maintenance tasks
+            List<DeviceMaintenance> overdueTasks = maintenanceScheduleService.getOverdueMaintenanceByOrganization(organizationId);
+            response.put("overdue", overdueTasks);
+            
+            // Get completed tasks from last 7 days
+            List<DeviceMaintenance> recentCompletedTasks = maintenanceScheduleService.getRecentCompletedMaintenance(organizationId, 7);
+            response.put("recentCompleted", recentCompletedTasks);
+            
+            // Summary statistics
+            Map<String, Object> summary = new HashMap<>();
+            summary.put("todayCount", todayTasks.size());
+            summary.put("tomorrowCount", tomorrowTasks.size());
+            summary.put("next7DaysCount", next7DaysTasks.size());
+            summary.put("next30DaysCount", next30DaysTasks.size());
+            summary.put("overdueCount", overdueTasks.size());
+            summary.put("recentCompletedCount", recentCompletedTasks.size());
+            summary.put("totalActive", maintenanceScheduleService.getMaintenanceCountByOrganization(organizationId));
+            
+            response.put("summary", summary);
+            
+            log.info("Day-wise maintenance data fetched successfully for organization: {}", organizationId);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error fetching day-wise maintenance tasks for organization: {}", user.getOrganizationId(), e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch maintenance data"));
+        }
+    }
+
+
+
+    /**
+     * Assign a maintenance task to a user
+     */
+    @PatchMapping("/{id}/assign")
+    @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
+    public ResponseEntity<?> assignMaintenanceTask(@PathVariable String id, @RequestBody Map<String, String> request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        try {
+            String assigneeId = request.get("assigneeId");
+            if (assigneeId == null || assigneeId.trim().isEmpty()) {
+                return ResponseEntity.status(400).body(Map.of("error", "Assignee ID is required"));
+            }
+            
+            log.info("Assigning maintenance task: {} to user: {} by user: {}", id, assigneeId, user.getUsername());
+            
+            DeviceMaintenance assignedTask = maintenanceScheduleService.assignMaintenanceTask(id, assigneeId, user.getId());
+            
+            // Send notification to assignee
+            Notification notification = new Notification();
+            notification.setUserId(assigneeId);
+            notification.setTitle("Maintenance Task Assigned");
+            notification.setMessage(String.format(
+                "You have been assigned maintenance task '%s' for device '%s'. " +
+                "Priority: %s. Please review and schedule accordingly.",
+                assignedTask.getTaskName(),
+                assignedTask.getDeviceName() != null ? assignedTask.getDeviceName() : "Unknown Device",
+                assignedTask.getPriority() != null ? assignedTask.getPriority().toString() : "Medium"
+            ));
+            notification.setType(Notification.NotificationType.INFO);
+            notification.setOrganizationId(user.getOrganizationId());
+            notification.setDeviceId(assignedTask.getDeviceId());
+            notification.setRead(false);
+            
+            Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(assigneeId, notification);
+            if (createdNotification.isPresent()) {
+                log.info("✅ Created maintenance assignment notification for user: {} for task: {}", 
+                       assigneeId, assignedTask.getTaskName());
+            } else {
+                log.warn("⚠️ Maintenance assignment notification blocked by user preferences for user: {}", assigneeId);
+            }
+            
+            log.info("Maintenance task assigned successfully: {} to user: {}", id, assigneeId);
+            return ResponseEntity.ok(assignedTask);
+            
+        } catch (IllegalArgumentException e) {
+            log.error("Maintenance task or user not found: {}", id);
+            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Error assigning maintenance task: {}", id, e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to assign maintenance task"));
         }
     }
 }

@@ -34,6 +34,11 @@ public class PDFProcessingConfig {
      */
     @Value("${pdf.processing.base-url:http://20.57.36.66:8000}")
     private String baseUrl = "http://20.57.36.66:8000";
+    
+    // Explicit getter method in case Lombok fails
+    public String getBaseUrl() {
+        return baseUrl;
+    }
 
     /**
      * API key for authentication with external service

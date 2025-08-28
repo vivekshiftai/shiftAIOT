@@ -28,6 +28,23 @@ public class RulesGenerationResponse {
     @JsonProperty("processing_time")
     private String processingTime;
     
+    // Explicit getter methods in case Lombok fails
+    public boolean isSuccess() {
+        return success;
+    }
+    
+    public String getMessage() {
+        return message;
+    }
+    
+    public List<Rule> getRules() {
+        return rules;
+    }
+    
+    public String getProcessingTime() {
+        return processingTime;
+    }
+    
     @Data
     @Builder
     @NoArgsConstructor
@@ -59,5 +76,42 @@ public class RulesGenerationResponse {
         
         @JsonProperty("priority")
         private String priority;
+        
+        // Explicit getter methods in case Lombok fails
+        public String getName() {
+            return name;
+        }
+        
+        public String getDescription() {
+            return description;
+        }
+        
+        public String getMetric() {
+            return metric;
+        }
+        
+        public String getMetricValue() {
+            return metricValue;
+        }
+        
+        public String getThreshold() {
+            return threshold;
+        }
+        
+        public String getConsequence() {
+            return consequence;
+        }
+        
+        public String getCondition() {
+            return condition;
+        }
+        
+        public String getAction() {
+            return action;
+        }
+        
+        public String getPriority() {
+            return priority;
+        }
     }
 }

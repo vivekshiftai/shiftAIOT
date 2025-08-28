@@ -238,6 +238,17 @@ export const maintenanceAPI = {
   delete: (id: string) => api.delete(`/api/maintenance/${id}`),
   getByDevice: (deviceId: string) => api.get(`/api/maintenance/device/${deviceId}`),
   getUpcoming: () => api.get('/api/devices/maintenance/upcoming'),
+  getDayWise: () => api.get('/api/maintenance/daywise'),
+  getToday: () => api.get('/api/maintenance/today'),
+  completeTask: (id: string) => api.patch(`/api/maintenance/${id}/complete`),
+  assignTask: (id: string, assigneeId: string) => api.patch(`/api/maintenance/${id}/assign`, { assigneeId }),
+};
+
+// Maintenance Scheduler API
+export const maintenanceSchedulerAPI = {
+  manualUpdate: () => api.post('/api/maintenance-scheduler/update'),
+  getAttentionNeeded: () => api.get('/api/maintenance-scheduler/attention-needed'),
+  getStatus: () => api.get('/api/maintenance-scheduler/status'),
 };
 
 // Device Safety Precautions API
@@ -369,6 +380,14 @@ export const userAPI = {
   // Preferences
   getPreferences: () => api.get('/api/user-preferences'),
   savePreferences: (prefs: any) => api.post('/api/user-preferences', prefs),
+  
+  // Notification Settings
+  getNotificationSettings: () => api.get('/api/user-settings/notifications'),
+  updateNotificationSettings: (settings: any) => api.put('/api/user-settings/notifications', settings),
+  
+  // Dashboard Settings
+  getDashboardSettings: () => api.get('/api/user-settings/dashboard'),
+  updateDashboardSettings: (settings: any) => api.put('/api/user-settings/dashboard', settings),
 };
 
 // Organization API

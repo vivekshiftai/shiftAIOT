@@ -8,7 +8,10 @@ import com.iotplatform.dto.SafetyGenerationResponse;
 import com.iotplatform.dto.PDFUploadResponse;
 import com.iotplatform.exception.PDFProcessingException;
 import com.iotplatform.model.*;
+import com.iotplatform.model.Device;
+import com.iotplatform.model.Notification;
 import com.iotplatform.repository.*;
+import java.util.Optional;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +58,7 @@ public class UnifiedOnboardingService {
     private final RuleRepository ruleRepository;
     private final DeviceMaintenanceRepository maintenanceRepository;
     private final DeviceSafetyPrecautionRepository safetyRepository;
+    private final NotificationService notificationService;
     private final ObjectMapper objectMapper;
 
     /**
@@ -82,6 +86,38 @@ public class UnifiedOnboardingService {
         DeviceCreateResponse deviceResponse = createDeviceTransactional(deviceRequest, organizationId, currentUserId);
         
         log.info("Device created successfully with ID: {}", deviceResponse.getId());
+        
+        // Send notification to device assignee if different from creator
+        if (deviceRequest.getAssignedUserId() != null && !deviceRequest.getAssignedUserId().trim().isEmpty() 
+            && !deviceRequest.getAssignedUserId().equals(currentUserId)) {
+            try {
+                Notification notification = new Notification();
+                notification.setUserId(deviceRequest.getAssignedUserId().trim());
+                notification.setTitle("New Device Assigned");
+                notification.setMessage(String.format(
+                    "You have been assigned a new device: '%s' (%s) at location: %s. " +
+                    "The device is ready for monitoring and configuration.",
+                    deviceRequest.getName(), deviceRequest.getType(), deviceRequest.getLocation()
+                ));
+                notification.setType(Notification.NotificationType.INFO);
+                notification.setOrganizationId(organizationId);
+                notification.setDeviceId(deviceResponse.getId());
+                notification.setRead(false);
+                
+                Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(
+                    deviceRequest.getAssignedUserId().trim(), notification);
+                if (createdNotification.isPresent()) {
+                    log.info("✅ Created device assignment notification for user: {} for device: {}", 
+                           deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
+                } else {
+                    log.warn("⚠️ Device assignment notification blocked by user preferences for user: {}", 
+                           deviceRequest.getAssignedUserId().trim());
+                }
+            } catch (Exception e) {
+                log.error("❌ Failed to create device assignment notification for user: {} device: {}", 
+                         deviceRequest.getAssignedUserId().trim(), deviceRequest.getName(), e);
+            }
+        }
         
         // Step 2: Upload PDF to PDF Processing Service and process - This is non-transactional
         log.info("Step 2: Uploading PDF to processing service and generating content...");
@@ -167,7 +203,17 @@ public class UnifiedOnboardingService {
             MaintenanceGenerationResponse maintenanceResponse = pdfProcessingService.generateMaintenance(pdfName, deviceId, organizationId);
             
             if (maintenanceResponse.isSuccess() && maintenanceResponse.getMaintenanceTasks() != null && !maintenanceResponse.getMaintenanceTasks().isEmpty()) {
-                log.info("Successfully generated and stored {} maintenance items for device: {}", maintenanceResponse.getMaintenanceTasks().size(), deviceId);
+                // Get device assignee for auto-assignment
+                Device device = deviceRepository.findById(deviceId).orElse(null);
+                String deviceAssignee = device != null ? device.getAssignedUserId() : null;
+                
+                if (deviceAssignee != null) {
+                    log.info("Auto-assigning {} maintenance tasks to device assignee: {}", maintenanceResponse.getMaintenanceTasks().size(), deviceAssignee);
+                    storeMaintenanceWithAutoAssignment(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId, deviceAssignee);
+                } else {
+                    log.warn("Device assignee not found for device: {}, storing maintenance tasks without assignment", deviceId);
+                    storeMaintenance(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId);
+                }
             } else {
                 log.warn("No maintenance items generated for device: {}", deviceId);
             }
@@ -198,6 +244,11 @@ public class UnifiedOnboardingService {
         try {
             List<Rule> rulesToSave = new ArrayList<>();
             
+            // Get device information for notifications
+            Optional<Device> deviceOpt = deviceRepository.findById(deviceId);
+            String deviceName = deviceOpt.map(Device::getName).orElse("Unknown Device");
+            String deviceAssignee = deviceOpt.map(Device::getAssignedUserId).orElse(null);
+            
             for (var ruleData : rules) {
                 Rule rule = new Rule();
                 rule.setId(UUID.randomUUID().toString());
@@ -219,14 +270,42 @@ public class UnifiedOnboardingService {
             ruleRepository.saveAll(rulesToSave);
             log.info("Successfully stored {} rules for device: {}", rulesToSave.size(), deviceId);
             
+            // Send notification to device assignee about new rules
+            if (deviceAssignee != null && !deviceAssignee.trim().isEmpty() && !rules.isEmpty()) {
+                try {
+                    Notification notification = new Notification();
+                    notification.setUserId(deviceAssignee);
+                    notification.setTitle("New Monitoring Rules Created");
+                    notification.setMessage(String.format(
+                        "%d new monitoring rules have been created for device '%s'. " +
+                        "Rules: %s. Please review the monitoring configuration.",
+                        rules.size(), deviceName, 
+                        rules.stream().map(RulesGenerationResponse.Rule::getName).limit(3).collect(java.util.stream.Collectors.joining(", "))
+                    ));
+                    notification.setType(Notification.NotificationType.INFO);
+                    notification.setOrganizationId(organizationId);
+                    notification.setDeviceId(deviceId);
+                    notification.setRead(false);
+                    
+                    Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(deviceAssignee, notification);
+                    if (createdNotification.isPresent()) {
+                        log.info("✅ Created rule creation notification for user: {} for device: {} with {} rules", 
+                               deviceAssignee, deviceName, rules.size());
+                    } else {
+                        log.warn("⚠️ Rule creation notification blocked by user preferences for user: {}", deviceAssignee);
+                    }
+                } catch (Exception e) {
+                    log.error("❌ Failed to create rule creation notification for user: {} device: {}", deviceAssignee, deviceName, e);
+                }
+            }
+            
         } catch (Exception e) {
             log.error("Error storing rules for device: {}", deviceId, e);
         }
     }
 
     /**
-     * Store maintenance items in database with validation and default values.
-     * Skips tasks without task_name and uses default values for missing fields.
+     * Store maintenance items in database
      */
     private void storeMaintenance(List<MaintenanceGenerationResponse.MaintenanceTask> maintenanceItems, String deviceId, String organizationId) {
         try {
@@ -236,9 +315,26 @@ public class UnifiedOnboardingService {
             
             for (var maintenanceData : maintenanceItems) {
                 try {
-                    // Validate required fields - skip if task_name is missing
-                    if (maintenanceData.getTaskName() == null || maintenanceData.getTaskName().trim().isEmpty()) {
-                        log.warn("Skipping maintenance task - task_name is missing or empty");
+                    // Get task title - prefer 'task' field over 'task_name' field
+                    String taskTitle = maintenanceData.getTask() != null && !maintenanceData.getTask().trim().isEmpty() 
+                        ? maintenanceData.getTask().trim() 
+                        : maintenanceData.getTaskName() != null ? maintenanceData.getTaskName().trim() : null;
+                    
+                    // Validate required fields - skip if any of task title, frequency, or description is missing
+                    if (taskTitle == null || taskTitle.isEmpty()) {
+                        log.warn("Skipping maintenance task - task title is missing or empty");
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    if (maintenanceData.getFrequency() == null || maintenanceData.getFrequency().trim().isEmpty()) {
+                        log.warn("Skipping maintenance task '{}' - frequency is missing or empty", taskTitle);
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    if (maintenanceData.getDescription() == null || maintenanceData.getDescription().trim().isEmpty()) {
+                        log.warn("Skipping maintenance task '{}' - description is missing or empty", taskTitle);
                         skippedCount++;
                         continue;
                     }
@@ -248,9 +344,12 @@ public class UnifiedOnboardingService {
                     maintenance.setOrganizationId(organizationId);
                     
                     // Set required fields with validation
-                    maintenance.setTaskName(maintenanceData.getTaskName().trim());
-                    maintenance.setComponentName(maintenanceData.getTaskName().trim());
+                    maintenance.setTaskName(taskTitle);
+                    maintenance.setComponentName(taskTitle);
                     maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
+                    
+                    // Set device information (required for foreign key constraint)
+                    setDeviceInformation(maintenance, deviceId);
                     
                     // Process optional fields with default values
                     maintenance.setFrequency(processFrequencyWithDefault(maintenanceData.getFrequency()));
@@ -259,23 +358,23 @@ public class UnifiedOnboardingService {
                     maintenance.setEstimatedDuration(processDurationWithDefault(maintenanceData.getEstimatedDuration()));
                     maintenance.setRequiredTools(processToolsWithDefault(maintenanceData.getRequiredTools()));
                     maintenance.setSafetyNotes(processSafetyNotesWithDefault(maintenanceData.getSafetyNotes()));
-                    maintenance.setComponentName(processCategoryWithDefault(maintenanceData.getCategory()));
+                    maintenance.setCategory(processCategoryWithDefault(maintenanceData.getCategory()));
                     
                     // Set dates
                     maintenance.setLastMaintenance(LocalDate.now());
                     maintenance.setNextMaintenance(calculateNextMaintenanceDate(LocalDate.now(), maintenance.getFrequency()));
-                    maintenance.setStatus(DeviceMaintenance.Status.PENDING);
+                    maintenance.setStatus(DeviceMaintenance.Status.ACTIVE);
                     maintenance.setCreatedAt(LocalDateTime.now());
                     maintenance.setUpdatedAt(LocalDateTime.now());
                     
                     maintenanceToSave.add(maintenance);
                     processedCount++;
                     
-                    log.debug("Processed maintenance task: {} with frequency: {}", 
+                    log.debug("REGULAR METHOD VALIDATION: Processed maintenance task: {} with frequency: {}", 
                         maintenance.getTaskName(), maintenance.getFrequency());
                         
                 } catch (Exception e) {
-                    log.error("Failed to process maintenance task: {}", 
+                    log.error("Failed to process maintenance task in regular storage: {}", 
                         maintenanceData.getTaskName() != null ? maintenanceData.getTaskName() : "Unknown", e);
                     skippedCount++;
                     // Continue with next task instead of failing completely
@@ -293,6 +392,142 @@ public class UnifiedOnboardingService {
             
         } catch (Exception e) {
             log.error("Error storing maintenance for device: {}", deviceId, e);
+        }
+    }
+
+    /**
+     * Store maintenance items in database with auto-assignment to device assignee.
+     * Skips tasks without required fields (task, frequency, description) and assigns to device assignee.
+     */
+    private void storeMaintenanceWithAutoAssignment(List<MaintenanceGenerationResponse.MaintenanceTask> maintenanceItems, 
+                                                   String deviceId, String organizationId, String deviceAssignee) {
+        try {
+            List<DeviceMaintenance> maintenanceToSave = new ArrayList<>();
+            int processedCount = 0;
+            int skippedCount = 0;
+            int assignedCount = 0;
+            
+            for (var maintenanceData : maintenanceItems) {
+                try {
+                    // Get task title - prefer 'task' field over 'task_name' field
+                    String taskTitle = maintenanceData.getTask() != null && !maintenanceData.getTask().trim().isEmpty() 
+                        ? maintenanceData.getTask().trim() 
+                        : maintenanceData.getTaskName() != null ? maintenanceData.getTaskName().trim() : null;
+                    
+                    // Validate required fields - skip if any of task title, frequency, or description is missing
+                    if (taskTitle == null || taskTitle.isEmpty()) {
+                        log.warn("Skipping maintenance task - task title is missing or empty");
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    if (maintenanceData.getFrequency() == null || maintenanceData.getFrequency().trim().isEmpty()) {
+                        log.warn("Skipping maintenance task '{}' - frequency is missing or empty", taskTitle);
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    if (maintenanceData.getDescription() == null || maintenanceData.getDescription().trim().isEmpty()) {
+                        log.warn("Skipping maintenance task '{}' - description is missing or empty", taskTitle);
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    DeviceMaintenance maintenance = new DeviceMaintenance();
+                    maintenance.setId(UUID.randomUUID().toString());
+                    maintenance.setOrganizationId(organizationId);
+                    
+                    // Set required fields with validation
+                    maintenance.setTaskName(taskTitle);
+                    maintenance.setComponentName(taskTitle);
+                    maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
+                    
+                    // Set device information (required for foreign key constraint)
+                    setDeviceInformation(maintenance, deviceId);
+                    
+                    // Process optional fields with default values
+                    maintenance.setFrequency(processFrequencyWithDefault(maintenanceData.getFrequency()));
+                    maintenance.setDescription(processDescriptionWithDefault(maintenanceData.getDescription()));
+                    maintenance.setPriority(processPriorityWithDefault(maintenanceData.getPriority()));
+                    maintenance.setEstimatedDuration(processDurationWithDefault(maintenanceData.getEstimatedDuration()));
+                    maintenance.setRequiredTools(processToolsWithDefault(maintenanceData.getRequiredTools()));
+                    maintenance.setSafetyNotes(processSafetyNotesWithDefault(maintenanceData.getSafetyNotes()));
+                    maintenance.setCategory(processCategoryWithDefault(maintenanceData.getCategory()));
+                    
+                    // Auto-assign to device assignee
+                    if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
+                        maintenance.setAssignedTo(deviceAssignee);
+                        maintenance.setAssignedBy("System");
+                        maintenance.setAssignedAt(LocalDateTime.now());
+                    } else {
+                        log.warn("Device assignee is null or empty for device: {}, skipping assignment", deviceId);
+                    }
+                    
+                    // Set dates
+                    maintenance.setLastMaintenance(LocalDate.now());
+                    maintenance.setNextMaintenance(calculateNextMaintenanceDate(LocalDate.now(), maintenance.getFrequency()));
+                    maintenance.setStatus(DeviceMaintenance.Status.ACTIVE);
+                    maintenance.setCreatedAt(LocalDateTime.now());
+                    maintenance.setUpdatedAt(LocalDateTime.now());
+                    
+                    maintenanceToSave.add(maintenance);
+                    processedCount++;
+                    assignedCount++;
+                    
+                    log.info("AUTO-ASSIGNMENT: Auto-assigned maintenance task: '{}' to device assignee: {} with frequency: {}", 
+                        maintenance.getTaskName(), deviceAssignee, maintenance.getFrequency());
+                    
+                    // Create notification for the assigned user
+                    if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
+                        try {
+                            // Get device information for better notification
+                            Optional<Device> deviceOpt = deviceRepository.findById(deviceId);
+                            String deviceName = deviceOpt.map(Device::getName).orElse("Unknown Device");
+                            
+                            Notification notification = new Notification();
+                            notification.setUserId(deviceAssignee);
+                            notification.setTitle("New Maintenance Task Assigned");
+                            notification.setMessage(String.format(
+                                "You have been assigned maintenance task '%s' for device '%s'. " +
+                                "Frequency: %s. Please review and schedule accordingly.",
+                                maintenance.getTaskName(), deviceName, maintenance.getFrequency()
+                            ));
+                            notification.setType(Notification.NotificationType.INFO);
+                            notification.setOrganizationId(organizationId);
+                            notification.setDeviceId(deviceId);
+                            notification.setRead(false);
+                            
+                            // Use preference checking to ensure notification is sent
+                            Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(deviceAssignee, notification);
+                            if (createdNotification.isPresent()) {
+                                log.info("✅ Created notification for auto-assigned maintenance task: {} to user: {}", maintenance.getTaskName(), deviceAssignee);
+                            } else {
+                                log.warn("⚠️ Notification blocked by user preferences for maintenance task: {} to user: {}", maintenance.getTaskName(), deviceAssignee);
+                            }
+                        } catch (Exception e) {
+                            log.error("❌ Failed to create notification for auto-assigned maintenance task: {} to user: {}", maintenance.getTaskName(), deviceAssignee, e);
+                        }
+                    }
+                        
+                } catch (Exception e) {
+                    log.error("Failed to process maintenance task in auto-assignment: {}", 
+                        maintenanceData.getTaskName() != null ? maintenanceData.getTaskName() : "Unknown", e);
+                    skippedCount++;
+                    // Continue with next task instead of failing completely
+                }
+            }
+            
+            if (!maintenanceToSave.isEmpty()) {
+                maintenanceRepository.saveAll(maintenanceToSave);
+                log.info("Successfully stored and auto-assigned {} maintenance items for device: {} (skipped: {})", 
+                    processedCount, deviceId, skippedCount);
+            } else {
+                log.warn("No valid maintenance items to store for device: {} (all {} items were skipped)", 
+                    deviceId, maintenanceItems.size());
+            }
+            
+        } catch (Exception e) {
+            log.error("Error storing maintenance with auto-assignment for device: {}", deviceId, e);
         }
     }
 
@@ -689,5 +924,27 @@ public class UnifiedOnboardingService {
         }
         String cat = category.trim();
         return cat.isEmpty() ? "General" : cat;
+    }
+
+    /**
+     * Sets the device ID and name for a maintenance item.
+     */
+    private void setDeviceInformation(DeviceMaintenance maintenance, String deviceId) {
+        // Set device information (required for foreign key constraint)
+        maintenance.setDeviceId(deviceId);
+        
+        // Get device name for reference
+        try {
+            Optional<Device> deviceOpt = deviceRepository.findById(deviceId);
+            if (deviceOpt.isPresent()) {
+                maintenance.setDeviceName(deviceOpt.get().getName());
+            } else {
+                log.warn("Device not found for ID: {}, using device ID as name", deviceId);
+                maintenance.setDeviceName("Device-" + deviceId);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to get device name for ID: {}, using device ID as name", deviceId, e);
+            maintenance.setDeviceName("Device-" + deviceId);
+        }
     }
 }

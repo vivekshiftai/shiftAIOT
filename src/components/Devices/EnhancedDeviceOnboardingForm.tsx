@@ -132,6 +132,16 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     });
   }, [currentStep, showOnboardingLoader, showSuccessMessage, uploadedFile, onboardingResult]);
 
+  // Cleanup effect for progress interval
+  useEffect(() => {
+    return () => {
+      // Cleanup any running intervals when component unmounts
+      if (showOnboardingLoader) {
+        setShowOnboardingLoader(false);
+      }
+    };
+  }, [showOnboardingLoader]);
+
   // Fetch users for assignment dropdown
   useEffect(() => {
     const fetchUsers = async () => {
@@ -318,12 +328,60 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     setProgress(0);
     setCurrentProcess('pdf');
 
+    // Start progress simulation
+    const progressInterval = setInterval(() => {
+      setProgress(prev => {
+        const newProgress = prev + Math.random() * 5;
+        return Math.min(newProgress, 100);
+      });
+    }, 500);
+
     try {
       logInfo('EnhancedDeviceOnboardingForm', 'Starting unified onboarding process', {
         deviceName: formData.deviceName,
         fileName: uploadedFile.file.name,
         fileSize: uploadedFile.file.size
       });
+
+      // Simulate realistic progress stages
+      const progressStages = [
+        { stage: 'pdf', progress: 30, message: 'Uploading and processing PDF...', duration: 2000 },
+        { stage: 'pdf', progress: 60, message: 'Extracting device specifications...', duration: 1500 },
+        { stage: 'pdf', progress: 100, message: 'PDF processing complete', duration: 1000 },
+        { stage: 'rules', progress: 0, message: 'Starting AI rule generation...', duration: 0 },
+        { stage: 'rules', progress: 40, message: 'Analyzing device specifications...', duration: 2000 },
+        { stage: 'rules', progress: 80, message: 'Generating monitoring rules...', duration: 1500 },
+        { stage: 'rules', progress: 100, message: 'Rules generation complete', duration: 1000 },
+        { stage: 'knowledgebase', progress: 0, message: 'Building AI knowledge base...', duration: 0 },
+        { stage: 'knowledgebase', progress: 50, message: 'Creating knowledge base entries...', duration: 2000 },
+        { stage: 'knowledgebase', progress: 100, message: 'AI setup complete', duration: 1000 }
+      ];
+
+      let currentStageIndex = 0;
+
+      const updateProgress = () => {
+        if (currentStageIndex < progressStages.length) {
+          const stage = progressStages[currentStageIndex];
+          setCurrentProcess(stage.stage as 'pdf' | 'rules' | 'knowledgebase');
+          setProgress(stage.progress);
+          setCurrentSubStage(stage.message);
+          
+          logInfo('Onboarding', `Progress Update: ${stage.stage} - ${stage.progress}%`, {
+            stage: stage.stage,
+            progress: stage.progress,
+            message: stage.message
+          });
+
+          currentStageIndex++;
+          
+          if (currentStageIndex < progressStages.length) {
+            setTimeout(updateProgress, stage.duration);
+          }
+        }
+      };
+
+      // Start progress updates
+      setTimeout(updateProgress, 1000);
 
       // Use the new unified onboarding service with detailed progress tracking
       const result = await unifiedOnboardingService.completeUnifiedOnboarding(
@@ -387,6 +445,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         }
       );
 
+      // Clear progress interval
+      clearInterval(progressInterval);
+
       // Set success result with processing time
       const finalProcessingTime = result.processingTime || (Date.now() - onboardingStartTime);
       setOnboardingResult({
@@ -433,6 +494,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       }, 1000);
 
     } catch (error) {
+      // Clear progress interval on error
+      clearInterval(progressInterval);
+      
       logError('EnhancedDeviceOnboardingForm', 'Onboarding process failed', error instanceof Error ? error : new Error('Unknown error'));
       setShowOnboardingLoader(false);
       
@@ -921,29 +985,56 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   // Simple form step indicator for the header
   const renderFormStepIndicator = useCallback(() => {
     const stepLabels = ['Basic Info', 'Connection', 'Upload PDF'];
+    const stepDescriptions = [
+      'Provide essential device details like name, location, and manufacturer to identify and categorize your device in the system.',
+      'Configure how your device connects to the platform. Choose between MQTT, HTTP, or COAP protocols based on your device capabilities.',
+      'Upload device documentation (manual, datasheet, or specifications) to automatically generate AI rules, maintenance schedules, and safety information.'
+    ];
+    
     return (
-      <div className="flex items-center justify-center mt-6">
-        {[1, 2, 3].map((step) => (
-          <div key={step} className="flex items-center">
-            <div className={`flex flex-col items-center justify-center w-16 h-16 rounded-full border-2 transition-all duration-300 ${
-              currentStep >= step 
-                ? 'bg-white/20 border-white/40 text-white shadow-lg' 
-                : 'bg-white/10 border-white/20 text-white/60'
-            }`}>
-              {currentStep > step ? (
-                <CheckCircle className="w-6 h-6" />
-              ) : (
-                <span className="text-sm font-bold">{step}</span>
-              )}
-              <span className="text-xs mt-1 text-white/80">{stepLabels[step - 1]}</span>
+      <div className="flex flex-col items-center justify-center space-y-6">
+        {/* Current Step - Large and Prominent */}
+        <div className="text-center space-y-4">
+          <div className="relative">
+            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
+              <span className="text-3xl font-bold text-white">{currentStep}</span>
             </div>
-            {step < 3 && (
-              <div className={`w-20 h-1 transition-all duration-300 rounded-full ${
-                currentStep > step ? 'bg-white/60' : 'bg-white/20'
-              }`} />
-            )}
+            {/* Pulsing ring animation */}
+            <div className="absolute inset-0 w-24 h-24 bg-blue-400 rounded-full animate-ping opacity-30"></div>
           </div>
-        ))}
+          <div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">{stepLabels[currentStep - 1]}</h3>
+            <p className="text-gray-600 text-sm leading-relaxed max-w-md">
+              {stepDescriptions[currentStep - 1]}
+            </p>
+          </div>
+        </div>
+
+        {/* All Steps - Small Indicators */}
+        <div className="flex items-center justify-center space-x-4">
+          {[1, 2, 3].map((step) => (
+            <div key={step} className="flex flex-col items-center space-y-2">
+              <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                step < currentStep
+                  ? 'bg-green-500 border-green-500 text-white'
+                  : step === currentStep
+                  ? 'bg-blue-500 border-blue-500 text-white'
+                  : 'border-gray-300 text-gray-400 bg-white'
+              }`}>
+                {step < currentStep ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : (
+                  <span className="text-xs font-bold">{step}</span>
+                )}
+              </div>
+              <span className={`text-xs font-medium ${
+                step <= currentStep ? 'text-gray-700' : 'text-gray-400'
+              }`}>
+                {stepLabels[step - 1]}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }, [currentStep]);
@@ -1230,37 +1321,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
               {/* Progress Indicator */}
               <div className="mb-8">
-                <div className="flex items-center justify-between mb-6">
-                  {[1, 2, 3].map((step) => (
-                    <div key={step} className="flex items-center">
-                      <div className={`flex flex-col items-center justify-center w-14 h-14 rounded-2xl border-2 transition-all duration-500 shadow-sm ${
-                        step < currentStep
-                          ? 'bg-green-500 border-green-500 text-white shadow-lg'
-                          : step === currentStep
-                          ? 'bg-white border-blue-500 text-blue-600 shadow-lg'
-                          : 'border-gray-300 text-gray-400 bg-white'
-                      }`}>
-                        {step < currentStep ? (
-                          <CheckCircle className="w-7 h-7" />
-                        ) : (
-                          <span className="text-lg font-bold">{step}</span>
-                        )}
-                      </div>
-                      {step < 3 && (
-                        <div className={`w-20 h-1 mx-3 rounded-full transition-all duration-500 ${
-                          step < currentStep ? 'bg-green-500' : 'bg-gray-200'
-                        }`} />
-                      )}
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Step Labels */}
-                <div className="flex justify-between text-sm font-medium">
-                  <span className={currentStep >= 1 ? 'text-gray-800' : 'text-gray-400'}>Basic Info</span>
-                  <span className={currentStep >= 2 ? 'text-gray-800' : 'text-gray-400'}>Connection</span>
-                  <span className={currentStep >= 3 ? 'text-gray-800' : 'text-gray-400'}>Upload PDF</span>
-                </div>
+                {renderFormStepIndicator()}
               </div>
 
               {/* Current Step Details */}
@@ -1271,11 +1332,67 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                     {currentStep === 2 && 'Connection Configuration'}
                     {currentStep === 3 && 'Document Upload'}
                   </h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">
-                    {currentStep === 1 && 'Provide essential device details like name, location, and manufacturer.'}
-                    {currentStep === 2 && 'Configure how your device connects to the platform (MQTT, HTTP, or COAP).'}
-                    {currentStep === 3 && 'Upload device documentation to automatically configure rules and safety information.'}
+                  <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                    {currentStep === 1 && 'Provide essential device details like name, location, and manufacturer to identify and categorize your device in the system.'}
+                    {currentStep === 2 && 'Configure how your device connects to the platform. Choose between MQTT, HTTP, or COAP protocols based on your device capabilities.'}
+                    {currentStep === 3 && 'Upload device documentation (manual, datasheet, or specifications) to automatically generate AI rules, maintenance schedules, and safety information.'}
                   </p>
+                  
+                  {/* Step-specific details */}
+                  {currentStep === 1 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>Device name helps identify your device in the system</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>Location information enables proper device management</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>Manufacturer details help with support and documentation</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {currentStep === 2 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>MQTT: Lightweight messaging protocol for IoT devices</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>HTTP: RESTful API communication for web-enabled devices</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>COAP: Constrained Application Protocol for resource-constrained devices</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {currentStep === 3 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>AI will analyze your documentation to understand device capabilities</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>Automatically generates monitoring rules and alert thresholds</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>Creates maintenance schedules based on manufacturer recommendations</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>Sets up safety precautions and emergency procedures</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ruleAPI, maintenanceAPI, deviceSafetyPrecautionsAPI } from '../services/api';
+import { ruleAPI, maintenanceAPI, deviceSafetyPrecautionsAPI, maintenanceSchedulerAPI } from '../services/api';
 import { handleAuthError } from '../utils/authUtils';
 import { 
   Plus, 
@@ -15,7 +15,7 @@ import {
   AlertTriangle,
   BarChart3,
   Shield,
-  Target,
+  Zap,
   Wrench
 } from 'lucide-react';
 import Button from '../components/UI/Button';
@@ -57,7 +57,16 @@ type TabType = 'rules' | 'maintenance' | 'safety';
 
 const RulesPage: React.FC = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<TabType>('rules');
+  const location = useLocation();
+  
+  // Get active tab from URL or default to 'rules'
+  const getActiveTabFromURL = (): TabType => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab') as TabType;
+    return tab && ['rules', 'maintenance', 'safety'].includes(tab) ? tab : 'rules';
+  };
+  
+  const [activeTab, setActiveTab] = useState<TabType>(getActiveTabFromURL());
   
   // Rules state
   const [rules, setRules] = useState<Rule[]>([]);
@@ -80,11 +89,38 @@ const RulesPage: React.FC = () => {
   const [showSafetyModal, setShowSafetyModal] = useState(false);
   const [editingSafety, setEditingSafety] = useState<DeviceSafetyPrecaution | null>(null);
   
+  // Scheduler state
+  const [schedulerStatus, setSchedulerStatus] = useState<any>(null);
+  const [schedulerLoading, setSchedulerLoading] = useState(false);
+  
   // Common state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
 
   const { user } = useAuth();
+
+  // Update URL when tab changes
+  const updateTabInURL = (tab: TabType) => {
+    const params = new URLSearchParams(location.search);
+    params.set('tab', tab);
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+  };
+
+  // Sync URL with active tab
+  useEffect(() => {
+    const urlTab = getActiveTabFromURL();
+    if (urlTab !== activeTab) {
+      setActiveTab(urlTab);
+    }
+  }, [location.search]);
+
+  // Initialize URL if no tab parameter is present
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (!params.get('tab')) {
+      updateTabInURL('rules');
+    }
+  }, []);
 
   // Fetch all data
   const fetchAllData = async () => {
@@ -141,7 +177,34 @@ const RulesPage: React.FC = () => {
 
   useEffect(() => {
     fetchAllData();
+    fetchSchedulerStatus();
   }, []);
+  
+  // Fetch scheduler status
+  const fetchSchedulerStatus = async () => {
+    try {
+      const response = await maintenanceSchedulerAPI.getStatus();
+      setSchedulerStatus(response.data);
+    } catch (error) {
+      console.error('Error fetching scheduler status:', error);
+    }
+  };
+  
+  // Manual trigger scheduler update
+  const handleManualSchedulerUpdate = async () => {
+    setSchedulerLoading(true);
+    try {
+      await maintenanceSchedulerAPI.manualUpdate();
+      alert('Maintenance schedule update completed successfully!');
+      fetchAllData(); // Refresh data
+      fetchSchedulerStatus(); // Refresh status
+    } catch (error) {
+      console.error('Error triggering scheduler update:', error);
+      alert('Failed to update maintenance schedules');
+    } finally {
+      setSchedulerLoading(false);
+    }
+  };
 
   // Filter functions
   const filteredRules = rules.filter(rule => {
@@ -286,6 +349,31 @@ const RulesPage: React.FC = () => {
         </Button>
       </div>
 
+      {/* Search and Filter */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1 max-w-md">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search rules..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+
       {rulesError && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-600">{rulesError}</p>
@@ -293,14 +381,17 @@ const RulesPage: React.FC = () => {
       )}
 
       {rulesLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} height={200} />
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-lg border border-gray-200 p-4">
+              <Skeleton height={20} className="mb-2" />
+              <Skeleton height={16} className="w-3/4" />
+            </div>
           ))}
         </div>
       ) : filteredRules.length === 0 ? (
         <div className="text-center py-12">
-          <Target className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <Zap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No rules found</h3>
           <p className="text-gray-600 mb-4">
             {searchTerm || filterStatus !== 'all' 
@@ -315,57 +406,93 @@ const RulesPage: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRules.map((rule) => (
-            <div key={rule.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                                 <div className="flex items-center gap-2">
-                   <div className={`w-2 h-2 rounded-full ${rule.status === 'ACTIVE' ? 'bg-green-500' : 'bg-gray-400'}`} />
-                   <h3 className="font-semibold text-gray-900">{rule.name}</h3>
-                 </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditRule(rule)}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteRule(rule.id)}
-                    className="text-red-500 hover:text-red-600"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              {rule.description && (
-                <p className="text-gray-600 text-sm mb-4">{rule.description}</p>
-              )}
-              
-              <div className="space-y-2 mb-4">
-                                 <div className="flex items-center gap-2 text-sm">
-                   <Target className="w-4 h-4 text-blue-600" />
-                   <span className="text-gray-600">Category:</span>
-                   <span className="font-medium text-gray-900 capitalize">{rule.category || 'General'}</span>
-                 </div>
-                
-                <div className="flex items-center gap-2 text-sm">
-                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                  <span className="text-gray-600">Priority:</span>
-                  <span className="font-medium text-gray-900 capitalize">{rule.priority || 'Medium'}</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>Created: {new Date(rule.createdAt).toLocaleDateString()}</span>
-                <span>Updated: {new Date(rule.updatedAt).toLocaleDateString()}</span>
-              </div>
-            </div>
-          ))}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Rule Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Priority
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredRules.map((rule) => (
+                  <tr key={rule.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{rule.name}</div>
+                        {rule.description && (
+                          <div className="text-sm text-gray-500 truncate max-w-xs">{rule.description}</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        rule.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {rule.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                      {rule.category || 'General'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(rule.priority)}`}>
+                        {rule.priority || 'Medium'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(rule.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/rules/${rule.id}`)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          View
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditRule(rule)}
+                          className="text-gray-600 hover:text-gray-900"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteRule(rule.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
@@ -378,16 +505,72 @@ const RulesPage: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">Maintenance Tasks</h2>
           <p className="text-gray-600">Manage device maintenance schedules</p>
         </div>
-        <Button
-          onClick={() => {
-            setEditingMaintenance(null);
-            setShowMaintenanceModal(true);
-          }}
-          className="flex items-center gap-2"
+        <div className="flex items-center gap-3">
+          <Button
+            onClick={handleManualSchedulerUpdate}
+            disabled={schedulerLoading}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+          >
+            <Clock className="w-4 h-4" />
+            {schedulerLoading ? 'Updating...' : 'Update Schedules'}
+          </Button>
+          <Button
+            onClick={() => {
+              setEditingMaintenance(null);
+              setShowMaintenanceModal(true);
+            }}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Maintenance
+          </Button>
+        </div>
+      </div>
+      
+      {/* Scheduler Status */}
+      {schedulerStatus && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-blue-900">Maintenance Scheduler</h3>
+              <p className="text-sm text-blue-700">
+                Status: {schedulerStatus.status} • Next Run: {schedulerStatus.nextScheduledRun}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${schedulerStatus.schedulerEnabled ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="text-xs text-blue-700">
+                {schedulerStatus.schedulerEnabled ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search and Filter */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1 max-w-md">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search maintenance tasks..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as any)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
-          <Plus className="w-4 h-4" />
-          Add Maintenance
-        </Button>
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="completed">Completed</option>
+          <option value="overdue">Overdue</option>
+        </select>
       </div>
 
       {maintenanceError && (
@@ -397,9 +580,12 @@ const RulesPage: React.FC = () => {
       )}
 
       {maintenanceLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} height={200} />
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-lg border border-gray-200 p-4">
+              <Skeleton height={20} className="mb-2" />
+              <Skeleton height={16} className="w-3/4" />
+            </div>
           ))}
         </div>
       ) : filteredMaintenance.length === 0 ? (
@@ -419,67 +605,97 @@ const RulesPage: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredMaintenance.map((task) => (
-            <div key={task.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
-                    {task.status.replace('_', ' ')}
-                  </span>
-                  <h3 className="font-semibold text-gray-900">{task.taskName}</h3>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditMaintenance(task)}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteMaintenance(task.id)}
-                    className="text-red-500 hover:text-red-600"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              {task.description && (
-                <p className="text-gray-600 text-sm mb-4">{task.description}</p>
-              )}
-              
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="w-4 h-4 text-blue-600" />
-                  <span className="text-gray-600">Next:</span>
-                  <span className="font-medium text-gray-900">{new Date(task.nextMaintenance).toLocaleDateString()}</span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="w-4 h-4 text-green-600" />
-                  <span className="text-gray-600">Frequency:</span>
-                  <span className="font-medium text-gray-900 capitalize">{task.frequency}</span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-sm">
-                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                  <span className="text-gray-600">Priority:</span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
-                    {task.priority}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>Created: {new Date(task.createdAt).toLocaleDateString()}</span>
-                <span>Updated: {new Date(task.updatedAt).toLocaleDateString()}</span>
-              </div>
-            </div>
-          ))}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Task Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Priority
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Next Maintenance
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Frequency
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Device
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredMaintenance.map((task) => (
+                  <tr key={task.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{task.taskName}</div>
+                        {task.description && (
+                          <div className="text-sm text-gray-500 truncate max-w-xs">{task.description}</div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+                        {task.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                        {task.priority}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {new Date(task.nextMaintenance).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                      {task.frequency}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {task.deviceName || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/maintenance/${task.id}`)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          View
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditMaintenance(task)}
+                          className="text-gray-600 hover:text-gray-900"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteMaintenance(task.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
@@ -504,6 +720,31 @@ const RulesPage: React.FC = () => {
         </Button>
       </div>
 
+      {/* Search and Filter */}
+      <div className="flex items-center gap-4">
+        <div className="flex-1 max-w-md">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search safety precautions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as any)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+
       {safetyError && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-600">{safetyError}</p>
@@ -511,9 +752,12 @@ const RulesPage: React.FC = () => {
       )}
 
       {safetyLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} height={200} />
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-lg border border-gray-200 p-4">
+              <Skeleton height={20} className="mb-2" />
+              <Skeleton height={16} className="w-3/4" />
+            </div>
           ))}
         </div>
       ) : filteredSafety.length === 0 ? (
@@ -533,63 +777,98 @@ const RulesPage: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSafety.map((precaution) => (
-            <div key={precaution.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${precaution.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
-                  <h3 className="font-semibold text-gray-900">{precaution.title}</h3>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditSafety(precaution)}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteSafety(precaution.id)}
-                    className="text-red-500 hover:text-red-600"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              
-              <p className="text-gray-600 text-sm mb-4">{precaution.description}</p>
-              
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 text-sm">
-                  <Shield className="w-4 h-4 text-blue-600" />
-                  <span className="text-gray-600">Type:</span>
-                  <span className="font-medium text-gray-900 capitalize">{precaution.type}</span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-sm">
-                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                  <span className="text-gray-600">Severity:</span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(precaution.severity)}`}>
-                    {precaution.severity}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="text-gray-600">Category:</span>
-                  <span className="font-medium text-gray-900 capitalize">{precaution.category.replace('_', ' ')}</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>Created: {new Date(precaution.createdAt).toLocaleDateString()}</span>
-                <span>Updated: {new Date(precaution.updatedAt).toLocaleDateString()}</span>
-              </div>
-            </div>
-          ))}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Title
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Severity
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredSafety.map((precaution) => (
+                  <tr key={precaution.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{precaution.title}</div>
+                        <div className="text-sm text-gray-500 truncate max-w-xs">{precaution.description}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${precaution.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+                        <span className="text-sm text-gray-900">
+                          {precaution.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                      {precaution.type}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSeverityColor(precaution.severity)}`}>
+                        {precaution.severity}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                      {precaution.category.replace('_', ' ')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(precaution.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/safety/${precaution.id}`)}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          View
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditSafety(precaution)}
+                          className="text-gray-600 hover:text-gray-900"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteSafety(precaution.id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
@@ -609,7 +888,10 @@ const RulesPage: React.FC = () => {
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('rules')}
+            onClick={() => {
+              setActiveTab('rules');
+              updateTabInURL('rules');
+            }}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'rules'
                 ? 'border-blue-500 text-blue-600'
@@ -617,12 +899,15 @@ const RulesPage: React.FC = () => {
             }`}
           >
             <div className="flex items-center gap-2">
-              <Target className="w-4 h-4" />
+                                <Zap className="w-4 h-4" />
               Rules ({rules.length})
             </div>
           </button>
           <button
-            onClick={() => setActiveTab('maintenance')}
+            onClick={() => {
+              setActiveTab('maintenance');
+              updateTabInURL('maintenance');
+            }}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'maintenance'
                 ? 'border-blue-500 text-blue-600'
@@ -635,7 +920,10 @@ const RulesPage: React.FC = () => {
             </div>
           </button>
           <button
-            onClick={() => setActiveTab('safety')}
+            onClick={() => {
+              setActiveTab('safety');
+              updateTabInURL('safety');
+            }}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'safety'
                 ? 'border-blue-500 text-blue-600'

@@ -142,7 +142,7 @@ export const DashboardSection: React.FC = () => {
 
   // Handle maintenance card click
   const handleMaintenanceClick = () => {
-    navigate('/maintenance');
+data     navigate('/device-care?tab=maintenance');
   };
 
   // Format maintenance date
@@ -183,8 +183,8 @@ export const DashboardSection: React.FC = () => {
   const handleNavigateDevices = () => navigate('/devices');
   const handleShowActiveDevices = () => navigate('/devices?status=ONLINE');
   const handleShowMaintenanceWeek = () => navigate('/notifications?filter=maintenance&range=this-week');
-  const handleShowRules = () => navigate('/rules');
-  const handleShowMaintenance = () => navigate('/maintenance');
+  const handleShowRules = () => navigate('/device-care?tab=rules');
+  const handleShowMaintenance = () => navigate('/device-care?tab=maintenance');
   const handleAddDevice = () => navigate('/devices?add=true');
 
   if (loading) {
@@ -412,7 +412,7 @@ export const DashboardSection: React.FC = () => {
           <p className="text-secondary text-sm">View and configure your IoT devices</p>
         </div>
 
-        <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/rules')}>
+        <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/device-care?tab=rules')}>
           <div className="w-12 h-12 bg-warning-50 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Shield className="w-6 h-6 text-warning-200" />
           </div>

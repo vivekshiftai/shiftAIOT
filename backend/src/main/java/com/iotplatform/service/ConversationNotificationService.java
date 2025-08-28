@@ -26,7 +26,7 @@ import java.util.concurrent.CompletableFuture;
 @Service
 @RequiredArgsConstructor
 public class ConversationNotificationService {
-
+    
     private final RestTemplate restTemplate;
 
     @Value("${conversation.api.base-url:http://localhost:8100/api/chat}")

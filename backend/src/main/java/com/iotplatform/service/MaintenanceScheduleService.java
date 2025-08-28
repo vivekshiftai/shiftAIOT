@@ -208,6 +208,83 @@ public class MaintenanceScheduleService {
     }
     
     /**
+     * Get tomorrow's maintenance tasks for an organization.
+     */
+    public List<DeviceMaintenance> getTomorrowMaintenance(String organizationId) {
+        log.info("Fetching tomorrow's maintenance tasks for organization: {}", organizationId);
+        List<DeviceMaintenance> allMaintenance = deviceMaintenanceRepository.findByOrganizationId(organizationId);
+        
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        log.info("Tomorrow's date: {}", tomorrow);
+        
+        List<DeviceMaintenance> tomorrowTasks = allMaintenance.stream()
+                .filter(maintenance -> {
+                    boolean hasNextMaintenance = maintenance.getNextMaintenance() != null;
+                    boolean isTomorrow = hasNextMaintenance && maintenance.getNextMaintenance().equals(tomorrow);
+                    boolean isActive = maintenance.getStatus() == DeviceMaintenance.Status.ACTIVE;
+                    
+                    log.debug("Maintenance task: {} - nextMaintenance: {}, isTomorrow: {}, isActive: {}", 
+                        maintenance.getTaskName(), maintenance.getNextMaintenance(), isTomorrow, isActive);
+                    
+                    return hasNextMaintenance && isTomorrow && isActive;
+                })
+                .collect(java.util.stream.Collectors.toList());
+        
+        log.info("Found {} maintenance tasks scheduled for tomorrow", tomorrowTasks.size());
+        return tomorrowTasks;
+    }
+    
+    /**
+     * Get maintenance tasks for the next N days for an organization.
+     */
+    public List<DeviceMaintenance> getNextDaysMaintenance(String organizationId, int days) {
+        log.info("Fetching next {} days maintenance tasks for organization: {}", days, organizationId);
+        List<DeviceMaintenance> allMaintenance = deviceMaintenanceRepository.findByOrganizationId(organizationId);
+        
+        LocalDate today = LocalDate.now();
+        LocalDate endDate = today.plusDays(days);
+        
+        List<DeviceMaintenance> nextDaysTasks = allMaintenance.stream()
+                .filter(maintenance -> {
+                    boolean hasNextMaintenance = maintenance.getNextMaintenance() != null;
+                    boolean isInRange = hasNextMaintenance && 
+                            !maintenance.getNextMaintenance().isBefore(today) && 
+                            !maintenance.getNextMaintenance().isAfter(endDate);
+                    boolean isActive = maintenance.getStatus() == DeviceMaintenance.Status.ACTIVE;
+                    
+                    return hasNextMaintenance && isInRange && isActive;
+                })
+                .collect(java.util.stream.Collectors.toList());
+        
+        log.info("Found {} maintenance tasks for next {} days", nextDaysTasks.size(), days);
+        return nextDaysTasks;
+    }
+    
+    /**
+     * Get recently completed maintenance tasks for an organization.
+     */
+    public List<DeviceMaintenance> getRecentCompletedMaintenance(String organizationId, int days) {
+        log.info("Fetching recently completed maintenance tasks for organization: {} (last {} days)", organizationId, days);
+        List<DeviceMaintenance> allMaintenance = deviceMaintenanceRepository.findByOrganizationId(organizationId);
+        
+        LocalDate cutoffDate = LocalDate.now().minusDays(days);
+        
+        List<DeviceMaintenance> recentCompletedTasks = allMaintenance.stream()
+                .filter(maintenance -> {
+                    boolean isCompleted = maintenance.getStatus() == DeviceMaintenance.Status.COMPLETED;
+                    boolean hasLastMaintenance = maintenance.getLastMaintenance() != null;
+                    boolean isRecent = hasLastMaintenance && !maintenance.getLastMaintenance().isBefore(cutoffDate);
+                    
+                    return isCompleted && hasLastMaintenance && isRecent;
+                })
+                .sorted((a, b) -> b.getLastMaintenance().compareTo(a.getLastMaintenance())) // Most recent first
+                .collect(java.util.stream.Collectors.toList());
+        
+        log.info("Found {} recently completed maintenance tasks", recentCompletedTasks.size());
+        return recentCompletedTasks;
+    }
+    
+    /**
      * Create maintenance tasks from PDF with enhanced data processing and validation.
      * Skips tasks without task_name and uses default values for missing fields.
      */
@@ -592,5 +669,29 @@ public class MaintenanceScheduleService {
         }
         
         return processed;
+    }    
+    /**
+     * Assign a maintenance task to a user
+     */
+    public DeviceMaintenance assignMaintenanceTask(String maintenanceId, String assigneeId, String assignedBy) {
+        log.info("Assigning maintenance task: {} to user: {} by user: {}", maintenanceId, assigneeId, assignedBy);
+        
+        Optional<DeviceMaintenance> optionalMaintenance = deviceMaintenanceRepository.findById(maintenanceId);
+        if (optionalMaintenance.isEmpty()) {
+            log.error("Maintenance task not found: {}", maintenanceId);
+            throw new IllegalArgumentException("Maintenance task not found: " + maintenanceId);
+        }
+        
+        DeviceMaintenance maintenance = optionalMaintenance.get();
+        maintenance.setAssignedTo(assigneeId);
+        maintenance.setAssignedBy(assignedBy);
+        maintenance.setAssignedAt(LocalDateTime.now());
+        maintenance.setUpdatedAt(LocalDateTime.now());
+        
+        DeviceMaintenance savedMaintenance = deviceMaintenanceRepository.save(maintenance);
+        
+        log.info("Successfully assigned maintenance task: {} to user: {}", maintenance.getTaskName(), assigneeId);
+        
+        return savedMaintenance;
     }
 }
