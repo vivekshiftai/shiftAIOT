@@ -89,8 +89,9 @@ public class DeviceController {
     private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final DeviceWebSocketService deviceWebSocketService;
 
-    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService) {
+    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.fileStorageService = fileStorageService;
@@ -104,6 +105,7 @@ public class DeviceController {
         this.deviceRepository = deviceRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.deviceWebSocketService = deviceWebSocketService;
     }
 
     @GetMapping
@@ -181,6 +183,14 @@ public class DeviceController {
             device.setOrganizationId(organizationId);
             Device createdDevice = deviceService.createDevice(device, organizationId);
             logger.info("Device {} created successfully with ID: {}", device.getName(), createdDevice.getId());
+            
+            // Broadcast device creation
+            try {
+                deviceWebSocketService.broadcastDeviceCreation(createdDevice);
+            } catch (Exception e) {
+                logger.error("Failed to broadcast device creation for device: {}", createdDevice.getId(), e);
+            }
+            
             return ResponseEntity.ok(createdDevice);
         } catch (Exception e) {
             logger.error("Failed to create device {}: {}", device.getName(), e.getMessage());
@@ -420,8 +430,21 @@ public class DeviceController {
         
         try {
             logger.info("🔍 Starting device deletion process for device: {}", trimmedId);
+            
+            // Get device info before deletion for broadcasting
+            Optional<Device> deviceToDelete = deviceRepository.findByIdAndOrganizationId(trimmedId, organizationId);
+            String deviceName = deviceToDelete.map(Device::getName).orElse("Unknown Device");
+            
             deviceService.deleteDevice(trimmedId, organizationId);
             logger.info("✅ Device {} deleted successfully", trimmedId);
+            
+            // Broadcast device deletion
+            try {
+                deviceWebSocketService.broadcastDeviceDeletion(trimmedId, deviceName, organizationId);
+            } catch (Exception e) {
+                logger.error("Failed to broadcast device deletion for device: {}", trimmedId, e);
+            }
+            
             return ResponseEntity.ok().build();
         } catch (RuntimeException e) {
             logger.error("❌ Failed to delete device {}: {}", trimmedId, e.getMessage(), e);

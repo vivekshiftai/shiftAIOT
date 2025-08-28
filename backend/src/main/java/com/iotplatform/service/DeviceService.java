@@ -99,6 +99,9 @@ public class DeviceService {
     private NotificationRepository notificationRepository;
 
     @Autowired
+    private DeviceWebSocketService deviceWebSocketService;
+
+    @Autowired
     private MaintenanceScheduleRepository maintenanceScheduleRepository;
 
 
@@ -614,9 +617,21 @@ public class DeviceService {
         Device device = deviceRepository.findByIdAndOrganizationId(id, organizationId)
                 .orElseThrow(() -> new RuntimeException("Device not found"));
 
+        Device.DeviceStatus oldStatus = device.getStatus();
         device.setStatus(status);
-        // Note: lastSeen field removed from simplified schema
-        return deviceRepository.save(device);
+        device.setUpdatedAt(LocalDateTime.now());
+        
+        Device savedDevice = deviceRepository.save(device);
+        
+        // Broadcast real-time status update
+        try {
+            deviceWebSocketService.broadcastDeviceStatusUpdate(savedDevice);
+            logger.info("Device status updated from {} to {} for device: {}", oldStatus, status, id);
+        } catch (Exception e) {
+            logger.error("Failed to broadcast device status update for device: {}", id, e);
+        }
+        
+        return savedDevice;
     }
 
     public void processTelemetryData(String deviceId, TelemetryDataRequest telemetryData, String organizationId) {

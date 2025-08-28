@@ -37,25 +37,60 @@ class NotificationService {
   }
 
   // Create a new notification
-  async createNotification(event: NotificationEvent): Promise<Notification> {
+  async createNotification(event: NotificationEvent): Promise<Notification | null> {
+    // Validate required fields
+    if (!event) {
+      console.error('Notification event is required');
+      return null;
+    }
+
+    if (!event.type) {
+      console.error('Notification event type is required');
+      return null;
+    }
+
+    if (!event.userId) {
+      console.error('User ID is required for notification');
+      return null;
+    }
+
+    // Get current user from localStorage for organization ID
+    const userStr = localStorage.getItem('user');
+    const user = userStr ? JSON.parse(userStr) : null;
+    const organizationId = user?.organizationId || '1';
+
     const notification: any = {
-      title: this.getNotificationTitle(event),
-      message: this.getNotificationMessage(event),
+      title: this.getNotificationTitle(event) || 'System Notification',
+      message: this.getNotificationMessage(event) || 'A system event has occurred.',
       type: this.getNotificationType(event),
       read: false,
-      userId: event.userId || '1', // Default user ID if not provided
-      deviceId: event.deviceId,
-      organizationId: '1' // Default organization ID
+      userId: event.userId,
+      deviceId: event.deviceId || null,
+      organizationId: organizationId,
+      metadata: event.data ? { ...event.data } : null
     };
 
     try {
-      // Store notification in database
+      // Store notification in database - backend will handle preference checking
       const response = await notificationAPI.create(notification);
       const savedNotification = response.data;
       
-      // Add to local state
-      this.notifications.unshift(savedNotification);
-      this.notifyListeners();
+      // Add to local state only if notification was created (not blocked by preferences)
+      if (savedNotification) {
+        this.notifications.unshift(savedNotification);
+        this.notifyListeners();
+        
+        // Log notification creation for debugging
+        console.log('Notification created:', {
+          id: savedNotification.id,
+          title: savedNotification.title,
+          type: savedNotification.type,
+          userId: savedNotification.userId
+        });
+      } else {
+        console.log('Notification blocked by user preferences:', event.type);
+      }
+      
       return savedNotification;
     } catch (error) {
       console.error('Failed to save notification to database:', error);
@@ -90,23 +125,29 @@ class NotificationService {
 
   // Get notification message based on event type
   private getNotificationMessage(event: NotificationEvent): string {
+    const deviceName = event.deviceName || 'Unknown Device';
+    const ruleName = event.data?.ruleName || 'Unknown Rule';
+    const temperature = event.data?.temperature || 'unknown';
+    const batteryLevel = event.data?.batteryLevel || 'unknown';
+    const additionalMessage = event.data?.message || '';
+
     switch (event.type) {
       case 'device_added':
-        return `New device "${event.deviceName}" has been added to the platform.`;
+        return `New device "${deviceName}" has been added to the platform.`;
       case 'device_assigned':
-        return `Device "${event.deviceName}" has been assigned to your organization.`;
+        return `Device "${deviceName}" has been assigned to your organization.`;
       case 'device_offline':
-        return `Device "${event.deviceName}" has gone offline. Please check the connection.`;
+        return `Device "${deviceName}" has gone offline. Please check the connection.`;
       case 'device_online':
-        return `Device "${event.deviceName}" is now online and reporting data.`;
+        return `Device "${deviceName}" is now online and reporting data.`;
       case 'rule_triggered':
-        return `Rule "${event.data?.ruleName}" has been triggered. ${event.data?.message || ''}`;
+        return `Rule "${ruleName}" has been triggered.${additionalMessage ? ` ${additionalMessage}` : ''}`;
       case 'temperature_alert':
-        return `Temperature sensor "${event.deviceName}" reported ${event.data?.temperature}°C, which exceeds the threshold.`;
+        return `Temperature sensor "${deviceName}" reported ${temperature}°C, which exceeds the threshold.`;
       case 'battery_low':
-        return `Device "${event.deviceName}" battery level is critically low (${event.data?.batteryLevel}%). Please replace or recharge.`;
+        return `Device "${deviceName}" battery level is critically low (${batteryLevel}%). Please replace or recharge.`;
       case 'maintenance_due':
-        return `Device "${event.deviceName}" is due for maintenance. Schedule a service appointment.`;
+        return `Device "${deviceName}" is due for maintenance. Schedule a service appointment.`;
       default:
         return 'A system event has occurred.';
     }
@@ -150,7 +191,30 @@ class NotificationService {
   async loadFromDatabase(): Promise<void> {
     try {
       const response = await notificationAPI.getAll();
-      this.notifications = response.data;
+      
+      // Validate response data
+      if (response?.data && Array.isArray(response.data)) {
+        // Filter out invalid notifications and ensure required fields
+        this.notifications = response.data.filter((notification: any) => {
+          return notification && 
+                 notification.id && 
+                 notification.title && 
+                 notification.message && 
+                 notification.type &&
+                 notification.userId &&
+                 notification.organizationId;
+        }).map((notification: any) => ({
+          ...notification,
+          read: Boolean(notification.read),
+          deviceId: notification.deviceId || null,
+          ruleId: notification.ruleId || null,
+          metadata: notification.metadata || null
+        }));
+      } else {
+        console.warn('Invalid notification data received from server');
+        this.notifications = [];
+      }
+      
       this.notifyListeners();
     } catch (error: any) {
       // Don't log 401 errors as they're expected when token is invalid
@@ -171,6 +235,39 @@ class NotificationService {
   clearAll() {
     this.notifications = [];
     this.notifyListeners();
+  }
+
+  // Delete a specific notification
+  async deleteNotification(notificationId: string): Promise<void> {
+    // Validate input
+    if (!notificationId || typeof notificationId !== 'string') {
+      throw new Error('Valid notification ID is required');
+    }
+
+    try {
+      await notificationAPI.delete(notificationId);
+      // Remove from local state
+      this.notifications = this.notifications.filter(n => n.id !== notificationId);
+      this.notifyListeners();
+      console.log('Notification deleted:', notificationId);
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
+      throw error;
+    }
+  }
+
+  // Delete all notifications
+  async deleteAllNotifications(): Promise<void> {
+    try {
+      await notificationAPI.deleteAll();
+      // Clear local state
+      this.notifications = [];
+      this.notifyListeners();
+      console.log('All notifications deleted');
+    } catch (error) {
+      console.error('Failed to delete all notifications:', error);
+      throw error;
+    }
   }
 
   // Check rules and trigger notifications (disabled to prevent unwanted notifications)

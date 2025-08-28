@@ -2,6 +2,7 @@ import axios from 'axios';
 import { getApiConfig } from '../config/api';
 import { tokenService } from './tokenService';
 import { logWarn, logError, logApiError } from '../utils/logger';
+import { NotificationTemplateRequest } from '../types';
 
 const API_BASE_URL = getApiConfig().BACKEND_BASE_URL;
 
@@ -311,6 +312,21 @@ export const notificationAPI = {
   markAsRead: (id: string) => api.patch(`/api/notifications/${id}/read`),
   markAllAsRead: () => api.patch('/api/notifications/read-all'),
   getUnreadCount: () => api.get('/api/notifications/unread-count'),
+  delete: (id: string) => api.delete(`/api/notifications/${id}`),
+  deleteAll: () => api.delete('/api/notifications'),
+};
+
+// Notification Template API
+export const notificationTemplateAPI = {
+  getAll: () => api.get('/api/notification-templates'),
+  getById: (id: string) => api.get(`/api/notification-templates/${id}`),
+  create: (template: NotificationTemplateRequest) => api.post('/api/notification-templates', template),
+  update: (id: string, template: NotificationTemplateRequest) => api.put(`/api/notification-templates/${id}`, template),
+  delete: (id: string) => api.delete(`/api/notification-templates/${id}`),
+  toggleStatus: (id: string) => api.patch(`/api/notification-templates/${id}/toggle`),
+  process: (id: string, variables: Record<string, string>) => api.post(`/api/notification-templates/${id}/process`, variables),
+  getVariables: (id: string) => api.get(`/api/notification-templates/${id}/variables`),
+  getByType: (type: string) => api.get(`/api/notification-templates/type/${type}`),
 };
 
 // Conversation Config API
@@ -548,5 +564,28 @@ export const pdfAPI = {
     testImages: async (pdfName: string) => {
       return api.get(`/api/pdf/debug/test-images/${pdfName}`);
     }
+  }
+};
+
+// Push Notification API
+export const pushNotificationAPI = {
+  // Get VAPID public key
+  getVapidPublicKey: async () => {
+    return api.get('/api/push-notifications/vapid-public-key');
+  },
+
+  // Subscribe to push notifications
+  subscribe: async (subscription: any) => {
+    return api.post('/api/push-notifications/subscribe', subscription);
+  },
+
+  // Unsubscribe from push notifications
+  unsubscribe: async () => {
+    return api.post('/api/push-notifications/unsubscribe');
+  },
+
+  // Get subscription status
+  getStatus: async () => {
+    return api.get('/api/push-notifications/status');
   }
 };

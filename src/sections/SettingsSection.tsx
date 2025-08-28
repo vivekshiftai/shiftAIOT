@@ -20,8 +20,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { userAPI } from '../services/api';
 import { ConversationConfigTab } from '../components/Settings/ConversationConfigTab';
 import { ComprehensiveProfileEditor } from '../components/Settings/ComprehensiveProfileEditor';
+import { NotificationTestPanel } from '../components/Settings/NotificationTestPanel';
+import { NotificationTemplateManager } from '../components/Settings/NotificationTemplateManager';
 import { handleAuthError } from '../utils/authUtils';
 import { AuthDebugger } from '../components/Debug/AuthDebugger';
+import PushNotificationService, { PushNotificationStatus } from '../services/pushNotificationService';
 
 
 
@@ -58,6 +61,9 @@ export const SettingsSection: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pushNotificationStatus, setPushNotificationStatus] = useState<PushNotificationStatus | null>(null);
+  const [isPushSupported, setIsPushSupported] = useState(false);
+  const [pushService] = useState(() => PushNotificationService.getInstance());
 
 
 
@@ -97,6 +103,18 @@ export const SettingsSection: React.FC = () => {
       if (!user) return;
       setIsLoading(true);
       setError(null);
+      
+      // Initialize push notifications
+      try {
+        setIsPushSupported(pushService.isPushSupported());
+        if (pushService.isPushSupported()) {
+          await pushService.initialize();
+          const status = await pushService.getStatus();
+          setPushNotificationStatus(status);
+        }
+      } catch (error) {
+        console.error('Failed to initialize push notifications:', error);
+      }
       
       try {
         // Try load preferences from backend first
@@ -145,6 +163,37 @@ export const SettingsSection: React.FC = () => {
 
   const persistNotificationSettings = async () => {
     if (!user?.id) return;
+    
+    // Handle push notification subscription
+    if (notificationSettings.pushNotifications && isPushSupported) {
+      try {
+        const permission = await pushService.requestPermission();
+        if (permission === 'granted') {
+          const subscribed = await pushService.subscribe();
+          if (subscribed) {
+            const status = await pushService.getStatus();
+            setPushNotificationStatus(status);
+          }
+        } else {
+          setError('Push notification permission denied. Please enable notifications in your browser settings.');
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to subscribe to push notifications:', error);
+        setError('Failed to enable push notifications. Please try again.');
+        return;
+      }
+    } else if (!notificationSettings.pushNotifications && isPushSupported) {
+      // Unsubscribe if push notifications are disabled
+      try {
+        await pushService.unsubscribe();
+        const status = await pushService.getStatus();
+        setPushNotificationStatus(status);
+      } catch (error) {
+        console.error('Failed to unsubscribe from push notifications:', error);
+      }
+    }
+    
     try {
       await userAPI.savePreferences({
         ...notificationSettings,
@@ -213,18 +262,18 @@ export const SettingsSection: React.FC = () => {
 
   const getNotificationDescription = (key: string) => {
     const descriptions = {
-      emailNotifications: 'Receive notifications via email',
-      pushNotifications: 'Receive push notifications in browser',
-      deviceAlerts: 'Get alerts when devices go offline or have issues',
-      systemUpdates: 'Receive system update notifications',
-      weeklyReports: 'Get weekly performance reports via email',
-      criticalAlerts: 'Immediate alerts for critical system issues',
-      performanceAlerts: 'Alerts when system performance drops',
+      emailNotifications: 'Receive notifications via email (backend handles sending)',
+      pushNotifications: 'Receive push notifications in browser (backend handles sending)',
+      deviceAlerts: 'Get alerts when devices go offline, online, or have issues',
+      systemUpdates: 'Receive system update and maintenance notifications',
+      weeklyReports: 'Get weekly performance and status reports',
+      criticalAlerts: 'Immediate alerts for critical system issues and errors',
+      performanceAlerts: 'Alerts when system performance drops or thresholds are exceeded',
       securityAlerts: 'Security-related notifications and warnings',
-      maintenanceAlerts: 'Scheduled maintenance notifications',
-      dataBackupAlerts: 'Backup completion and failure alerts',
-      userActivityAlerts: 'User login and activity notifications',
-      ruleTriggerAlerts: 'Alerts when automation rules are triggered'
+      maintenanceAlerts: 'Scheduled maintenance and service notifications',
+      dataBackupAlerts: 'Backup completion, failure, and data protection alerts',
+      userActivityAlerts: 'User login, logout, and activity notifications',
+      ruleTriggerAlerts: 'Alerts when automation rules are triggered or conditions are met'
     } as const;
     return descriptions[key as keyof typeof descriptions] || '';
   };
@@ -252,6 +301,58 @@ export const SettingsSection: React.FC = () => {
   const renderNotificationsTab = () => (
     <div className="space-y-6">
       <h3 className="text-xl font-semibold text-slate-800">Notification Preferences</h3>
+      
+      {/* Information about backend handling */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start">
+          <Info className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+          <div>
+            <h4 className="text-sm font-medium text-blue-800 mb-1">Backend Notification Logic</h4>
+            <p className="text-sm text-blue-700">
+              All notification logic is handled by the backend. When you toggle these settings, 
+              the backend will automatically check your preferences before sending any notifications. 
+              The frontend only displays these options and sends your preferences to the server.
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      {/* Push Notification Status */}
+      {isPushSupported && (
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-slate-200">
+          <h4 className="text-lg font-medium text-slate-800 mb-4">Push Notification Status</h4>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-600">Browser Support:</span>
+              <span className="text-sm font-medium text-green-600">Supported</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-600">Permission:</span>
+              <span className={`text-sm font-medium ${
+                pushNotificationStatus?.pushEnabled ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {pushNotificationStatus?.pushEnabled ? 'Granted' : 'Denied'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-600">Subscription:</span>
+              <span className={`text-sm font-medium ${
+                pushNotificationStatus?.hasSubscription ? 'text-green-600' : 'text-orange-600'
+              }`}>
+                {pushNotificationStatus?.hasSubscription ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-slate-600">Server Configuration:</span>
+              <span className={`text-sm font-medium ${
+                pushNotificationStatus?.vapidConfigured ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {pushNotificationStatus?.vapidConfigured ? 'Configured' : 'Not Configured'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-slate-200">
         <div className="space-y-4">
@@ -299,6 +400,16 @@ export const SettingsSection: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Notification Test Panel - Only show for admin users */}
+      {user?.role === 'ADMIN' && (
+        <NotificationTestPanel userId={user.id} />
+      )}
+
+      {/* Notification Template Manager - Only show for admin users */}
+      {user?.role === 'ADMIN' && (
+        <NotificationTemplateManager organizationId={user.organizationId} />
+      )}
     </div>
   );
 

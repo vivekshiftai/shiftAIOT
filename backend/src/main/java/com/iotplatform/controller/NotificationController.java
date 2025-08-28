@@ -42,10 +42,30 @@ public class NotificationController {
         if (userDetails == null || userDetails.getUser() == null) {
             return ResponseEntity.status(401).build();
         }
+        
+        if (notification == null) {
+            return ResponseEntity.badRequest().build();
+        }
+        
         User user = userDetails.getUser();
+        
+        // Validate user and organization
+        if (user.getId() == null || user.getOrganizationId() == null) {
+            return ResponseEntity.status(500).build();
+        }
+        
         notification.setOrganizationId(user.getOrganizationId());
-        Notification createdNotification = notificationService.createNotification(notification);
-        return ResponseEntity.ok(createdNotification);
+        notification.setUserId(user.getId());
+        
+        // Use preference checking - this will automatically check user preferences
+        Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(user.getId(), notification);
+        
+        if (createdNotification.isPresent()) {
+            return ResponseEntity.ok(createdNotification.get());
+        } else {
+            // Notification was blocked due to user preferences
+            return ResponseEntity.status(204).build(); // No Content - notification blocked
+        }
     }
 
     @PatchMapping("/{id}/read")
@@ -93,5 +113,43 @@ public class NotificationController {
         User user = userDetails.getUser();
         Long count = notificationService.getUnreadCount(user.getOrganizationId(), user.getId());
         return ResponseEntity.ok(count);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('NOTIFICATION_WRITE')")
+    public ResponseEntity<?> deleteNotification(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        
+        if (id == null || id.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        
+        User user = userDetails.getUser();
+        
+        // Validate user and organization
+        if (user.getId() == null || user.getOrganizationId() == null) {
+            return ResponseEntity.status(500).build();
+        }
+        
+        try {
+            notificationService.deleteNotification(id, user.getOrganizationId(), user.getId());
+            return ResponseEntity.ok().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping
+    @PreAuthorize("hasAuthority('NOTIFICATION_WRITE')")
+    public ResponseEntity<?> deleteAllNotifications(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        notificationService.deleteAllNotifications(user.getOrganizationId(), user.getId());
+        return ResponseEntity.ok().build();
     }
 }

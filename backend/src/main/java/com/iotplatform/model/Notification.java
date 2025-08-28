@@ -14,37 +14,42 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    @NotBlank
-    @Size(max = 200)
+    @NotBlank(message = "Notification title is required")
+    @Size(max = 200, message = "Title must not exceed 200 characters")
     private String title;
 
-    @NotBlank
-    @Size(max = 1000)
+    @NotBlank(message = "Notification message is required")
+    @Size(max = 1000, message = "Message must not exceed 1000 characters")
     private String message;
 
     @Enumerated(EnumType.STRING)
-    private NotificationType type;
+    @Column(nullable = false)
+    private NotificationType type = NotificationType.INFO;
 
+    @Column(nullable = false)
     private boolean read = false;
 
-    @Column(name = "device_id")
+    @Column(name = "device_id", nullable = true)
     private String deviceId;
 
-    @Column(name = "rule_id")
+    @Column(name = "rule_id", nullable = true)
     private String ruleId;
 
-    @Column(name = "user_id")
+    @Column(name = "user_id", nullable = false)
+    @NotBlank(message = "User ID is required")
     private String userId;
 
-    @Column(name = "organization_id")
+    @Column(name = "organization_id", nullable = false)
+    @NotBlank(message = "Organization ID is required")
     private String organizationId;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.LAZY)
     @MapKeyColumn(name = "metadata_key")
     @Column(name = "metadata_value")
+    @CollectionTable(name = "notification_metadata", joinColumns = @JoinColumn(name = "notification_id"))
     private Map<String, String> metadata;
 
     public enum NotificationType {

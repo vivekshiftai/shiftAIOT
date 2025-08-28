@@ -65,12 +65,47 @@ export interface Notification {
   title: string;
   message: string;
   type: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH';
-  status: 'READ' | 'UNREAD';
+  read: boolean;
+  deviceId?: string | null;
+  ruleId?: string | null;
+  userId: string;
+  organizationId: string;
   createdAt: string;
-  updatedAt: string;
-  userId?: string;
-  deviceId?: string;
+  metadata?: Record<string, string> | null;
+}
+
+// Notification Template Types
+export interface NotificationTemplate {
+  id: string;
+  name: string;
+  type: 'DEVICE_ASSIGNMENT' | 'DEVICE_CREATION' | 'MAINTENANCE_SCHEDULE' | 'MAINTENANCE_REMINDER' | 'DEVICE_OFFLINE' | 'DEVICE_ONLINE' | 'TEMPERATURE_ALERT' | 'BATTERY_LOW' | 'RULE_TRIGGERED' | 'SYSTEM_UPDATE' | 'SECURITY_ALERT' | 'PERFORMANCE_ALERT' | 'CUSTOM';
+  titleTemplate: string;
+  messageTemplate: string;
+  notificationType: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
+  active: boolean;
+  organizationId: string;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt?: string;
+  variables?: Record<string, string> | null;
+  description?: string;
+}
+
+export interface NotificationTemplateRequest {
+  name: string;
+  type: NotificationTemplate['type'];
+  titleTemplate: string;
+  messageTemplate: string;
+  notificationType: NotificationTemplate['notificationType'];
+  active?: boolean;
+  description?: string;
+  variables?: Record<string, string>;
+}
+
+export interface ProcessedTemplate {
+  title: string;
+  message: string;
+  type: NotificationTemplate['notificationType'];
 }
 
 // Rule Types

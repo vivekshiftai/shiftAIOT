@@ -150,6 +150,13 @@ conversation:
     max-retries: 3
     retry-delay: 1000  # 1 second
 
+# Push Notification Configuration
+push:
+  vapid:
+    public-key: ${VAPID_PUBLIC_KEY:BN8WyzVySc9qA7hTWP_TpsdNSfw84H49eCj3GVkcpFjR13s0luOowkgpGpf4t4mxc2Fb0sgtsMHNbFyPxPTdMs4}
+    private-key: ${VAPID_PRIVATE_KEY:3BSB5X1TVNnyv7fhsW39oyGJdwNha2hfm4m1NgnrJvk}
+    "subject": "mailto: <s.tadikonda@theshiftai.in>"
+
 # Logging
 logging:
   level:
