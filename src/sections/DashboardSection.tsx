@@ -142,7 +142,7 @@ export const DashboardSection: React.FC = () => {
 
   // Handle maintenance card click
   const handleMaintenanceClick = () => {
-data     navigate('/device-care?tab=maintenance');
+    navigate('/device-care?tab=maintenance');
   };
 
   // Format maintenance date
