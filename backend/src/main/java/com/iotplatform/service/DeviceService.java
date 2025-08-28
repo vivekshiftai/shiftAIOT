@@ -614,21 +614,28 @@ public class DeviceService {
     }
 
     public Device updateDeviceStatus(String id, Device.DeviceStatus status, String organizationId) {
+        logger.info("🔄 Updating device status: deviceId={}, newStatus={}, organizationId={}", id, status, organizationId);
+        
         Device device = deviceRepository.findByIdAndOrganizationId(id, organizationId)
                 .orElseThrow(() -> new RuntimeException("Device not found"));
 
         Device.DeviceStatus oldStatus = device.getStatus();
+        logger.info("📊 Device status change: {} -> {} for device: {} ({})", oldStatus, status, device.getName(), id);
+        
+        // Update device status
         device.setStatus(status);
         device.setUpdatedAt(LocalDateTime.now());
         
         Device savedDevice = deviceRepository.save(device);
+        logger.info("✅ Device status saved to database: {} is now {}", device.getName(), status);
         
         // Broadcast real-time status update
         try {
             deviceWebSocketService.broadcastDeviceStatusUpdate(savedDevice);
-            logger.info("Device status updated from {} to {} for device: {}", oldStatus, status, id);
+            logger.info("📡 WebSocket broadcast sent for device status update: {} -> {} for device: {}", oldStatus, status, device.getName());
         } catch (Exception e) {
-            logger.error("Failed to broadcast device status update for device: {}", id, e);
+            logger.error("❌ Failed to broadcast device status update for device: {}", id, e);
+            // Don't fail the status update if WebSocket broadcast fails
         }
         
         return savedDevice;

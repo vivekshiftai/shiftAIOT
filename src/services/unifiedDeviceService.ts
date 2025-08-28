@@ -170,7 +170,7 @@ export class UnifiedDeviceService {
    */
   async updateDeviceStatus(deviceId: string, status: string): Promise<boolean> {
     try {
-      await deviceAPI.update(deviceId, { status });
+      await deviceAPI.updateStatus(deviceId, status);
       return true;
     } catch (error) {
       logError('UnifiedDeviceService', 'Error updating device status', error instanceof Error ? error : new Error('Unknown error'));

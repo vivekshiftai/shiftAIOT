@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { unifiedDeviceService, DeviceDocumentation, DeviceRules, DeviceMaintenance, DeviceSafetyPrecaution } from '../../services/unifiedDeviceService';
 import { logError, logInfo } from '../../utils/logger';
+import { DeviceStatusTest } from './DeviceStatusTest';
 
 interface Device {
   id: string;
@@ -291,6 +292,15 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
                         </span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Device Status Test */}
+                  <div className="bg-white p-6 rounded-lg border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Device Status Test</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Test the real-time device status update functionality. This will update the device status in the database and broadcast the change to all connected clients.
+                    </p>
+                    <DeviceStatusTest device={device} />
                   </div>
                 </div>
               )}

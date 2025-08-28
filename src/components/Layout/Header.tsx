@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useToast } from '../UI/Toast';
@@ -9,7 +9,9 @@ import {
   Settings, 
   User, 
   Info,
-  Trash2
+  Trash2,
+  AlertTriangle,
+  Bell
 } from 'lucide-react';
 import Button from '../UI/Button';
 import { IconButton } from '../UI/Button';
@@ -25,6 +27,24 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close user dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+
+    if (userDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [userDropdownOpen]);
 
   const handleLogout = async () => {
     try {
@@ -36,15 +56,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
     }
   };
 
-  // Log header component updates
-  React.useEffect(() => {
-    console.log('Header component updated:', {
-      darkModeRemoved: true,
-      helpIconChanged: 'AlertTriangle -> Info',
-      signOutButtonColor: 'dark red (text-red-700)',
-      themeToggleRemoved: true
-    });
-  }, []);
+
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
         />
 
         {/* User Menu */}
-        <div className="relative">
+        <div className="relative" ref={userDropdownRef}>
           <button
             onClick={() => setUserDropdownOpen(!userDropdownOpen)}
             className="flex items-center gap-3 p-2 rounded-lg hover:bg-tertiary transition-colors"

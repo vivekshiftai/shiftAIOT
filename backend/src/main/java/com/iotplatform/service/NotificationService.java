@@ -1,6 +1,7 @@
 package com.iotplatform.service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import com.iotplatform.dto.TelemetryDataRequest;
 import com.iotplatform.model.Device;
 import com.iotplatform.model.Notification;
+import com.iotplatform.model.NotificationTemplate;
 import com.iotplatform.model.Rule;
 import com.iotplatform.repository.NotificationRepository;
 import com.iotplatform.util.NotificationValidator;

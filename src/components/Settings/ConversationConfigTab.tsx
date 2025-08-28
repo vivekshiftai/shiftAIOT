@@ -5,8 +5,8 @@ import {
   Trash2, 
   MessageSquare,
   Mail,
-  Smartphone,
-  MessageCircle,
+  Phone,
+  MessageSquare as MessageCircle,
   Zap,
   CheckCircle,
   AlertTriangle,
@@ -16,6 +16,7 @@ import {
 import { conversationConfigAPI } from '../../services/api';
 import Button from '../UI/Button';
 import Modal from '../UI/Modal';
+
 
 interface ConversationConfig {
   id: string;
@@ -39,7 +40,7 @@ const platformOptions = [
   { value: 'gmail', label: 'Gmail', icon: Mail, color: 'text-red-600' },
   { value: 'teams', label: 'Microsoft Teams', icon: MessageCircle, color: 'text-blue-600' },
   { value: 'google_chat', label: 'Google Chat', icon: MessageSquare, color: 'text-green-600' },
-  { value: 'sms', label: 'SMS', icon: Smartphone, color: 'text-gray-600' }
+  { value: 'sms', label: 'SMS', icon: Phone, color: 'text-gray-600' }
 ];
 
 const credentialFields = {
@@ -255,6 +256,8 @@ export const ConversationConfigTab: React.FC = () => {
           Add Platform
         </Button>
       </div>
+
+
 
       {/* Configurations List */}
       <div className="space-y-4">

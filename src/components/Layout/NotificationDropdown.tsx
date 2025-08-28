@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Settings, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import { Settings, AlertTriangle, Info, CheckCircle, Bell } from 'lucide-react';
 import { useIoT } from '../../contexts/IoTContext';
 import { Notification } from '../../types';
 
@@ -14,6 +14,8 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
 }) => {
   const { notifications } = useIoT();
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -32,7 +34,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     };
   }, [isOpen, onToggle]);
 
-  const unreadCount = notifications.filter(n => n.status === 'UNREAD').length;
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const handleNotificationClick = async (notification: Notification) => {
     // Handle notification click - you can add navigation logic here
@@ -64,8 +66,8 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     
     // Default styling
     return {
-      container: notification.status === 'UNREAD' ? 'bg-slate-50' : '',
-      title: notification.status === 'UNREAD' ? 'text-slate-900' : 'text-slate-600',
+      container: !notification.read ? 'bg-slate-50' : '',
+      title: !notification.read ? 'text-slate-900' : 'text-slate-600',
       message: 'text-slate-600'
     };
   };
@@ -86,8 +88,9 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
       <button 
         onClick={onToggle}
         className="p-2 hover:bg-slate-100 rounded-lg transition-colors relative"
+        aria-label="Notifications"
       >
-        <Settings className="w-5 h-5 text-slate-600" />
+        <Bell className="w-5 h-5 text-slate-600" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -115,7 +118,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="p-6 text-center">
-                <Settings className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                <Bell className="w-8 h-8 text-slate-400 mx-auto mb-2" />
                 <p className="text-slate-500 text-sm">No notifications</p>
               </div>
             ) : (
@@ -138,7 +141,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                               {notification.title}
                             </p>
                             <div className="flex items-center gap-2">
-                              {notification.status === 'UNREAD' && (
+                              {!notification.read && (
                                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                               )}
                               <span className="text-xs text-slate-400">

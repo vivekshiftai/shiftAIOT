@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  AlertTriangle, FileText, CheckCircle, Clock, Brain, Settings, Trash2
+  AlertTriangle, FileText, CheckCircle, Clock, Brain, Settings, Trash2, Zap
 } from 'lucide-react';
 import { Device } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
-
-
+import { logInfo, logError } from '../../utils/logger';
 
 interface DeviceCardProps {
   device: Device;
@@ -121,6 +120,8 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   onDelete
 }) => {
   const { user } = useAuth();
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [statusUpdateError, setStatusUpdateError] = useState<string | null>(null);
 
   // Add additional safety checks
   if (!device) {
@@ -179,7 +180,71 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
     }
   }, [isOnboarding, pdfProcessingStatus, startTime]);
 
+  const handleStatusChange = async (newStatus: Device['status']) => {
+    if (!onStatusChange || isUpdatingStatus) return;
+    
+    const oldStatus = device.status;
+    
+    logInfo('DeviceCard', 'Initiating device status change', {
+      deviceId: device.id,
+      deviceName: device.name,
+      oldStatus,
+      newStatus,
+      userRole: user?.role
+    });
+    
+    setIsUpdatingStatus(true);
+    setStatusUpdateError(null);
+    
+    try {
+      // Optimistic update for better UX
+      const statusEmoji = {
+        'ONLINE': '🟢',
+        'OFFLINE': '⚫',
+        'WARNING': '🟡',
+        'ERROR': '🔴'
+      }[newStatus] || '⚪';
+      
+      console.log(`🔄 Updating device status: ${device.name} (${device.id}) from ${oldStatus} to ${newStatus}`);
+      
+      // Call the status update function
+      await onStatusChange(device.id, newStatus);
+      
+      logInfo('DeviceCard', 'Device status updated successfully', {
+        deviceId: device.id,
+        deviceName: device.name,
+        oldStatus,
+        newStatus
+      });
+      
+      console.log(`✅ Device status updated successfully: ${device.name} is now ${newStatus}`);
+      console.log(`${statusEmoji} ${device.name} status changed to ${newStatus.toLowerCase()}`);
+      
+      // Show success feedback
+      // You could add a toast notification here
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      logError('DeviceCard', 'Failed to update device status', error instanceof Error ? error : new Error('Unknown error'));
+      console.error('❌ Failed to update device status:', error);
+      console.error(`Failed to update ${device.name} status to ${newStatus}`);
+      
+      setStatusUpdateError(errorMessage);
+      
+      // Show error feedback
+      // You could add a toast notification here
+      
+      throw error;
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
+  const handleTestStatusChange = async () => {
+    const newStatus = device.status === 'ONLINE' ? 'OFFLINE' : 'ONLINE';
+    await handleStatusChange(newStatus);
+  };
 
   const renderOnboardingContent = () => {
     if (pdfProcessingStatus === 'pending') {
@@ -310,13 +375,22 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               </span>
             </div>
             <p className="text-sm text-slate-600 mb-1 truncate">{deviceTypeInfo.label} • {device.location}</p>
-                          <p className="text-xs text-slate-500">Updated: {formatLastSeen(device.updatedAt)}</p>
+            <p className="text-xs text-slate-500">Updated: {formatLastSeen(device.updatedAt)}</p>
           </div>
         </div>
 
-        {/* Status Icon and Chevron */}
+        {/* Status Icon and Real-time Indicator */}
         <div className="flex items-center gap-3 flex-shrink-0">
-          <StatusIcon className={`w-5 h-5 ${statusInfo.color}`} />
+          <div className="relative">
+            <StatusIcon className={`w-5 h-5 ${statusInfo.color}`} />
+            {/* Real-time indicator dot */}
+            <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${
+              device.status === 'ONLINE' ? 'bg-green-500 animate-pulse' :
+              device.status === 'WARNING' ? 'bg-yellow-500 animate-pulse' :
+              device.status === 'ERROR' ? 'bg-red-500 animate-pulse' :
+              'bg-slate-400'
+            }`} />
+          </div>
           
           {/* Delete Button - Only show if onDelete prop is provided and not onboarding */}
           {onDelete && !isOnboarding && (
@@ -331,8 +405,37 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               <Trash2 className="w-4 h-4" />
             </button>
           )}
+          
+          {/* Test Status Change Button - Only for admins and not onboarding */}
+          {canUpdateStatus && !isOnboarding && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleTestStatusChange();
+              }}
+              disabled={isUpdatingStatus}
+              className={`p-2 rounded-lg transition-colors ${
+                isUpdatingStatus 
+                  ? 'text-slate-400 cursor-not-allowed' 
+                  : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
+              }`}
+              title={isUpdatingStatus ? "Updating status..." : "Test Real-time Status Change"}
+            >
+              <Zap className={`w-4 h-4 ${isUpdatingStatus ? 'animate-spin' : ''}`} />
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Status Update Error */}
+      {statusUpdateError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-600" />
+            <p className="text-sm text-red-700">{statusUpdateError}</p>
+          </div>
+        </div>
+      )}
 
       {/* Onboarding Content */}
       {isOnboarding && (
@@ -359,18 +462,31 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             <span className="text-xs text-slate-600">Quick Status:</span>
             <select
               value={device.status}
-              onChange={(e) => onStatusChange(device.id, e.target.value as Device['status'])}
-              className="text-xs px-3 py-1 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all"
+              onChange={async (e) => {
+                const newStatus = e.target.value as Device['status'];
+                await handleStatusChange(newStatus);
+              }}
+              disabled={isUpdatingStatus}
+              className={`text-xs px-3 py-1 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all ${
+                isUpdatingStatus 
+                  ? 'border-slate-300 text-slate-400 cursor-not-allowed' 
+                  : 'border-slate-300 hover:border-blue-400'
+              }`}
             >
-              <option value="ONLINE">Online</option>
-              <option value="OFFLINE">Offline</option>
-              <option value="WARNING">Warning</option>
-              <option value="ERROR">Error</option>
+              <option value="ONLINE">🟢 Online</option>
+              <option value="OFFLINE">⚫ Offline</option>
+              <option value="WARNING">🟡 Warning</option>
+              <option value="ERROR">🔴 Error</option>
             </select>
+            {isUpdatingStatus && (
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-xs text-slate-500">Updating...</span>
+              </div>
+            )}
           </div>
         </div>
       )}
-
 
     </div>
   );

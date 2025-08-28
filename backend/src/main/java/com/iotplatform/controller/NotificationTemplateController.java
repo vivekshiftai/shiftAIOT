@@ -3,6 +3,7 @@ package com.iotplatform.controller;
 import com.iotplatform.dto.NotificationTemplateRequest;
 import com.iotplatform.model.NotificationTemplate;
 import com.iotplatform.model.User;
+import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.service.NotificationTemplateService;
 import com.iotplatform.service.NotificationTemplateService.ProcessedTemplate;
 import org.slf4j.Logger;

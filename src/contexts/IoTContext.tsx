@@ -6,6 +6,7 @@ import { logInfo, logError, logWarn } from '../utils/logger';
 import { Device, Rule, Notification, TelemetryData, Status } from '../types';
 import { tokenService } from '../services/tokenService';
 import NotificationService from '../services/notificationService';
+import { websocketService } from '../services/websocketService';
 import { useAuth } from './AuthContext';
 
 interface IoTContextType {
@@ -54,6 +55,44 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   
   const { user, isLoading: authLoading } = useAuth();
   const notificationService = user ? NotificationService.getInstance() : null;
+
+  // WebSocket connection management
+  useEffect(() => {
+    if (user?.organizationId) {
+      // Set up WebSocket callbacks
+      websocketService.setCallbacks({
+        onDeviceStatusUpdate: (deviceId: string, status: string, deviceName: string) => {
+          logInfo('IoT', 'WebSocket: Device status update received', { deviceId, status, deviceName });
+          setDevices((prev: Device[]) => 
+            prev.map((device: Device) => 
+              device.id === deviceId 
+                ? { ...device, status: status as Status }
+                : device
+            )
+          );
+        },
+        onDeviceCreated: (device: Device) => {
+          logInfo('IoT', 'WebSocket: Device created', { deviceId: device.id, deviceName: device.name });
+          setDevices((prev: Device[]) => [...prev, device]);
+        },
+        onDeviceDeleted: (deviceId: string, deviceName: string) => {
+          logInfo('IoT', 'WebSocket: Device deleted', { deviceId, deviceName });
+          setDevices((prev: Device[]) => prev.filter((device: Device) => device.id !== deviceId));
+        },
+        onConnectionStatusChange: (connected: boolean) => {
+          logInfo('IoT', 'WebSocket connection status changed', { connected });
+        }
+      });
+
+      // Connect to WebSocket
+      websocketService.connect(user.organizationId);
+
+      // Cleanup on unmount
+      return () => {
+        websocketService.disconnect();
+      };
+    }
+  }, [user?.organizationId]);
 
   // Load notifications from database and subscribe to updates
   useEffect(() => {
@@ -232,13 +271,71 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     }
   }, [user]);
 
-  const updateDeviceStatus = (deviceId: string, status: Status) => {
+  const updateDeviceStatus = async (deviceId: string, status: Status) => {
     logInfo('IoT', 'Updating device status', { deviceId, status });
-    setDevices((prev: Device[]) => 
-      prev.map((device: Device) => 
-        device.id === deviceId ? { ...device, status } : device
-      )
-    );
+    
+    try {
+      // Find the device to get its name for logging
+      const device = devices.find(d => d.id === deviceId);
+      const deviceName = device?.name || 'Unknown Device';
+      const oldStatus = device?.status || 'UNKNOWN';
+      
+      console.log(`🔄 Updating device status: ${deviceName} (${deviceId}) from ${oldStatus} to ${status}`);
+      
+      // Validate status value
+      const validStatuses = ['ONLINE', 'OFFLINE', 'WARNING', 'ERROR'];
+      if (!validStatuses.includes(status)) {
+        throw new Error(`Invalid status: ${status}. Must be one of: ${validStatuses.join(', ')}`);
+      }
+      
+      // Update local state immediately for responsive UI (optimistic update)
+      setDevices((prev: Device[]) => 
+        prev.map((device: Device) => 
+          device.id === deviceId 
+            ? { 
+                ...device, 
+                status,
+                updatedAt: new Date().toISOString() // Update timestamp immediately
+              }
+            : device
+        )
+      );
+
+      // Call backend API to update status using the dedicated status endpoint
+      const response = await deviceAPI.updateStatus(deviceId, status);
+      
+      logInfo('IoT', 'Device status updated successfully', { 
+        deviceId, 
+        oldStatus, 
+        newStatus: status, 
+        deviceName,
+        responseStatus: response?.status 
+      });
+      
+      
+      
+      // The WebSocket will handle the real-time broadcast to other clients
+      // No need to manually update again as the WebSocket callback will handle it
+      
+      return response;
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      logError('IoT', 'Failed to update device status', error instanceof Error ? error : new Error(`Failed to update device status: ${errorMessage}`));
+      
+      console.error(`❌ Failed to update device status: ${deviceId} to ${status}`, error);
+      
+      // Revert local state on error by refreshing devices
+      try {
+        await refreshDevices();
+      } catch (refreshError) {
+        logError('IoT', 'Failed to refresh devices after status update error', refreshError instanceof Error ? refreshError : new Error('Unknown error'));
+      }
+      
+      // Throw a more user-friendly error
+      throw new Error(`Failed to update device status: ${errorMessage}`);
+    }
   };
 
   const addNotification = (notification: Notification) => {
@@ -367,16 +464,11 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   const deleteDevice = async (deviceId: string) => {
     try {
       logInfo('IoT', 'Deleting device', { deviceId });
-      console.log('🔍 IoTContext: Starting device deletion for ID:', deviceId);
-      console.log('🔍 IoTContext: Current API base URL:', import.meta.env.VITE_API_BASE_URL || 'http://20.57.36.66:8100');
+      
       
       // Check token before deletion
       const token = tokenService.getToken();
-      console.log('🔍 IoTContext: Token check before deletion:', {
-        hasToken: !!token,
-        tokenLength: token?.length,
-        tokenPreview: token ? `${token.substring(0, 20)}...` : 'No token'
-      });
+
       
       if (!token) {
         throw new Error('No authentication token found. Please log in again.');
@@ -384,7 +476,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       
       // Validate token before proceeding
       const isValidToken = await tokenService.validateToken();
-      console.log('🔍 IoTContext: Token validation result:', isValidToken);
+      
       
       if (!isValidToken) {
         console.warn('⚠️ IoTContext: Token validation failed, attempting token refresh...');
@@ -392,14 +484,14 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         if (!refreshedToken) {
           throw new Error('Authentication token is invalid and could not be refreshed. Please log in again.');
         }
-        console.log('✅ IoTContext: Token refreshed successfully');
+        
       }
       
       // First, verify the device exists
       try {
-        console.log('🔍 IoTContext: Verifying device exists before deletion...');
+
         const deviceCheck = await deviceAPI.getById(deviceId);
-        console.log('✅ IoTContext: Device found:', deviceCheck.data);
+        
       } catch (checkError) {
         console.error('❌ IoTContext: Device not found during verification:', checkError);
         throw new Error(`Device not found: ${deviceId}`);

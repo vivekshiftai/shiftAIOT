@@ -43,15 +43,23 @@ public class CustomUserDetails implements UserDetails {
             authorities.add(new SimpleGrantedAuthority("KNOWLEDGE_READ"));
             authorities.add(new SimpleGrantedAuthority("KNOWLEDGE_WRITE"));
             authorities.add(new SimpleGrantedAuthority("KNOWLEDGE_DELETE"));
+            // Conversation config permissions for admins
+            authorities.add(new SimpleGrantedAuthority("CONVERSATION_CONFIG_READ"));
+            authorities.add(new SimpleGrantedAuthority("CONVERSATION_CONFIG_WRITE"));
+            authorities.add(new SimpleGrantedAuthority("CONVERSATION_CONFIG_DELETE"));
         } else {
             // Regular user can only read
             authorities.add(new SimpleGrantedAuthority("DEVICE_READ"));
             authorities.add(new SimpleGrantedAuthority("RULE_READ"));
             // Allow regular users to read and create/update maintenance tasks
             authorities.add(new SimpleGrantedAuthority("MAINTENANCE_READ"));
-            authorities.add(new SimpleGrantedAuthority("MAINTENANCE_WRITE"));
+            // authorities.add(new SimpleGrantedAuthority("MAINTENANCE_WRITE"));
             authorities.add(new SimpleGrantedAuthority("NOTIFICATION_READ"));
             authorities.add(new SimpleGrantedAuthority("KNOWLEDGE_READ"));
+            // Conversation config permissions for regular users (allow them to manage their own configs)
+            authorities.add(new SimpleGrantedAuthority("CONVERSATION_CONFIG_READ"));
+            // authorities.add(new SimpleGrantedAuthority("CONVERSATION_CONFIG_WRITE"));
+            // authorities.add(new SimpleGrantedAuthority("CONVERSATION_CONFIG_DELETE"));
         }
         
         return authorities;

@@ -37,15 +37,18 @@ public class DeviceWebSocketService {
 
             String messageJson = objectMapper.writeValueAsString(message);
             
+            logger.info("📡 Broadcasting device status update: device={} ({}) status={} organization={}", 
+                       device.getName(), device.getId(), device.getStatus(), device.getOrganizationId());
+            
             // Broadcast to all clients
             messagingTemplate.convertAndSend("/topic/devices/status", messageJson);
             
             // Send to specific organization
             messagingTemplate.convertAndSend("/topic/organization/" + device.getOrganizationId() + "/devices/status", messageJson);
             
-            logger.info("Broadcasted device status update for device: {} with status: {}", device.getId(), device.getStatus());
+            logger.info("✅ Device status update broadcasted successfully for device: {} with status: {}", device.getId(), device.getStatus());
         } catch (Exception e) {
-            logger.error("Failed to broadcast device status update for device: {}", device.getId(), e);
+            logger.error("❌ Failed to broadcast device status update for device: {}", device.getId(), e);
         }
     }
 

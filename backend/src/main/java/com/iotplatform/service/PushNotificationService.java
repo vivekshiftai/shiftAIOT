@@ -1,17 +1,15 @@
 package com.iotplatform.service;
 
-import com.iotplatform.model.Notification;
 import com.iotplatform.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import nl.martijndwars.webpush.Notification as WebPushNotification;
 import nl.martijndwars.webpush.PushService;
 import nl.martijndwars.webpush.Subscription;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.security.Security;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,7 +62,8 @@ public class PushNotificationService {
      */
     public void registerSubscription(String userId, String endpoint, String p256dh, String auth) {
         try {
-            Subscription subscription = new Subscription(endpoint, p256dh, auth);
+            Subscription.Keys keys = new Subscription.Keys(p256dh, auth);
+            Subscription subscription = new Subscription(endpoint, keys);
             userSubscriptions.put(userId, subscription);
             log.info("Push subscription registered for user: {}", userId);
         } catch (Exception e) {
@@ -83,7 +82,7 @@ public class PushNotificationService {
     /**
      * Send a push notification to a specific user.
      */
-    public void sendPushNotification(String userId, Notification notification) {
+    public void sendPushNotification(String userId, com.iotplatform.model.Notification notification) {
         if (!notificationSettingsService.isPushEnabled(userId)) {
             log.debug("Push notifications disabled for user: {}", userId);
             return;
@@ -103,7 +102,7 @@ public class PushNotificationService {
         executorService.submit(() -> {
             try {
                 String payload = createNotificationPayload(notification);
-                WebPushNotification webPushNotification = new WebPushNotification(subscription, payload);
+                nl.martijndwars.webpush.Notification webPushNotification = new nl.martijndwars.webpush.Notification(subscription, payload);
                 
                 pushService.send(webPushNotification);
                 log.info("Push notification sent successfully to user: {}", userId);
@@ -123,7 +122,7 @@ public class PushNotificationService {
     /**
      * Send push notification to multiple users.
      */
-    public void sendPushNotificationToUsers(Iterable<String> userIds, Notification notification) {
+    public void sendPushNotificationToUsers(Iterable<String> userIds, com.iotplatform.model.Notification notification) {
         for (String userId : userIds) {
             sendPushNotification(userId, notification);
         }
@@ -132,7 +131,7 @@ public class PushNotificationService {
     /**
      * Create notification payload for web push.
      */
-    private String createNotificationPayload(Notification notification) {
+    private String createNotificationPayload(com.iotplatform.model.Notification notification) {
         // Create a simple JSON payload for the push notification
         return String.format(
             "{\"title\":\"%s\",\"body\":\"%s\",\"icon\":\"/favicon.ico\",\"badge\":\"/favicon.ico\",\"data\":{\"notificationId\":\"%s\",\"type\":\"%s\"}}",

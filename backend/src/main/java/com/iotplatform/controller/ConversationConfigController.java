@@ -3,6 +3,8 @@ package com.iotplatform.controller;
 import java.util.List;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,17 +32,26 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/conversation-configs")
 public class ConversationConfigController {
 
+    private static final Logger logger = LoggerFactory.getLogger(ConversationConfigController.class);
+
     @Autowired
     private ConversationConfigService conversationConfigService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('CONVERSATION_CONFIG_READ')")
     public ResponseEntity<List<ConversationConfig>> getAllConfigs(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🔍 GET /api/conversation-configs - Fetching all configs");
+        
         if (userDetails == null || userDetails.getUser() == null) {
+            logger.error("❌ Authentication failed - no user details");
             return ResponseEntity.status(401).build();
         }
+        
         User user = userDetails.getUser();
+        logger.info("👤 User {} requesting conversation configs", user.getEmail());
+        
         List<ConversationConfig> configs = conversationConfigService.getAllConfigs(user.getId());
+        logger.info("✅ Returning {} conversation configs for user: {}", configs.size(), user.getEmail());
         return ResponseEntity.ok(configs);
     }
 
@@ -58,19 +69,32 @@ public class ConversationConfigController {
     @PostMapping
     @PreAuthorize("hasAuthority('CONVERSATION_CONFIG_WRITE')")
     public ResponseEntity<ConversationConfig> createConfig(@Valid @RequestBody ConversationConfigRequest request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🆕 POST /api/conversation-configs - Creating new config");
+        logger.info("📝 Request details - Platform: {}, Type: {}, Active: {}", 
+                   request.getPlatformName(), request.getPlatformType(), request.isActive());
+        
         if (userDetails == null || userDetails.getUser() == null) {
+            logger.error("❌ Authentication failed - no user details");
             return ResponseEntity.status(401).build();
         }
-        User user = userDetails.getUser();
         
-        ConversationConfig config = new ConversationConfig();
-        config.setPlatformName(request.getPlatformName());
-        config.setPlatformType(request.getPlatformType());
-        config.setCredentials(request.getCredentials());
-        config.setActive(request.isActive());
+        User user = userDetails.getUser();
+        logger.info("👤 User {} creating conversation config", user.getEmail());
+        
+        try {
+            ConversationConfig config = new ConversationConfig();
+            config.setPlatformName(request.getPlatformName());
+            config.setPlatformType(request.getPlatformType());
+            config.setCredentials(request.getCredentials());
+            config.setActive(request.isActive());
 
-        ConversationConfig createdConfig = conversationConfigService.createConfig(config, user.getId());
-        return ResponseEntity.ok(createdConfig);
+            ConversationConfig createdConfig = conversationConfigService.createConfig(config, user.getId());
+            logger.info("✅ Conversation config created successfully with ID: {}", createdConfig.getId());
+            return ResponseEntity.ok(createdConfig);
+        } catch (Exception e) {
+            logger.error("❌ Failed to create conversation config for user: {}", user.getEmail(), e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @PutMapping("/{id}")

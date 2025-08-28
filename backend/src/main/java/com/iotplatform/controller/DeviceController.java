@@ -42,6 +42,7 @@ import com.iotplatform.model.Device.Protocol;
 import com.iotplatform.model.User;
 import com.iotplatform.service.DeviceService;
 import com.iotplatform.service.DeviceSafetyPrecautionService;
+import com.iotplatform.service.DeviceWebSocketService;
 import com.iotplatform.service.FileStorageService;
 import com.iotplatform.service.TelemetryService;
 import com.iotplatform.service.UnifiedOnboardingService;
@@ -454,7 +455,10 @@ public class DeviceController {
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<Device> updateDeviceStatus(@PathVariable String id, @RequestBody Device.DeviceStatus status, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🔧 PATCH /api/devices/{}/status called", id);
+        
         if (userDetails == null || userDetails.getUser() == null) {
+            logger.error("❌ Authentication failed - no user details");
             return ResponseEntity.status(401).build();
         }
         User user = userDetails.getUser();
@@ -462,25 +466,90 @@ public class DeviceController {
         String userEmail = user.getEmail();
         String organizationId = user.getOrganizationId();
         
-        logger.info("User {} updating device {} status to: {}", userEmail, id, status);
+        logger.info("👤 User {} (org: {}) updating device {} status to: {}", userEmail, organizationId, id, status);
         
         if (id == null || id.trim().isEmpty()) {
-            logger.warn("Invalid device ID provided by user {}", userEmail);
+            logger.warn("❌ Invalid device ID provided by user {}: '{}'", userEmail, id);
             return ResponseEntity.badRequest().build();
         }
         
         if (status == null) {
-            logger.warn("Invalid status provided by user {}", userEmail);
+            logger.warn("❌ Invalid status provided by user {}: '{}'", userEmail, status);
             return ResponseEntity.badRequest().build();
         }
         
         try {
             Device updatedDevice = deviceService.updateDeviceStatus(id.trim(), status, organizationId);
-            logger.info("Device {} status updated to: {}", id, status);
+            logger.info("✅ Device {} status updated successfully to: {} by user: {}", id, status, userEmail);
             return ResponseEntity.ok(updatedDevice);
         } catch (RuntimeException e) {
-            logger.error("Failed to update device {} status: {}", id, e.getMessage());
+            logger.error("❌ Failed to update device {} status: {}", id, e.getMessage());
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * Test endpoint to simulate device status changes for real-time testing
+     */
+    @PostMapping("/{id}/test-status-change")
+    public ResponseEntity<?> testDeviceStatusChange(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🧪 Test endpoint called for device status change: {}", id);
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        String organizationId = user.getOrganizationId();
+        
+        try {
+            // Get the device
+            Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
+            if (deviceOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Device device = deviceOpt.get();
+            Device.DeviceStatus currentStatus = device.getStatus();
+            
+            // Cycle through statuses for testing
+            Device.DeviceStatus newStatus;
+            switch (currentStatus) {
+                case ONLINE:
+                    newStatus = Device.DeviceStatus.OFFLINE;
+                    break;
+                case OFFLINE:
+                    newStatus = Device.DeviceStatus.WARNING;
+                    break;
+                case WARNING:
+                    newStatus = Device.DeviceStatus.ERROR;
+                    break;
+                case ERROR:
+                    newStatus = Device.DeviceStatus.ONLINE;
+                    break;
+                default:
+                    newStatus = Device.DeviceStatus.ONLINE;
+            }
+            
+            logger.info("🧪 Test status change: {} -> {} for device: {}", currentStatus, newStatus, device.getName());
+            
+            Device updatedDevice = deviceService.updateDeviceStatus(id, newStatus, organizationId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Test status change completed");
+            response.put("deviceId", id);
+            response.put("oldStatus", currentStatus);
+            response.put("newStatus", newStatus);
+            response.put("deviceName", device.getName());
+            response.put("timestamp", new Date());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("❌ Test status change failed for device: {}", id, e);
+            return ResponseEntity.internalServerError().body(Map.of(
+                "error", "Test status change failed",
+                "message", e.getMessage()
+            ));
         }
     }
 

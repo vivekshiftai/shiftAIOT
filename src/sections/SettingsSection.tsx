@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
   User, 
   Bell, 
@@ -23,7 +24,6 @@ import { ComprehensiveProfileEditor } from '../components/Settings/Comprehensive
 import { NotificationTestPanel } from '../components/Settings/NotificationTestPanel';
 import { NotificationTemplateManager } from '../components/Settings/NotificationTemplateManager';
 import { handleAuthError } from '../utils/authUtils';
-import { AuthDebugger } from '../components/Debug/AuthDebugger';
 import PushNotificationService, { PushNotificationStatus } from '../services/pushNotificationService';
 
 
@@ -54,6 +54,7 @@ interface DashboardSettings {
 
 export const SettingsSection: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -96,6 +97,15 @@ export const SettingsSection: React.FC = () => {
     newPassword: '',
     confirmPassword: ''
   });
+
+  // Handle URL parameters for tab switching
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['profile', 'notifications', 'dashboard', 'conversation', 'security'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [location.search]);
 
   // Load settings on mount
   useEffect(() => {
@@ -241,8 +251,7 @@ export const SettingsSection: React.FC = () => {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'conversation', label: 'Conversation Configuration', icon: MessageSquare },
-    { id: 'security', label: 'Security', icon: Shield },
-    { id: 'debug', label: 'Debug', icon: Info }
+    { id: 'security', label: 'Security', icon: Shield }
   ];
 
 
@@ -600,8 +609,8 @@ export const SettingsSection: React.FC = () => {
           {activeTab === 'notifications' && renderNotificationsTab()}
           {activeTab === 'dashboard' && renderDashboardTab()}
           {activeTab === 'conversation' && renderConversationTab()}
-                     {activeTab === 'security' && renderSecurityTab()}
-           {activeTab === 'debug' && <AuthDebugger />}
+          {activeTab === 'security' && renderSecurityTab()}
+
         </div>
       </div>
     </div>

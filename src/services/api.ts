@@ -170,6 +170,8 @@ export const deviceAPI = {
   create: (deviceData: any) => api.post('/api/devices', deviceData),
   update: (id: string, deviceData: any) => api.put(`/api/devices/${id}`, deviceData),
   delete: (id: string) => api.delete(`/api/devices/${id}`),
+  updateStatus: (id: string, status: string) => api.patch(`/api/devices/${id}/status`, status),
+  testStatusChange: (id: string) => api.post(`/api/devices/${id}/test-status-change`),
   getDocumentation: (deviceId: string) => api.get(`/api/devices/${deviceId}/documentation`),
   downloadDocumentation: (deviceId: string, type: string) => api.get(`/api/devices/${deviceId}/documentation/${type}/download`),
   debugDatabase: (email: string) => api.get(`/api/devices/debug-db?email=${email}`),
