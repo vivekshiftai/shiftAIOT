@@ -7,6 +7,7 @@ import nl.martijndwars.webpush.PushService;
 import nl.martijndwars.webpush.Subscription;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
@@ -25,6 +26,7 @@ import java.util.concurrent.Executors;
 @RequiredArgsConstructor
 public class PushNotificationService {
 
+    @Lazy
     private final NotificationSettingsService notificationSettingsService;
     
     @Value("${push.vapid.public.key:}")

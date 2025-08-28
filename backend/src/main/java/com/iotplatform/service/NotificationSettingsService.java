@@ -5,6 +5,7 @@ import com.iotplatform.model.UserPreferences;
 import com.iotplatform.repository.UserPreferencesRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -19,6 +20,7 @@ import java.util.Optional;
 public class NotificationSettingsService {
 
     private final UserPreferencesRepository userPreferencesRepository;
+    @Lazy
     private final NotificationService notificationService;
 
     /**
