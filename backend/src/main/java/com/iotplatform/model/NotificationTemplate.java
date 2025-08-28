@@ -2,6 +2,7 @@ package com.iotplatform.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -19,7 +20,7 @@ public class NotificationTemplate {
     @Column(name = "name", nullable = false)
     private String name;
     
-    @NotBlank(message = "Template type is required")
+    @NotNull(message = "Template type is required")
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
     private TemplateType type;
@@ -34,6 +35,7 @@ public class NotificationTemplate {
     @Column(name = "message_template", nullable = false)
     private String messageTemplate;
     
+    @NotNull(message = "Notification type is required")
     @Enumerated(EnumType.STRING)
     @Column(name = "notification_type", nullable = false)
     private Notification.NotificationType notificationType = Notification.NotificationType.INFO;
@@ -41,6 +43,7 @@ public class NotificationTemplate {
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
     
+    @NotBlank(message = "Organization ID is required")
     @Column(name = "organization_id", nullable = false)
     private String organizationId;
     

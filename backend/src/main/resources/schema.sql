@@ -262,6 +262,22 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- Notification Templates table
+CREATE TABLE IF NOT EXISTS notification_templates (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    title_template VARCHAR(200) NOT NULL,
+    message_template TEXT NOT NULL,
+    notification_type VARCHAR(50) NOT NULL DEFAULT 'INFO',
+    is_active BOOLEAN DEFAULT true,
+    organization_id VARCHAR(255) NOT NULL,
+    created_by VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    description VARCHAR(500)
+);
+
 -- Knowledge Documents table - Fixed schema
 CREATE TABLE IF NOT EXISTS knowledge_documents (
     id BIGSERIAL PRIMARY KEY,
@@ -351,6 +367,10 @@ CREATE INDEX IF NOT EXISTS idx_devices_assigned_by ON devices(assigned_by);
 CREATE INDEX IF NOT EXISTS idx_rules_organization ON rules(organization_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_organization ON notifications(organization_id);
+CREATE INDEX IF NOT EXISTS idx_notification_templates_organization ON notification_templates(organization_id);
+CREATE INDEX IF NOT EXISTS idx_notification_templates_type ON notification_templates(type);
+CREATE INDEX IF NOT EXISTS idx_notification_templates_active ON notification_templates(is_active);
+CREATE INDEX IF NOT EXISTS idx_notification_templates_name_org ON notification_templates(name, organization_id);
 CREATE INDEX IF NOT EXISTS idx_knowledge_organization ON knowledge_documents(organization_id);
 CREATE INDEX IF NOT EXISTS idx_device_documentation_device ON device_documentation(device_id);
 CREATE INDEX IF NOT EXISTS idx_device_maintenance_device ON device_maintenance(device_id);
