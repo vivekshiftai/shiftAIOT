@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import com.iotplatform.dto.TelemetryDataRequest;
@@ -31,6 +32,7 @@ public class NotificationService {
     private NotificationTemplateService templateService;
     
     @Autowired
+    @Lazy
     private NotificationSettingsService notificationSettingsService;
 
     public List<Notification> getAllNotifications(String organizationId) {

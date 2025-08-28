@@ -16,6 +16,7 @@ import com.iotplatform.repository.DeviceSafetyPrecautionRepository;
 import com.iotplatform.config.PDFProcessingConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -67,6 +68,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
     private final RuleRepository ruleRepository;
     private final DeviceMaintenanceRepository deviceMaintenanceRepository;
     private final DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository;
+    @Lazy
     private final RuleService ruleService;
     private final MaintenanceScheduleService maintenanceService;
     private final DeviceSafetyPrecautionService safetyService;

@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import com.iotplatform.controller.RuleController;
@@ -29,6 +30,7 @@ public class RuleService {
     private DeviceRepository deviceRepository;
 
     @Autowired
+    @Lazy
     private NotificationService notificationService;
 
     public List<Rule> getAllRules(String organizationId) {
