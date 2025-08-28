@@ -7,8 +7,6 @@ import {
   EyeOff, 
   Save, 
   X, 
-  Copy,
-  Play,
   Settings,
   FileText,
   AlertCircle,
@@ -18,6 +16,8 @@ import {
 } from 'lucide-react';
 import { notificationTemplateAPI } from '../../services/api';
 import { NotificationTemplate, NotificationTemplateRequest } from '../../types';
+import { useFormValidation, COMMON_VALIDATION_RULES } from '../../utils/validation';
+import { ValidatedField } from '../UI/ValidatedField';
 
 interface NotificationTemplateManagerProps {
   organizationId: string;
@@ -32,8 +32,17 @@ export const NotificationTemplateManager: React.FC<NotificationTemplateManagerPr
   const [previewTemplate, setPreviewTemplate] = useState<NotificationTemplate | null>(null);
   const [previewVariables, setPreviewVariables] = useState<Record<string, string>>({});
 
-  // Form state
-  const [formData, setFormData] = useState<NotificationTemplateRequest>({
+  // Form validation
+  const validationRules = {
+    name: COMMON_VALIDATION_RULES.templateName,
+    type: { required: true },
+    titleTemplate: COMMON_VALIDATION_RULES.templateTitle,
+    messageTemplate: COMMON_VALIDATION_RULES.templateMessage,
+    notificationType: { required: true },
+    description: COMMON_VALIDATION_RULES.description
+  };
+
+  const initialFormData: NotificationTemplateRequest = {
     name: '',
     type: 'CUSTOM',
     titleTemplate: '',
@@ -42,7 +51,17 @@ export const NotificationTemplateManager: React.FC<NotificationTemplateManagerPr
     active: true,
     description: '',
     variables: {}
-  });
+  };
+
+  const {
+    data: formData,
+    errors,
+    touched,
+    handleChange,
+    handleBlur,
+    validateAll,
+    reset
+  } = useFormValidation(initialFormData, validationRules);
 
   // Load templates
   useEffect(() => {
@@ -64,11 +83,17 @@ export const NotificationTemplateManager: React.FC<NotificationTemplateManagerPr
   };
 
   const handleCreateTemplate = async () => {
+    if (!validateAll()) {
+      setError('Please fix validation errors before submitting');
+      return;
+    }
+
     try {
       await notificationTemplateAPI.create(formData);
       setShowCreateForm(false);
-      resetForm();
+      reset();
       loadTemplates();
+      setError(null);
     } catch (err: any) {
       console.error('Failed to create template:', err);
       setError('Failed to create template');
@@ -78,11 +103,17 @@ export const NotificationTemplateManager: React.FC<NotificationTemplateManagerPr
   const handleUpdateTemplate = async () => {
     if (!editingTemplate) return;
     
+    if (!validateAll()) {
+      setError('Please fix validation errors before submitting');
+      return;
+    }
+
     try {
       await notificationTemplateAPI.update(editingTemplate.id, formData);
       setEditingTemplate(null);
-      resetForm();
+      reset();
       loadTemplates();
+      setError(null);
     } catch (err: any) {
       console.error('Failed to update template:', err);
       setError('Failed to update template');
@@ -126,22 +157,9 @@ export const NotificationTemplateManager: React.FC<NotificationTemplateManagerPr
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      type: 'CUSTOM',
-      titleTemplate: '',
-      messageTemplate: '',
-      notificationType: 'INFO',
-      active: true,
-      description: '',
-      variables: {}
-    });
-  };
-
   const startEdit = (template: NotificationTemplate) => {
     setEditingTemplate(template);
-    setFormData({
+    reset({
       name: template.name,
       type: template.type,
       titleTemplate: template.titleTemplate,
@@ -282,7 +300,7 @@ export const NotificationTemplateManager: React.FC<NotificationTemplateManagerPr
                 onClick={() => {
                   setShowCreateForm(false);
                   setEditingTemplate(null);
-                  resetForm();
+                  reset();
                 }}
                 className="p-2 hover:bg-gray-100 rounded-lg"
               >
@@ -296,104 +314,117 @@ export const NotificationTemplateManager: React.FC<NotificationTemplateManagerPr
             }} className="space-y-4">
               
               {/* Name */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Template Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
+              <ValidatedField
+                label="Template Name"
+                name="name"
+                type="text"
+                value={formData.name}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                validationRule={validationRules.name}
+                error={errors.name}
+                touched={touched.name}
+                placeholder="Enter template name"
+                required
+                maxLength={100}
+              />
 
               {/* Type */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Template Type
-                </label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value="DEVICE_ASSIGNMENT">Device Assignment</option>
-                  <option value="DEVICE_CREATION">Device Creation</option>
-                  <option value="MAINTENANCE_SCHEDULE">Maintenance Schedule</option>
-                  <option value="MAINTENANCE_REMINDER">Maintenance Reminder</option>
-                  <option value="DEVICE_OFFLINE">Device Offline</option>
-                  <option value="DEVICE_ONLINE">Device Online</option>
-                  <option value="TEMPERATURE_ALERT">Temperature Alert</option>
-                  <option value="BATTERY_LOW">Battery Low</option>
-                  <option value="RULE_TRIGGERED">Rule Triggered</option>
-                  <option value="CUSTOM">Custom</option>
-                </select>
-              </div>
+              <ValidatedField
+                label="Template Type"
+                name="type"
+                type="select"
+                value={formData.type}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                validationRule={validationRules.type}
+                error={errors.type}
+                touched={touched.type}
+                required
+                options={[
+                  { value: 'DEVICE_ASSIGNMENT', label: 'Device Assignment' },
+                  { value: 'DEVICE_CREATION', label: 'Device Creation' },
+                  { value: 'MAINTENANCE_SCHEDULE', label: 'Maintenance Schedule' },
+                  { value: 'MAINTENANCE_REMINDER', label: 'Maintenance Reminder' },
+                  { value: 'DEVICE_OFFLINE', label: 'Device Offline' },
+                  { value: 'DEVICE_ONLINE', label: 'Device Online' },
+                  { value: 'TEMPERATURE_ALERT', label: 'Temperature Alert' },
+                  { value: 'BATTERY_LOW', label: 'Battery Low' },
+                  { value: 'RULE_TRIGGERED', label: 'Rule Triggered' },
+                  { value: 'CUSTOM', label: 'Custom' }
+                ]}
+              />
 
               {/* Title Template */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Title Template
-                </label>
-                <input
-                  type="text"
-                  value={formData.titleTemplate}
-                  onChange={(e) => setFormData({ ...formData, titleTemplate: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., New Device Assignment - {{deviceName}}"
-                  required
-                />
-              </div>
+              <ValidatedField
+                label="Title Template"
+                name="titleTemplate"
+                type="text"
+                value={formData.titleTemplate}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                validationRule={validationRules.titleTemplate}
+                error={errors.titleTemplate}
+                touched={touched.titleTemplate}
+                placeholder="e.g., New Device Assignment - {{deviceName}}"
+                required
+                maxLength={200}
+                helpText="Use {{variableName}} for dynamic content"
+              />
 
               {/* Message Template */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Message Template
-                </label>
-                <textarea
-                  value={formData.messageTemplate}
-                  onChange={(e) => setFormData({ ...formData, messageTemplate: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={6}
-                  placeholder="Enter your message template with variables like {{deviceName}}"
-                  required
-                />
-              </div>
+              <ValidatedField
+                label="Message Template"
+                name="messageTemplate"
+                type="textarea"
+                value={formData.messageTemplate}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                validationRule={validationRules.messageTemplate}
+                error={errors.messageTemplate}
+                touched={touched.messageTemplate}
+                placeholder="Enter your message template with variables like {{deviceName}}"
+                required
+                maxLength={1000}
+                rows={6}
+                helpText="Use {{variableName}} for dynamic content"
+              />
 
               {/* Notification Type */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Notification Type
-                </label>
-                <select
-                  value={formData.notificationType}
-                  onChange={(e) => setFormData({ ...formData, notificationType: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                >
-                  <option value="INFO">Info</option>
-                  <option value="WARNING">Warning</option>
-                  <option value="ERROR">Error</option>
-                  <option value="SUCCESS">Success</option>
-                </select>
-              </div>
+              <ValidatedField
+                label="Notification Type"
+                name="notificationType"
+                type="select"
+                value={formData.notificationType}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                validationRule={validationRules.notificationType}
+                error={errors.notificationType}
+                touched={touched.notificationType}
+                required
+                options={[
+                  { value: 'INFO', label: 'Info' },
+                  { value: 'WARNING', label: 'Warning' },
+                  { value: 'ERROR', label: 'Error' },
+                  { value: 'SUCCESS', label: 'Success' }
+                ]}
+              />
 
               {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={2}
-                  placeholder="Optional description of this template"
-                />
-              </div>
+              <ValidatedField
+                label="Description"
+                name="description"
+                type="textarea"
+                value={formData.description}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                validationRule={validationRules.description}
+                error={errors.description}
+                touched={touched.description}
+                placeholder="Optional description of this template"
+                maxLength={500}
+                rows={2}
+              />
 
               {/* Active Status */}
               <div className="flex items-center gap-2">
@@ -401,7 +432,7 @@ export const NotificationTemplateManager: React.FC<NotificationTemplateManagerPr
                   type="checkbox"
                   id="active"
                   checked={formData.active}
-                  onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                  onChange={(e) => handleChange('active', e.target.checked)}
                   className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
                 <label htmlFor="active" className="text-sm font-medium text-slate-700">
@@ -416,7 +447,7 @@ export const NotificationTemplateManager: React.FC<NotificationTemplateManagerPr
                   onClick={() => {
                     setShowCreateForm(false);
                     setEditingTemplate(null);
-                    resetForm();
+                    reset();
                   }}
                   className="px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
                 >
@@ -480,7 +511,7 @@ export const NotificationTemplateManager: React.FC<NotificationTemplateManagerPr
                   onClick={handlePreviewTemplate}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  <Play className="w-4 h-4" />
+                  <FileText className="w-4 h-4" />
                   Preview
                 </button>
               </div>

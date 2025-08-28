@@ -45,7 +45,8 @@ public interface DeviceMaintenanceRepository extends JpaRepository<DeviceMainten
     @Query("SELECT COUNT(dm) FROM DeviceMaintenance dm WHERE dm.device.id = :deviceId AND dm.status = :status")
     long countByDeviceIdAndStatus(@Param("deviceId") String deviceId, @Param("status") DeviceMaintenance.Status status);
     
-    long countByOrganizationIdAndStatus(String organizationId, DeviceMaintenance.Status status);
+    @Query("SELECT COUNT(dm) FROM DeviceMaintenance dm WHERE dm.organizationId = :organizationId AND dm.status = :status")
+    long countByOrganizationIdAndStatus(@Param("organizationId") String organizationId, @Param("status") DeviceMaintenance.Status status);
     
     @Query("DELETE FROM DeviceMaintenance dm WHERE dm.device.id = :deviceId")
     void deleteByDeviceId(@Param("deviceId") String deviceId);

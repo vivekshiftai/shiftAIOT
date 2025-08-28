@@ -200,6 +200,14 @@ public class MaintenanceScheduleService {
     }
     
     /**
+     * Get total maintenance count for an organization.
+     */
+    public long getMaintenanceCountByOrganization(String organizationId) {
+        log.info("Fetching total maintenance count for organization: {}", organizationId);
+        return deviceMaintenanceRepository.countByOrganizationIdAndStatus(organizationId, DeviceMaintenance.Status.ACTIVE);
+    }
+    
+    /**
      * Create maintenance tasks from PDF with enhanced data processing and validation.
      * Skips tasks without task_name and uses default values for missing fields.
      */

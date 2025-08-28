@@ -46,6 +46,7 @@ import com.iotplatform.service.DeviceWebSocketService;
 import com.iotplatform.service.FileStorageService;
 import com.iotplatform.service.TelemetryService;
 import com.iotplatform.service.UnifiedOnboardingService;
+import com.iotplatform.service.MaintenanceScheduleService;
 import com.iotplatform.model.Rule;
 import com.iotplatform.model.DeviceMaintenance;
 import com.iotplatform.model.DeviceSafetyPrecaution;
@@ -91,8 +92,9 @@ public class DeviceController {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final DeviceWebSocketService deviceWebSocketService;
+    private final MaintenanceScheduleService maintenanceScheduleService;
 
-    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService) {
+    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService, MaintenanceScheduleService maintenanceScheduleService) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.fileStorageService = fileStorageService;
@@ -107,6 +109,7 @@ public class DeviceController {
         this.userRepository = userRepository;
         this.notificationService = notificationService;
         this.deviceWebSocketService = deviceWebSocketService;
+        this.maintenanceScheduleService = maintenanceScheduleService;
     }
 
     @GetMapping
@@ -1441,17 +1444,14 @@ public class DeviceController {
         
         try {
             String organizationId = user.getOrganizationId();
-            // For now, we'll get maintenance for all devices in the organization
-            // In a real implementation, you might want to get maintenance for specific devices
-            List<DeviceMaintenance> upcomingMaintenance = new ArrayList<>();
-            long totalCount = 0;
+            logger.info("Fetching upcoming maintenance for organization: {}", organizationId);
             
-            // Get all devices for the organization and collect their maintenance
-            List<Device> devices = deviceRepository.findByOrganizationId(organizationId);
-            for (Device device : devices) {
-                upcomingMaintenance.addAll(pdfProcessingService.getUpcomingMaintenance(device.getId()));
-                totalCount += pdfProcessingService.getMaintenanceCount(device.getId());
-            }
+            // Use the maintenance schedule service directly instead of PDF processing service
+            List<DeviceMaintenance> upcomingMaintenance = maintenanceScheduleService.getUpcomingMaintenanceByOrganization(organizationId);
+            long totalCount = maintenanceScheduleService.getMaintenanceCountByOrganization(organizationId);
+            
+            logger.info("Found {} upcoming maintenance tasks and {} total maintenance tasks for organization: {}", 
+                       upcomingMaintenance.size(), totalCount, organizationId);
             
             Map<String, Object> response = new HashMap<>();
             response.put("upcomingMaintenance", upcomingMaintenance);
