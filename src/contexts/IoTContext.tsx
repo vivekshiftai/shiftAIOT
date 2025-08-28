@@ -18,6 +18,8 @@ interface IoTContextType {
   error: string | null;
   updateDeviceStatus: (deviceId: string, status: Status) => void;
   addNotification: (notification: Notification) => void;
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
   addTelemetryData: (data: TelemetryData) => Promise<void>;
   createRule: (rule: Partial<Rule>) => Promise<void>;
   updateRule: (id: string, ruleUpdates: Partial<Rule>) => Promise<void>;
@@ -515,6 +517,44 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     }
   };
 
+  const markNotificationAsRead = async (notificationId: string) => {
+    try {
+      logInfo('IoT', 'Marking notification as read', { notificationId });
+      await notificationAPI.markAsRead(notificationId);
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === notificationId 
+            ? { ...notification, read: true }
+            : notification
+        )
+      );
+      
+      logInfo('IoT', 'Notification marked as read successfully', { notificationId });
+    } catch (error) {
+      logError('IoT', 'Failed to mark notification as read', error instanceof Error ? error : new Error('Unknown error'));
+      throw error;
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    try {
+      logInfo('IoT', 'Marking all notifications as read');
+      await notificationAPI.markAllAsRead();
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => ({ ...notification, read: true }))
+      );
+      
+      logInfo('IoT', 'All notifications marked as read successfully');
+    } catch (error) {
+      logError('IoT', 'Failed to mark all notifications as read', error instanceof Error ? error : new Error('Unknown error'));
+      throw error;
+    }
+  };
+
   return (
     <IoTContext.Provider value={{
       devices,
@@ -525,6 +565,8 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       error,
       updateDeviceStatus,
       addNotification,
+      markNotificationAsRead,
+      markAllNotificationsAsRead,
       addTelemetryData,
       createRule,
       updateRule,

@@ -5,7 +5,7 @@ import { Notification } from '../types';
 import { LoadingSpinner } from '../components/Loading/LoadingComponents';
 
 export const NotificationsSection: React.FC = () => {
-  const { notifications, markNotificationAsRead } = useIoT();
+  const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useIoT();
   const params = new URLSearchParams(window.location.search);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -40,10 +40,7 @@ export const NotificationsSection: React.FC = () => {
   };
 
   const handleMarkAllAsRead = async () => {
-    const unreadNotifications = notifications.filter(n => !n.read);
-    for (const notification of unreadNotifications) {
-      await markNotificationAsRead(notification.id);
-    }
+    await markAllNotificationsAsRead();
   };
 
   const handleSelectNotification = (notificationId: string) => {

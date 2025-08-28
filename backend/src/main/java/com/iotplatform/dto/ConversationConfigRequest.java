@@ -15,7 +15,7 @@ public class ConversationConfigRequest {
     @JsonProperty("platformType")
     private String platformType;
     
-    @NotNull
+    @NotNull(message = "Credentials cannot be null")
     @JsonProperty("credentials")
     private Map<String, Object> credentials;
     

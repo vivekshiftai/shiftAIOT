@@ -19,7 +19,8 @@ import {
   Filter,
   Eye,
   EyeOff,
-  ArrowLeft
+  ArrowLeft,
+  Wrench
 } from 'lucide-react';
 import { useIoT } from '../contexts/IoTContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -77,6 +78,143 @@ interface KnowledgeDocument {
   deviceName?: string;
 }
 
+interface MaintenanceTask {
+  id: string;
+  taskName: string;
+  description?: string;
+  status: string;
+  priority: string;
+  frequency: string;
+  nextMaintenance: string;
+  deviceName?: string;
+  assignedTo?: string;
+  estimatedDuration?: string;
+  notes?: string;
+  requiredTools?: string;
+  safetyNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Maintenance Card Component
+const MaintenanceCard: React.FC<{ task: MaintenanceTask }> = ({ task }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'scheduled':
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'in_progress':
+        return 'bg-blue-100 text-blue-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'overdue':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority.toLowerCase()) {
+      case 'critical':
+      case 'high':
+        return 'bg-red-100 text-red-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'low':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <h4 className="font-medium text-slate-800 mb-1">{task.taskName}</h4>
+          <p className="text-sm text-slate-600 mb-2">{task.frequency}</p>
+        </div>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+        >
+          {isExpanded ? (
+            <EyeOff className="w-4 h-4 text-slate-500" />
+          ) : (
+            <Eye className="w-4 h-4 text-slate-500" />
+          )}
+        </button>
+      </div>
+
+      <div className="flex items-center gap-2 mb-3">
+        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+          {task.status.replace('_', ' ')}
+        </span>
+        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+          {task.priority}
+        </span>
+      </div>
+
+      <div className="text-sm text-slate-600 mb-3">
+        <p><strong>Next:</strong> {formatDate(task.nextMaintenance)}</p>
+      </div>
+
+      {isExpanded && (
+        <div className="border-t border-slate-200 pt-3 space-y-2">
+          {task.description && (
+            <div>
+              <p className="text-sm text-slate-700"><strong>Description:</strong></p>
+              <p className="text-sm text-slate-600">{task.description}</p>
+            </div>
+          )}
+          
+          {task.assignedTo && (
+            <div>
+              <p className="text-sm text-slate-700"><strong>Assigned to:</strong></p>
+              <p className="text-sm text-slate-600">{task.assignedTo}</p>
+            </div>
+          )}
+          
+          {task.estimatedDuration && (
+            <div>
+              <p className="text-sm text-slate-700"><strong>Estimated Duration:</strong></p>
+              <p className="text-sm text-slate-600">{task.estimatedDuration}</p>
+            </div>
+          )}
+          
+          {task.requiredTools && (
+            <div>
+              <p className="text-sm text-slate-700"><strong>Required Tools:</strong></p>
+              <p className="text-sm text-slate-600">{task.requiredTools}</p>
+            </div>
+          )}
+          
+          {task.notes && (
+            <div>
+              <p className="text-sm text-slate-700"><strong>Notes:</strong></p>
+              <p className="text-sm text-slate-600">{task.notes}</p>
+            </div>
+          )}
+          
+          {task.safetyNotes && (
+            <div>
+              <p className="text-sm text-slate-700"><strong>Safety Notes:</strong></p>
+              <p className="text-sm text-slate-600">{task.safetyNotes}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const tabs = [
   { id: 'device-info', label: 'Device Information', icon: Settings },
   { id: 'maintenance', label: 'Maintenance', icon: Settings },
@@ -111,7 +249,7 @@ export const DeviceDetailsSection: React.FC = () => {
   
   // Real-time data states
   const [deviceStats, setDeviceStats] = useState<DeviceStats | null>(null);
-  const [maintenanceHistory, setMaintenanceHistory] = useState<any[]>([]);
+  const [maintenanceHistory, setMaintenanceHistory] = useState<MaintenanceTask[]>([]);
   const [deviceRules, setDeviceRules] = useState<any[]>([]);
   const [safetyPrecautions, setSafetyPrecautions] = useState<any[]>([]);
   const [lastSeen, setLastSeen] = useState<string>('');
@@ -181,8 +319,27 @@ export const DeviceDetailsSection: React.FC = () => {
       console.log('🔧 Maintenance data:', maintenanceData);
       console.log('🛡️ Safety data:', safetyData);
       
+      // Transform maintenance data to match MaintenanceTask interface
+      const transformedMaintenanceData: MaintenanceTask[] = maintenanceData.map((task: any) => ({
+        id: task.id || task.taskId || '',
+        taskName: task.taskName || task.title || task.name || 'Unnamed Task',
+        description: task.description || task.details || '',
+        status: task.status || 'scheduled',
+        priority: task.priority || 'medium',
+        frequency: task.frequency || task.schedule || 'unknown',
+        nextMaintenance: task.nextMaintenance || task.scheduledDate || task.dueDate || new Date().toISOString(),
+        deviceName: task.deviceName || device.name,
+        assignedTo: task.assignedTo || task.assignedUserId || '',
+        estimatedDuration: task.estimatedDuration || task.duration || '',
+        notes: task.notes || task.comments || '',
+        requiredTools: task.requiredTools || task.tools || '',
+        safetyNotes: task.safetyNotes || task.safetyInfo || '',
+        createdAt: task.createdAt || task.created_at || new Date().toISOString(),
+        updatedAt: task.updatedAt || task.updated_at || new Date().toISOString()
+      }));
+      
       setDeviceRules(rulesData);
-      setMaintenanceHistory(maintenanceData);
+      setMaintenanceHistory(transformedMaintenanceData);
       setSafetyPrecautions(safetyData);
       
       // Update last seen timestamp
@@ -967,6 +1124,33 @@ export const DeviceDetailsSection: React.FC = () => {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </div>
+
+            {/* Maintenance Cards */}
+            <div className="border-t border-slate-200 pt-6">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <Wrench className="w-5 h-5" />
+                Maintenance Tasks
+              </h3>
+              
+              {isRealTimeLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                  <p className="text-slate-600 mt-2">Loading maintenance tasks...</p>
+                </div>
+              ) : maintenanceHistory.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {maintenanceHistory.slice(0, 6).map((task) => (
+                    <MaintenanceCard key={task.id} task={task} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Wrench className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                  <p className="text-slate-600">No maintenance tasks found</p>
+                  <p className="text-sm text-slate-500 mt-1">Maintenance tasks will appear here when scheduled</p>
                 </div>
               )}
             </div>

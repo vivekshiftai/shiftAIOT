@@ -9,42 +9,56 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Converter
 public class JsonConverter implements AttributeConverter<Map<String, Object>, Object> {
     
+    private static final Logger logger = LoggerFactory.getLogger(JsonConverter.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public Object convertToDatabaseColumn(Map<String, Object> attribute) {
         if (attribute == null) {
+            logger.debug("Converting null attribute to database column");
             return null;
         }
         try {
-            // Return as JsonNode for PostgreSQL JSON type
-            return objectMapper.valueToTree(attribute);
+            // Convert to JSON string for PostgreSQL JSON type
+            String jsonString = objectMapper.writeValueAsString(attribute);
+            logger.debug("Successfully converted Map to JSON string: {}", jsonString);
+            return jsonString;
         } catch (Exception e) {
-            throw new RuntimeException("Error converting map to JSON", e);
+            logger.error("Error converting map to JSON: {}", e.getMessage(), e);
+            throw new RuntimeException("Error converting map to JSON: " + e.getMessage(), e);
         }
     }
 
     @Override
     public Map<String, Object> convertToEntityAttribute(Object dbData) {
         if (dbData == null) {
+            logger.debug("Converting null database data to entity attribute");
             return null;
         }
         try {
+            Map<String, Object> result;
             if (dbData instanceof String) {
-                return objectMapper.readValue((String) dbData, new TypeReference<Map<String, Object>>() {});
+                result = objectMapper.readValue((String) dbData, new TypeReference<Map<String, Object>>() {});
+                logger.debug("Successfully converted JSON string to Map: {}", dbData);
             } else if (dbData instanceof JsonNode) {
-                return objectMapper.convertValue(dbData, new TypeReference<Map<String, Object>>() {});
+                result = objectMapper.convertValue(dbData, new TypeReference<Map<String, Object>>() {});
+                logger.debug("Successfully converted JsonNode to Map: {}", dbData);
             } else {
                 // Handle other cases by converting to string first
                 String jsonString = objectMapper.writeValueAsString(dbData);
-                return objectMapper.readValue(jsonString, new TypeReference<Map<String, Object>>() {});
+                result = objectMapper.readValue(jsonString, new TypeReference<Map<String, Object>>() {});
+                logger.debug("Successfully converted unknown type to Map via string: {}", jsonString);
             }
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error converting JSON to map", e);
+            return result;
+        } catch (Exception e) {
+            logger.error("Error converting JSON to map: {}", e.getMessage(), e);
+            throw new RuntimeException("Error converting JSON to map: " + e.getMessage(), e);
         }
     }
 }

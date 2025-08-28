@@ -208,8 +208,8 @@ const RulesPage: React.FC = () => {
 
   // Filter functions
   const filteredRules = rules.filter(rule => {
-    const matchesSearch = rule.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         rule.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (rule.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (rule.description?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || 
                          (filterStatus === 'active' && rule.status === 'ACTIVE') ||
                          (filterStatus === 'inactive' && rule.status === 'INACTIVE');
@@ -217,8 +217,8 @@ const RulesPage: React.FC = () => {
   });
 
   const filteredMaintenance = maintenanceTasks.filter(task => {
-    const matchesSearch = task.taskName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         task.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (task.taskName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (task.description?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || 
                          (filterStatus === 'active' && task.status !== 'COMPLETED') ||
                          (filterStatus === 'inactive' && task.status === 'COMPLETED');
@@ -226,8 +226,8 @@ const RulesPage: React.FC = () => {
   });
 
   const filteredSafety = safetyPrecautions.filter(precaution => {
-    const matchesSearch = precaution.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         precaution.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (precaution.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (precaution.description?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || 
                          (filterStatus === 'active' && precaution.isActive) ||
                          (filterStatus === 'inactive' && !precaution.isActive);
@@ -285,7 +285,9 @@ const RulesPage: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | undefined) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
+    
     switch (status) {
       case 'active':
       case 'pending':
@@ -301,7 +303,9 @@ const RulesPage: React.FC = () => {
     }
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityColor = (priority: string | undefined) => {
+    if (!priority) return 'bg-gray-100 text-gray-800';
+    
     switch (priority.toLowerCase()) {
       case 'critical':
       case 'high':
@@ -315,7 +319,9 @@ const RulesPage: React.FC = () => {
     }
   };
 
-  const getSeverityColor = (severity: string) => {
+  const getSeverityColor = (severity: string | undefined) => {
+    if (!severity) return 'bg-gray-100 text-gray-800';
+    
     switch (severity) {
       case 'CRITICAL':
         return 'bg-red-100 text-red-800';

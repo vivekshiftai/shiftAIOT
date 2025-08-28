@@ -82,6 +82,14 @@ public class ConversationConfigController {
         logger.info("👤 User {} creating conversation config", user.getEmail());
         
         try {
+            // Validate credentials before saving
+            if (request.getCredentials() == null || request.getCredentials().isEmpty()) {
+                logger.error("❌ Credentials cannot be null or empty");
+                return ResponseEntity.badRequest().body("Credentials cannot be null or empty");
+            }
+            
+            logger.info("📝 Validating credentials structure: {}", request.getCredentials());
+            
             ConversationConfig config = new ConversationConfig();
             config.setPlatformName(request.getPlatformName());
             config.setPlatformType(request.getPlatformType());
@@ -106,6 +114,14 @@ public class ConversationConfigController {
         User user = userDetails.getUser();
         
         try {
+            // Validate credentials before updating
+            if (request.getCredentials() == null || request.getCredentials().isEmpty()) {
+                logger.error("❌ Credentials cannot be null or empty");
+                return ResponseEntity.badRequest().body("Credentials cannot be null or empty");
+            }
+            
+            logger.info("📝 Validating credentials structure for update: {}", request.getCredentials());
+            
             ConversationConfig config = new ConversationConfig();
             config.setPlatformName(request.getPlatformName());
             config.setPlatformType(request.getPlatformType());
