@@ -1021,13 +1021,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           ))}
         </div>
 
-        {/* Step Description */}
-        <div className="text-center">
-          <h3 className="text-lg font-bold text-gray-800 mb-2">{stepLabels[currentStep - 1]}</h3>
-          <p className="text-gray-600 text-sm leading-relaxed max-w-md">
-            {stepDescriptions[currentStep - 1]}
-          </p>
-        </div>
+
       </div>
     );
   }, [currentStep]);
