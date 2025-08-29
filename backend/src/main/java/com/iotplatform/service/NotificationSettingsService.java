@@ -5,6 +5,8 @@ import com.iotplatform.model.UserPreferences;
 import com.iotplatform.repository.UserPreferencesRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
@@ -14,10 +16,11 @@ import java.util.Optional;
  * Service for managing notification settings and ensuring notifications
  * are only sent based on user preferences.
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationSettingsService {
+    
+    private static final Logger log = LoggerFactory.getLogger(NotificationSettingsService.class);
     
     private final UserPreferencesRepository userPreferencesRepository;
     @Lazy

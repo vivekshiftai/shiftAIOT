@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import nl.martijndwars.webpush.PushService;
 import nl.martijndwars.webpush.Subscription;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -21,10 +23,11 @@ import java.util.concurrent.Executors;
  * Service for sending web push notifications to browsers.
  * Uses the Web Push protocol to send notifications to subscribed clients.
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PushNotificationService {
+    
+    private static final Logger log = LoggerFactory.getLogger(PushNotificationService.class);
 
     @Lazy
     private final NotificationSettingsService notificationSettingsService;

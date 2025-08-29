@@ -84,6 +84,12 @@ public class SafetyGenerationResponse {
         @JsonProperty("safety_info")
         private String safetyInfo;
         
+        @JsonProperty("type")
+        private String type;
+        
+        @JsonProperty("recommended_action")
+        private String recommendedAction;
+        
         // Explicit getter methods in case Lombok fails
         public String getTitle() {
             return title;
@@ -119,6 +125,14 @@ public class SafetyGenerationResponse {
         
         public String getSafetyInfo() {
             return safetyInfo;
+        }
+        
+        public String getType() {
+            return type;
+        }
+        
+        public String getRecommendedAction() {
+            return recommendedAction;
         }
     }
 }

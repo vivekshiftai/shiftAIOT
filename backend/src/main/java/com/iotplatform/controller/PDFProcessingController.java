@@ -15,6 +15,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -51,13 +53,14 @@ import com.iotplatform.service.DeviceDocumentationService;
  * @author IoT Platform Team
  * @version 1.0
  */
-@Slf4j
 @RestController
 @RequestMapping("/api/pdf")
 @RequiredArgsConstructor
 @Tag(name = "PDF Processing", description = "PDF document processing and management operations")
 @CrossOrigin(origins = "*", maxAge = 3600)
 public class PDFProcessingController {
+    
+    private static final Logger log = LoggerFactory.getLogger(PDFProcessingController.class);
 
     private final PDFProcessingService pdfProcessingService;
     private final PDFProcessingConfig config;

@@ -31,6 +31,11 @@ public class PDFListResponse {
     @JsonProperty("total_count")
     private int totalCount;
     
+    // Additional getter method for compatibility
+    public int getTotalCount() {
+        return totalCount;
+    }
+    
     @JsonProperty("page")
     private int page;
     

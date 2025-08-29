@@ -576,67 +576,7 @@ public class UnifiedOnboardingService {
         }
     }
 
-    /**
-     * Store safety precautions in database
-     */
-    private void storeSafetyPrecautions(List<SafetyGenerationResponse.SafetyPrecaution> safetyPrecautions, String deviceId, String organizationId) {
-        try {
-            log.info("Starting to store {} safety precautions for device: {} in organization: {}", safetyPrecautions.size(), deviceId, organizationId);
-            List<DeviceSafetyPrecaution> safetyToSave = new ArrayList<>();
-            
-            for (var safetyData : safetyPrecautions) {
-                DeviceSafetyPrecaution safety = new DeviceSafetyPrecaution();
-                safety.setId(UUID.randomUUID().toString());
-                safety.setDeviceId(deviceId);
-                safety.setOrganizationId(organizationId);
-                safety.setTitle(safetyData.getTitle());
-                safety.setDescription(safetyData.getDescription());
-                safety.setSeverity(safetyData.getSeverity());
-                safety.setCategory(safetyData.getCategory());
-                safety.setType("PDF_GENERATED"); // Set required type field
-                safety.setRecommendedAction(safetyData.getMitigation());
-                safety.setIsActive(true);
-                safety.setCreatedAt(LocalDateTime.now());
-                safety.setUpdatedAt(LocalDateTime.now());
-                
-                log.debug("Created safety precaution: ID={}, Title={}, Type={}, Category={}", 
-                    safety.getId(), safety.getTitle(), safety.getType(), safety.getCategory());
-                
-                // Verify all required fields are set
-                if (safety.getId() == null || safety.getId().trim().isEmpty()) {
-                    log.error("Safety precaution ID is null or empty");
-                    throw new IllegalStateException("Safety precaution ID is required");
-                }
-                if (safety.getType() == null || safety.getType().trim().isEmpty()) {
-                    log.error("Safety precaution Type is null or empty");
-                    throw new IllegalStateException("Safety precaution Type is required");
-                }
-                if (safety.getCategory() == null || safety.getCategory().trim().isEmpty()) {
-                    log.error("Safety precaution Category is null or empty");
-                    throw new IllegalStateException("Safety precaution Category is required");
-                }
-                
-                safetyToSave.add(safety);
-            }
-            
-            // Save safety precautions one by one to avoid batch operation issues
-            for (DeviceSafetyPrecaution safety : safetyToSave) {
-                try {
-                    safetyRepository.save(safety);
-                    log.debug("Successfully saved safety precaution: {}", safety.getId());
-                } catch (Exception e) {
-                    log.error("Failed to save safety precaution {}: {}", safety.getId(), e.getMessage());
-                    throw e; // Re-throw to stop the process
-                }
-            }
-            log.info("Successfully stored {} safety precautions for device: {}", safetyToSave.size(), deviceId);
-            
-        } catch (Exception e) {
-            log.error("Error storing safety precautions for device: {} - Error: {}", deviceId, e.getMessage(), e);
-            // Don't re-throw to avoid transaction rollback issues
-            log.warn("Safety precautions storage failed, but continuing with device creation");
-        }
-    }
+
 
     /**
      * Process and store rules for the device (DEPRECATED - use processPDFAndGenerateContent instead)
@@ -1028,7 +968,7 @@ public class UnifiedOnboardingService {
             }
             
             if (!precautionsToSave.isEmpty()) {
-                deviceSafetyPrecautionRepository.saveAll(precautionsToSave);
+                safetyRepository.saveAll(precautionsToSave);
                 log.info("Successfully stored {} safety precautions for device: {}", precautionsToSave.size(), deviceId);
                 
                 // Send notification to device assignee about new safety precautions
@@ -1071,24 +1011,21 @@ public class UnifiedOnboardingService {
     /**
      * Process safety type with default value.
      */
-    private DeviceSafetyPrecaution.Type processSafetyTypeWithDefault(String type) {
+    private String processSafetyTypeWithDefault(String type) {
         if (type == null || type.trim().isEmpty()) {
-            return DeviceSafetyPrecaution.Type.WARNING;
+            return "warning";
         }
         String typeStr = type.trim().toLowerCase();
         
         switch (typeStr) {
             case "warning":
-                return DeviceSafetyPrecaution.Type.WARNING;
             case "procedure":
-                return DeviceSafetyPrecaution.Type.PROCEDURE;
             case "caution":
-                return DeviceSafetyPrecaution.Type.CAUTION;
             case "note":
-                return DeviceSafetyPrecaution.Type.NOTE;
+                return typeStr;
             default:
-                log.warn("Unknown safety type: {}, defaulting to WARNING", typeStr);
-                return DeviceSafetyPrecaution.Type.WARNING;
+                log.warn("Unknown safety type: {}, defaulting to warning", typeStr);
+                return "warning";
         }
     }
 
@@ -1106,17 +1043,22 @@ public class UnifiedOnboardingService {
     /**
      * Process safety severity with default value.
      */
-    private DeviceSafetyPrecaution.Severity processSafetySeverityWithDefault(String severity) {
+    private String processSafetySeverityWithDefault(String severity) {
         if (severity == null || severity.trim().isEmpty()) {
-            return DeviceSafetyPrecaution.Severity.MEDIUM;
+            return "MEDIUM";
         }
         String sev = severity.trim().toUpperCase();
         
-        try {
-            return DeviceSafetyPrecaution.Severity.valueOf(sev);
-        } catch (IllegalArgumentException e) {
-            log.warn("Invalid severity value: {}, defaulting to MEDIUM", sev);
-            return DeviceSafetyPrecaution.Severity.MEDIUM;
+        // Validate severity values
+        switch (sev) {
+            case "LOW":
+            case "MEDIUM":
+            case "HIGH":
+            case "CRITICAL":
+                return sev;
+            default:
+                log.warn("Invalid severity value: {}, defaulting to MEDIUM", sev);
+                return "MEDIUM";
         }
     }
 

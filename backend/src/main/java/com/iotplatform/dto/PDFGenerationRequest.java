@@ -29,4 +29,17 @@ public class PDFGenerationRequest {
     
     @JsonProperty("organization_id")
     private String organizationId; // Optional - will be set from authenticated user
+    
+    // Additional getter methods for compatibility
+    public String getPdfName() {
+        return pdfName;
+    }
+    
+    public String getDeviceId() {
+        return deviceId;
+    }
+    
+    public void setOrganizationId(String organizationId) {
+        this.organizationId = organizationId;
+    }
 }
