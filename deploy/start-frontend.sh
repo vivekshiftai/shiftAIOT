@@ -9,7 +9,8 @@ set -e
 APP_NAME="iot-platform-frontend"
 APP_DIR="/opt/iot-platform/frontend"
 LOG_DIR="/var/log/iot-platform"
-PID_FILE="/var/run/iot-platform-frontend.pid"
+FRONTEND_LOG="$LOG_DIR/frontend.log"
+PID_FILE="/var/run/iot-platform/iot-platform-frontend.pid"
 PORT=3000
 NODE_ENV="production"
 
@@ -42,8 +43,10 @@ fi
 log "Creating necessary directories..."
 sudo mkdir -p $APP_DIR
 sudo mkdir -p $LOG_DIR
+sudo mkdir -p /var/run/iot-platform
 sudo chown $USER:$USER $APP_DIR
 sudo chown $USER:$USER $LOG_DIR
+sudo chown $USER:$USER /var/run/iot-platform
 
 # Check if Node.js is installed
 if ! command -v node &> /dev/null; then
@@ -110,7 +113,7 @@ cd $APP_DIR
 # Install dependencies if node_modules doesn't exist
 if [ ! -d "node_modules" ]; then
     log "Installing dependencies..."
-    npm install --production
+    npm install --production >> $LOG_DIR/npm-install.log 2>&1
 fi
 
 # Set environment variables
@@ -119,7 +122,7 @@ export PORT=$PORT
 
 # Start the application
 log "Starting $APP_NAME on port $PORT..."
-nohup npm run preview > $LOG_DIR/frontend.log 2>&1 &
+nohup npm run preview > $FRONTEND_LOG 2>&1 &
 
 # Save PID
 echo $! > $PID_FILE
@@ -133,6 +136,7 @@ if [ -f "$PID_FILE" ]; then
         log "✅ $APP_NAME started successfully with PID: $PID"
         log "📁 Logs available at: $LOG_DIR/frontend.log"
         log "🌐 Application URL: http://localhost:$PORT"
+        log "📝 Frontend log: $FRONTEND_LOG"
         
         # Check if application is responding
         sleep 3
@@ -140,11 +144,11 @@ if [ -f "$PID_FILE" ]; then
             log "✅ Application is responding on port $PORT"
         else
             warn "⚠️ Application may not be fully started yet"
-            log "Check logs: tail -f $LOG_DIR/frontend.log"
+            log "Check logs: tail -f $FRONTEND_LOG"
         fi
     else
         error "❌ Failed to start $APP_NAME"
-        error "Check logs at: $LOG_DIR/frontend.log"
+        error "Check logs at: $FRONTEND_LOG"
         rm -f $PID_FILE
         exit 1
     fi

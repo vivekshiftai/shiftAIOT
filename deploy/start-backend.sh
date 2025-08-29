@@ -10,7 +10,8 @@ APP_NAME="iot-platform-backend"
 JAR_FILE="iot-platform-backend-0.0.1-SNAPSHOT.jar"
 APP_DIR="/opt/iot-platform"
 LOG_DIR="/var/log/iot-platform"
-PID_FILE="/var/run/iot-platform-backend.pid"
+BACKEND_LOG="$LOG_DIR/backend.log"
+PID_FILE="/var/run/iot-platform/iot-platform-backend.pid"
 JAVA_OPTS="-Xms512m -Xmx2g -XX:+UseG1GC -XX:+UseStringDeduplication"
 SPRING_PROFILES="prod"
 
@@ -43,8 +44,10 @@ fi
 log "Creating necessary directories..."
 sudo mkdir -p $APP_DIR
 sudo mkdir -p $LOG_DIR
+sudo mkdir -p /var/run/iot-platform
 sudo chown $USER:$USER $APP_DIR
 sudo chown $USER:$USER $LOG_DIR
+sudo chown $USER:$USER /var/run/iot-platform
 
 # Check if JAR file exists
 if [ ! -f "$APP_DIR/$JAR_FILE" ]; then
@@ -89,7 +92,7 @@ nohup java $JAVA_OPTS \
     -Dspring.profiles.active=$SPRING_PROFILES \
     -Dserver.port=8100 \
     -Dlogging.file.path=$LOG_DIR \
-    -Dlogging.file.name=$LOG_DIR/iot-platform-backend.log \
+    -Dlogging.file.name=$BACKEND_LOG \
     -jar $APP_DIR/$JAR_FILE > $LOG_DIR/startup.log 2>&1 &
 
 # Save PID
@@ -105,6 +108,7 @@ if [ -f "$PID_FILE" ]; then
         log "📁 Logs available at: $LOG_DIR/"
         log "🌐 Application URL: http://localhost:8100"
         log "📊 Health check: http://localhost:8100/actuator/health"
+        log "📝 Backend log: $BACKEND_LOG"
     else
         error "❌ Failed to start $APP_NAME"
         error "Check logs at: $LOG_DIR/startup.log"
