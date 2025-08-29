@@ -328,7 +328,9 @@ public class UnifiedOnboardingService {
     }
 
     /**
-     * Store maintenance items in database
+     * Store maintenance items in database with strict validation.
+     * Skips tasks with empty required fields (task, frequency, description, priority, estimated_duration, required_tools, safety_notes).
+     * Safety notes are part of maintenance tasks and are stored with them.
      */
     private void storeMaintenance(List<MaintenanceGenerationResponse.MaintenanceTask> maintenanceItems, String deviceId, String organizationId) {
         try {
@@ -343,7 +345,7 @@ public class UnifiedOnboardingService {
                         ? maintenanceData.getTask().trim() 
                         : maintenanceData.getTaskName() != null ? maintenanceData.getTaskName().trim() : null;
                     
-                    // Validate required fields - skip if any of task title, frequency, or description is missing
+                    // STRICT VALIDATION: Check all required fields - skip if any are missing or empty
                     if (taskTitle == null || taskTitle.isEmpty()) {
                         log.warn("Skipping maintenance task - task title is missing or empty");
                         skippedCount++;
@@ -362,11 +364,36 @@ public class UnifiedOnboardingService {
                         continue;
                     }
                     
+                    if (maintenanceData.getPriority() == null || maintenanceData.getPriority().trim().isEmpty()) {
+                        log.warn("Skipping maintenance task '{}' - priority is missing or empty", taskTitle);
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    if (maintenanceData.getEstimatedDuration() == null || maintenanceData.getEstimatedDuration().trim().isEmpty()) {
+                        log.warn("Skipping maintenance task '{}' - estimated_duration is missing or empty", taskTitle);
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    if (maintenanceData.getRequiredTools() == null || maintenanceData.getRequiredTools().trim().isEmpty()) {
+                        log.warn("Skipping maintenance task '{}' - required_tools is missing or empty", taskTitle);
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    if (maintenanceData.getSafetyNotes() == null || maintenanceData.getSafetyNotes().trim().isEmpty()) {
+                        log.warn("Skipping maintenance task '{}' - safety_notes is missing or empty", taskTitle);
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    // All required fields are present, create maintenance task
                     DeviceMaintenance maintenance = new DeviceMaintenance();
                     maintenance.setId(UUID.randomUUID().toString());
                     maintenance.setOrganizationId(organizationId);
                     
-                    // Set required fields with validation
+                    // Set required fields with actual values (no defaults)
                     maintenance.setTaskName(taskTitle);
                     maintenance.setComponentName(taskTitle);
                     maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
@@ -374,14 +401,20 @@ public class UnifiedOnboardingService {
                     // Set device information (required for foreign key constraint)
                     setDeviceInformation(maintenance, deviceId);
                     
-                    // Process optional fields with default values
-                    maintenance.setFrequency(processFrequencyWithDefault(maintenanceData.getFrequency()));
-                    maintenance.setDescription(processDescriptionWithDefault(maintenanceData.getDescription()));
-                    maintenance.setPriority(processPriorityWithDefault(maintenanceData.getPriority()));
-                    maintenance.setEstimatedDuration(processDurationWithDefault(maintenanceData.getEstimatedDuration()));
-                    maintenance.setRequiredTools(processToolsWithDefault(maintenanceData.getRequiredTools()));
-                    maintenance.setSafetyNotes(processSafetyNotesWithDefault(maintenanceData.getSafetyNotes()));
-                    maintenance.setCategory(processCategoryWithDefault(maintenanceData.getCategory()));
+                    // Set validated fields with actual values
+                    maintenance.setFrequency(maintenanceData.getFrequency().trim());
+                    maintenance.setDescription(maintenanceData.getDescription().trim());
+                    maintenance.setPriority(processPriorityStrict(maintenanceData.getPriority().trim()));
+                    maintenance.setEstimatedDuration(maintenanceData.getEstimatedDuration().trim());
+                    maintenance.setRequiredTools(maintenanceData.getRequiredTools().trim());
+                    
+                    // Store safety notes as part of maintenance task
+                    maintenance.setSafetyNotes(maintenanceData.getSafetyNotes().trim());
+                    
+                    // Set category if available
+                    if (maintenanceData.getCategory() != null && !maintenanceData.getCategory().trim().isEmpty()) {
+                        maintenance.setCategory(maintenanceData.getCategory().trim());
+                    }
                     
                     // Set dates
                     maintenance.setLastMaintenance(LocalDate.now());
@@ -393,11 +426,11 @@ public class UnifiedOnboardingService {
                     maintenanceToSave.add(maintenance);
                     processedCount++;
                     
-                    log.debug("REGULAR METHOD VALIDATION: Processed maintenance task: {} with frequency: {}", 
-                        maintenance.getTaskName(), maintenance.getFrequency());
+                    log.debug("STRICT VALIDATION: Processed maintenance task: {} with frequency: {}, priority: {}", 
+                        maintenance.getTaskName(), maintenance.getFrequency(), maintenance.getPriority());
                         
                 } catch (Exception e) {
-                    log.error("Failed to process maintenance task in regular storage: {}", 
+                    log.error("Failed to process maintenance task in strict validation storage: {}", 
                         maintenanceData.getTaskName() != null ? maintenanceData.getTaskName() : "Unknown", e);
                     skippedCount++;
                     // Continue with next task instead of failing completely
@@ -409,7 +442,7 @@ public class UnifiedOnboardingService {
                 log.info("Successfully stored {} maintenance items for device: {} (skipped: {})", 
                     processedCount, deviceId, skippedCount);
             } else {
-                log.warn("No valid maintenance items to store for device: {} (all {} items were skipped)", 
+                log.warn("No valid maintenance items to store for device: {} (all {} items were skipped due to missing required fields)", 
                     deviceId, maintenanceItems.size());
             }
             
@@ -420,7 +453,8 @@ public class UnifiedOnboardingService {
 
     /**
      * Store maintenance items in database with auto-assignment to device assignee.
-     * Skips tasks without required fields (task, frequency, description) and assigns to device assignee.
+     * Skips tasks with empty required fields (task, frequency, description, priority, estimated_duration, required_tools, safety_notes).
+     * Safety notes are part of maintenance tasks and are stored with them.
      */
     private void storeMaintenanceWithAutoAssignment(List<MaintenanceGenerationResponse.MaintenanceTask> maintenanceItems, 
                                                    String deviceId, String organizationId, String deviceAssignee) {
@@ -437,7 +471,7 @@ public class UnifiedOnboardingService {
                         ? maintenanceData.getTask().trim() 
                         : maintenanceData.getTaskName() != null ? maintenanceData.getTaskName().trim() : null;
                     
-                    // Validate required fields - skip if any of task title, frequency, or description is missing
+                    // STRICT VALIDATION: Check all required fields - skip if any are missing or empty
                     if (taskTitle == null || taskTitle.isEmpty()) {
                         log.warn("Skipping maintenance task - task title is missing or empty");
                         skippedCount++;
@@ -456,11 +490,36 @@ public class UnifiedOnboardingService {
                         continue;
                     }
                     
+                    if (maintenanceData.getPriority() == null || maintenanceData.getPriority().trim().isEmpty()) {
+                        log.warn("Skipping maintenance task '{}' - priority is missing or empty", taskTitle);
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    if (maintenanceData.getEstimatedDuration() == null || maintenanceData.getEstimatedDuration().trim().isEmpty()) {
+                        log.warn("Skipping maintenance task '{}' - estimated_duration is missing or empty", taskTitle);
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    if (maintenanceData.getRequiredTools() == null || maintenanceData.getRequiredTools().trim().isEmpty()) {
+                        log.warn("Skipping maintenance task '{}' - required_tools is missing or empty", taskTitle);
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    if (maintenanceData.getSafetyNotes() == null || maintenanceData.getSafetyNotes().trim().isEmpty()) {
+                        log.warn("Skipping maintenance task '{}' - safety_notes is missing or empty", taskTitle);
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    // All required fields are present, create maintenance task
                     DeviceMaintenance maintenance = new DeviceMaintenance();
                     maintenance.setId(UUID.randomUUID().toString());
                     maintenance.setOrganizationId(organizationId);
                     
-                    // Set required fields with validation
+                    // Set required fields with actual values (no defaults)
                     maintenance.setTaskName(taskTitle);
                     maintenance.setComponentName(taskTitle);
                     maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
@@ -468,20 +527,27 @@ public class UnifiedOnboardingService {
                     // Set device information (required for foreign key constraint)
                     setDeviceInformation(maintenance, deviceId);
                     
-                    // Process optional fields with default values
-                    maintenance.setFrequency(processFrequencyWithDefault(maintenanceData.getFrequency()));
-                    maintenance.setDescription(processDescriptionWithDefault(maintenanceData.getDescription()));
-                    maintenance.setPriority(processPriorityWithDefault(maintenanceData.getPriority()));
-                    maintenance.setEstimatedDuration(processDurationWithDefault(maintenanceData.getEstimatedDuration()));
-                    maintenance.setRequiredTools(processToolsWithDefault(maintenanceData.getRequiredTools()));
-                    maintenance.setSafetyNotes(processSafetyNotesWithDefault(maintenanceData.getSafetyNotes()));
-                    maintenance.setCategory(processCategoryWithDefault(maintenanceData.getCategory()));
+                    // Set validated fields with actual values
+                    maintenance.setFrequency(maintenanceData.getFrequency().trim());
+                    maintenance.setDescription(maintenanceData.getDescription().trim());
+                    maintenance.setPriority(processPriorityStrict(maintenanceData.getPriority().trim()));
+                    maintenance.setEstimatedDuration(maintenanceData.getEstimatedDuration().trim());
+                    maintenance.setRequiredTools(maintenanceData.getRequiredTools().trim());
+                    
+                    // Store safety notes as part of maintenance task
+                    maintenance.setSafetyNotes(maintenanceData.getSafetyNotes().trim());
+                    
+                    // Set category if available
+                    if (maintenanceData.getCategory() != null && !maintenanceData.getCategory().trim().isEmpty()) {
+                        maintenance.setCategory(maintenanceData.getCategory().trim());
+                    }
                     
                     // Auto-assign to device assignee
                     if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
                         maintenance.setAssignedTo(deviceAssignee);
                         maintenance.setAssignedBy("System");
                         maintenance.setAssignedAt(LocalDateTime.now());
+                        assignedCount++;
                     } else {
                         log.warn("Device assignee is null or empty for device: {}, skipping assignment", deviceId);
                     }
@@ -495,15 +561,12 @@ public class UnifiedOnboardingService {
                     
                     maintenanceToSave.add(maintenance);
                     processedCount++;
-                    assignedCount++;
                     
-                    log.info("AUTO-ASSIGNMENT: Auto-assigned maintenance task: '{}' to device assignee: {} with frequency: {}", 
-                        maintenance.getTaskName(), deviceAssignee, maintenance.getFrequency());
+                    log.info("AUTO-ASSIGNMENT STRICT VALIDATION: Auto-assigned maintenance task: '{}' to device assignee: {} with frequency: {}, priority: {}", 
+                        maintenance.getTaskName(), deviceAssignee, maintenance.getFrequency(), maintenance.getPriority());
                     
-                    // Note: Individual maintenance notifications removed - will be included in consolidated notification
-                        
                 } catch (Exception e) {
-                    log.error("Failed to process maintenance task in auto-assignment: {}", 
+                    log.error("Failed to process maintenance task in auto-assignment storage: {}", 
                         maintenanceData.getTaskName() != null ? maintenanceData.getTaskName() : "Unknown", e);
                     skippedCount++;
                     // Continue with next task instead of failing completely
@@ -512,10 +575,10 @@ public class UnifiedOnboardingService {
             
             if (!maintenanceToSave.isEmpty()) {
                 maintenanceRepository.saveAll(maintenanceToSave);
-                log.info("Successfully stored and auto-assigned {} maintenance items for device: {} (skipped: {})", 
-                    processedCount, deviceId, skippedCount);
+                log.info("Successfully stored {} maintenance items for device: {} (skipped: {}, auto-assigned: {})", 
+                    processedCount, deviceId, skippedCount, assignedCount);
             } else {
-                log.warn("No valid maintenance items to store for device: {} (all {} items were skipped)", 
+                log.warn("No valid maintenance items to store for device: {} (all {} items were skipped due to missing required fields)", 
                     deviceId, maintenanceItems.size());
             }
             
@@ -803,6 +866,24 @@ public class UnifiedOnboardingService {
      */
     private DeviceMaintenance.Priority processPriorityWithDefault(String priority) {
         if (priority == null || priority.trim().isEmpty()) {
+            return DeviceMaintenance.Priority.MEDIUM;
+        }
+        String prio = priority.trim().toUpperCase();
+        
+        try {
+            return DeviceMaintenance.Priority.valueOf(prio);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid priority value: {}, defaulting to MEDIUM", prio);
+            return DeviceMaintenance.Priority.MEDIUM;
+        }
+    }
+
+    /**
+     * Process priority with strict validation.
+     */
+    private DeviceMaintenance.Priority processPriorityStrict(String priority) {
+        if (priority == null || priority.trim().isEmpty()) {
+            log.warn("Priority is missing or empty, defaulting to MEDIUM");
             return DeviceMaintenance.Priority.MEDIUM;
         }
         String prio = priority.trim().toUpperCase();

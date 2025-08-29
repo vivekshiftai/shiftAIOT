@@ -285,8 +285,9 @@ public class MaintenanceScheduleService {
     }
     
     /**
-     * Create maintenance tasks from PDF with enhanced data processing and validation.
-     * Skips tasks without task_name and uses default values for missing fields.
+     * Create maintenance tasks from PDF with strict validation.
+     * Skips tasks with empty required fields (task, frequency, description, priority, estimated_duration, required_tools, safety_notes).
+     * Safety notes are part of maintenance tasks and are stored with them.
      */
     public void createMaintenanceFromPDF(List<MaintenanceGenerationResponse.MaintenanceTask> maintenanceTasks, String deviceId, String organizationId) {
         log.info("Creating maintenance tasks from PDF for device: {} in organization: {}", deviceId, organizationId);
@@ -296,25 +297,71 @@ public class MaintenanceScheduleService {
         
         for (MaintenanceGenerationResponse.MaintenanceTask maintenanceData : maintenanceTasks) {
             try {
-                // Validate required fields - skip if task_name is missing
-                if (maintenanceData.getTaskName() == null || maintenanceData.getTaskName().trim().isEmpty()) {
-                    log.warn("Skipping maintenance task - task_name is missing or empty");
+                // Get task title - prefer 'task' field over 'task_name' field
+                String taskTitle = maintenanceData.getTask() != null && !maintenanceData.getTask().trim().isEmpty() 
+                    ? maintenanceData.getTask().trim() 
+                    : maintenanceData.getTaskName() != null ? maintenanceData.getTaskName().trim() : null;
+                
+                // STRICT VALIDATION: Check all required fields - skip if any are missing or empty
+                if (taskTitle == null || taskTitle.isEmpty()) {
+                    log.warn("Skipping maintenance task - task title is missing or empty");
                     skippedCount++;
                     continue;
                 }
                 
+                if (maintenanceData.getFrequency() == null || maintenanceData.getFrequency().trim().isEmpty()) {
+                    log.warn("Skipping maintenance task '{}' - frequency is missing or empty", taskTitle);
+                    skippedCount++;
+                    continue;
+                }
+                
+                if (maintenanceData.getDescription() == null || maintenanceData.getDescription().trim().isEmpty()) {
+                    log.warn("Skipping maintenance task '{}' - description is missing or empty", taskTitle);
+                    skippedCount++;
+                    continue;
+                }
+                
+                if (maintenanceData.getPriority() == null || maintenanceData.getPriority().trim().isEmpty()) {
+                    log.warn("Skipping maintenance task '{}' - priority is missing or empty", taskTitle);
+                    skippedCount++;
+                    continue;
+                }
+                
+                if (maintenanceData.getEstimatedDuration() == null || maintenanceData.getEstimatedDuration().trim().isEmpty()) {
+                    log.warn("Skipping maintenance task '{}' - estimated_duration is missing or empty", taskTitle);
+                    skippedCount++;
+                    continue;
+                }
+                
+                if (maintenanceData.getRequiredTools() == null || maintenanceData.getRequiredTools().trim().isEmpty()) {
+                    log.warn("Skipping maintenance task '{}' - required_tools is missing or empty", taskTitle);
+                    skippedCount++;
+                    continue;
+                }
+                
+                if (maintenanceData.getSafetyNotes() == null || maintenanceData.getSafetyNotes().trim().isEmpty()) {
+                    log.warn("Skipping maintenance task '{}' - safety_notes is missing or empty", taskTitle);
+                    skippedCount++;
+                    continue;
+                }
+                
+                // All required fields are present, create maintenance task
                 DeviceMaintenance maintenance = new DeviceMaintenance();
                 maintenance.setId(UUID.randomUUID().toString());
                 maintenance.setDeviceName("Device " + deviceId);
                 maintenance.setOrganizationId(organizationId);
                 
-                // Enhanced data processing and validation with default values
-                maintenance.setTaskName(processTaskName(maintenanceData.getTaskName()));
-                maintenance.setDescription(processDescription(maintenanceData.getDescription()));
-                maintenance.setFrequency(processFrequency(maintenanceData.getFrequency()));
-                maintenance.setPriority(convertPriority(maintenanceData.getPriority()));
-                maintenance.setEstimatedDuration(processDuration(maintenanceData.getEstimatedDuration()));
-                maintenance.setRequiredTools(processTools(maintenanceData.getRequiredTools()));
+                // Set validated fields with actual values (no defaults)
+                maintenance.setTaskName(taskTitle);
+                maintenance.setDescription(maintenanceData.getDescription().trim());
+                maintenance.setFrequency(maintenanceData.getFrequency().trim());
+                maintenance.setPriority(convertPriority(maintenanceData.getPriority().trim()));
+                maintenance.setEstimatedDuration(maintenanceData.getEstimatedDuration().trim());
+                maintenance.setRequiredTools(maintenanceData.getRequiredTools().trim());
+                
+                // Store safety notes as part of maintenance task
+                maintenance.setSafetyNotes(maintenanceData.getSafetyNotes().trim());
+                
                 maintenance.setStatus(DeviceMaintenance.Status.ACTIVE);
                 
                 // Calculate next maintenance date based on processed frequency
@@ -330,8 +377,8 @@ public class MaintenanceScheduleService {
                 deviceMaintenanceRepository.save(maintenance);
                 processedCount++;
                 
-                log.info("Created maintenance task: '{}' with next maintenance date: {} (frequency: {})", 
-                        maintenance.getTaskName(), nextMaintenance, maintenance.getFrequency());
+                log.info("STRICT VALIDATION: Created maintenance task: '{}' with next maintenance date: {} (frequency: {}, priority: {})", 
+                        maintenance.getTaskName(), nextMaintenance, maintenance.getFrequency(), maintenance.getPriority());
                         
             } catch (Exception e) {
                 log.error("Failed to create maintenance task from PDF data: {}", 
