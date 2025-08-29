@@ -993,47 +993,40 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     
     return (
       <div className="flex flex-col items-center justify-center space-y-6">
-        {/* Current Step - Large and Prominent */}
-        <div className="text-center space-y-4">
-          <div className="relative">
-            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
-              <span className="text-3xl font-bold text-white">{currentStep}</span>
-            </div>
-            {/* Pulsing ring animation */}
-            <div className="absolute inset-0 w-24 h-24 bg-blue-400 rounded-full animate-ping opacity-30"></div>
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">{stepLabels[currentStep - 1]}</h3>
-            <p className="text-gray-600 text-sm leading-relaxed max-w-md">
-              {stepDescriptions[currentStep - 1]}
-            </p>
-          </div>
-        </div>
-
-        {/* All Steps - Small Indicators */}
-        <div className="flex items-center justify-center space-x-4">
+        {/* Three Step Indicators with Larger Current Step */}
+        <div className="flex items-center justify-center space-x-8">
           {[1, 2, 3].map((step) => (
-            <div key={step} className="flex flex-col items-center space-y-2">
-              <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+            <div key={step} className="flex flex-col items-center space-y-3">
+              <div className={`rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
                 step < currentStep
-                  ? 'bg-green-500 border-green-500 text-white'
+                  ? 'w-10 h-10 bg-green-500 border-green-500 text-white'
                   : step === currentStep
-                  ? 'bg-blue-500 border-blue-500 text-white'
-                  : 'border-gray-300 text-gray-400 bg-white'
+                  ? 'w-16 h-16 bg-blue-500 border-blue-500 text-white shadow-lg'
+                  : 'w-8 h-8 border-gray-300 text-gray-400 bg-white'
               }`}>
                 {step < currentStep ? (
-                  <CheckCircle className="w-4 h-4" />
+                  <CheckCircle className="w-5 h-5" />
+                ) : step === currentStep ? (
+                  <span className="text-2xl font-bold">{step}</span>
                 ) : (
-                  <span className="text-xs font-bold">{step}</span>
+                  <span className="text-sm font-medium">{step}</span>
                 )}
               </div>
-              <span className={`text-xs font-medium ${
+              <span className={`text-sm font-medium ${
                 step <= currentStep ? 'text-gray-700' : 'text-gray-400'
               }`}>
                 {stepLabels[step - 1]}
               </span>
             </div>
           ))}
+        </div>
+
+        {/* Step Description */}
+        <div className="text-center">
+          <h3 className="text-lg font-bold text-gray-800 mb-2">{stepLabels[currentStep - 1]}</h3>
+          <p className="text-gray-600 text-sm leading-relaxed max-w-md">
+            {stepDescriptions[currentStep - 1]}
+          </p>
         </div>
       </div>
     );
@@ -1353,6 +1346,10 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                         <CheckCircle className="w-4 h-4 text-green-500" />
                         <span>Manufacturer details help with support and documentation</span>
                       </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>User assignment ensures proper access control and monitoring</span>
+                      </div>
                     </div>
                   )}
                   
@@ -1369,6 +1366,10 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <CheckCircle className="w-4 h-4 text-green-500" />
                         <span>COAP: Constrained Application Protocol for resource-constrained devices</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>Secure authentication ensures data privacy and system integrity</span>
                       </div>
                     </div>
                   )}
