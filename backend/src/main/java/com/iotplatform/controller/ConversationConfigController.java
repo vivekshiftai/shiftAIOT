@@ -82,13 +82,10 @@ public class ConversationConfigController {
         logger.info("👤 User {} creating conversation config", user.getEmail());
         
         try {
-            // Validate credentials before saving
-            if (request.getCredentials() == null || request.getCredentials().isEmpty()) {
-                logger.error("❌ Credentials cannot be null or empty");
-                return ResponseEntity.badRequest().body("Credentials cannot be null or empty");
-            }
+            // Validate credentials using the DTO validation method
+            request.validateCredentials();
             
-            logger.info("📝 Validating credentials structure: {}", request.getCredentials());
+            logger.info("📝 Validating credentials structure: {} keys", request.getCredentials().keySet());
             
             ConversationConfig config = new ConversationConfig();
             config.setPlatformName(request.getPlatformName());
@@ -99,6 +96,9 @@ public class ConversationConfigController {
             ConversationConfig createdConfig = conversationConfigService.createConfig(config, user.getId());
             logger.info("✅ Conversation config created successfully with ID: {}", createdConfig.getId());
             return ResponseEntity.ok(createdConfig);
+        } catch (IllegalArgumentException e) {
+            logger.error("❌ Validation error for conversation config: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             logger.error("❌ Failed to create conversation config for user: {}", user.getEmail(), e);
             return ResponseEntity.internalServerError().build();
@@ -114,13 +114,10 @@ public class ConversationConfigController {
         User user = userDetails.getUser();
         
         try {
-            // Validate credentials before updating
-            if (request.getCredentials() == null || request.getCredentials().isEmpty()) {
-                logger.error("❌ Credentials cannot be null or empty");
-                return ResponseEntity.badRequest().body("Credentials cannot be null or empty");
-            }
+            // Validate credentials using the DTO validation method
+            request.validateCredentials();
             
-            logger.info("📝 Validating credentials structure for update: {}", request.getCredentials());
+            logger.info("📝 Validating credentials structure for update: {} keys", request.getCredentials().keySet());
             
             ConversationConfig config = new ConversationConfig();
             config.setPlatformName(request.getPlatformName());
@@ -130,6 +127,9 @@ public class ConversationConfigController {
 
             ConversationConfig updatedConfig = conversationConfigService.updateConfig(id, config, user.getId());
             return ResponseEntity.ok(updatedConfig);
+        } catch (IllegalArgumentException e) {
+            logger.error("❌ Validation error for conversation config update: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }

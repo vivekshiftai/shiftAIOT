@@ -346,7 +346,7 @@ CREATE TABLE IF NOT EXISTS conversation_configs (
     user_id VARCHAR(255) NOT NULL,
     platform_name VARCHAR(100) NOT NULL,
     platform_type VARCHAR(50) NOT NULL, -- 'slack', 'gmail', 'teams', 'google_chat', 'sms'
-    credentials JSON NOT NULL,
+    credentials JSONB NOT NULL,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

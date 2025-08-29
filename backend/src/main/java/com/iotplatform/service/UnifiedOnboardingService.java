@@ -59,6 +59,7 @@ public class UnifiedOnboardingService {
     private final DeviceMaintenanceRepository maintenanceRepository;
     private final DeviceSafetyPrecautionRepository safetyRepository;
     private final NotificationService notificationService;
+    private final ConsolidatedNotificationService consolidatedNotificationService;
     private final ObjectMapper objectMapper;
 
     /**
@@ -87,34 +88,16 @@ public class UnifiedOnboardingService {
         
         log.info("Device created successfully with ID: {}", deviceResponse.getId());
         
-        // Send notification to device assignee if different from creator
+        // Send consolidated notification to device assignee if different from creator
         if (deviceRequest.getAssignedUserId() != null && !deviceRequest.getAssignedUserId().trim().isEmpty() 
             && !deviceRequest.getAssignedUserId().equals(currentUserId)) {
             try {
-                Notification notification = new Notification();
-                notification.setUserId(deviceRequest.getAssignedUserId().trim());
-                notification.setTitle("New Device Assigned");
-                notification.setMessage(String.format(
-                    "You have been assigned a new device: '%s' (%s) at location: %s. " +
-                    "The device is ready for monitoring and configuration.",
-                    deviceRequest.getName(), deviceRequest.getType(), deviceRequest.getLocation()
-                ));
-                notification.setType(Notification.NotificationType.INFO);
-                notification.setOrganizationId(organizationId);
-                notification.setDeviceId(deviceResponse.getId());
-                notification.setRead(false);
-                
-                Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(
-                    deviceRequest.getAssignedUserId().trim(), notification);
-                if (createdNotification.isPresent()) {
-                    log.info("✅ Created device assignment notification for user: {} for device: {}", 
-                           deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
-                } else {
-                    log.warn("⚠️ Device assignment notification blocked by user preferences for user: {}", 
-                           deviceRequest.getAssignedUserId().trim());
-                }
+                // Create consolidated notification after all processing is complete
+                // This will be called at the end of the method after rules, maintenance, and safety are processed
+                log.info("📝 Will create consolidated notification for user: {} for device: {}", 
+                       deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
             } catch (Exception e) {
-                log.error("❌ Failed to create device assignment notification for user: {} device: {}", 
+                log.error("❌ Failed to prepare consolidated notification for user: {} device: {}", 
                          deviceRequest.getAssignedUserId().trim(), deviceRequest.getName(), e);
             }
         }
@@ -122,7 +105,7 @@ public class UnifiedOnboardingService {
         // Step 2: Upload PDF to PDF Processing Service and process - This is non-transactional
         log.info("Step 2: Uploading PDF to processing service and generating content...");
         try {
-            processPDFAndGenerateContent(deviceResponse.getId(), manualFile, datasheetFile, certificateFile, organizationId);
+            processPDFAndGenerateContent(deviceResponse.getId(), manualFile, datasheetFile, certificateFile, organizationId, deviceRequest, currentUserId);
         } catch (Exception e) {
             log.error("PDF processing failed for device: {}, but device creation succeeded", deviceResponse.getId(), e);
             // Don't fail the entire onboarding if PDF processing fails
@@ -160,7 +143,9 @@ public class UnifiedOnboardingService {
             MultipartFile manualFile,
             MultipartFile datasheetFile, 
             MultipartFile certificateFile,
-            String organizationId) throws PDFProcessingException {
+            String organizationId,
+            DeviceCreateWithFileRequest deviceRequest,
+            String currentUserId) throws PDFProcessingException {
         
         log.info("Processing PDF and generating content for device: {}", deviceId);
         
@@ -275,6 +260,26 @@ public class UnifiedOnboardingService {
             
             log.info("PDF processing and content generation completed for device: {}", deviceId);
             
+            // Step 5: Create consolidated notification after all processing is complete
+            if (deviceRequest.getAssignedUserId() != null && !deviceRequest.getAssignedUserId().trim().isEmpty() 
+                && !deviceRequest.getAssignedUserId().equals(currentUserId)) {
+                try {
+                    Optional<Notification> consolidatedNotification = consolidatedNotificationService.createConsolidatedDeviceNotification(
+                        deviceId, deviceRequest.getAssignedUserId().trim(), organizationId, currentUserId);
+                    
+                    if (consolidatedNotification.isPresent()) {
+                        log.info("✅ Created consolidated notification for user: {} for device: {}", 
+                               deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
+                    } else {
+                        log.warn("⚠️ Consolidated notification blocked by user preferences for user: {}", 
+                               deviceRequest.getAssignedUserId().trim());
+                    }
+                } catch (Exception e) {
+                    log.error("❌ Failed to create consolidated notification for user: {} device: {}", 
+                             deviceRequest.getAssignedUserId().trim(), deviceRequest.getName(), e);
+                }
+            }
+            
         } catch (Exception e) {
             log.error("Error processing PDF and generating content for device: {}", deviceId, e);
             // Don't throw exception to allow device creation to succeed
@@ -315,34 +320,7 @@ public class UnifiedOnboardingService {
             ruleRepository.saveAll(rulesToSave);
             log.info("Successfully stored {} rules for device: {}", rulesToSave.size(), deviceId);
             
-            // Send notification to device assignee about new rules
-            if (deviceAssignee != null && !deviceAssignee.trim().isEmpty() && !rules.isEmpty()) {
-                try {
-                    Notification notification = new Notification();
-                    notification.setUserId(deviceAssignee);
-                    notification.setTitle("New Monitoring Rules Created");
-                    notification.setMessage(String.format(
-                        "%d new monitoring rules have been created for device '%s'. " +
-                        "Rules: %s. Please review the monitoring configuration.",
-                        rules.size(), deviceName, 
-                        rules.stream().map(RulesGenerationResponse.Rule::getName).limit(3).collect(java.util.stream.Collectors.joining(", "))
-                    ));
-                    notification.setType(Notification.NotificationType.INFO);
-                    notification.setOrganizationId(organizationId);
-                    notification.setDeviceId(deviceId);
-                    notification.setRead(false);
-                    
-                    Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(deviceAssignee, notification);
-                    if (createdNotification.isPresent()) {
-                        log.info("✅ Created rule creation notification for user: {} for device: {} with {} rules", 
-                               deviceAssignee, deviceName, rules.size());
-                    } else {
-                        log.warn("⚠️ Rule creation notification blocked by user preferences for user: {}", deviceAssignee);
-                    }
-                } catch (Exception e) {
-                    log.error("❌ Failed to create rule creation notification for user: {} device: {}", deviceAssignee, deviceName, e);
-                }
-            }
+            // Note: Individual rule notifications removed - will be included in consolidated notification
             
         } catch (Exception e) {
             log.error("Error storing rules for device: {}", deviceId, e);
@@ -522,37 +500,7 @@ public class UnifiedOnboardingService {
                     log.info("AUTO-ASSIGNMENT: Auto-assigned maintenance task: '{}' to device assignee: {} with frequency: {}", 
                         maintenance.getTaskName(), deviceAssignee, maintenance.getFrequency());
                     
-                    // Create notification for the assigned user
-                    if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
-                        try {
-                            // Get device information for better notification
-                            Optional<Device> deviceOpt = deviceRepository.findById(deviceId);
-                            String deviceName = deviceOpt.map(Device::getName).orElse("Unknown Device");
-                            
-                            Notification notification = new Notification();
-                            notification.setUserId(deviceAssignee);
-                            notification.setTitle("New Maintenance Task Assigned");
-                            notification.setMessage(String.format(
-                                "You have been assigned maintenance task '%s' for device '%s'. " +
-                                "Frequency: %s. Please review and schedule accordingly.",
-                                maintenance.getTaskName(), deviceName, maintenance.getFrequency()
-                            ));
-                            notification.setType(Notification.NotificationType.INFO);
-                            notification.setOrganizationId(organizationId);
-                            notification.setDeviceId(deviceId);
-                            notification.setRead(false);
-                            
-                            // Use preference checking to ensure notification is sent
-                            Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(deviceAssignee, notification);
-                            if (createdNotification.isPresent()) {
-                                log.info("✅ Created notification for auto-assigned maintenance task: {} to user: {}", maintenance.getTaskName(), deviceAssignee);
-                            } else {
-                                log.warn("⚠️ Notification blocked by user preferences for maintenance task: {} to user: {}", maintenance.getTaskName(), deviceAssignee);
-                            }
-                        } catch (Exception e) {
-                            log.error("❌ Failed to create notification for auto-assigned maintenance task: {} to user: {}", maintenance.getTaskName(), deviceAssignee, e);
-                        }
-                    }
+                    // Note: Individual maintenance notifications removed - will be included in consolidated notification
                         
                 } catch (Exception e) {
                     log.error("Failed to process maintenance task in auto-assignment: {}", 
@@ -971,34 +919,7 @@ public class UnifiedOnboardingService {
                 safetyRepository.saveAll(precautionsToSave);
                 log.info("Successfully stored {} safety precautions for device: {}", precautionsToSave.size(), deviceId);
                 
-                // Send notification to device assignee about new safety precautions
-                if (deviceAssignee != null && !deviceAssignee.trim().isEmpty() && !safetyPrecautions.isEmpty()) {
-                    try {
-                        Notification notification = new Notification();
-                        notification.setUserId(deviceAssignee);
-                        notification.setTitle("New Safety Precautions Created");
-                        notification.setMessage(String.format(
-                            "%d new safety precautions have been created for device '%s'. " +
-                            "Precautions: %s. Please review the safety guidelines.",
-                            safetyPrecautions.size(), deviceName, 
-                            safetyPrecautions.stream().map(SafetyGenerationResponse.SafetyPrecaution::getTitle).limit(3).collect(java.util.stream.Collectors.joining(", "))
-                        ));
-                        notification.setType(Notification.NotificationType.INFO);
-                        notification.setOrganizationId(organizationId);
-                        notification.setDeviceId(deviceId);
-                        notification.setRead(false);
-                        
-                        Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(deviceAssignee, notification);
-                        if (createdNotification.isPresent()) {
-                            log.info("✅ Created safety precaution notification for user: {} for device: {} with {} precautions", 
-                                   deviceAssignee, deviceName, safetyPrecautions.size());
-                        } else {
-                            log.warn("⚠️ Safety precaution notification blocked by user preferences for user: {}", deviceAssignee);
-                        }
-                    } catch (Exception e) {
-                        log.error("❌ Failed to create safety precaution notification for user: {} device: {}", deviceAssignee, deviceName, e);
-                    }
-                }
+                // Note: Individual safety notifications removed - will be included in consolidated notification
             } else {
                 log.warn("No valid safety precautions to store for device: {}", deviceId);
             }

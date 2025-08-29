@@ -12,6 +12,7 @@ import com.iotplatform.model.Notification;
 import com.iotplatform.model.User;
 import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.service.NotificationService;
+import com.iotplatform.service.ConsolidatedNotificationService;
 
 import jakarta.validation.Valid;
 
@@ -21,9 +22,11 @@ import jakarta.validation.Valid;
 public class NotificationController {
 
     private final NotificationService notificationService;
+    private final ConsolidatedNotificationService consolidatedNotificationService;
 
-    public NotificationController(NotificationService notificationService) {
+    public NotificationController(NotificationService notificationService, ConsolidatedNotificationService consolidatedNotificationService) {
         this.notificationService = notificationService;
+        this.consolidatedNotificationService = consolidatedNotificationService;
     }
 
     @GetMapping
@@ -152,5 +155,21 @@ public class NotificationController {
         
         notificationService.deleteAllNotifications(user.getOrganizationId(), user.getId());
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id}/details")
+    @PreAuthorize("hasAuthority('NOTIFICATION_READ')")
+    public ResponseEntity<?> getNotificationDetails(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        try {
+            java.util.Map<String, Object> details = consolidatedNotificationService.getNotificationDetails(id);
+            return ResponseEntity.ok(details);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(java.util.Map.of("error", "Failed to load notification details"));
+        }
     }
 }

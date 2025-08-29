@@ -39,12 +39,25 @@ public class ConversationConfigService {
         logger.info("📝 Config details - Platform: {}, Type: {}, Active: {}", 
                    config.getPlatformName(), config.getPlatformType(), config.isActive());
         
+        // Validate credentials before saving
+        if (config.getCredentials() == null || config.getCredentials().isEmpty()) {
+            throw new IllegalArgumentException("Credentials cannot be null or empty");
+        }
+        
+        // Log credentials structure for debugging (without sensitive data)
+        logger.info("📝 Credentials structure: {} keys", config.getCredentials().keySet());
+        
         config.setId(UUID.randomUUID().toString());
         config.setUserId(userId);
         
-        ConversationConfig savedConfig = conversationConfigRepository.save(config);
-        logger.info("✅ Conversation config created successfully with ID: {}", savedConfig.getId());
-        return savedConfig;
+        try {
+            ConversationConfig savedConfig = conversationConfigRepository.save(config);
+            logger.info("✅ Conversation config created successfully with ID: {}", savedConfig.getId());
+            return savedConfig;
+        } catch (Exception e) {
+            logger.error("❌ Failed to save conversation config: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to save conversation config: " + e.getMessage(), e);
+        }
     }
 
     public ConversationConfig updateConfig(String id, ConversationConfig configDetails, String userId) {
@@ -53,14 +66,27 @@ public class ConversationConfigService {
         ConversationConfig config = conversationConfigRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new RuntimeException("Conversation config not found"));
 
+        // Validate credentials before updating
+        if (configDetails.getCredentials() == null || configDetails.getCredentials().isEmpty()) {
+            throw new IllegalArgumentException("Credentials cannot be null or empty");
+        }
+        
+        // Log credentials structure for debugging (without sensitive data)
+        logger.info("📝 Credentials structure: {} keys", configDetails.getCredentials().keySet());
+
         config.setPlatformName(configDetails.getPlatformName());
         config.setPlatformType(configDetails.getPlatformType());
         config.setCredentials(configDetails.getCredentials());
         config.setActive(configDetails.isActive());
 
-        ConversationConfig updatedConfig = conversationConfigRepository.save(config);
-        logger.info("✅ Conversation config updated successfully: {}", updatedConfig.getId());
-        return updatedConfig;
+        try {
+            ConversationConfig updatedConfig = conversationConfigRepository.save(config);
+            logger.info("✅ Conversation config updated successfully: {}", updatedConfig.getId());
+            return updatedConfig;
+        } catch (Exception e) {
+            logger.error("❌ Failed to update conversation config: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to update conversation config: " + e.getMessage(), e);
+        }
     }
 
     public void deleteConfig(String id, String userId) {

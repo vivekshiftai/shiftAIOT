@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Settings, AlertTriangle, Info, CheckCircle, Bell } from 'lucide-react';
 import { useIoT } from '../../contexts/IoTContext';
 import { Notification } from '../../types';
+import { EnhancedNotificationItem } from './EnhancedNotificationItem';
 
 interface NotificationDropdownProps {
   isOpen: boolean;
@@ -123,47 +124,13 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {notifications.map((notification) => {
-                  const style = getNotificationStyle(notification);
-                  return (
-                    <div
-                      key={notification.id}
-                      onClick={() => handleNotificationClick(notification)}
-                      className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors ${style.container}`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-0.5">
-                          {getNotificationIcon(notification.type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between">
-                            <p className={`text-sm font-medium ${style.title}`}>
-                              {notification.title}
-                            </p>
-                            <div className="flex items-center gap-2">
-                              {!notification.read && (
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                              )}
-                              <span className="text-xs text-slate-400">
-                                {formatTimestamp(notification.createdAt)}
-                              </span>
-                            </div>
-                          </div>
-                          <p className={`text-sm mt-1 line-clamp-2 ${style.message}`}>
-                            {notification.message}
-                          </p>
-                          {notification.deviceId && (
-                            <div className="mt-2">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                                Device: {notification.deviceId}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                {notifications.map((notification) => (
+                  <EnhancedNotificationItem
+                    key={notification.id}
+                    notification={notification}
+                    onClick={handleNotificationClick}
+                  />
+                ))}
               </div>
             )}
           </div>

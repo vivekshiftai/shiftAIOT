@@ -19,6 +19,28 @@ public class ConversationConfigRequest {
     @JsonProperty("credentials")
     private Map<String, Object> credentials;
     
+    // Validation method to ensure credentials are properly formatted
+    public void validateCredentials() {
+        if (credentials == null || credentials.isEmpty()) {
+            throw new IllegalArgumentException("Credentials cannot be null or empty");
+        }
+        
+        // Validate that credentials contain required fields based on platform type
+        if ("slack".equalsIgnoreCase(platformType)) {
+            if (!credentials.containsKey("token")) {
+                throw new IllegalArgumentException("Slack credentials must contain 'token' field");
+            }
+        } else if ("gmail".equalsIgnoreCase(platformType)) {
+            if (!credentials.containsKey("clientId") || !credentials.containsKey("clientSecret")) {
+                throw new IllegalArgumentException("Gmail credentials must contain 'clientId' and 'clientSecret' fields");
+            }
+        } else if ("teams".equalsIgnoreCase(platformType)) {
+            if (!credentials.containsKey("webhookUrl")) {
+                throw new IllegalArgumentException("Teams credentials must contain 'webhookUrl' field");
+            }
+        }
+    }
+    
     @JsonProperty("isActive")
     private boolean isActive = true;
 

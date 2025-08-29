@@ -32,7 +32,7 @@ public class ConversationConfig {
     @Column(name = "platform_type", nullable = false)
     private String platformType;
 
-    @Column(name = "credentials", nullable = false, columnDefinition = "JSON")
+    @Column(name = "credentials", nullable = false, columnDefinition = "JSONB")
     @Convert(converter = JsonConverter.class)
     private Map<String, Object> credentials;
 

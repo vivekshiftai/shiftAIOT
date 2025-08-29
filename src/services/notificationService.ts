@@ -336,6 +336,17 @@ class NotificationService {
     return hour >= 9 && hour <= 17; // Business hours
   }
 
+  // Get notification details
+  async getNotificationDetails(notificationId: string): Promise<any> {
+    try {
+      const response = await notificationAPI.getDetails(notificationId);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch notification details:', error);
+      throw error;
+    }
+  }
+
   // Device event notifications
   async onDeviceAdded(device: Device, userId: string) {
     await this.createNotification({

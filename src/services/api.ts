@@ -328,6 +328,7 @@ export const notificationAPI = {
   getUnreadCount: () => api.get('/api/notifications/unread-count'),
   delete: (id: string) => api.delete(`/api/notifications/${id}`),
   deleteAll: () => api.delete('/api/notifications'),
+  getDetails: (id: string) => api.get(`/api/notifications/${id}/details`),
 };
 
 // Notification Template API

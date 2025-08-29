@@ -1,0 +1,35 @@
+[Unit]
+Description=IoT Platform Frontend Service
+After=network.target iot-platform-backend.service
+Wants=iot-platform-backend.service
+
+[Service]
+Type=simple
+User=iot-platform
+Group=iot-platform
+WorkingDirectory=/opt/iot-platform/frontend
+ExecStart=/usr/bin/npx serve -s dist -l 3000
+ExecStop=/bin/kill -TERM $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=iot-platform-frontend
+
+# Environment variables
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/iot-platform/frontend /var/log/iot-platform
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target
