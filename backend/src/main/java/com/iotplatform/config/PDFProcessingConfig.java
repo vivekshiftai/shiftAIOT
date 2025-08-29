@@ -54,13 +54,13 @@ public class PDFProcessingConfig {
      * Connection timeout for HTTP requests (in milliseconds)
      * Set to 0 for no timeout
      */
-    private int connectionTimeout = 0; // No timeout
+    private int connectionTimeout = 30000; // 30 seconds
 
     /**
      * Read timeout for HTTP requests (in milliseconds)
      * Set to 0 for no timeout
      */
-    private int readTimeout = 0; // No timeout
+    private int readTimeout = 300000; // 5 minutes
 
     /**
      * Maximum number of retries for failed requests

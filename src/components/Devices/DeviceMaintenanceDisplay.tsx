@@ -22,6 +22,7 @@ interface DeviceMaintenance {
   title: string;
   description: string;
   type: 'preventive' | 'corrective' | 'emergency' | 'routine';
+  frequency?: string;
   status: 'scheduled' | 'in_progress' | 'completed' | 'overdue';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   scheduledDate: string;
@@ -41,6 +42,7 @@ interface MaintenanceFormData {
   title: string;
   description: string;
   type: 'preventive' | 'corrective' | 'emergency' | 'routine';
+  frequency: string;
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   scheduledDate: string;
   assignedTo: string;
@@ -81,6 +83,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
     title: '',
     description: '',
     type: 'preventive',
+    frequency: '',
     priority: 'MEDIUM',
     scheduledDate: '',
     assignedTo: '',
@@ -137,6 +140,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
         title: task.taskName || task.title || 'Unnamed Task',
         description: task.description || 'No description available',
         type: task.maintenanceType || task.type || 'preventive',
+        frequency: task.frequency || 'Not specified',
         status: task.status || 'scheduled',
         priority: task.priority || 'MEDIUM',
         scheduledDate: task.nextMaintenance || task.scheduledDate || new Date().toISOString(),
@@ -254,6 +258,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
       title: '',
       description: '',
       type: 'preventive',
+      frequency: '',
       priority: 'MEDIUM',
       scheduledDate: '',
       assignedTo: '',
@@ -272,6 +277,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
       title: task.title,
       description: task.description,
       type: task.type,
+      frequency: task.frequency || '',
       priority: task.priority,
       scheduledDate: task.scheduledDate,
       assignedTo: task.assignedTo || '',
@@ -478,7 +484,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Task Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Frequency</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -498,7 +504,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
                         {truncateText(task.title)}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        <span className="capitalize">{task.type}</span>
+                        {task.frequency || 'Not specified'}
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(task.status)}`}>
@@ -597,7 +603,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
                               </div>
                             )}
                             <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-200">
-                              <span>Type: {task.type}</span>
+                              <span>Frequency: {task.frequency || 'Not specified'}</span>
                               <span>Created: {formatDate(task.createdAt)}</span>
                             </div>
                           </div>
@@ -676,6 +682,21 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
               </select>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Frequency
+              </label>
+              <input
+                type="text"
+                value={formData.frequency}
+                onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="e.g., Daily, Weekly, Monthly, Quarterly"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Priority

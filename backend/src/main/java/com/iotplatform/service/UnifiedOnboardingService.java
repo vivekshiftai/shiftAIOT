@@ -177,55 +177,100 @@ public class UnifiedOnboardingService {
             
             log.info("Uploading PDF to processing service: {}", pdfFile.getOriginalFilename());
             
-            // Step 1: Upload PDF to PDF Processing Service
-            PDFUploadResponse uploadResponse = pdfProcessingService.uploadPDF(pdfFile, organizationId);
-            
-            if (!uploadResponse.isSuccess()) {
-                log.error("PDF upload failed for device: {} - {}", deviceId, uploadResponse.getMessage());
+            // Step 1: Upload PDF to PDF Processing Service with timeout handling
+            PDFUploadResponse uploadResponse = null;
+            try {
+                uploadResponse = pdfProcessingService.uploadPDF(pdfFile, organizationId);
+                
+                if (uploadResponse == null) {
+                    log.error("PDF upload failed for device: {} - Null response from service", deviceId);
+                    return;
+                }
+                
+                if (!uploadResponse.isSuccess()) {
+                    log.error("PDF upload failed for device: {} - {}", deviceId, uploadResponse.getMessage());
+                    return;
+                }
+            } catch (Exception e) {
+                log.error("PDF upload failed for device: {} - Exception: {}", deviceId, e.getMessage(), e);
                 return;
             }
             
             String pdfName = uploadResponse.getPdfName();
+            if (pdfName == null || pdfName.trim().isEmpty()) {
+                log.error("PDF upload succeeded but returned null/empty PDF name for device: {}", deviceId);
+                return;
+            }
+            
             log.info("PDF uploaded successfully: {}", pdfName);
             
-            // Step 2: Generate rules from processed PDF
+            // Step 2: Generate rules from processed PDF with null handling
             log.info("Generating rules from PDF: {}", pdfName);
-            RulesGenerationResponse rulesResponse = pdfProcessingService.generateRules(pdfName, deviceId, organizationId);
-            
-            if (rulesResponse.isSuccess() && rulesResponse.getRules() != null && !rulesResponse.getRules().isEmpty()) {
-                log.info("Successfully generated and stored {} rules for device: {}", rulesResponse.getRules().size(), deviceId);
-            } else {
-                log.warn("No rules generated for device: {}", deviceId);
-            }
-            
-            // Step 3: Generate maintenance from processed PDF
-            log.info("Generating maintenance from PDF: {}", pdfName);
-            MaintenanceGenerationResponse maintenanceResponse = pdfProcessingService.generateMaintenance(pdfName, deviceId, organizationId);
-            
-            if (maintenanceResponse.isSuccess() && maintenanceResponse.getMaintenanceTasks() != null && !maintenanceResponse.getMaintenanceTasks().isEmpty()) {
-                // Get device assignee for auto-assignment
-                Device device = deviceRepository.findById(deviceId).orElse(null);
-                String deviceAssignee = device != null ? device.getAssignedUserId() : null;
+            RulesGenerationResponse rulesResponse = null;
+            try {
+                rulesResponse = pdfProcessingService.generateRules(pdfName, deviceId, organizationId);
                 
-                if (deviceAssignee != null) {
-                    log.info("Auto-assigning {} maintenance tasks to device assignee: {}", maintenanceResponse.getMaintenanceTasks().size(), deviceAssignee);
-                    storeMaintenanceWithAutoAssignment(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId, deviceAssignee);
+                if (rulesResponse != null && rulesResponse.isSuccess() && 
+                    rulesResponse.getRules() != null && !rulesResponse.getRules().isEmpty()) {
+                    log.info("Successfully generated {} rules for device: {}", rulesResponse.getRules().size(), deviceId);
+                    storeRules(rulesResponse.getRules(), deviceId, organizationId);
                 } else {
-                    log.warn("Device assignee not found for device: {}, storing maintenance tasks without assignment", deviceId);
-                    storeMaintenance(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId);
+                    log.warn("No rules generated for device: {} - Response: {}", deviceId, 
+                            rulesResponse != null ? "success=" + rulesResponse.isSuccess() + ", rules=" + 
+                            (rulesResponse.getRules() != null ? rulesResponse.getRules().size() : "null") : "null response");
                 }
-            } else {
-                log.warn("No maintenance items generated for device: {}", deviceId);
+            } catch (Exception e) {
+                log.error("Rules generation failed for device: {} - Exception: {}", deviceId, e.getMessage(), e);
             }
             
-            // Step 4: Generate safety precautions from processed PDF
-            log.info("Generating safety precautions from PDF: {}", pdfName);
-            SafetyGenerationResponse safetyResponse = pdfProcessingService.generateSafety(pdfName, deviceId, organizationId);
+            // Step 3: Generate maintenance from processed PDF with null handling
+            log.info("Generating maintenance from PDF: {}", pdfName);
+            MaintenanceGenerationResponse maintenanceResponse = null;
+            try {
+                maintenanceResponse = pdfProcessingService.generateMaintenance(pdfName, deviceId, organizationId);
+                
+                if (maintenanceResponse != null && maintenanceResponse.isSuccess() && 
+                    maintenanceResponse.getMaintenanceTasks() != null && !maintenanceResponse.getMaintenanceTasks().isEmpty()) {
+                    
+                    // Get device assignee for auto-assignment
+                    Device device = deviceRepository.findById(deviceId).orElse(null);
+                    String deviceAssignee = device != null ? device.getAssignedUserId() : null;
+                    
+                    if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
+                        log.info("Auto-assigning {} maintenance tasks to device assignee: {}", 
+                                maintenanceResponse.getMaintenanceTasks().size(), deviceAssignee);
+                        storeMaintenanceWithAutoAssignment(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId, deviceAssignee);
+                    } else {
+                        log.warn("Device assignee not found for device: {}, storing maintenance tasks without assignment", deviceId);
+                        storeMaintenance(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId);
+                    }
+                } else {
+                    log.warn("No maintenance items generated for device: {} - Response: {}", deviceId,
+                            maintenanceResponse != null ? "success=" + maintenanceResponse.isSuccess() + ", tasks=" + 
+                            (maintenanceResponse.getMaintenanceTasks() != null ? maintenanceResponse.getMaintenanceTasks().size() : "null") : "null response");
+                }
+            } catch (Exception e) {
+                log.error("Maintenance generation failed for device: {} - Exception: {}", deviceId, e.getMessage(), e);
+            }
             
-            if (safetyResponse.isSuccess() && safetyResponse.getSafetyPrecautions() != null && !safetyResponse.getSafetyPrecautions().isEmpty()) {
-                log.info("Successfully generated and stored {} safety precautions for device: {}", safetyResponse.getSafetyPrecautions().size(), deviceId);
-            } else {
-                log.warn("No safety precautions generated for device: {}", deviceId);
+            // Step 4: Generate safety precautions from processed PDF with null handling
+            log.info("Generating safety precautions from PDF: {}", pdfName);
+            SafetyGenerationResponse safetyResponse = null;
+            try {
+                safetyResponse = pdfProcessingService.generateSafety(pdfName, deviceId, organizationId);
+                
+                if (safetyResponse != null && safetyResponse.isSuccess() && 
+                    safetyResponse.getSafetyPrecautions() != null && !safetyResponse.getSafetyPrecautions().isEmpty()) {
+                    log.info("Successfully generated {} safety precautions for device: {}", 
+                            safetyResponse.getSafetyPrecautions().size(), deviceId);
+                    storeSafetyPrecautions(safetyResponse.getSafetyPrecautions(), deviceId, organizationId);
+                } else {
+                    log.warn("No safety precautions generated for device: {} - Response: {}", deviceId,
+                            safetyResponse != null ? "success=" + safetyResponse.isSuccess() + ", precautions=" + 
+                            (safetyResponse.getSafetyPrecautions() != null ? safetyResponse.getSafetyPrecautions().size() : "null") : "null response");
+                }
+            } catch (Exception e) {
+                log.error("Safety generation failed for device: {} - Exception: {}", deviceId, e.getMessage(), e);
             }
             
             log.info("PDF processing and content generation completed for device: {}", deviceId);
@@ -924,6 +969,166 @@ public class UnifiedOnboardingService {
         }
         String cat = category.trim();
         return cat.isEmpty() ? "General" : cat;
+    }
+
+    /**
+     * Store safety precautions in database
+     */
+    private void storeSafetyPrecautions(List<SafetyGenerationResponse.SafetyPrecaution> safetyPrecautions, String deviceId, String organizationId) {
+        try {
+            List<DeviceSafetyPrecaution> precautionsToSave = new ArrayList<>();
+            
+            // Get device information for notifications
+            Optional<Device> deviceOpt = deviceRepository.findById(deviceId);
+            String deviceName = deviceOpt.map(Device::getName).orElse("Unknown Device");
+            String deviceAssignee = deviceOpt.map(Device::getAssignedUserId).orElse(null);
+            
+            for (var precautionData : safetyPrecautions) {
+                try {
+                    // Validate required fields
+                    if (precautionData.getTitle() == null || precautionData.getTitle().trim().isEmpty()) {
+                        log.warn("Skipping safety precaution - title is missing or empty");
+                        continue;
+                    }
+                    
+                    if (precautionData.getDescription() == null || precautionData.getDescription().trim().isEmpty()) {
+                        log.warn("Skipping safety precaution '{}' - description is missing or empty", precautionData.getTitle());
+                        continue;
+                    }
+                    
+                    DeviceSafetyPrecaution precaution = new DeviceSafetyPrecaution();
+                    precaution.setId(UUID.randomUUID().toString());
+                    precaution.setDeviceId(deviceId);
+                    precaution.setOrganizationId(organizationId);
+                    
+                    // Set required fields with validation
+                    precaution.setTitle(precautionData.getTitle().trim());
+                    precaution.setDescription(precautionData.getDescription().trim());
+                    precaution.setType(processSafetyTypeWithDefault(precautionData.getType()));
+                    precaution.setCategory(processSafetyCategoryWithDefault(precautionData.getCategory()));
+                    precaution.setSeverity(processSafetySeverityWithDefault(precautionData.getSeverity()));
+                    
+                    // Set optional fields with null handling
+                    precaution.setRecommendedAction(processStringWithDefault(precautionData.getRecommendedAction(), "Follow standard safety procedures"));
+                    precaution.setAboutReaction(processStringWithDefault(precautionData.getAboutReaction(), null));
+                    precaution.setCauses(processStringWithDefault(precautionData.getCauses(), null));
+                    precaution.setHowToAvoid(processStringWithDefault(precautionData.getHowToAvoid(), null));
+                    precaution.setSafetyInfo(processStringWithDefault(precautionData.getSafetyInfo(), null));
+                    
+                    // Set metadata
+                    precaution.setIsActive(true);
+                    precaution.setCreatedAt(LocalDateTime.now());
+                    precaution.setUpdatedAt(LocalDateTime.now());
+                    
+                    precautionsToSave.add(precaution);
+                    
+                } catch (Exception e) {
+                    log.error("Error processing safety precaution: {}", precautionData.getTitle(), e);
+                }
+            }
+            
+            if (!precautionsToSave.isEmpty()) {
+                deviceSafetyPrecautionRepository.saveAll(precautionsToSave);
+                log.info("Successfully stored {} safety precautions for device: {}", precautionsToSave.size(), deviceId);
+                
+                // Send notification to device assignee about new safety precautions
+                if (deviceAssignee != null && !deviceAssignee.trim().isEmpty() && !safetyPrecautions.isEmpty()) {
+                    try {
+                        Notification notification = new Notification();
+                        notification.setUserId(deviceAssignee);
+                        notification.setTitle("New Safety Precautions Created");
+                        notification.setMessage(String.format(
+                            "%d new safety precautions have been created for device '%s'. " +
+                            "Precautions: %s. Please review the safety guidelines.",
+                            safetyPrecautions.size(), deviceName, 
+                            safetyPrecautions.stream().map(SafetyGenerationResponse.SafetyPrecaution::getTitle).limit(3).collect(java.util.stream.Collectors.joining(", "))
+                        ));
+                        notification.setType(Notification.NotificationType.INFO);
+                        notification.setOrganizationId(organizationId);
+                        notification.setDeviceId(deviceId);
+                        notification.setRead(false);
+                        
+                        Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(deviceAssignee, notification);
+                        if (createdNotification.isPresent()) {
+                            log.info("✅ Created safety precaution notification for user: {} for device: {} with {} precautions", 
+                                   deviceAssignee, deviceName, safetyPrecautions.size());
+                        } else {
+                            log.warn("⚠️ Safety precaution notification blocked by user preferences for user: {}", deviceAssignee);
+                        }
+                    } catch (Exception e) {
+                        log.error("❌ Failed to create safety precaution notification for user: {} device: {}", deviceAssignee, deviceName, e);
+                    }
+                }
+            } else {
+                log.warn("No valid safety precautions to store for device: {}", deviceId);
+            }
+            
+        } catch (Exception e) {
+            log.error("Error storing safety precautions for device: {}", deviceId, e);
+        }
+    }
+
+    /**
+     * Process safety type with default value.
+     */
+    private DeviceSafetyPrecaution.Type processSafetyTypeWithDefault(String type) {
+        if (type == null || type.trim().isEmpty()) {
+            return DeviceSafetyPrecaution.Type.WARNING;
+        }
+        String typeStr = type.trim().toLowerCase();
+        
+        switch (typeStr) {
+            case "warning":
+                return DeviceSafetyPrecaution.Type.WARNING;
+            case "procedure":
+                return DeviceSafetyPrecaution.Type.PROCEDURE;
+            case "caution":
+                return DeviceSafetyPrecaution.Type.CAUTION;
+            case "note":
+                return DeviceSafetyPrecaution.Type.NOTE;
+            default:
+                log.warn("Unknown safety type: {}, defaulting to WARNING", typeStr);
+                return DeviceSafetyPrecaution.Type.WARNING;
+        }
+    }
+
+    /**
+     * Process safety category with default value.
+     */
+    private String processSafetyCategoryWithDefault(String category) {
+        if (category == null || category.trim().isEmpty()) {
+            return "general";
+        }
+        String cat = category.trim().toLowerCase();
+        return cat.isEmpty() ? "general" : cat;
+    }
+
+    /**
+     * Process safety severity with default value.
+     */
+    private DeviceSafetyPrecaution.Severity processSafetySeverityWithDefault(String severity) {
+        if (severity == null || severity.trim().isEmpty()) {
+            return DeviceSafetyPrecaution.Severity.MEDIUM;
+        }
+        String sev = severity.trim().toUpperCase();
+        
+        try {
+            return DeviceSafetyPrecaution.Severity.valueOf(sev);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid severity value: {}, defaulting to MEDIUM", sev);
+            return DeviceSafetyPrecaution.Severity.MEDIUM;
+        }
+    }
+
+    /**
+     * Process string with default value.
+     */
+    private String processStringWithDefault(String value, String defaultValue) {
+        if (value == null || value.trim().isEmpty()) {
+            return defaultValue;
+        }
+        String str = value.trim();
+        return str.isEmpty() ? defaultValue : str;
     }
 
     /**

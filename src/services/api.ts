@@ -181,6 +181,7 @@ export const deviceAPI = {
       'Content-Type': 'multipart/form-data',
     },
   }),
+  getDevicePDFResults: (deviceId: string) => api.get(`/api/devices/${deviceId}/pdf-results`),
 };
 
 // Rule API

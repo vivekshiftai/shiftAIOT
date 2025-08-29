@@ -792,258 +792,84 @@ export const DeviceDetailsSection: React.FC = () => {
               )}
             </div>
 
-            {/* Status and Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
-                <div className={`p-2 rounded-lg ${statusInfo.bg}`}>
-                  <div className={`w-4 h-4 rounded-full ${statusInfo.color.replace('text-', 'bg-')}`}></div>
+            {/* Device Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Device Information
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Device Name</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editedDevice?.name || ''}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  ) : (
+                    <p className="text-slate-800">{device.name}</p>
+                  )}
                 </div>
                 <div>
-                  <p className="text-sm text-slate-600">Status</p>
-                  <p className={`font-semibold ${statusInfo.color}`}>{statusInfo.label}</p>
+                  <label className="text-sm font-medium text-slate-600">Location</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editedDevice?.location || ''}
+                      onChange={(e) => handleInputChange('location', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  ) : (
+                    <p className="text-slate-800">{device.location}</p>
+                  )}
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
-                <Clock className="w-5 h-5 text-slate-500" />
                 <div>
-                  <p className="text-sm text-slate-600">Last Seen</p>
-                  <p className="font-semibold text-slate-800">
-                    {lastSeen ? formatLastSeen(lastSeen) : 'Not available'}
-                    {isRealTimeLoading && (
-                      <span className="ml-2 inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-                    )}
-                  </p>
+                  <label className="text-sm font-medium text-slate-600">Manufacturer</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editedDevice?.manufacturer || ''}
+                      onChange={(e) => handleInputChange('manufacturer', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Enter manufacturer"
+                    />
+                  ) : (
+                    <p className="text-slate-800">{device.manufacturer || 'Not specified'}</p>
+                  )}
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl">
-                <Settings className="w-5 h-5 text-slate-500" />
                 <div>
-                  <p className="text-sm text-slate-600">Protocol</p>
-                  <p className="font-semibold text-slate-800">{device.protocol}</p>
+                  <label className="text-sm font-medium text-slate-600">Model</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editedDevice?.model || ''}
+                      onChange={(e) => handleInputChange('model', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Enter model"
+                    />
+                  ) : (
+                    <p className="text-slate-800">{device.model || 'Not specified'}</p>
+                  )}
                 </div>
-              </div>
-            </div>
-
-            {/* Device Information and Specifications */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Device Information */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <Settings className="w-5 h-5" />
-                  Device Information
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Device Name</label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editedDevice?.name || ''}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    ) : (
-                      <p className="text-slate-800">{device.name}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Location</label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editedDevice?.location || ''}
-                        onChange={(e) => handleInputChange('location', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    ) : (
-                      <p className="text-slate-800">{device.location}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Manufacturer</label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editedDevice?.manufacturer || ''}
-                        onChange={(e) => handleInputChange('manufacturer', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter manufacturer"
-                      />
-                    ) : (
-                      <p className="text-slate-800">{device.manufacturer || 'Not specified'}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Model</label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editedDevice?.model || ''}
-                        onChange={(e) => handleInputChange('model', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter model"
-                      />
-                    ) : (
-                      <p className="text-slate-800">{device.model || 'Not specified'}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Description</label>
-                    {isEditing ? (
-                      <textarea
-                        value={editedDevice?.description || ''}
-                        onChange={(e) => handleInputChange('description', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                        rows={3}
-                        placeholder="Enter device description"
-                      />
-                    ) : (
-                      <p className="text-slate-800">{device.description || 'Not specified'}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Assigned User</label>
-                    <p className="text-slate-800">{device.assignedUserId ? `User ID: ${device.assignedUserId}` : 'Not assigned'}</p>
-                  </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Description</label>
+                  {isEditing ? (
+                    <textarea
+                      value={editedDevice?.description || ''}
+                      onChange={(e) => handleInputChange('description', e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      rows={3}
+                      placeholder="Enter device description"
+                    />
+                  ) : (
+                    <p className="text-slate-800">{device.description || 'Not specified'}</p>
+                  )}
                 </div>
-              </div>
-
-              {/* Connection Details */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                  <Settings className="w-5 h-5" />
-                  Connection Details
-                </h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">IP Address</label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editedDevice?.ipAddress || ''}
-                        onChange={(e) => handleInputChange('ipAddress', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter IP address"
-                      />
-                    ) : (
-                      <p className="text-slate-800">{device.ipAddress || 'Not specified'}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Port</label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editedDevice?.port || ''}
-                        onChange={(e) => handleInputChange('port', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter port"
-                      />
-                    ) : (
-                      <p className="text-slate-800">{device.port || 'Not specified'}</p>
-                    )}
-                  </div>
-                  {device.protocol === 'MQTT' && (
-                    <>
-                      <div>
-                        <label className="text-sm font-medium text-slate-600">MQTT Broker</label>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editedDevice?.mqttBroker || ''}
-                            onChange={(e) => handleInputChange('mqttBroker', e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Enter MQTT broker URL"
-                          />
-                        ) : (
-                          <p className="text-slate-800">{device.mqttBroker || 'Not specified'}</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-slate-600">MQTT Topic</label>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editedDevice?.mqttTopic || ''}
-                            onChange={(e) => handleInputChange('mqttTopic', e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Enter MQTT topic"
-                          />
-                        ) : (
-                          <p className="text-slate-800">{device.mqttTopic || 'Not specified'}</p>
-                        )}
-                      </div>
-                    </>
-                  )}
-                  {device.protocol === 'HTTP' && (
-                    <>
-                      <div>
-                        <label className="text-sm font-medium text-slate-600">HTTP Endpoint</label>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editedDevice?.httpEndpoint || ''}
-                            onChange={(e) => handleInputChange('httpEndpoint', e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Enter HTTP endpoint"
-                          />
-                        ) : (
-                          <p className="text-slate-800">{device.httpEndpoint || 'Not specified'}</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-slate-600">HTTP Method</label>
-                        {isEditing ? (
-                          <select
-                            value={editedDevice?.httpMethod || 'GET'}
-                            onChange={(e) => handleInputChange('httpMethod', e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                          >
-                            <option value="GET">GET</option>
-                            <option value="POST">POST</option>
-                            <option value="PUT">PUT</option>
-                            <option value="DELETE">DELETE</option>
-                          </select>
-                        ) : (
-                          <p className="text-slate-800">{device.httpMethod || 'GET'}</p>
-                        )}
-                      </div>
-                    </>
-                  )}
-                  {device.protocol === 'COAP' && (
-                    <>
-                      <div>
-                        <label className="text-sm font-medium text-slate-600">COAP Host</label>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editedDevice?.coapHost || ''}
-                            onChange={(e) => handleInputChange('coapHost', e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Enter COAP host"
-                          />
-                        ) : (
-                          <p className="text-slate-800">{device.coapHost || 'Not specified'}</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-slate-600">COAP Port</label>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editedDevice?.coapPort || ''}
-                            onChange={(e) => handleInputChange('coapPort', e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Enter COAP port"
-                          />
-                        ) : (
-                          <p className="text-slate-800">{device.coapPort || 'Not specified'}</p>
-                        )}
-                      </div>
-                    </>
-                  )}
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Assigned User</label>
+                  <p className="text-slate-800">{device.assignedUserId ? `User ID: ${device.assignedUserId}` : 'Not assigned'}</p>
                 </div>
               </div>
             </div>
@@ -1067,93 +893,6 @@ export const DeviceDetailsSection: React.FC = () => {
                 </div>
               </div>
             )}
-
-            {/* Documentation */}
-            <div className="border-t border-slate-200 pt-6">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                Documentation
-              </h3>
-              
-              {loading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                  <p className="text-slate-600 mt-2">Loading documentation...</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {['manual', 'datasheet', 'certificate'].map((type) => {
-                    const fileInfo = documentationInfo?.files[type as keyof typeof documentationInfo.files];
-                    const isAvailable = fileInfo?.available;
-                    const isDownloading = downloading === type;
-                    
-                    return (
-                      <div
-                        key={type}
-                        className={`p-4 rounded-xl border-2 ${
-                          isAvailable 
-                            ? 'border-green-200 bg-green-50 hover:bg-green-100 cursor-pointer' 
-                            : 'border-slate-200 bg-slate-50'
-                        } transition-colors`}
-                        onClick={() => isAvailable && downloadDocumentation(type as 'manual' | 'datasheet' | 'certificate')}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${
-                            isAvailable ? 'bg-green-100' : 'bg-slate-100'
-                          }`}>
-                            <FileText className={`w-5 h-5 ${
-                              isAvailable ? 'text-green-600' : 'text-slate-400'
-                            }`} />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium text-slate-800 capitalize">{type}</h4>
-                            <p className="text-sm text-slate-600">
-                              {isAvailable 
-                                ? fileInfo?.size ? formatFileSize(fileInfo.size) : 'Available'
-                                : 'Not available'
-                              }
-                            </p>
-                          </div>
-                          {isDownloading && (
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
-                          )}
-                          {isAvailable && !isDownloading && (
-                            <Download className="w-5 h-5 text-green-600" />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Maintenance Cards */}
-            <div className="border-t border-slate-200 pt-6">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <Wrench className="w-5 h-5" />
-                Maintenance Tasks
-              </h3>
-              
-              {isRealTimeLoading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                  <p className="text-slate-600 mt-2">Loading maintenance tasks...</p>
-                </div>
-              ) : maintenanceHistory.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {maintenanceHistory.slice(0, 6).map((task) => (
-                    <MaintenanceCard key={task.id} task={task} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Wrench className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                  <p className="text-slate-600">No maintenance tasks found</p>
-                  <p className="text-sm text-slate-500 mt-1">Maintenance tasks will appear here when scheduled</p>
-                </div>
-              )}
-            </div>
           </div>
         );
 

@@ -383,7 +383,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       // Start progress updates
       setTimeout(updateProgress, 1000);
 
-      // Use the new unified onboarding service with detailed progress tracking
+      // Use the new unified onboarding service with enhanced error handling and progress tracking
       const result = await unifiedOnboardingService.completeUnifiedOnboarding(
         formData,
         uploadedFile.file,
@@ -397,13 +397,21 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             setStepDetails(progress.stepDetails);
           }
           
+          // Handle error states
+          if (progress.error) {
+            logError('Onboarding', `Progress Error: ${progress.stage} - ${progress.error}`, new Error(progress.error));
+            setCurrentSubStage(`Error: ${progress.error}`);
+          }
+          
           // Log detailed progress information
           logInfo('Onboarding', `Progress Update: ${progress.stage} - ${progress.progress}%`, {
             stage: progress.stage,
             progress: progress.progress,
             message: progress.message,
             subMessage: progress.subMessage,
-            stepDetails: progress.stepDetails
+            stepDetails: progress.stepDetails,
+            error: progress.error,
+            retryable: progress.retryable
           });
           
           if (progress.subMessage) {
@@ -426,7 +434,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               break;
             case 'maintenance':
               setCurrentProcess('rules');
-              logInfo('Onboarding', 'Processing maintenance schedule stage with date formatting', { progress: progress.progress });
+              logInfo('Onboarding', 'Processing maintenance schedule stage', { progress: progress.progress });
               break;
             case 'safety':
               setCurrentProcess('knowledgebase');
@@ -497,11 +505,27 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       // Clear progress interval on error
       clearInterval(progressInterval);
       
-      logError('EnhancedDeviceOnboardingForm', 'Onboarding process failed', error instanceof Error ? error : new Error('Unknown error'));
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      logError('EnhancedDeviceOnboardingForm', 'Onboarding process failed', errorObj);
+      
+      // Update progress to show error
+      setProgress(0);
+      setCurrentSubStage(`Onboarding failed: ${errorObj.message}`);
       setShowOnboardingLoader(false);
       
-      // Show error message to user
-      alert(`Onboarding failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Determine if error is retryable
+      const isRetryable = errorObj.message.toLowerCase().includes('timeout') || 
+                         errorObj.message.toLowerCase().includes('network') ||
+                         errorObj.message.toLowerCase().includes('connection');
+      
+      // Show appropriate error message to user
+      setTimeout(() => {
+        if (isRetryable) {
+          alert(`Onboarding failed due to a temporary issue: ${errorObj.message}\n\nPlease check your connection and try again.`);
+        } else {
+          alert(`Onboarding failed: ${errorObj.message}\n\nPlease check your input and try again.`);
+        }
+      }, 1000);
     }
   }, [uploadedFile, formData, onboardingStartTime, currentUser]);
 
