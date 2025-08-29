@@ -68,7 +68,7 @@ public class ConversationConfigController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('CONVERSATION_CONFIG_WRITE')")
-    public ResponseEntity<ConversationConfig> createConfig(@Valid @RequestBody ConversationConfigRequest request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<?> createConfig(@Valid @RequestBody ConversationConfigRequest request, @AuthenticationPrincipal CustomUserDetails userDetails) {
         logger.info("🆕 POST /api/conversation-configs - Creating new config");
         logger.info("📝 Request details - Platform: {}, Type: {}, Active: {}", 
                    request.getPlatformName(), request.getPlatformType(), request.isActive());
@@ -107,7 +107,7 @@ public class ConversationConfigController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('CONVERSATION_CONFIG_WRITE')")
-    public ResponseEntity<ConversationConfig> updateConfig(@PathVariable String id, @Valid @RequestBody ConversationConfigRequest request, @AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<?> updateConfig(@PathVariable String id, @Valid @RequestBody ConversationConfigRequest request, @AuthenticationPrincipal CustomUserDetails userDetails) {
         if (userDetails == null || userDetails.getUser() == null) {
             return ResponseEntity.status(401).build();
         }
