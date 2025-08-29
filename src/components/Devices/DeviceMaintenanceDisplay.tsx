@@ -92,6 +92,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     logComponentMount('DeviceMaintenanceDisplay', { deviceId });
@@ -99,6 +100,21 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
     loadMaintenanceTasks();
     loadUsers();
   }, [deviceId]);
+
+  const toggleRowExpansion = (id: string) => {
+    const newExpandedRows = new Set(expandedRows);
+    if (newExpandedRows.has(id)) {
+      newExpandedRows.delete(id);
+    } else {
+      newExpandedRows.add(id);
+    }
+    setExpandedRows(newExpandedRows);
+  };
+
+  const truncateText = (text: string, limit: number = 40) => {
+    if (text.length <= limit) return text;
+    return text.substring(0, limit) + '...';
+  };
 
   const loadMaintenanceTasks = async () => {
     try {
@@ -457,116 +473,142 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
             )}
           </div>
         ) : (
-          filteredTasks.map((task) => (
-            <div
-              key={task.id}
-              className={`p-4 rounded-lg border ${
-                task.status === 'completed' ? 'opacity-60 bg-gray-50' : 'bg-white'
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3 flex-1">
-                  {getTypeIcon(task.type)}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="font-medium text-gray-900">{task.title}</h4>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(task.status)}`}>
-                        {task.status.replace('_', ' ').toUpperCase()}
-                      </span>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(task.priority)}`}>
-                        {task.priority}
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-2 text-sm">
-                      <div>
-                        <strong className="text-gray-700">Description:</strong>
-                        <p className="text-gray-600 ml-2">{task.description}</p>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <strong className="text-gray-700">Scheduled:</strong>
-                          <p className="text-gray-600 ml-2">{formatDate(task.scheduledDate)}</p>
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Task Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredTasks.map((task) => (
+                  <React.Fragment key={task.id}>
+                    <tr 
+                      className={`hover:bg-gray-50 cursor-pointer ${
+                        task.status === 'completed' ? 'opacity-60' : ''
+                      }`}
+                      onClick={() => toggleRowExpansion(task.id)}
+                    >
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {truncateText(task.title)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        <span className="capitalize">{task.type}</span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(task.status)}`}>
+                          {task.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(task.priority)}`}>
+                          {task.priority}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditTask(task);
+                            }}
+                            className="p-1 text-blue-600 hover:bg-blue-100 rounded"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(task.id);
+                            }}
+                            className="p-1 text-red-600 hover:bg-red-100 rounded"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
-                        {task.completedDate && (
-                          <div>
-                            <strong className="text-gray-700">Completed:</strong>
-                            <p className="text-gray-600 ml-2">{formatDate(task.completedDate)}</p>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-400">
+                        {expandedRows.has(task.id) ? '↑' : '↓'}
+                      </td>
+                    </tr>
+                    {expandedRows.has(task.id) && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-4 bg-gray-50 border-t border-gray-200">
+                          <div className="space-y-3">
+                            <div>
+                              <h5 className="font-medium text-gray-800 mb-1">Description:</h5>
+                              <p className="text-gray-600 text-sm">{task.description || 'No description available'}</p>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              <div>
+                                <span className="font-medium text-gray-600">Scheduled:</span>
+                                <p className="text-gray-800">{formatDate(task.scheduledDate)}</p>
+                              </div>
+                              {task.completedDate && (
+                                <div>
+                                  <span className="font-medium text-gray-600">Completed:</span>
+                                  <p className="text-gray-800">{formatDate(task.completedDate)}</p>
+                                </div>
+                              )}
+                              <div>
+                                <span className="font-medium text-gray-600">Duration:</span>
+                                <p className="text-gray-800">{task.estimatedDuration || 'Not specified'}</p>
+                              </div>
+                              {task.cost && (
+                                <div>
+                                  <span className="font-medium text-gray-600">Cost:</span>
+                                  <p className="text-gray-800">${task.cost}</p>
+                                </div>
+                              )}
+                            </div>
+                            {(task.requiredTools || task.safetyNotes || task.assignedTo || task.notes) && (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                {task.requiredTools && (
+                                  <div>
+                                    <span className="font-medium text-gray-600">Required Tools:</span>
+                                    <p className="text-gray-800">{task.requiredTools}</p>
+                                  </div>
+                                )}
+                                {task.safetyNotes && (
+                                  <div>
+                                    <span className="font-medium text-gray-600">Safety Notes:</span>
+                                    <p className="text-gray-800">{task.safetyNotes}</p>
+                                  </div>
+                                )}
+                                {task.assignedTo && (
+                                  <div>
+                                    <span className="font-medium text-gray-600">Assigned to:</span>
+                                    <p className="text-gray-800">{getUserNameById(task.assignedTo)}</p>
+                                  </div>
+                                )}
+                                {task.notes && (
+                                  <div>
+                                    <span className="font-medium text-gray-600">Notes:</span>
+                                    <p className="text-gray-800">{task.notes}</p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-200">
+                              <span>Type: {task.type}</span>
+                              <span>Created: {formatDate(task.createdAt)}</span>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <strong className="text-gray-700">Duration:</strong>
-                          <p className="text-gray-600 ml-2">
-                            {task.estimatedDuration || 'Not specified'}
-                          </p>
-                        </div>
-                        {task.cost && (
-                          <div>
-                            <strong className="text-gray-700">Cost:</strong>
-                            <p className="text-gray-600 ml-2">${task.cost}</p>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {task.requiredTools && (
-                        <div>
-                          <strong className="text-gray-700">Required Tools:</strong>
-                          <p className="text-gray-600 ml-2">{task.requiredTools}</p>
-                        </div>
-                      )}
-                      
-                      {task.safetyNotes && (
-                        <div>
-                          <strong className="text-gray-700">Safety Notes:</strong>
-                          <p className="text-gray-600 ml-2">{task.safetyNotes}</p>
-                        </div>
-                      )}
-                      
-                      {task.assignedTo && (
-                        <div>
-                          <strong className="text-gray-700">Assigned to:</strong>
-                          <p className="text-gray-600 ml-2">{getUserNameById(task.assignedTo)}</p>
-                        </div>
-                      )}
-                      
-                      {task.notes && (
-                        <div>
-                          <strong className="text-gray-700">Notes:</strong>
-                          <p className="text-gray-600 ml-2">{task.notes}</p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
-                      <span>Type: {task.type}</span>
-                      <span>Created: {formatDate(task.createdAt)}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2 ml-4">
-                  <button
-                    onClick={() => handleEditTask(task)}
-                    className="p-1 text-blue-600 hover:bg-blue-100 rounded"
-                    title="Edit"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(task.id)}
-                    className="p-1 text-red-600 hover:bg-red-100 rounded"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

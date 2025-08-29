@@ -8,10 +8,11 @@ import {
   Clock,
   Settings,
   BarChart3,
-  HardDrive,
   Shield,
   Wrench,
-  Eye
+  Eye,
+  ArrowDown,
+  ArrowUp
 } from 'lucide-react';
 import { unifiedDeviceService, DeviceDocumentation, DeviceRules, DeviceMaintenance, DeviceSafetyPrecaution } from '../../services/unifiedDeviceService';
 import { logError, logInfo } from '../../utils/logger';
@@ -47,10 +48,26 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
   const [debugData, setDebugData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [authStatus, setAuthStatus] = useState<'checking' | 'success' | 'failed'>('checking');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadTabData(activeTab);
   }, [activeTab, device.id]);
+
+  const toggleRowExpansion = (id: string) => {
+    const newExpandedRows = new Set(expandedRows);
+    if (newExpandedRows.has(id)) {
+      newExpandedRows.delete(id);
+    } else {
+      newExpandedRows.add(id);
+    }
+    setExpandedRows(newExpandedRows);
+  };
+
+  const truncateText = (text: string, limit: number = 40) => {
+    if (text.length <= limit) return text;
+    return text.substring(0, limit) + '...';
+  };
 
   const loadTabData = async (tab: string) => {
     setIsLoading(true);
@@ -341,32 +358,87 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
                   {rules.length === 0 ? (
                     <p className="text-gray-600">No rules configured for this device.</p>
                   ) : (
-                    <div className="space-y-4">
-                      {rules.map((rule) => (
-                        <div key={rule.id} className="bg-white p-4 rounded-lg border border-gray-200">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium text-gray-800">{rule.name}</h4>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              rule.status === 'ACTIVE' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {rule.status}
-                            </span>
-                          </div>
-                          <p className="text-gray-600 mb-2">{rule.description}</p>
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <span className="font-medium text-gray-600">Metric:</span>
-                              <p className="text-gray-800">{rule.metric}</p>
-                            </div>
-                            <div>
-                              <span className="font-medium text-gray-600">Threshold:</span>
-                              <p className="text-gray-800">{rule.threshold}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rule Name</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {rules.map((rule) => (
+                            <React.Fragment key={rule.id}>
+                              <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleRowExpansion(rule.id)}>
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  {truncateText(rule.name || 'Unnamed Rule')}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  <span className={`px-2 py-1 rounded-full text-xs ${
+                                    rule.priority === 'HIGH'
+                                      ? 'bg-red-100 text-red-800'
+                                      : rule.priority === 'MEDIUM'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-green-100 text-green-800'
+                                  }`}>
+                                    {rule.priority || 'MEDIUM'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm">
+                                  <span className={`px-2 py-1 rounded-full text-xs ${
+                                    rule.status === 'ACTIVE' 
+                                      ? 'bg-green-100 text-green-800' 
+                                      : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {rule.status}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-400">
+                                  {expandedRows.has(rule.id) ? '↑' : '↓'}
+                                </td>
+                              </tr>
+                              {expandedRows.has(rule.id) && (
+                                <tr>
+                                  <td colSpan={4} className="px-4 py-4 bg-gray-50 border-t border-gray-200">
+                                    <div className="space-y-3">
+                                      <div>
+                                        <h5 className="font-medium text-gray-800 mb-1">Description:</h5>
+                                        <p className="text-gray-600 text-sm">{rule.description || 'No description available'}</p>
+                                      </div>
+                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                        <div>
+                                          <span className="font-medium text-gray-600">Metric:</span>
+                                          <p className="text-gray-800">{rule.metric || 'Not specified'}</p>
+                                        </div>
+                                        <div>
+                                          <span className="font-medium text-gray-600">Threshold:</span>
+                                          <p className="text-gray-800">{rule.threshold || 'Not specified'}</p>
+                                        </div>
+                                        <div>
+                                          <span className="font-medium text-gray-600">Category:</span>
+                                          <p className="text-gray-800">{rule.category || 'General'}</p>
+                                        </div>
+                                        <div>
+                                          <span className="font-medium text-gray-600">Action:</span>
+                                          <p className="text-gray-800">{rule.action || rule.consequence || 'Not specified'}</p>
+                                        </div>
+                                      </div>
+                                      {rule.condition && (
+                                        <div>
+                                          <span className="font-medium text-gray-600">Condition:</span>
+                                          <p className="text-gray-800">{rule.condition}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>
@@ -378,40 +450,99 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
                   {maintenance.length === 0 ? (
                     <p className="text-gray-600">No maintenance schedule available for this device.</p>
                   ) : (
-                    <div className="space-y-4">
-                      {maintenance.map((item) => (
-                        <div key={item.id} className="bg-white p-4 rounded-lg border border-gray-200">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium text-gray-800">{item.taskName}</h4>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              item.status === 'ACTIVE' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {item.status}
-                            </span>
-                          </div>
-                          <p className="text-gray-600 mb-2">{item.description}</p>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            <div>
-                              <span className="font-medium text-gray-600">Component:</span>
-                              <p className="text-gray-800">{item.componentName}</p>
-                            </div>
-                            <div>
-                              <span className="font-medium text-gray-600">Frequency:</span>
-                              <p className="text-gray-800">{item.frequency}</p>
-                            </div>
-                            <div>
-                              <span className="font-medium text-gray-600">Priority:</span>
-                              <p className="text-gray-800">{item.priority}</p>
-                            </div>
-                            <div>
-                              <span className="font-medium text-gray-600">Next Due:</span>
-                              <p className="text-gray-800">{item.nextMaintenance || 'Not scheduled'}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Name</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Frequency</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {maintenance.map((item) => (
+                            <React.Fragment key={item.id}>
+                              <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleRowExpansion(item.id)}>
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  {truncateText(item.taskName || item.title || 'Unnamed Task')}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  {item.frequency || 'Not specified'}
+                                </td>
+                                <td className="px-4 py-3 text-sm">
+                                  <span className={`px-2 py-1 rounded-full text-xs ${
+                                    item.status === 'ACTIVE' || item.status === 'scheduled'
+                                      ? 'bg-green-100 text-green-800' 
+                                      : item.status === 'in_progress'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : item.status === 'completed'
+                                      ? 'bg-gray-100 text-gray-800'
+                                      : 'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                    {item.status}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-400">
+                                  {expandedRows.has(item.id) ? '↑' : '↓'}
+                                </td>
+                              </tr>
+                              {expandedRows.has(item.id) && (
+                                <tr>
+                                  <td colSpan={4} className="px-4 py-4 bg-gray-50 border-t border-gray-200">
+                                    <div className="space-y-3">
+                                      <div>
+                                        <h5 className="font-medium text-gray-800 mb-1">Description:</h5>
+                                        <p className="text-gray-600 text-sm">{item.description || 'No description available'}</p>
+                                      </div>
+                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                        <div>
+                                          <span className="font-medium text-gray-600">Component:</span>
+                                          <p className="text-gray-800">{item.componentName || 'Not specified'}</p>
+                                        </div>
+                                        <div>
+                                          <span className="font-medium text-gray-600">Priority:</span>
+                                          <p className="text-gray-800">{item.priority || 'Medium'}</p>
+                                        </div>
+                                        <div>
+                                          <span className="font-medium text-gray-600">Next Due:</span>
+                                          <p className="text-gray-800">{item.nextMaintenance || item.scheduledDate || 'Not scheduled'}</p>
+                                        </div>
+                                        <div>
+                                          <span className="font-medium text-gray-600">Duration:</span>
+                                          <p className="text-gray-800">{item.estimatedDuration || 'Not specified'}</p>
+                                        </div>
+                                      </div>
+                                      {(item.notes || item.requiredTools || item.safetyNotes) && (
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                          {item.notes && (
+                                            <div>
+                                              <span className="font-medium text-gray-600">Notes:</span>
+                                              <p className="text-gray-800">{item.notes}</p>
+                                            </div>
+                                          )}
+                                          {item.requiredTools && (
+                                            <div>
+                                              <span className="font-medium text-gray-600">Required Tools:</span>
+                                              <p className="text-gray-800">{item.requiredTools}</p>
+                                            </div>
+                                          )}
+                                          {item.safetyNotes && (
+                                            <div>
+                                              <span className="font-medium text-gray-600">Safety Notes:</span>
+                                              <p className="text-gray-800">{item.safetyNotes}</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>
@@ -423,28 +554,79 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
                   {safetyPrecautions.length === 0 ? (
                     <p className="text-gray-600">No safety precautions available for this device.</p>
                   ) : (
-                    <div className="space-y-4">
-                      {safetyPrecautions.map((precaution) => (
-                        <div key={precaution.id} className="bg-white p-4 rounded-lg border border-gray-200">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="font-medium text-gray-800">{precaution.title}</h4>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              precaution.severity === 'HIGH' 
-                                ? 'bg-red-100 text-red-800'
-                                : precaution.severity === 'MEDIUM'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-green-100 text-green-800'
-                            }`}>
-                              {precaution.severity}
-                            </span>
-                          </div>
-                          <p className="text-gray-600 mb-2">{precaution.description}</p>
-                          <div className="text-sm">
-                            <span className="font-medium text-gray-600">Category:</span>
-                            <span className="text-gray-800 ml-2">{precaution.category}</span>
-                          </div>
-                        </div>
-                      ))}
+                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Safety Item</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Severity</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {safetyPrecautions.map((precaution) => (
+                            <React.Fragment key={precaution.id}>
+                              <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleRowExpansion(precaution.id)}>
+                                <td className="px-4 py-3 text-sm text-gray-900">
+                                  {truncateText(precaution.title || 'Safety Precaution')}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  {precaution.category || 'General'}
+                                </td>
+                                <td className="px-4 py-3 text-sm">
+                                  <span className={`px-2 py-1 rounded-full text-xs ${
+                                    precaution.severity === 'HIGH' 
+                                      ? 'bg-red-100 text-red-800'
+                                      : precaution.severity === 'MEDIUM'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-green-100 text-green-800'
+                                  }`}>
+                                    {precaution.severity || 'LOW'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-400">
+                                  {expandedRows.has(precaution.id) ? '↑' : '↓'}
+                                </td>
+                              </tr>
+                              {expandedRows.has(precaution.id) && (
+                                <tr>
+                                  <td colSpan={4} className="px-4 py-4 bg-gray-50 border-t border-gray-200">
+                                    <div className="space-y-3">
+                                      <div>
+                                        <h5 className="font-medium text-gray-800 mb-1">Description:</h5>
+                                        <p className="text-gray-600 text-sm">{precaution.description || 'No description available'}</p>
+                                      </div>
+                                      {(precaution.procedure || precaution.emergencyContact || precaution.requirements) && (
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                          {precaution.procedure && (
+                                            <div>
+                                              <span className="font-medium text-gray-600">Procedure:</span>
+                                              <p className="text-gray-800">{precaution.procedure}</p>
+                                            </div>
+                                          )}
+                                          {precaution.emergencyContact && (
+                                            <div>
+                                              <span className="font-medium text-gray-600">Emergency Contact:</span>
+                                              <p className="text-gray-800">{precaution.emergencyContact}</p>
+                                            </div>
+                                          )}
+                                          {precaution.requirements && (
+                                            <div>
+                                              <span className="font-medium text-gray-600">Requirements:</span>
+                                              <p className="text-gray-800">{precaution.requirements}</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>

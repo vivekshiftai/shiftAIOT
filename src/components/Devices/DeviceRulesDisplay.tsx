@@ -39,10 +39,26 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingRule, setEditingRule] = useState<IoTRule | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadRules();
   }, [deviceId]);
+
+  const toggleRowExpansion = (id: string) => {
+    const newExpandedRows = new Set(expandedRows);
+    if (newExpandedRows.has(id)) {
+      newExpandedRows.delete(id);
+    } else {
+      newExpandedRows.add(id);
+    }
+    setExpandedRows(newExpandedRows);
+  };
+
+  const truncateText = (text: string, limit: number = 40) => {
+    if (text.length <= limit) return text;
+    return text.substring(0, limit) + '...';
+  };
 
   const loadRules = async () => {
     try {
@@ -306,107 +322,146 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
             )}
           </div>
         ) : (
-          filteredRules.map((rule) => (
-            <div
-              key={rule.id}
-              className={`p-4 rounded-lg border ${
-                rule.status === 'INACTIVE' ? 'opacity-60 bg-gray-50' : 'bg-white'
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3 flex-1">
-                  <Settings className="w-5 h-5 text-blue-500 mt-1" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h4 className="font-medium text-gray-900">{rule.name}</h4>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getPriorityColor(rule.priority)}`}>
-                        {rule.priority}
-                      </span>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(rule.status)}`}>
-                        {rule.status}
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-2 text-sm">
-                      <div>
-                        <strong className="text-gray-700">Description:</strong>
-                        <p className="text-gray-600 ml-2">{rule.description}</p>
-                      </div>
-                      {rule.metric && (
-                        <div>
-                          <strong className="text-gray-700">Metric:</strong>
-                          <p className="text-gray-600 ml-2">{rule.metric}</p>
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Rule Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredRules.map((rule) => (
+                  <React.Fragment key={rule.id}>
+                    <tr 
+                      className={`hover:bg-gray-50 cursor-pointer ${
+                        rule.status === 'INACTIVE' ? 'opacity-60' : ''
+                      }`}
+                      onClick={() => toggleRowExpansion(rule.id)}
+                    >
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {truncateText(rule.name)}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(rule.priority)}`}>
+                          {rule.priority}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(rule.status)}`}>
+                          {rule.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {rule.category}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleStatus(rule);
+                            }}
+                            className={`p-1 rounded ${
+                              rule.status === 'ACTIVE' 
+                                ? 'text-green-600 hover:bg-green-100' 
+                                : 'text-gray-400 hover:bg-gray-100'
+                            }`}
+                            title={rule.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                          >
+                            {rule.status === 'ACTIVE' ? (
+                              <CheckCircle className="w-4 h-4" />
+                            ) : (
+                              <Clock className="w-4 h-4" />
+                            )}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditRule(rule);
+                            }}
+                            className="p-1 text-blue-600 hover:bg-blue-100 rounded"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteRule(rule.id);
+                            }}
+                            className="p-1 text-red-600 hover:bg-red-100 rounded"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
-                      )}
-                      {rule.metricValue && (
-                        <div>
-                          <strong className="text-gray-700">Metric Value:</strong>
-                          <p className="text-gray-600 ml-2">{rule.metricValue}</p>
-                        </div>
-                      )}
-                      {rule.threshold && (
-                        <div>
-                          <strong className="text-gray-700">Threshold:</strong>
-                          <p className="text-gray-600 ml-2">{rule.threshold}</p>
-                        </div>
-                      )}
-                      {rule.consequence && (
-                        <div>
-                          <strong className="text-gray-700">Consequence:</strong>
-                          <p className="text-gray-600 ml-2">{rule.consequence}</p>
-                        </div>
-                      )}
-                      <div>
-                        <strong className="text-gray-700">Condition:</strong>
-                        <p className="text-gray-600 ml-2">{rule.condition}</p>
-                      </div>
-                      <div>
-                        <strong className="text-gray-700">Action:</strong>
-                        <p className="text-gray-600 ml-2">{rule.action}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
-                      <span>Category: {rule.category}</span>
-                      <span>Created: {new Date(rule.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2 ml-4">
-                  <button
-                    onClick={() => handleToggleStatus(rule)}
-                    className={`p-1 rounded ${
-                      rule.status === 'ACTIVE' 
-                        ? 'text-green-600 hover:bg-green-100' 
-                        : 'text-gray-400 hover:bg-gray-100'
-                    }`}
-                    title={rule.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
-                  >
-                    {rule.status === 'ACTIVE' ? (
-                      <CheckCircle className="w-4 h-4" />
-                    ) : (
-                      <Clock className="w-4 h-4" />
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-400">
+                        {expandedRows.has(rule.id) ? '↑' : '↓'}
+                      </td>
+                    </tr>
+                    {expandedRows.has(rule.id) && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-4 bg-gray-50 border-t border-gray-200">
+                          <div className="space-y-3">
+                            <div>
+                              <h5 className="font-medium text-gray-800 mb-1">Description:</h5>
+                              <p className="text-gray-600 text-sm">{rule.description || 'No description available'}</p>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                              {rule.metric && (
+                                <div>
+                                  <span className="font-medium text-gray-600">Metric:</span>
+                                  <p className="text-gray-800">{rule.metric}</p>
+                                </div>
+                              )}
+                              {rule.metricValue && (
+                                <div>
+                                  <span className="font-medium text-gray-600">Metric Value:</span>
+                                  <p className="text-gray-800">{rule.metricValue}</p>
+                                </div>
+                              )}
+                              {rule.threshold && (
+                                <div>
+                                  <span className="font-medium text-gray-600">Threshold:</span>
+                                  <p className="text-gray-800">{rule.threshold}</p>
+                                </div>
+                              )}
+                              {rule.consequence && (
+                                <div>
+                                  <span className="font-medium text-gray-600">Consequence:</span>
+                                  <p className="text-gray-800">{rule.consequence}</p>
+                                </div>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="font-medium text-gray-600">Condition:</span>
+                                <p className="text-gray-800">{rule.condition}</p>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-600">Action:</span>
+                                <p className="text-gray-800">{rule.action}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-200">
+                              <span>Category: {rule.category}</span>
+                              <span>Created: {new Date(rule.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
                     )}
-                  </button>
-                  <button
-                    onClick={() => handleEditRule(rule)}
-                    className="p-1 text-blue-600 hover:bg-blue-100 rounded"
-                    title="Edit"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteRule(rule.id)}
-                    className="p-1 text-red-600 hover:bg-red-100 rounded"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

@@ -38,10 +38,26 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingPrecaution, setEditingPrecaution] = useState<DeviceSafetyPrecaution | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadSafetyPrecautions();
   }, [deviceId]);
+
+  const toggleRowExpansion = (id: string) => {
+    const newExpandedRows = new Set(expandedRows);
+    if (newExpandedRows.has(id)) {
+      newExpandedRows.delete(id);
+    } else {
+      newExpandedRows.add(id);
+    }
+    setExpandedRows(newExpandedRows);
+  };
+
+  const truncateText = (text: string, limit: number = 40) => {
+    if (text.length <= limit) return text;
+    return text.substring(0, limit) + '...';
+  };
 
   const loadSafetyPrecautions = async () => {
     try {
