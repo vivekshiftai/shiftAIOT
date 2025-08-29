@@ -49,7 +49,7 @@ sudo /opt/iot-platform/logs.sh
 
 ## 🌐 Access URLs
 
-- **Frontend**: http://localhost:3000
+- **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:8100
 - **Health Check**: http://localhost:8100/actuator/health
 

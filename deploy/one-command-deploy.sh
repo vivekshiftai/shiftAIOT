@@ -248,7 +248,7 @@ sleep 10
 sudo systemctl start iot-platform-frontend
 sleep 5
 echo "✅ IoT Platform started!"
-echo "🌐 Frontend: http://localhost:3000"
+echo "🌐 Frontend: http://localhost:5173"
 echo "🔧 Backend: http://localhost:8100"
 echo "📊 Health: http://localhost:8100/actuator/health"
 echo "📁 Logs: $LOG_DIR"
@@ -277,7 +277,7 @@ sudo systemctl status iot-platform-frontend --no-pager -l
 echo ""
 echo "Port Status:"
 echo "Backend (8100): \$(netstat -tuln | grep :8100 | wc -l) connections"
-echo "Frontend (3000): \$(netstat -tuln | grep :3000 | wc -l) connections"
+echo "Frontend (5173): \$(netstat -tuln | grep :5173 | wc -l) connections"
 echo ""
 echo "Log Files:"
 echo "Backend: $BACKEND_LOG"
@@ -354,10 +354,10 @@ else
     warn "⚠️ Backend is not listening on port 8100"
 fi
 
-if netstat -tuln | grep -q ":3000 "; then
-    log "✅ Frontend is listening on port 3000"
+if netstat -tuln | grep -q ":5173 "; then
+    log "✅ Frontend is listening on port 5173"
 else
-    warn "⚠️ Frontend is not listening on port 3000"
+    warn "⚠️ Frontend is not listening on port 5173"
 fi
 
 # Test backend health
@@ -377,7 +377,7 @@ log "✅ Services: Started and enabled"
 log "✅ Logs: Configured in $LOG_DIR"
 echo ""
 log "🌐 Access URLs:"
-log "   Frontend: http://localhost:3000"
+log "   Frontend: http://localhost:5173"
 log "   Backend API: http://localhost:8100"
 log "   Health Check: http://localhost:8100/actuator/health"
 echo ""

@@ -8,6 +8,10 @@ export default defineConfig({
     port: 5173,
     host: true,
   },
+  preview: {
+    port: 5173,
+    host: true,
+  },
   define: {
     // Ensure process.env is available for any remaining references
     'process.env': {}
