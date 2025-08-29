@@ -1,12 +1,8 @@
 package com.iotplatform.service;
 
 import com.iotplatform.dto.TelemetryDataRequest;
-import com.influxdb.client.InfluxDBClient;
-import com.influxdb.client.InfluxDBClientFactory;
-import com.influxdb.client.WriteApiBlocking;
-import com.influxdb.client.domain.WritePrecision;
-import com.influxdb.client.write.Point;
-import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -15,52 +11,34 @@ import java.util.Map;
 @Service
 public class TelemetryService {
 
-    @Value("${influxdb.url}")
-    private String influxUrl;
-
-    @Value("${influxdb.token}")
-    private String influxToken;
-
-    @Value("${influxdb.org}")
-    private String influxOrg;
-
-    @Value("${influxdb.bucket}")
-    private String influxBucket;
-
-    private InfluxDBClient getInfluxDBClient() {
-        return InfluxDBClientFactory.create(influxUrl, influxToken.toCharArray(), influxOrg, influxBucket);
-    }
+    private static final Logger logger = LoggerFactory.getLogger(TelemetryService.class);
 
     public void storeTelemetryData(String deviceId, TelemetryDataRequest telemetryData) {
-        try (InfluxDBClient client = getInfluxDBClient()) {
-            WriteApiBlocking writeApi = client.getWriteApiBlocking();
-
-            Point point = Point.measurement("telemetry")
-                    .addTag("device_id", deviceId)
-                    .time(Instant.now(), WritePrecision.MS);
-
-            // Add all metrics as fields
-            for (Map.Entry<String, Double> entry : telemetryData.getMetrics().entrySet()) {
-                point.addField(entry.getKey(), entry.getValue());
-            }
-
-            writeApi.writePoint(point);
+        try {
+            // Log telemetry data for now (can be extended to use a different storage solution later)
+            logger.info("Telemetry data received for device {}: {}", deviceId, telemetryData.getMetrics());
+            
+            // TODO: Implement storage to PostgreSQL or another database
+            // For now, we'll just log the data
+            logger.debug("Storing telemetry data - Device: {}, Timestamp: {}, Metrics: {}", 
+                deviceId, Instant.now(), telemetryData.getMetrics());
+                
         } catch (Exception e) {
-            // Fallback to in-memory storage or logging
-            System.out.println("Failed to store telemetry data in InfluxDB: " + e.getMessage());
-            System.out.println("Device: " + deviceId + ", Data: " + telemetryData.getMetrics());
+            logger.error("Failed to store telemetry data for device {}: {}", deviceId, e.getMessage(), e);
         }
     }
 
     public String getTelemetryData(String deviceId, String timeRange) {
-        try (InfluxDBClient client = getInfluxDBClient()) {
-            // TODO: Implement actual InfluxDB query based on deviceId and timeRange
-            // This should query the InfluxDB bucket for actual telemetry data
-            // Example query: from(bucket: "iot_telemetry") |> range(start: -1h) |> filter(fn: (r) => r["device_id"] == deviceId)
+        try {
+            logger.info("Retrieving telemetry data for device {} with time range: {}", deviceId, timeRange);
             
-            return "[]"; // Return empty array until InfluxDB query is implemented
+            // TODO: Implement retrieval from PostgreSQL or another database
+            // For now, return empty array
+            logger.debug("Telemetry data retrieval not yet implemented - returning empty array");
+            
+            return "[]"; // Return empty array until database storage is implemented
         } catch (Exception e) {
-            System.out.println("Failed to retrieve telemetry data from InfluxDB: " + e.getMessage());
+            logger.error("Failed to retrieve telemetry data for device {}: {}", deviceId, e.getMessage(), e);
             return "[]"; // Return empty array on error
         }
     }

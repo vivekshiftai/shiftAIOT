@@ -104,13 +104,6 @@ if ! systemctl is-active --quiet postgresql; then
 fi
 log "✅ PostgreSQL is running"
 
-# Check Redis
-if ! systemctl is-active --quiet redis; then
-    error "Redis is not running. Please run: sudo ./deploy/install-prerequisites.sh"
-    exit 1
-fi
-log "✅ Redis is running"
-
 # Step 2: Build Applications
 log "🔨 Step 2: Building applications..."
 
@@ -170,7 +163,7 @@ log "🔧 Step 4: Creating service files..."
 sudo tee /etc/systemd/system/iot-platform-backend.service > /dev/null <<EOF
 [Unit]
 Description=IoT Platform Backend
-After=network.target postgresql.service redis.service
+After=network.target postgresql.service
 
 [Service]
 Type=simple
@@ -229,10 +222,6 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: false
-  
-  redis:
-    host: localhost
-    port: 6379
 
 jwt:
   secret: shiftAIOT_secure_jwt_secret_key_2025

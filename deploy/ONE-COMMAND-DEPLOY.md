@@ -76,7 +76,7 @@ If deployment fails:
    java -version
    mvn --version
    node --version
-   sudo systemctl status postgresql redis
+   sudo systemctl status postgresql
    ```
 
 2. **Check logs**:
@@ -115,5 +115,17 @@ If deployment fails:
 - Service status monitoring
 - Log rotation is set up
 - Performance metrics available
+
+## 🗄️ Database
+
+- **PostgreSQL**: Main database for application data
+- **Database**: iotplatform
+- **Username**: postgres
+- **Password**: 123
+
+## 📡 MQTT Broker
+
+- **Mosquitto**: MQTT broker for IoT device communication
+- **Port**: 1883 (default)
 
 Your IoT Platform is now running as a production-ready background service! 🎉
