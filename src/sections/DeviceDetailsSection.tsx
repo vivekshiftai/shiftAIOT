@@ -362,69 +362,103 @@ export const DeviceDetailsSection: React.FC = () => {
     
     try {
       console.log('📄 Loading PDFs for device:', device.id);
-      // Load all PDFs from backend API with timeout
-      const pdfPromise = pdfAPI.listPDFs(0, 100);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('PDF loading timeout')), 5000)
-      );
-      const pdfListResponse = await Promise.race([pdfPromise, timeoutPromise]) as any;
       
-      // Filter PDFs that might be associated with this device
-      // We'll look for PDFs that contain the device name or are likely related
-      const deviceNameLower = device.name.toLowerCase();
-      const deviceTypeLower = device.type.toLowerCase();
+      // Get device PDF results which includes PDF documents
+      const pdfResultsResponse = await deviceAPI.getDevicePDFResults(device.id);
       
-      const filteredPDFs: KnowledgeDocument[] = pdfListResponse.data.pdfs
-        .map((pdf: any, index: number) => ({
-          id: pdf.id || index.toString(),
-          name: pdf.name || pdf.filename || `PDF_${index}`,
+      if (pdfResultsResponse.data.pdfDocuments && pdfResultsResponse.data.pdfDocuments.length > 0) {
+        const pdfDocuments = pdfResultsResponse.data.pdfDocuments;
+        
+        const filteredPDFs: KnowledgeDocument[] = pdfDocuments.map((doc: any) => ({
+          id: doc.id,
+          name: doc.pdfName || doc.originalFilename,
           type: 'pdf',
-          uploadedAt: pdf.uploaded_at || pdf.created_at || new Date().toISOString(),
-          processedAt: pdf.processed_at || pdf.created_at || new Date().toISOString(),
-          size: pdf.file_size || pdf.size_bytes || 0,
-          status: pdf.status || 'completed',
-          vectorized: pdf.vectorized || true,
-          chunk_count: pdf.chunk_count || 0,
+          uploadedAt: doc.createdAt || new Date().toISOString(),
+          processedAt: doc.updatedAt || new Date().toISOString(),
+          size: doc.fileSize || 0,
+          status: doc.processingStatus || 'completed',
+          vectorized: true,
+          chunk_count: doc.processedChunks || 0,
           deviceId: device.id,
-          deviceName: device.name
-        }))
-        .filter((pdf: any) => {
-          const pdfNameLower = pdf.name.toLowerCase();
-          // Check if PDF name contains device name, device type, or common device-related terms
-          return pdfNameLower.includes(deviceNameLower) ||
-                 pdfNameLower.includes(deviceTypeLower) ||
-                 pdfNameLower.includes('manual') ||
-                 pdfNameLower.includes('datasheet') ||
-                 pdfNameLower.includes('specification') ||
-                 pdfNameLower.includes('guide') ||
-                 pdfNameLower.includes('instruction') ||
-                 pdfNameLower.includes('user') ||
-                 pdfNameLower.includes('technical');
+          deviceName: device.name,
+          documentType: doc.documentType
+        }));
+        
+        setDevicePDFs(filteredPDFs);
+        
+        // Auto-select the first PDF if available
+        if (filteredPDFs.length > 0 && !selectedPDF) {
+          setSelectedPDF(filteredPDFs[0]);
+        }
+        
+        // Update initial chat message if PDFs are found
+        if (filteredPDFs.length > 0) {
+          setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. How can I help you with this device?`);
+        }
+        
+        console.log('✅ Device PDFs loaded successfully:', { 
+          deviceId: device.id, 
+          totalPDFs: pdfDocuments.length,
+          filteredPDFs: filteredPDFs.length 
         });
-      
-      setDevicePDFs(filteredPDFs);
-      
-      // Auto-select the first PDF if available
-      if (filteredPDFs.length > 0 && !selectedPDF) {
-        setSelectedPDF(filteredPDFs[0]);
+        
+        logInfo('DeviceDetails', 'Device PDFs loaded successfully', { 
+          deviceId: device.id, 
+          totalPDFs: pdfDocuments.length,
+          filteredPDFs: filteredPDFs.length 
+        });
+      } else {
+        // Fallback to old method if no PDF documents found
+        console.log('📄 No PDF documents found, trying fallback method...');
+        
+        // Load all PDFs from backend API with timeout
+        const pdfPromise = pdfAPI.listPDFs(0, 100);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('PDF loading timeout')), 5000)
+        );
+        const pdfListResponse = await Promise.race([pdfPromise, timeoutPromise]) as any;
+        
+        // Filter PDFs that might be associated with this device
+        const deviceNameLower = device.name.toLowerCase();
+        const deviceTypeLower = device.type.toLowerCase();
+        
+        const filteredPDFs: KnowledgeDocument[] = pdfListResponse.data.pdfs
+          .map((pdf: any, index: number) => ({
+            id: pdf.id || index.toString(),
+            name: pdf.name || pdf.filename || `PDF_${index}`,
+            type: 'pdf',
+            uploadedAt: pdf.uploaded_at || pdf.created_at || new Date().toISOString(),
+            processedAt: pdf.processed_at || pdf.created_at || new Date().toISOString(),
+            size: pdf.file_size || pdf.size_bytes || 0,
+            status: pdf.status || 'completed',
+            vectorized: pdf.vectorized || true,
+            chunk_count: pdf.chunk_count || 0,
+            deviceId: device.id,
+            deviceName: device.name
+          }))
+          .filter((pdf: any) => {
+            const pdfNameLower = pdf.name.toLowerCase();
+            return pdfNameLower.includes(deviceNameLower) ||
+                   pdfNameLower.includes(deviceTypeLower) ||
+                   pdfNameLower.includes('manual') ||
+                   pdfNameLower.includes('datasheet') ||
+                   pdfNameLower.includes('specification') ||
+                   pdfNameLower.includes('guide') ||
+                   pdfNameLower.includes('instruction') ||
+                   pdfNameLower.includes('user') ||
+                   pdfNameLower.includes('technical');
+          });
+        
+        setDevicePDFs(filteredPDFs);
+        
+        if (filteredPDFs.length > 0 && !selectedPDF) {
+          setSelectedPDF(filteredPDFs[0]);
+        }
+        
+        if (filteredPDFs.length > 0) {
+          setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. How can I help you with this device?`);
+        }
       }
-      
-      // Update initial chat message if PDFs are found
-      if (filteredPDFs.length > 0) {
-        setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. How can I help you with this device?`);
-      }
-      
-      console.log('✅ Device PDFs loaded successfully:', { 
-        deviceId: device.id, 
-        totalPDFs: pdfListResponse.data.pdfs.length,
-        filteredPDFs: filteredPDFs.length 
-      });
-      
-      logInfo('DeviceDetails', 'Device PDFs loaded successfully', { 
-        deviceId: device.id, 
-        totalPDFs: pdfListResponse.data.pdfs.length,
-        filteredPDFs: filteredPDFs.length 
-      });
       
     } catch (error) {
       console.error('❌ Failed to load device PDFs:', error);
@@ -967,48 +1001,82 @@ export const DeviceDetailsSection: React.FC = () => {
           <div className="flex flex-col h-96">
             {/* PDF Selection */}
             {devicePDFs.length > 0 && (
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
+              <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-800">Available PDFs ({devicePDFs.length}):</span>
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">Available PDF Documents ({devicePDFs.length})</span>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                      📱 Device-specific
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-blue-700 mb-2">
+                    Select PDF for AI Chat:
+                  </label>
                   <select
                     value={selectedPDF?.id || ''}
                     onChange={(e) => {
                       const pdf = devicePDFs.find(p => p.id === e.target.value);
                       setSelectedPDF(pdf || null);
                     }}
-                    className="text-sm border border-blue-200 rounded px-2 py-1 bg-white"
+                    className="w-full text-sm border border-blue-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="">Select a PDF to query...</option>
+                    <option value="">🤖 Choose a PDF to ask questions about...</option>
                     {devicePDFs.map((pdf) => (
                       <option key={pdf.id} value={pdf.id}>
-                        {pdf.name}
+                        📄 {pdf.name}
                       </option>
                     ))}
                   </select>
                 </div>
+                
                 {selectedPDF && (
-                  <div className="text-xs text-blue-600">
-                    <p className="font-medium">Currently querying: {selectedPDF.name}</p>
+                  <div className="p-3 bg-white rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800">Currently querying:</span>
+                    </div>
+                    <p className="text-sm text-blue-700 font-medium mb-1">{selectedPDF.name}</p>
                     {selectedPDF.chunk_count && (
-                      <p className="text-blue-500">Contains {selectedPDF.chunk_count} knowledge chunks</p>
+                      <p className="text-xs text-blue-600">
+                        📊 Contains {selectedPDF.chunk_count} knowledge chunks for AI analysis
+                      </p>
                     )}
+                    <p className="text-xs text-blue-500 mt-1">
+                      💡 Ask me anything about this document - setup, maintenance, troubleshooting, specifications, etc.
+                    </p>
                   </div>
                 )}
               </div>
             )}
             
             {devicePDFs.length === 0 && (
-              <div className="mb-4 p-3 bg-yellow-50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                  <span className="text-sm font-medium text-yellow-800">No PDF documents found for this device</span>
+              <div className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-yellow-100 rounded-lg">
+                    <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-yellow-800">No PDF Documents Found</h4>
+                    <p className="text-xs text-yellow-600">This device doesn't have any associated PDF documents yet.</p>
+                  </div>
                 </div>
-                <p className="text-xs text-yellow-600 mt-1">
-                  Upload PDF documents in the Knowledge section to enable AI-powered chat assistance.
-                </p>
+                <div className="bg-white p-3 rounded-lg border border-yellow-200">
+                  <p className="text-sm text-yellow-700 mb-2">
+                    To enable AI-powered chat assistance for this device:
+                  </p>
+                  <ol className="text-xs text-yellow-600 space-y-1 ml-4">
+                    <li>1. Go to the <strong>Knowledge Base</strong> section</li>
+                    <li>2. Upload PDF documents (manuals, datasheets, etc.)</li>
+                    <li>3. Associate them with this device during upload</li>
+                    <li>4. Return here to start chatting with AI about your device</li>
+                  </ol>
+                </div>
               </div>
             )}
 

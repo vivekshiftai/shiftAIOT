@@ -214,8 +214,11 @@ public class DeviceService {
         // Set user assignment - use assignedUserId from request if provided, otherwise use current user
         if (request.getAssignedUserId() != null && !request.getAssignedUserId().trim().isEmpty()) {
             device.setAssignedUserId(request.getAssignedUserId().trim());
+            logger.info("📱 Device assigned to user: {} - notification will be handled by calling service", 
+                       request.getAssignedUserId().trim());
         } else {
             device.setAssignedUserId(currentUserId);
+            logger.info("📱 Device auto-assigned to creator: {}", currentUserId);
         }
         device.setAssignedBy(currentUserId);
         
@@ -303,11 +306,14 @@ public class DeviceService {
             device.setAssignedUserId(request.getAssignedUserId().trim());
             device.setAssignedBy(currentUserId);
             
-            // Create notification for the assigned user
-            createDeviceAssignmentNotification(device, request.getAssignedUserId().trim(), organizationId);
+            // Note: Notification will be created by the calling service (UnifiedOnboardingService)
+            // to ensure a single consolidated notification with all device information
+            logger.info("📱 Device assigned to user: {} - notification will be handled by calling service", 
+                       request.getAssignedUserId().trim());
         } else {
             device.setAssignedUserId(currentUserId);
             device.setAssignedBy(currentUserId);
+            logger.info("📱 Device auto-assigned to creator: {}", currentUserId);
         }
         
         // Use the status from the request if provided, otherwise default to ONLINE

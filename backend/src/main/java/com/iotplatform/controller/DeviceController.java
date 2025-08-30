@@ -39,8 +39,10 @@ import com.iotplatform.dto.TelemetryDataRequest;
 import com.iotplatform.dto.DeviceUpdateRequest;
 import com.iotplatform.model.Device;
 import com.iotplatform.model.Device.Protocol;
+import com.iotplatform.model.DeviceDocumentation;
 import com.iotplatform.model.User;
 import com.iotplatform.service.DeviceService;
+import com.iotplatform.service.DeviceDocumentationService;
 import com.iotplatform.service.DeviceSafetyPrecautionService;
 import com.iotplatform.service.DeviceWebSocketService;
 import com.iotplatform.service.FileStorageService;
@@ -66,6 +68,8 @@ import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.iotplatform.dto.UnifiedOnboardingProgress;
+import java.util.function.Consumer;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -84,6 +88,7 @@ public class DeviceController {
     private final PDFProcessingService pdfProcessingService;
     private final UnifiedOnboardingService unifiedOnboardingService;
     private final DeviceSafetyPrecautionService deviceSafetyPrecautionService;
+    private final DeviceDocumentationService deviceDocumentationService;
     private final RuleRepository ruleRepository;
     private final RuleConditionRepository ruleConditionRepository;
     private final DeviceMaintenanceRepository deviceMaintenanceRepository;
@@ -94,9 +99,10 @@ public class DeviceController {
     private final DeviceWebSocketService deviceWebSocketService;
     private final MaintenanceScheduleService maintenanceScheduleService;
 
-    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService, MaintenanceScheduleService maintenanceScheduleService) {
+    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, DeviceDocumentationService deviceDocumentationService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService, MaintenanceScheduleService maintenanceScheduleService) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
+        this.deviceDocumentationService = deviceDocumentationService;
         this.fileStorageService = fileStorageService;
         this.pdfProcessingService = pdfProcessingService;
         this.unifiedOnboardingService = unifiedOnboardingService;
@@ -873,11 +879,15 @@ public class DeviceController {
             List<DeviceMaintenance> maintenance = pdfProcessingService.getDeviceMaintenance(id);
             List<DeviceSafetyPrecaution> safetyPrecautions = pdfProcessingService.getDeviceSafetyPrecautions(id);
             
+            // Get PDF documentation for the device
+            List<DeviceDocumentation> pdfDocuments = deviceDocumentationService.getByDeviceId(id);
+            
             Map<String, Object> response = new HashMap<>();
             response.put("device", device);
             response.put("rules", rules);
             response.put("maintenance", maintenance);
             response.put("safetyPrecautions", safetyPrecautions);
+            response.put("pdfDocuments", pdfDocuments);
             
             return ResponseEntity.ok(response);
             
@@ -1469,40 +1479,13 @@ public class DeviceController {
      * Device onboarding endpoint - simplified version without aiRules
      * Only accepts device data and PDF file
      */
-    @PostMapping("/device-onboard")
-    public ResponseEntity<?> deviceOnboard(
+    @PostMapping("/unified-onboarding")
+    public ResponseEntity<DeviceCreateResponse> unifiedOnboarding(
             @RequestParam("deviceData") String deviceData,
             @RequestParam(value = "manualFile", required = false) MultipartFile manualFile,
             @RequestParam(value = "datasheetFile", required = false) MultipartFile datasheetFile,
             @RequestParam(value = "certificateFile", required = false) MultipartFile certificateFile,
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            HttpServletRequest request) {
-        
-        // Enhanced authentication logging
-        logger.info("🔐 Authentication check for device-onboard endpoint");
-        logger.info("🔐 userDetails: {}", userDetails != null);
-        logger.info("🔐 userDetails.getUser(): {}", userDetails != null ? userDetails.getUser() != null : false);
-        logger.info("🔐 Authorization header: {}", request.getHeader("Authorization") != null ? "Present" : "Missing");
-        
-        if (userDetails != null && userDetails.getUser() != null) {
-            logger.info("🔐 Authenticated user: {} with roles: {}", 
-                userDetails.getUser().getEmail(), 
-                userDetails.getAuthorities());
-        }
-        
-        // Log file upload configuration for debugging
-        logger.info("📁 File upload configuration - max-file-size: 500MB, max-request-size: 500MB");
-        logger.info("📁 PDF processing max-file-size: 500MB (524288000 bytes)");
-        
-        logger.info("🔍 deviceOnboard called - userDetails: {}, user: {}", 
-                   userDetails != null, userDetails != null ? userDetails.getUser() != null : false);
-        
-        // Log all request parameters for debugging
-        logger.info("🔍 Request parameters received:");
-        logger.info("🔍 deviceData: {}", deviceData != null ? "present (length: " + deviceData.length() + ")" : "null");
-        logger.info("🔍 manualFile: {}", manualFile != null ? "present (name: " + manualFile.getOriginalFilename() + ", size: " + manualFile.getSize() + ")" : "null");
-        logger.info("🔍 datasheetFile: {}", datasheetFile != null ? "present (name: " + datasheetFile.getOriginalFilename() + ", size: " + datasheetFile.getSize() + ")" : "null");
-        logger.info("🔍 certificateFile: {}", certificateFile != null ? "present (name: " + certificateFile.getOriginalFilename() + ", size: " + certificateFile.getSize() + ")" : "null");
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         
         if (userDetails == null || userDetails.getUser() == null) {
             logger.error("❌ Authentication failed: userDetails is null or user is null");
@@ -1534,26 +1517,27 @@ public class DeviceController {
             String organizationId = userDetails.getUser().getOrganizationId();
             logger.info("🏢 Using organization ID: {}", organizationId);
             
-            // Call unified onboarding service
+            // Call unified onboarding service with progress callback
             String currentUserId = userDetails.getUser().getId();
+            
+            // Create a simple progress callback that logs progress
+            Consumer<UnifiedOnboardingProgress> progressCallback = (progress) -> {
+                logger.info("📊 Onboarding Progress - Stage: {}, Progress: {}%, Message: {}", 
+                           progress.getStage(), progress.getProgress(), progress.getMessage());
+            };
+            
             DeviceCreateResponse response = unifiedOnboardingService.completeUnifiedOnboarding(
-                deviceRequest, manualFile, datasheetFile, certificateFile, organizationId, currentUserId);
+                deviceRequest, manualFile, datasheetFile, certificateFile, organizationId, currentUserId, progressCallback);
             
             logger.info("✅ Device onboarding completed successfully for user: {}", userDetails.getUser().getEmail());
             return ResponseEntity.ok(response);
             
         } catch (JsonProcessingException e) {
             logger.error("❌ Failed to parse device data JSON", e);
-            return ResponseEntity.badRequest().body(Map.of(
-                "error", "Invalid device data format",
-                "message", e.getMessage()
-            ));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         } catch (Exception e) {
             logger.error("❌ Failed to onboard device: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "error", "Device onboarding failed",
-                "message", e.getMessage()
-            ));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

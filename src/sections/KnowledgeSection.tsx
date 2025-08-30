@@ -77,6 +77,8 @@ export const KnowledgeSection: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showOnlyDevicePDFs, setShowOnlyDevicePDFs] = useState(false);
+  const [showDeviceSummary, setShowDeviceSummary] = useState(false);
 
   // Refs for scrolling
   const chatMessagesRef = useRef<HTMLDivElement>(null);
@@ -179,29 +181,10 @@ export const KnowledgeSection: React.FC = () => {
         } catch (collectionsError) {
           logError('Knowledge', 'Failed to load PDF documents from external collections', collectionsError instanceof Error ? collectionsError : new Error('Unknown error'));
           
-          // Fallback to backend PDF API
+          // Try knowledge API first (better device association support)
           try {
-            const pdfListResponse = await pdfAPI.listPDFs(0, 50);
-            const convertedDocuments: KnowledgeDocument[] = pdfListResponse.data.pdfs.map((pdf: any, index: number) => ({
-              id: pdf.id || index.toString(),
-              name: pdf.name || pdf.filename || `PDF_${index}`,
-              type: 'pdf',
-              uploadedAt: pdf.uploaded_at || pdf.created_at || new Date().toISOString(),
-              processedAt: pdf.processed_at || pdf.created_at || new Date().toISOString(),
-              size: pdf.file_size || pdf.size_bytes || 0,
-              status: pdf.status || 'completed',
-              vectorized: pdf.vectorized || true,
-              chunk_count: pdf.chunk_count || 0,
-              deviceId: pdf.device_id || undefined,
-              deviceName: pdf.device_name || undefined
-            }));
-            setDocuments(convertedDocuments);
-            logInfo('Knowledge', 'PDF documents loaded from backend fallback', { count: convertedDocuments.length });
-          } catch (pdfError) {
-            logError('Knowledge', 'Failed to load PDF documents from backend fallback', pdfError instanceof Error ? pdfError : new Error('Unknown error'));
-            // Try fallback to knowledge API
-            try {
-              const knowledgeResponse = await knowledgeAPI.getDocuments();
+            const knowledgeResponse = await knowledgeAPI.getDocuments();
+            if (knowledgeResponse.data.documents) {
               const knowledgeDocuments: KnowledgeDocument[] = knowledgeResponse.data.documents.map((doc: any) => ({
                 id: doc.id.toString(),
                 name: doc.name,
@@ -216,9 +199,32 @@ export const KnowledgeSection: React.FC = () => {
                 deviceName: doc.deviceName
               }));
               setDocuments(knowledgeDocuments);
-              logInfo('Knowledge', 'PDF documents loaded from knowledge API fallback', { count: knowledgeDocuments.length });
-            } catch (knowledgeError) {
-              logError('Knowledge', 'Failed to load documents from knowledge API fallback', knowledgeError instanceof Error ? knowledgeError : new Error('Unknown error'));
+              logInfo('Knowledge', 'PDF documents loaded from knowledge API', { count: knowledgeDocuments.length });
+            } else {
+              throw new Error('Invalid response format from knowledge API');
+            }
+          } catch (knowledgeError) {
+            logError('Knowledge', 'Failed to load documents from knowledge API', knowledgeError instanceof Error ? knowledgeError : new Error('Unknown error'));
+            // Fallback to backend PDF API
+            try {
+              const pdfListResponse = await pdfAPI.listPDFs(0, 50);
+              const convertedDocuments: KnowledgeDocument[] = pdfListResponse.data.pdfs.map((pdf: any, index: number) => ({
+                id: pdf.id || index.toString(),
+                name: pdf.name || pdf.filename || `PDF_${index}`,
+                type: 'pdf',
+                uploadedAt: pdf.uploaded_at || pdf.created_at || new Date().toISOString(),
+                processedAt: pdf.processed_at || pdf.created_at || new Date().toISOString(),
+                size: pdf.file_size || pdf.size_bytes || 0,
+                status: pdf.status || 'completed',
+                vectorized: pdf.vectorized || true,
+                chunk_count: pdf.chunk_count || 0,
+                deviceId: pdf.device_id || undefined,
+                deviceName: pdf.device_name || undefined
+              }));
+              setDocuments(convertedDocuments);
+              logInfo('Knowledge', 'PDF documents loaded from backend fallback', { count: convertedDocuments.length });
+            } catch (pdfError) {
+              logError('Knowledge', 'Failed to load PDF documents from backend fallback', pdfError instanceof Error ? pdfError : new Error('Unknown error'));
               // Keep empty array as final fallback
               setDocuments([]);
             }
@@ -258,13 +264,13 @@ export const KnowledgeSection: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="w-4 h-4 text-success-500" />;
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'processing':
-        return <Clock className="w-4 h-4 text-warning-500" />;
+        return <Clock className="w-4 h-4 text-blue-500" />;
       case 'failed':
-        return <AlertTriangle className="w-4 h-4 text-error-500" />;
+        return <AlertTriangle className="w-4 h-4 text-red-500" />;
       default:
-        return <Clock className="w-4 h-4 text-tertiary" />;
+        return <Clock className="w-4 h-4 text-gray-500" />;
     }
   };
 
@@ -398,38 +404,41 @@ export const KnowledgeSection: React.FC = () => {
     try {
       const deviceName = deviceId ? devices.find((d: Device) => d.id === deviceId)?.name : undefined;
       
-      // Upload directly to PDF processing service using the public endpoint
-      const uploadResponse = await pdfProcessingService.uploadPDFPublic(file);
+      // Upload to knowledge API which supports device association
+      const uploadResponse = await knowledgeAPI.uploadPDF(file, deviceId, deviceName);
       
-      // Create a new document entry
-      const newDocument: KnowledgeDocument = {
-        id: Date.now().toString(),
-        name: uploadResponse.pdf_name || file.name,
-        type: 'pdf',
-        uploadedAt: new Date().toISOString(),
-        size: file.size,
-        status: 'completed', // PDF processing service processes immediately
-        vectorized: true,
-        chunk_count: uploadResponse.chunks_processed,
-        deviceId: deviceId,
-        deviceName: deviceName
-      };
+      if (uploadResponse.data.success) {
+        // Create a new document entry from the response
+        const newDocument: KnowledgeDocument = {
+          id: uploadResponse.data.pdfId || Date.now().toString(),
+          name: uploadResponse.data.pdf_filename || file.name,
+          type: 'pdf',
+          uploadedAt: new Date().toISOString(),
+          size: file.size,
+          status: uploadResponse.data.processing_status || 'processing',
+          vectorized: false, // Will be updated when processing completes
+          chunk_count: 0, // Will be updated when processing completes
+          deviceId: uploadResponse.data.device_id || deviceId,
+          deviceName: uploadResponse.data.device_name || deviceName
+        };
 
-      setDocuments((prev: KnowledgeDocument[]) => [newDocument, ...prev]);
-      
-      // Show success message
-      const deviceInfo = deviceId ? ` for device "${deviceName}"` : '';
-      const successMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: `Successfully uploaded "${newDocument.name}"${deviceInfo}. The document has been processed and is ready for querying.`,
-        timestamp: new Date()
-      };
-      setChatMessages((prev: ChatMessage[]) => [...prev, successMessage]);
+        setDocuments((prev: KnowledgeDocument[]) => [newDocument, ...prev]);
+        
+        // Show immediate success message (no loading screen)
+        const successMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: uploadResponse.data.message || `✅ PDF "${newDocument.name}" uploaded successfully. We're processing your document in the background. You'll receive a notification when it's ready for AI chat queries.`,
+          timestamp: new Date()
+        };
+        setChatMessages((prev: ChatMessage[]) => [...prev, successMessage]);
 
-      // Reset device selector
-      setShowDeviceSelector(false);
-      setSelectedDeviceForUpload('');
+        // Reset device selector
+        setShowDeviceSelector(false);
+        setSelectedDeviceForUpload('');
+      } else {
+        throw new Error(uploadResponse.data.error || 'Upload failed');
+      }
     } catch (error) {
       logError('Knowledge', 'Failed to upload document', error instanceof Error ? error : new Error('Unknown error'));
       alert('Failed to upload document. Please try again.');
@@ -516,8 +525,19 @@ export const KnowledgeSection: React.FC = () => {
 
   const filteredDocuments = documents.filter(doc =>
     doc.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    (!selectedDeviceForUpload || doc.deviceId === selectedDeviceForUpload)
+    (!selectedDeviceForUpload || doc.deviceId === selectedDeviceForUpload) &&
+    (!showOnlyDevicePDFs || doc.deviceName)
   );
+
+  // Get device summary statistics
+  const deviceSummary = devices.map(device => {
+    const devicePDFs = documents.filter(doc => doc.deviceId === device.id);
+    return {
+      ...device,
+      pdfCount: devicePDFs.length,
+      hasPDFs: devicePDFs.length > 0
+    };
+  }).filter(device => device.hasPDFs);
 
   return (
     <div className="knowledge-section flex flex-col bg-gray-50 h-full">
@@ -742,6 +762,28 @@ export const KnowledgeSection: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">PDF Library</h2>
               <div className="flex items-center gap-2">
+                {deviceSummary.length > 0 && (
+                  <button
+                    onClick={() => setShowDeviceSummary(!showDeviceSummary)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+                      showDeviceSummary 
+                        ? 'bg-green-100 text-green-700 border border-green-300' 
+                        : 'bg-gray-100 text-gray-700 border border-gray-300'
+                    }`}
+                  >
+                    📊 {showDeviceSummary ? 'Hide Summary' : 'Device Summary'}
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowOnlyDevicePDFs(!showOnlyDevicePDFs)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+                    showOnlyDevicePDFs 
+                      ? 'bg-blue-100 text-blue-700 border border-blue-300' 
+                      : 'bg-gray-100 text-gray-700 border border-gray-300'
+                  }`}
+                >
+                  📱 {showOnlyDevicePDFs ? 'All PDFs' : 'Device PDFs Only'}
+                </button>
                 <button
                   onClick={refreshCollections}
                   disabled={loading}
@@ -774,6 +816,40 @@ export const KnowledgeSection: React.FC = () => {
                 </label>
               </div>
             </div>
+
+            {/* Device Summary */}
+            {showDeviceSummary && deviceSummary.length > 0 && (
+              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1 bg-green-100 rounded">
+                    <FileText className="w-4 h-4 text-green-600" />
+                  </div>
+                  <h4 className="text-sm font-medium text-green-800">Device PDF Summary</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {deviceSummary.map((device) => (
+                    <div key={device.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 bg-blue-100 rounded">
+                          <FileText className="w-3 h-3 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{device.name}</p>
+                          <p className="text-xs text-gray-500">{device.type}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-bold text-blue-600">{device.pdfCount}</span>
+                        <p className="text-xs text-gray-500">PDF{device.pdfCount !== 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-green-600 mt-2">
+                  💡 These PDFs are available for chat queries in their respective device detail pages.
+                </p>
+              </div>
+            )}
 
             {/* Search and Filters */}
             <div className="space-y-3">
@@ -847,30 +923,38 @@ export const KnowledgeSection: React.FC = () => {
                                 <span>{doc.chunk_count} chunks</span>
                               </>
                             )}
-                            {doc.deviceName && (
-                              <>
-                                <span>•</span>
-                                <span className="text-blue-600 font-medium">{doc.deviceName}</span>
-                              </>
-                            )}
                           </div>
+                          {doc.deviceName && (
+                            <div className="flex items-center gap-1 mt-1">
+                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
+                                📱 {doc.deviceName}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                       
                       <div className="flex items-center gap-2 ml-2">
                         {getStatusIcon(doc.status)}
-                        {doc.vectorized && (
+                        {doc.status === 'processing' && (
+                          <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
+                            Processing...
+                          </span>
+                        )}
+                        {doc.status === 'completed' && doc.vectorized && (
                           <Brain className="w-4 h-4 text-green-500" />
                         )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteDocument(doc.id);
-                          }}
-                          className="p-1 hover:bg-red-100 rounded transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </button>
+                        {doc.status === 'completed' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteDocument(doc.id);
+                            }}
+                            className="p-1 hover:bg-red-100 rounded transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -882,8 +966,13 @@ export const KnowledgeSection: React.FC = () => {
           {/* PDF Library Footer - Fixed at bottom */}
           <div className="knowledge-fixed-footer flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between text-sm text-gray-600">
-              <span>{documents.length} PDF documents</span>
-              <span>{documents.filter(d => d.vectorized).length} AI ready</span>
+              <div className="flex items-center gap-4">
+                <span>{documents.length} PDF documents</span>
+                <span>{documents.filter(d => d.vectorized).length} AI ready</span>
+                <span className="text-blue-600 font-medium">
+                  📱 {documents.filter(d => d.deviceName).length} device-associated
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -892,23 +981,56 @@ export const KnowledgeSection: React.FC = () => {
       {/* Device Selector Modal */}
       {showDeviceSelector && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Associate PDF with Device</h3>
-            <p className="text-gray-600 mb-4">Select a device to associate this PDF with, or upload without association:</p>
+          <div className="bg-white p-6 rounded-xl shadow-lg max-w-lg w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <FileText className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Upload PDF Document</h3>
+                <p className="text-sm text-gray-600">Associate with a device for better organization</p>
+              </div>
+            </div>
             
-            <select
-              value={selectedDeviceForUpload}
-              onChange={(e) => setSelectedDeviceForUpload(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 mb-4"
-            >
-              <option value="">No device association</option>
-              {devices.map((device) => (
-                <option key={device.id} value={device.id}>
-                  {device.name} ({device.type})
-                </option>
-              ))}
-            </select>
+            {/* File Info */}
+            {selectedFile && (
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-900">{selectedFile.name}</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              </div>
+            )}
             
+            {/* Device Selection */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Device Association (Optional)
+              </label>
+              <select
+                value={selectedDeviceForUpload}
+                onChange={(e) => setSelectedDeviceForUpload(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">📄 No device association (General document)</option>
+                {devices.map((device) => (
+                  <option key={device.id} value={device.id}>
+                    📱 {device.name} ({device.type})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                {selectedDeviceForUpload 
+                  ? 'This PDF will be available for chat queries in the device details section.'
+                  : 'This PDF will be available in the general knowledge base.'
+                }
+              </p>
+            </div>
+            
+            {/* Action Buttons */}
             <div className="flex gap-3">
               <button
                 onClick={() => {
@@ -928,9 +1050,16 @@ export const KnowledgeSection: React.FC = () => {
                   }
                   setShowDeviceSelector(false);
                 }}
-                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
               >
-                Upload
+                {uploading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Uploading...
+                  </div>
+                ) : (
+                  'Upload PDF'
+                )}
               </button>
             </div>
           </div>

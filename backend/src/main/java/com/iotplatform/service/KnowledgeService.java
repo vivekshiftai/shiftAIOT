@@ -1,6 +1,8 @@
 package com.iotplatform.service;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -28,13 +30,26 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.iotplatform.model.KnowledgeDocument;
+import com.iotplatform.model.Notification;
 import com.iotplatform.repository.KnowledgeDocumentRepository;
+import com.iotplatform.service.NotificationService;
+import com.iotplatform.service.PDFProcessingService;
+import com.iotplatform.dto.PDFUploadResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 
+@Slf4j
 @Service
 public class KnowledgeService {
 
     @Autowired
     private KnowledgeDocumentRepository knowledgeDocumentRepository;
+    
+    @Autowired
+    private NotificationService notificationService;
+    
+    @Autowired
+    private PDFProcessingService pdfProcessingService;
 
     @Value("${pdf.processing.base-url}")
     private String pdfProcessingUrl;
@@ -59,7 +74,7 @@ public class KnowledgeService {
         Path filePath = uploadPath.resolve(filename);
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
         
-        // Create document record
+        // Create document record with "processing" status
         KnowledgeDocument document = new KnowledgeDocument(
             originalFilename,
             fileExtension.substring(1).toLowerCase(),
@@ -74,10 +89,14 @@ public class KnowledgeService {
             document.setDeviceName(deviceName);
         }
         
-        // Save to database
+        // Set initial status as "processing"
+        document.setStatus("processing");
+        document.setVectorized(false);
+        
+        // Save to database immediately
         KnowledgeDocument savedDocument = knowledgeDocumentRepository.save(document);
         
-        // Simulate processing (in a real implementation, this would be async)
+        // Start background processing
         processDocumentAsync(savedDocument);
         
         return savedDocument;
@@ -203,53 +222,156 @@ public class KnowledgeService {
         return stats;
     }
 
+    @Async
     private void processDocumentAsync(KnowledgeDocument document) {
-        // Process with external PDF API
-        new Thread(() -> {
-            try {
-                // Upload to external PDF processing API
-                RestTemplate restTemplate = new RestTemplate();
-                
-                // Create multipart request
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-                
-                MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-                
-                // Read the file and create a resource
-                Path filePath = Paths.get(document.getFilePath());
-                org.springframework.core.io.Resource fileResource = new UrlResource(filePath.toUri());
-                
-                body.add("file", fileResource);
-                
-                HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-                
-                // Upload to external API using correct endpoint
-                String uploadUrl = pdfProcessingUrl + "/upload-pdf"; // Fixed endpoint
-                System.out.println("Uploading to MinerU service: " + uploadUrl);
-                
-                ResponseEntity<Map> response = restTemplate.postForEntity(uploadUrl, requestEntity, Map.class);
-                
-                if (response.getStatusCode().is2xxSuccessful()) {
-                    Map<String, Object> result = response.getBody();
-                    System.out.println("PDF uploaded to MinerU successfully: " + result);
-                    
-                    // Update document status
-                    document.setStatus("completed");
-                    document.setVectorized(true);
-                    document.setProcessedAt(LocalDateTime.now());
-                    
-                    knowledgeDocumentRepository.save(document);
-                } else {
-                    throw new RuntimeException("MinerU API upload failed: " + response.getStatusCode());
+        try {
+            log.info("🚀 Starting background processing for document: {}", document.getName());
+            
+            // Read the file and create a multipart file for processing
+            Path filePath = Paths.get(document.getFilePath());
+            org.springframework.core.io.Resource fileResource = new UrlResource(filePath.toUri());
+            
+            // Create a MultipartFile from the resource
+            MultipartFile multipartFile = new MultipartFile() {
+                @Override
+                public String getName() {
+                    return document.getName();
                 }
-                
-            } catch (Exception e) {
-                System.err.println("Error processing document with MinerU API: " + e.getMessage());
-                e.printStackTrace();
-                document.setStatus("error");
-                knowledgeDocumentRepository.save(document);
+
+                @Override
+                public String getOriginalFilename() {
+                    return document.getName();
+                }
+
+                @Override
+                public String getContentType() {
+                    return "application/pdf";
+                }
+
+                @Override
+                public boolean isEmpty() {
+                    return false;
+                }
+
+                @Override
+                public long getSize() {
+                    return document.getSize();
+                }
+
+                @Override
+                public byte[] getBytes() throws IOException {
+                    return Files.readAllBytes(filePath);
+                }
+
+                @Override
+                public InputStream getInputStream() throws IOException {
+                    return fileResource.getInputStream();
+                }
+
+                @Override
+                public void transferTo(File dest) throws IOException, IllegalStateException {
+                    Files.copy(filePath, dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                }
+            };
+            
+            // Use the PDF processing service to upload and process
+            PDFUploadResponse response = pdfProcessingService.uploadPDF(multipartFile, document.getOrganizationId());
+            
+            log.info("✅ PDF processing completed successfully for document: {}", document.getName());
+            
+            // Update document status
+            document.setStatus("completed");
+            document.setVectorized(true);
+            document.setProcessedAt(LocalDateTime.now());
+            
+            // Save updated document
+            knowledgeDocumentRepository.save(document);
+            
+            // Send notification to user
+            sendProcessingCompleteNotification(document);
+            
+        } catch (Exception e) {
+            log.error("❌ Error processing document: {}", document.getName(), e);
+            
+            // Update document status to error
+            document.setStatus("error");
+            knowledgeDocumentRepository.save(document);
+            
+            // Send error notification
+            sendProcessingErrorNotification(document, e.getMessage());
+        }
+    }
+    
+    private void sendProcessingCompleteNotification(KnowledgeDocument document) {
+        try {
+            String title = "PDF Processing Complete";
+            String message;
+            
+            if (document.getDeviceId() != null && document.getDeviceName() != null) {
+                message = String.format(
+                    "🎉 Your knowledge base for device '%s' is ready! The PDF '%s' has been processed and is now available for AI chat queries.",
+                    document.getDeviceName(),
+                    document.getName()
+                );
+            } else {
+                message = String.format(
+                    "🎉 Your PDF '%s' has been processed successfully and is now available in the knowledge base for AI queries.",
+                    document.getName()
+                );
             }
-        }).start();
+            
+            // Create notification
+            Notification notification = new Notification();
+            notification.setTitle(title);
+            notification.setMessage(message);
+            notification.setType(Notification.NotificationType.INFO);
+            notification.setOrganizationId(document.getOrganizationId());
+            notification.setCreatedAt(LocalDateTime.now());
+            notification.setRead(false);
+            
+            // If device is associated, set the device info
+            if (document.getDeviceId() != null) {
+                notification.setDeviceId(document.getDeviceId());
+            }
+            
+            // Save notification
+            notificationService.createNotification(notification);
+            
+            log.info("📧 Processing complete notification sent for document: {}", document.getName());
+            
+        } catch (Exception e) {
+            log.error("Failed to send processing complete notification for document: {}", document.getName(), e);
+        }
+    }
+    
+    private void sendProcessingErrorNotification(KnowledgeDocument document, String errorMessage) {
+        try {
+            String title = "PDF Processing Failed";
+            String message = String.format(
+                "❌ Failed to process PDF '%s'. Please try uploading again or contact support if the issue persists.",
+                document.getName()
+            );
+            
+            // Create notification
+            Notification notification = new Notification();
+            notification.setTitle(title);
+            notification.setMessage(message);
+            notification.setType(Notification.NotificationType.ERROR);
+            notification.setOrganizationId(document.getOrganizationId());
+            notification.setCreatedAt(LocalDateTime.now());
+            
+            // If device is associated, set the device info
+            if (document.getDeviceId() != null) {
+                notification.setDeviceId(document.getDeviceId());
+            }
+            
+            // Save notification
+            notificationService.createNotification(notification);
+            
+            log.info("📧 Processing error notification sent for document: {}", document.getName());
+            
+        } catch (Exception e) {
+            log.error("Failed to send processing error notification for document: {}", document.getName(), e);
+        }
     }
 }

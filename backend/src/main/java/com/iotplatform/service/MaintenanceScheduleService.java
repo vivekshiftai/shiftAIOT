@@ -348,7 +348,7 @@ public class MaintenanceScheduleService {
                 // All required fields are present, create maintenance task
                 DeviceMaintenance maintenance = new DeviceMaintenance();
                 maintenance.setId(UUID.randomUUID().toString());
-                maintenance.setDeviceName("Device " + deviceId);
+                maintenance.setDeviceId(deviceId);
                 maintenance.setOrganizationId(organizationId);
                 
                 // Set validated fields with actual values (no defaults)

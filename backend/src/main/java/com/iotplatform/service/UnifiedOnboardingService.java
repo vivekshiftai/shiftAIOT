@@ -6,6 +6,7 @@ import com.iotplatform.dto.MaintenanceGenerationResponse;
 import com.iotplatform.dto.RulesGenerationResponse;
 import com.iotplatform.dto.SafetyGenerationResponse;
 import com.iotplatform.dto.PDFUploadResponse;
+import com.iotplatform.dto.UnifiedOnboardingProgress;
 import com.iotplatform.exception.PDFProcessingException;
 import com.iotplatform.model.*;
 import com.iotplatform.model.Device;
@@ -29,6 +30,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.function.Consumer;
 
 /**
  * Unified service for handling sequential device onboarding workflow.
@@ -60,10 +62,11 @@ public class UnifiedOnboardingService {
     private final DeviceSafetyPrecautionRepository safetyRepository;
     private final NotificationService notificationService;
     private final ConsolidatedNotificationService consolidatedNotificationService;
+    private final DeviceDocumentationService deviceDocumentationService;
     private final ObjectMapper objectMapper;
 
     /**
-     * Complete unified onboarding workflow
+     * Complete unified onboarding workflow with real-time progress tracking
      * 
      * Correct Flow:
      * 1. Create device (without storing PDF files)
@@ -77,16 +80,26 @@ public class UnifiedOnboardingService {
             MultipartFile datasheetFile,
             MultipartFile certificateFile,
             String organizationId,
-            String currentUserId
+            String currentUserId,
+            Consumer<UnifiedOnboardingProgress> progressCallback
     ) throws IOException, PDFProcessingException {
         
         log.info("Starting unified onboarding workflow for device: {}", deviceRequest.getName());
         
         // Step 1: Create device (without storing PDF files in our DB) - This is transactional
         log.info("Step 1: Creating device without storing PDF files...");
+        
+        // Send progress update for device creation
+        sendProgressUpdate(progressCallback, "device", 10, "Creating device configuration...", 
+                          "Setting up device in the system", null, 1, 5, "Device Creation");
+        
         DeviceCreateResponse deviceResponse = createDeviceTransactional(deviceRequest, organizationId, currentUserId);
         
         log.info("Device created successfully with ID: {}", deviceResponse.getId());
+        
+        // Send progress update for device creation completion
+        sendProgressUpdate(progressCallback, "device", 20, "Device created successfully", 
+                          "Device configuration saved to database", null, 1, 5, "Device Creation");
         
         // Send consolidated notification to device assignee if different from creator
         if (deviceRequest.getAssignedUserId() != null && !deviceRequest.getAssignedUserId().trim().isEmpty() 
@@ -105,15 +118,90 @@ public class UnifiedOnboardingService {
         // Step 2: Upload PDF to PDF Processing Service and process - This is non-transactional
         log.info("Step 2: Uploading PDF to processing service and generating content...");
         try {
-            processPDFAndGenerateContent(deviceResponse.getId(), manualFile, datasheetFile, certificateFile, organizationId, deviceRequest, currentUserId);
+            PDFProcessingResult pdfResult = processPDFAndGenerateContent(deviceResponse.getId(), manualFile, datasheetFile, certificateFile, 
+                                       organizationId, deviceRequest, currentUserId, progressCallback);
+            
+            // Populate PDF data in the response
+            if (pdfResult != null) {
+                DeviceCreateResponse.PDFData pdfData = new DeviceCreateResponse.PDFData();
+                pdfData.setPdfName(pdfResult.pdfName);
+                pdfData.setOriginalFileName(pdfResult.originalFileName);
+                pdfData.setFileSize(pdfResult.fileSize);
+                pdfData.setDocumentType(pdfResult.documentType);
+                pdfData.setRulesGenerated(pdfResult.rulesGenerated);
+                pdfData.setMaintenanceItems(pdfResult.maintenanceItems);
+                pdfData.setSafetyPrecautions(pdfResult.safetyPrecautions);
+                pdfData.setProcessingTime(pdfResult.processingTime);
+                
+                deviceResponse.setPdfData(pdfData);
+                
+                log.info("✅ PDF data populated in device response: {}", pdfResult.pdfName);
+            }
+            
         } catch (Exception e) {
             log.error("PDF processing failed for device: {}, but device creation succeeded", deviceResponse.getId(), e);
+            
+            // Send error progress update
+            sendProgressUpdate(progressCallback, "error", 0, "PDF processing failed", 
+                              "Device created but PDF processing encountered an error", e.getMessage(), 0, 5, "Error");
+            
             // Don't fail the entire onboarding if PDF processing fails
         }
+        
+        // Send final completion progress
+        sendProgressUpdate(progressCallback, "complete", 100, "Onboarding completed", 
+                          "Device successfully onboarded with all configurations", null, 5, 5, "Completion");
         
         log.info("Unified onboarding workflow completed successfully for device: {}", deviceResponse.getId());
         
         return deviceResponse;
+    }
+    
+    /**
+     * PDF Processing Result class to hold processing data
+     */
+    private static class PDFProcessingResult {
+        String pdfName;
+        String originalFileName;
+        Long fileSize;
+        String documentType;
+        Integer rulesGenerated;
+        Integer maintenanceItems;
+        Integer safetyPrecautions;
+        Long processingTime;
+    }
+    
+    /**
+     * Send progress update to the callback
+     */
+    private void sendProgressUpdate(Consumer<UnifiedOnboardingProgress> progressCallback, 
+                                  String stage, int progress, String message, String subMessage, 
+                                  String error, int currentStep, int totalSteps, String stepName) {
+        if (progressCallback != null) {
+            try {
+                UnifiedOnboardingProgress progressUpdate = UnifiedOnboardingProgress.builder()
+                    .stage(stage)
+                    .progress(progress)
+                    .message(message)
+                    .subMessage(subMessage)
+                    .error(error)
+                    .retryable(error != null && !error.contains("fatal"))
+                    .timestamp(LocalDateTime.now())
+                    .stepDetails(UnifiedOnboardingProgress.StepDetails.builder()
+                        .currentStep(currentStep)
+                        .totalSteps(totalSteps)
+                        .stepName(stepName)
+                        .status(error != null ? "failed" : progress == 100 ? "completed" : "processing")
+                        .startTime(System.currentTimeMillis())
+                        .build())
+                    .build();
+                
+                progressCallback.accept(progressUpdate);
+                log.info("Progress update sent: {} - {}% - {}", stage, progress, message);
+            } catch (Exception e) {
+                log.error("Failed to send progress update", e);
+            }
+        }
     }
     
     /**
@@ -129,7 +217,7 @@ public class UnifiedOnboardingService {
     }
 
     /**
-     * Process PDF and generate all content (rules, maintenance, safety)
+     * Process PDF and generate all content (rules, maintenance, safety) with progress tracking
      * 
      * Flow:
      * 1. Upload PDF to PDF Processing Service
@@ -138,17 +226,20 @@ public class UnifiedOnboardingService {
      * 4. Generate safety precautions from processed PDF
      * 5. Store all results in our database
      */
-    private void processPDFAndGenerateContent(
+    private PDFProcessingResult processPDFAndGenerateContent(
             String deviceId, 
             MultipartFile manualFile,
             MultipartFile datasheetFile, 
             MultipartFile certificateFile,
             String organizationId,
             DeviceCreateWithFileRequest deviceRequest,
-            String currentUserId) throws PDFProcessingException {
+            String currentUserId,
+            Consumer<UnifiedOnboardingProgress> progressCallback) throws PDFProcessingException {
         
         log.info("Processing PDF and generating content for device: {}", deviceId);
         
+        PDFProcessingResult pdfResult = new PDFProcessingResult();
+
         try {
             // Use the first available PDF file (manual, datasheet, or certificate)
             MultipartFile pdfFile = manualFile != null ? manualFile : 
@@ -156,300 +247,168 @@ public class UnifiedOnboardingService {
                                    certificateFile;
             
             if (pdfFile == null) {
-                log.warn("No PDF file provided for device: {}, skipping content generation", deviceId);
-                return;
+                String errorMsg = "No PDF file provided for processing";
+                log.error(errorMsg);
+                sendProgressUpdate(progressCallback, "error", 0, "No PDF file found", 
+                                  "Please provide a PDF file for processing", errorMsg, 0, 5, "PDF Upload");
+                throw new PDFProcessingException(errorMsg);
             }
+
+            // Step 2.1: Upload PDF to processing service
+            log.info("Step 2.1: Uploading PDF to processing service...");
+            sendProgressUpdate(progressCallback, "upload", 30, "Uploading PDF to AI processing service", 
+                              "Sending document for intelligent analysis", null, 2, 5, "PDF Upload");
             
-            log.info("Uploading PDF to processing service: {}", pdfFile.getOriginalFilename());
+            PDFUploadResponse uploadResponse = pdfProcessingService.uploadPDF(pdfFile, organizationId);
+            pdfResult.pdfName = uploadResponse.getPdfName();
+            pdfResult.originalFileName = pdfFile.getOriginalFilename();
+            pdfResult.fileSize = pdfFile.getSize();
+            pdfResult.documentType = "manual"; // Default, will be updated if other files are provided
             
-            // Step 1: Upload PDF to PDF Processing Service with timeout handling
-            PDFUploadResponse uploadResponse = null;
+            log.info("PDF uploaded successfully: {}", pdfResult.pdfName);
+            
+            // Send progress update for PDF upload completion
+            sendProgressUpdate(progressCallback, "upload", 40, "PDF uploaded successfully", 
+                              "Document received and queued for processing", null, 2, 5, "PDF Upload");
+            
+            // Step 1.5: Store PDF metadata in device documentation table
             try {
-                uploadResponse = pdfProcessingService.uploadPDF(pdfFile, organizationId);
+                String documentType = manualFile != null ? "manual" : 
+                                    datasheetFile != null ? "datasheet" : 
+                                    "certificate";
                 
-                if (uploadResponse == null) {
-                    log.error("PDF upload failed for device: {} - Null response from service", deviceId);
-                    return;
-                }
+                DeviceDocumentation documentation = deviceDocumentationService.createDeviceDocumentation(
+                    deviceId,
+                    documentType,
+                    pdfResult.pdfName, // Use the PDF name from external service
+                    pdfResult.originalFileName,
+                    pdfResult.fileSize,
+                    "external_service" // File path is not stored locally
+                );
                 
-                if (!uploadResponse.isSuccess()) {
-                    log.error("PDF upload failed for device: {} - {}", deviceId, uploadResponse.getMessage());
-                    return;
-                }
+                // Update with processing response details
+                deviceDocumentationService.updateProcessingResponse(
+                    documentation.getId(),
+                    pdfResult.pdfName,
+                    uploadResponse.getChunksProcessed(),
+                    uploadResponse.getProcessingTime(),
+                    uploadResponse.getCollectionName()
+                );
+                
+                log.info("✅ Stored PDF metadata in device documentation: {} for device: {}", 
+                       documentation.getId(), deviceId);
+                
             } catch (Exception e) {
-                log.error("PDF upload failed for device: {} - Exception: {}", deviceId, e.getMessage(), e);
-                return;
+                log.error("❌ Failed to store PDF metadata for device: {} - {}", deviceId, e.getMessage(), e);
+                // Continue with processing even if metadata storage fails
             }
+
+            // Step 2.2: Generate rules from processed PDF
+            log.info("Step 2.2: Generating rules from processed PDF...");
+            sendProgressUpdate(progressCallback, "rules", 50, "Generating intelligent monitoring rules", 
+                              "Analyzing device specifications and creating automation rules", null, 3, 5, "Rules Generation");
             
-            String pdfName = uploadResponse.getPdfName();
-            if (pdfName == null || pdfName.trim().isEmpty()) {
-                log.error("PDF upload succeeded but returned null/empty PDF name for device: {}", deviceId);
-                return;
-            }
+            RulesGenerationResponse rulesResponse = pdfProcessingService.generateRules(pdfResult.pdfName, deviceId, organizationId);
+            pdfResult.rulesGenerated = rulesResponse.getRules().size();
+            log.info("Rules generated successfully: {} rules created", pdfResult.rulesGenerated);
             
-            log.info("PDF uploaded successfully: {}", pdfName);
+            // Store rules in database
+            ruleService.createRulesFromPDF(rulesResponse.getRules(), deviceId, organizationId);
+            log.info("✅ Stored {} rules in database for device: {}", pdfResult.rulesGenerated, deviceId);
             
-            // Step 2: Generate rules from processed PDF with null handling
-            log.info("Generating rules from PDF: {}", pdfName);
-            RulesGenerationResponse rulesResponse = null;
+            // Send progress update for rules completion
+            sendProgressUpdate(progressCallback, "rules", 60, "Rules generated successfully", 
+                              pdfResult.rulesGenerated + " monitoring rules created and configured", null, 3, 5, "Rules Generation");
+
+            // Step 2.3: Generate maintenance schedule from processed PDF
+            log.info("Step 2.3: Generating maintenance schedule from processed PDF...");
+            sendProgressUpdate(progressCallback, "maintenance", 70, "Creating maintenance schedule", 
+                              "Extracting maintenance requirements and creating service plans", null, 4, 5, "Maintenance Schedule");
+            
+            MaintenanceGenerationResponse maintenanceResponse = pdfProcessingService.generateMaintenance(pdfResult.pdfName, deviceId, organizationId);
+            pdfResult.maintenanceItems = maintenanceResponse.getMaintenanceTasks().size();
+            log.info("Maintenance schedule generated successfully: {} maintenance items created", 
+                    pdfResult.maintenanceItems);
+            
+            // Store maintenance schedule in database
+            maintenanceService.createMaintenanceFromPDF(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId);
+            log.info("✅ Stored {} maintenance items in database for device: {}", pdfResult.maintenanceItems, deviceId);
+            
+            // Send progress update for maintenance completion
+            sendProgressUpdate(progressCallback, "maintenance", 80, "Maintenance schedule created", 
+                              pdfResult.maintenanceItems + " maintenance tasks scheduled", null, 4, 5, "Maintenance Schedule");
+
+            // Step 2.4: Generate safety precautions from processed PDF
+            log.info("Step 2.4: Generating safety precautions from processed PDF...");
+            sendProgressUpdate(progressCallback, "safety", 90, "Extracting safety procedures", 
+                              "Identifying safety requirements and creating protocols", null, 5, 5, "Safety Procedures");
+            
+            SafetyGenerationResponse safetyResponse = pdfProcessingService.generateSafety(pdfResult.pdfName, deviceId, organizationId);
+            pdfResult.safetyPrecautions = safetyResponse.getSafetyPrecautions().size();
+            log.info("Safety precautions generated successfully: {} safety items created", 
+                    pdfResult.safetyPrecautions);
+            
+            // Store safety precautions in database
+            safetyService.createSafetyFromPDF(safetyResponse.getSafetyPrecautions(), deviceId, organizationId);
+            log.info("✅ Stored {} safety precautions in database for device: {}", pdfResult.safetyPrecautions, deviceId);
+            
+            // Send progress update for safety completion
+            sendProgressUpdate(progressCallback, "safety", 95, "Safety procedures configured", 
+                              pdfResult.safetyPrecautions + " safety protocols established", null, 5, 5, "Safety Procedures");
+
+            // Step 2.5: Create consolidated notification
+            log.info("Step 2.5: Creating consolidated notification...");
             try {
-                rulesResponse = pdfProcessingService.generateRules(pdfName, deviceId, organizationId);
-                
-                if (rulesResponse != null && rulesResponse.isSuccess() && 
-                    rulesResponse.getRules() != null && !rulesResponse.getRules().isEmpty()) {
-                    log.info("Successfully generated {} rules for device: {}", rulesResponse.getRules().size(), deviceId);
-                    storeRules(rulesResponse.getRules(), deviceId, organizationId);
-                } else {
-                    log.warn("No rules generated for device: {} - Response: {}", deviceId, 
-                            rulesResponse != null ? "success=" + rulesResponse.isSuccess() + ", rules=" + 
-                            (rulesResponse.getRules() != null ? rulesResponse.getRules().size() : "null") : "null response");
-                }
-            } catch (Exception e) {
-                log.error("Rules generation failed for device: {} - Exception: {}", deviceId, e.getMessage(), e);
-            }
-            
-            // Step 3: Generate maintenance from processed PDF with null handling
-            log.info("Generating maintenance from PDF: {}", pdfName);
-            MaintenanceGenerationResponse maintenanceResponse = null;
-            try {
-                maintenanceResponse = pdfProcessingService.generateMaintenance(pdfName, deviceId, organizationId);
-                
-                if (maintenanceResponse != null && maintenanceResponse.isSuccess() && 
-                    maintenanceResponse.getMaintenanceTasks() != null && !maintenanceResponse.getMaintenanceTasks().isEmpty()) {
+                if (deviceRequest.getAssignedUserId() != null && !deviceRequest.getAssignedUserId().trim().isEmpty() 
+                    && !deviceRequest.getAssignedUserId().equals(currentUserId)) {
                     
-                    // Get device assignee for auto-assignment
-                    Device device = deviceRepository.findById(deviceId).orElse(null);
-                    String deviceAssignee = device != null ? device.getAssignedUserId() : null;
+                    String notificationMessage = String.format(
+                        "Device '%s' has been successfully onboarded with AI-generated configurations:\n" +
+                        "• %d monitoring rules created\n" +
+                        "• %d maintenance tasks scheduled\n" +
+                        "• %d safety protocols established\n" +
+                        "• PDF documentation processed and stored\n\n" +
+                        "The device is now ready for monitoring and management.",
+                        deviceRequest.getName(),
+                        pdfResult.rulesGenerated,
+                        pdfResult.maintenanceItems,
+                        pdfResult.safetyPrecautions
+                    );
                     
-                    if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
-                        log.info("Auto-assigning {} maintenance tasks to device assignee: {}", 
-                                maintenanceResponse.getMaintenanceTasks().size(), deviceAssignee);
-                        storeMaintenanceWithAutoAssignment(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId, deviceAssignee);
-                    } else {
-                        log.warn("Device assignee not found for device: {}, storing maintenance tasks without assignment", deviceId);
-                        storeMaintenance(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId);
-                    }
-                } else {
-                    log.warn("No maintenance items generated for device: {} - Response: {}", deviceId,
-                            maintenanceResponse != null ? "success=" + maintenanceResponse.isSuccess() + ", tasks=" + 
-                            (maintenanceResponse.getMaintenanceTasks() != null ? maintenanceResponse.getMaintenanceTasks().size() : "null") : "null response");
+                    consolidatedNotificationService.createConsolidatedDeviceNotification(
+                        deviceId,
+                        deviceRequest.getAssignedUserId().trim(),
+                        organizationId,
+                        currentUserId
+                    );
+                    
+                    log.info("✅ Consolidated notification sent to user: {} for device: {}", 
+                           deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
                 }
             } catch (Exception e) {
-                log.error("Maintenance generation failed for device: {} - Exception: {}", deviceId, e.getMessage(), e);
+                log.error("❌ Failed to create consolidated notification for device: {}", deviceId, e);
             }
             
-            // Step 4: Generate safety precautions from processed PDF with null handling
-            log.info("Generating safety precautions from PDF: {}", pdfName);
-            SafetyGenerationResponse safetyResponse = null;
+            // Convert processing time string to long if possible, otherwise use current time
             try {
-                safetyResponse = pdfProcessingService.generateSafety(pdfName, deviceId, organizationId);
-                
-                if (safetyResponse != null && safetyResponse.isSuccess() && 
-                    safetyResponse.getSafetyPrecautions() != null && !safetyResponse.getSafetyPrecautions().isEmpty()) {
-                    log.info("Successfully generated {} safety precautions for device: {}", 
-                            safetyResponse.getSafetyPrecautions().size(), deviceId);
-                    storeSafetyPrecautions(safetyResponse.getSafetyPrecautions(), deviceId, organizationId);
-                } else {
-                    log.warn("No safety precautions generated for device: {} - Response: {}", deviceId,
-                            safetyResponse != null ? "success=" + safetyResponse.isSuccess() + ", precautions=" + 
-                            (safetyResponse.getSafetyPrecautions() != null ? safetyResponse.getSafetyPrecautions().size() : "null") : "null response");
-                }
-            } catch (Exception e) {
-                log.error("Safety generation failed for device: {} - Exception: {}", deviceId, e.getMessage(), e);
+                pdfResult.processingTime = Long.parseLong(uploadResponse.getProcessingTime());
+            } catch (NumberFormatException e) {
+                pdfResult.processingTime = System.currentTimeMillis();
+                log.warn("Could not parse processing time from response, using current time: {}", uploadResponse.getProcessingTime());
             }
-            
-            log.info("PDF processing and content generation completed for device: {}", deviceId);
-            
-            // Step 5: Create consolidated notification after all processing is complete
-            if (deviceRequest.getAssignedUserId() != null && !deviceRequest.getAssignedUserId().trim().isEmpty() 
-                && !deviceRequest.getAssignedUserId().equals(currentUserId)) {
-                try {
-                    Optional<Notification> consolidatedNotification = consolidatedNotificationService.createConsolidatedDeviceNotification(
-                        deviceId, deviceRequest.getAssignedUserId().trim(), organizationId, currentUserId);
-                    
-                    if (consolidatedNotification.isPresent()) {
-                        log.info("✅ Created consolidated notification for user: {} for device: {}", 
-                               deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
-                    } else {
-                        log.warn("⚠️ Consolidated notification blocked by user preferences for user: {}", 
-                               deviceRequest.getAssignedUserId().trim());
-                    }
-                } catch (Exception e) {
-                    log.error("❌ Failed to create consolidated notification for user: {} device: {}", 
-                             deviceRequest.getAssignedUserId().trim(), deviceRequest.getName(), e);
-                }
-            }
+            log.info("✅ PDF processing and content generation completed successfully for device: {}", deviceId);
             
         } catch (Exception e) {
-            log.error("Error processing PDF and generating content for device: {}", deviceId, e);
-            // Don't throw exception to allow device creation to succeed
-            log.warn("PDF processing failed, but device creation succeeded");
+            log.error("❌ Error during PDF processing and content generation for device: {}", deviceId, e);
+            throw new PDFProcessingException("Failed to process PDF and generate content: " + e.getMessage(), e);
         }
+        
+        return pdfResult;
     }
 
-    /**
-     * Store rules in database
-     */
-    private void storeRules(List<RulesGenerationResponse.Rule> rules, String deviceId, String organizationId) {
-        try {
-            List<Rule> rulesToSave = new ArrayList<>();
-            
-            // Get device information for notifications
-            Optional<Device> deviceOpt = deviceRepository.findById(deviceId);
-            String deviceName = deviceOpt.map(Device::getName).orElse("Unknown Device");
-            String deviceAssignee = deviceOpt.map(Device::getAssignedUserId).orElse(null);
-            
-            for (var ruleData : rules) {
-                Rule rule = new Rule();
-                rule.setId(UUID.randomUUID().toString());
-                rule.setName(ruleData.getName());
-                rule.setDescription(ruleData.getDescription());
-                rule.setMetric(ruleData.getMetric());
-                rule.setMetricValue(ruleData.getMetricValue());
-                rule.setThreshold(ruleData.getThreshold());
-                rule.setConsequence(ruleData.getConsequence());
-                rule.setActive(true);
-                rule.setDeviceId(deviceId);
-                rule.setOrganizationId(organizationId);
-                rule.setCreatedAt(LocalDateTime.now());
-                rule.setUpdatedAt(LocalDateTime.now());
-                
-                rulesToSave.add(rule);
-            }
-            
-            ruleRepository.saveAll(rulesToSave);
-            log.info("Successfully stored {} rules for device: {}", rulesToSave.size(), deviceId);
-            
-            // Note: Individual rule notifications removed - will be included in consolidated notification
-            
-        } catch (Exception e) {
-            log.error("Error storing rules for device: {}", deviceId, e);
-        }
-    }
 
-    /**
-     * Store maintenance items in database with strict validation.
-     * Skips tasks with empty required fields (task, frequency, description, priority, estimated_duration, required_tools, safety_notes).
-     * Safety notes are part of maintenance tasks and are stored with them.
-     */
-    private void storeMaintenance(List<MaintenanceGenerationResponse.MaintenanceTask> maintenanceItems, String deviceId, String organizationId) {
-        try {
-            List<DeviceMaintenance> maintenanceToSave = new ArrayList<>();
-            int processedCount = 0;
-            int skippedCount = 0;
-            
-            for (var maintenanceData : maintenanceItems) {
-                try {
-                    // Get task title - prefer 'task' field over 'task_name' field
-                    String taskTitle = maintenanceData.getTask() != null && !maintenanceData.getTask().trim().isEmpty() 
-                        ? maintenanceData.getTask().trim() 
-                        : maintenanceData.getTaskName() != null ? maintenanceData.getTaskName().trim() : null;
-                    
-                    // STRICT VALIDATION: Check all required fields - skip if any are missing or empty
-                    if (taskTitle == null || taskTitle.isEmpty()) {
-                        log.warn("Skipping maintenance task - task title is missing or empty");
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    if (maintenanceData.getFrequency() == null || maintenanceData.getFrequency().trim().isEmpty()) {
-                        log.warn("Skipping maintenance task '{}' - frequency is missing or empty", taskTitle);
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    if (maintenanceData.getDescription() == null || maintenanceData.getDescription().trim().isEmpty()) {
-                        log.warn("Skipping maintenance task '{}' - description is missing or empty", taskTitle);
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    if (maintenanceData.getPriority() == null || maintenanceData.getPriority().trim().isEmpty()) {
-                        log.warn("Skipping maintenance task '{}' - priority is missing or empty", taskTitle);
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    if (maintenanceData.getEstimatedDuration() == null || maintenanceData.getEstimatedDuration().trim().isEmpty()) {
-                        log.warn("Skipping maintenance task '{}' - estimated_duration is missing or empty", taskTitle);
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    if (maintenanceData.getRequiredTools() == null || maintenanceData.getRequiredTools().trim().isEmpty()) {
-                        log.warn("Skipping maintenance task '{}' - required_tools is missing or empty", taskTitle);
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    if (maintenanceData.getSafetyNotes() == null || maintenanceData.getSafetyNotes().trim().isEmpty()) {
-                        log.warn("Skipping maintenance task '{}' - safety_notes is missing or empty", taskTitle);
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    // All required fields are present, create maintenance task
-                    DeviceMaintenance maintenance = new DeviceMaintenance();
-                    maintenance.setId(UUID.randomUUID().toString());
-                    maintenance.setOrganizationId(organizationId);
-                    
-                    // Set required fields with actual values (no defaults)
-                    maintenance.setTaskName(taskTitle);
-                    maintenance.setComponentName(taskTitle);
-                    maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
-                    
-                    // Set device information (required for foreign key constraint)
-                    setDeviceInformation(maintenance, deviceId);
-                    
-                    // Set validated fields with actual values
-                    maintenance.setFrequency(maintenanceData.getFrequency().trim());
-                    maintenance.setDescription(maintenanceData.getDescription().trim());
-                    maintenance.setPriority(processPriorityStrict(maintenanceData.getPriority().trim()));
-                    maintenance.setEstimatedDuration(maintenanceData.getEstimatedDuration().trim());
-                    maintenance.setRequiredTools(maintenanceData.getRequiredTools().trim());
-                    
-                    // Store safety notes as part of maintenance task
-                    maintenance.setSafetyNotes(maintenanceData.getSafetyNotes().trim());
-                    
-                    // Set category if available
-                    if (maintenanceData.getCategory() != null && !maintenanceData.getCategory().trim().isEmpty()) {
-                        maintenance.setCategory(maintenanceData.getCategory().trim());
-                    }
-                    
-                    // Set dates
-                    maintenance.setLastMaintenance(LocalDate.now());
-                    maintenance.setNextMaintenance(calculateNextMaintenanceDate(LocalDate.now(), maintenance.getFrequency()));
-                    maintenance.setStatus(DeviceMaintenance.Status.ACTIVE);
-                    maintenance.setCreatedAt(LocalDateTime.now());
-                    maintenance.setUpdatedAt(LocalDateTime.now());
-                    
-                    maintenanceToSave.add(maintenance);
-                    processedCount++;
-                    
-                    log.debug("STRICT VALIDATION: Processed maintenance task: {} with frequency: {}, priority: {}", 
-                        maintenance.getTaskName(), maintenance.getFrequency(), maintenance.getPriority());
-                        
-                } catch (Exception e) {
-                    log.error("Failed to process maintenance task in strict validation storage: {}", 
-                        maintenanceData.getTaskName() != null ? maintenanceData.getTaskName() : "Unknown", e);
-                    skippedCount++;
-                    // Continue with next task instead of failing completely
-                }
-            }
-            
-            if (!maintenanceToSave.isEmpty()) {
-                maintenanceRepository.saveAll(maintenanceToSave);
-                log.info("Successfully stored {} maintenance items for device: {} (skipped: {})", 
-                    processedCount, deviceId, skippedCount);
-            } else {
-                log.warn("No valid maintenance items to store for device: {} (all {} items were skipped due to missing required fields)", 
-                    deviceId, maintenanceItems.size());
-            }
-            
-        } catch (Exception e) {
-            log.error("Error storing maintenance for device: {}", deviceId, e);
-        }
-    }
+
+
 
     /**
      * Store maintenance items in database with auto-assignment to device assignee.
@@ -589,83 +548,7 @@ public class UnifiedOnboardingService {
 
 
 
-    /**
-     * Process and store rules for the device (DEPRECATED - use processPDFAndGenerateContent instead)
-     */
-    private void processAndStoreRules(String deviceId, String organizationId) throws PDFProcessingException {
-        try {
-            // Get device to find associated PDF
-            Optional<Device> deviceOpt = deviceRepository.findById(deviceId);
-            if (deviceOpt.isEmpty()) {
-                log.warn("Device not found for rule processing: {}", deviceId);
-                return;
-            }
-            
-            Device device = deviceOpt.get();
-            
-            // Note: Manual URL field removed from simplified schema
-            // PDF processing is now handled through the device documentation system
-            log.info("PDF processing for device {} is now handled through the device documentation system", deviceId);
-            return;
-            
-        } catch (Exception e) {
-            log.error("Error processing rules for device: {}", deviceId, e);
-            // Don't throw exception to allow other steps to continue
-            log.warn("Rule processing failed, continuing with other steps");
-        }
-    }
 
-    /**
-     * Process and store maintenance schedule with proper date formatting and frequency calculation
-     */
-    private void processAndStoreMaintenance(String deviceId, String organizationId) throws PDFProcessingException {
-        try {
-            // Get device to find associated PDF
-            Optional<Device> deviceOpt = deviceRepository.findById(deviceId);
-            if (deviceOpt.isEmpty()) {
-                log.warn("Device not found for maintenance processing: {}", deviceId);
-                return;
-            }
-            
-            Device device = deviceOpt.get();
-            
-            // Note: Manual URL field removed from simplified schema
-            // PDF processing is now handled through the device documentation system
-            log.info("Maintenance generation for device {} is now handled through the device documentation system", deviceId);
-            return;
-            
-        } catch (Exception e) {
-            log.error("Error processing maintenance for device: {}", deviceId, e);
-            // Don't throw exception to allow other steps to continue
-            log.warn("Maintenance processing failed, continuing with other steps");
-        }
-    }
-
-    /**
-     * Process and store safety precautions
-     */
-    private void processAndStoreSafety(String deviceId, String organizationId) throws PDFProcessingException {
-        try {
-            // Get device to find associated PDF
-            Optional<Device> deviceOpt = deviceRepository.findById(deviceId);
-            if (deviceOpt.isEmpty()) {
-                log.warn("Device not found for safety processing: {}", deviceId);
-                return;
-            }
-            
-            Device device = deviceOpt.get();
-            
-            // Note: Manual URL field removed from simplified schema
-            // PDF processing is now handled through the device documentation system
-            log.info("Safety generation for device {} is now handled through the device documentation system", deviceId);
-            return;
-            
-        } catch (Exception e) {
-            log.error("Error processing safety precautions for device: {}", deviceId, e);
-            // Don't throw exception to allow other steps to continue
-            log.warn("Safety processing failed, continuing with other steps");
-        }
-    }
 
     /**
      * Extract PDF filename from file path with improved handling
@@ -940,75 +823,7 @@ public class UnifiedOnboardingService {
         return cat.isEmpty() ? "General" : cat;
     }
 
-    /**
-     * Store safety precautions in database
-     */
-    private void storeSafetyPrecautions(List<SafetyGenerationResponse.SafetyPrecaution> safetyPrecautions, String deviceId, String organizationId) {
-        try {
-            List<DeviceSafetyPrecaution> precautionsToSave = new ArrayList<>();
-            
-            // Get device information for notifications
-            Optional<Device> deviceOpt = deviceRepository.findById(deviceId);
-            String deviceName = deviceOpt.map(Device::getName).orElse("Unknown Device");
-            String deviceAssignee = deviceOpt.map(Device::getAssignedUserId).orElse(null);
-            
-            for (var precautionData : safetyPrecautions) {
-                try {
-                    // Validate required fields
-                    if (precautionData.getTitle() == null || precautionData.getTitle().trim().isEmpty()) {
-                        log.warn("Skipping safety precaution - title is missing or empty");
-                        continue;
-                    }
-                    
-                    if (precautionData.getDescription() == null || precautionData.getDescription().trim().isEmpty()) {
-                        log.warn("Skipping safety precaution '{}' - description is missing or empty", precautionData.getTitle());
-                        continue;
-                    }
-                    
-                    DeviceSafetyPrecaution precaution = new DeviceSafetyPrecaution();
-                    precaution.setId(UUID.randomUUID().toString());
-                    precaution.setDeviceId(deviceId);
-                    precaution.setOrganizationId(organizationId);
-                    
-                    // Set required fields with validation
-                    precaution.setTitle(precautionData.getTitle().trim());
-                    precaution.setDescription(precautionData.getDescription().trim());
-                    precaution.setType(processSafetyTypeWithDefault(precautionData.getType()));
-                    precaution.setCategory(processSafetyCategoryWithDefault(precautionData.getCategory()));
-                    precaution.setSeverity(processSafetySeverityWithDefault(precautionData.getSeverity()));
-                    
-                    // Set optional fields with null handling
-                    precaution.setRecommendedAction(processStringWithDefault(precautionData.getRecommendedAction(), "Follow standard safety procedures"));
-                    precaution.setAboutReaction(processStringWithDefault(precautionData.getAboutReaction(), null));
-                    precaution.setCauses(processStringWithDefault(precautionData.getCauses(), null));
-                    precaution.setHowToAvoid(processStringWithDefault(precautionData.getHowToAvoid(), null));
-                    precaution.setSafetyInfo(processStringWithDefault(precautionData.getSafetyInfo(), null));
-                    
-                    // Set metadata
-                    precaution.setIsActive(true);
-                    precaution.setCreatedAt(LocalDateTime.now());
-                    precaution.setUpdatedAt(LocalDateTime.now());
-                    
-                    precautionsToSave.add(precaution);
-                    
-                } catch (Exception e) {
-                    log.error("Error processing safety precaution: {}", precautionData.getTitle(), e);
-                }
-            }
-            
-            if (!precautionsToSave.isEmpty()) {
-                safetyRepository.saveAll(precautionsToSave);
-                log.info("Successfully stored {} safety precautions for device: {}", precautionsToSave.size(), deviceId);
-                
-                // Note: Individual safety notifications removed - will be included in consolidated notification
-            } else {
-                log.warn("No valid safety precautions to store for device: {}", deviceId);
-            }
-            
-        } catch (Exception e) {
-            log.error("Error storing safety precautions for device: {}", deviceId, e);
-        }
-    }
+
 
     /**
      * Process safety type with default value.

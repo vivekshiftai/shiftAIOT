@@ -26,9 +26,13 @@ export interface UnifiedOnboardingResult {
   deviceData: any;
   pdfData: {
     pdfName: string;
-    rulesData?: any;
-    maintenanceData?: any;
-    safetyData?: any;
+    originalFileName: string;
+    fileSize: number;
+    documentType: string;
+    rulesGenerated: number;
+    maintenanceItems: number;
+    safetyPrecautions: number;
+    processingTime: number;
   };
   processingTime: number;
   success: boolean;
@@ -152,10 +156,14 @@ export class UnifiedOnboardingService {
         safetyPrecautions: pdfResults.safetyCount,
         deviceData: deviceResponse,
         pdfData: {
-          pdfName: uploadedFile?.name || 'No file uploaded',
-          rulesData: pdfResults.rulesData,
-          maintenanceData: pdfResults.maintenanceData,
-          safetyData: pdfResults.safetyData
+          pdfName: deviceResponse.pdfData?.pdfName || uploadedFile?.name || 'unknown.pdf',
+          originalFileName: deviceResponse.pdfData?.originalFileName || uploadedFile?.name || 'unknown.pdf',
+          fileSize: deviceResponse.pdfData?.fileSize || uploadedFile?.size || 0,
+          documentType: deviceResponse.pdfData?.documentType || 'PDF',
+          rulesGenerated: deviceResponse.pdfData?.rulesGenerated || 0,
+          maintenanceItems: deviceResponse.pdfData?.maintenanceItems || 0,
+          safetyPrecautions: deviceResponse.pdfData?.safetyPrecautions || 0,
+          processingTime: deviceResponse.pdfData?.processingTime || processingTime
         },
         processingTime,
         success: true,
@@ -471,6 +479,6 @@ export class UnifiedOnboardingService {
     }
   }
 }
-
 // Export singleton instance
 export const unifiedOnboardingService = new UnifiedOnboardingService();
+

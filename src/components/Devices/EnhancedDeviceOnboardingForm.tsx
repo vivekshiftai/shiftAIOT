@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Upload, FileText, Settings, Bot, CheckCircle, AlertTriangle, MessageSquare, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
 import { unifiedOnboardingService, UnifiedOnboardingProgress } from '../../services/unifiedOnboardingService';
 import { deviceAPI, ruleAPI, knowledgeAPI, userAPI } from '../../services/api';
-import AILoadingScreen from '../Loading/AILoadingScreen';
+import DeviceOnboardingLoader from '../Loading/DeviceOnboardingLoader';
 import { DeviceChatInterface } from './DeviceChatInterface';
 import { OnboardingSuccess } from './OnboardingSuccess';
 import { getApiConfig } from '../../config/api';
@@ -92,28 +92,19 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
-  // Progress tracking states
-  const [currentProcess, setCurrentProcess] = useState<'pdf' | 'rules' | 'knowledgebase'>('pdf');
-  const [progress, setProgress] = useState(0);
-  const [currentSubStage, setCurrentSubStage] = useState('');
+  // Progress tracking states for 5-step onboarding
+  const [currentOnboardingStep, setCurrentOnboardingStep] = useState<string>('pdf_upload');
   const [onboardingStartTime, setOnboardingStartTime] = useState<number>(0);
-  const [stepDetails, setStepDetails] = useState<{
-    currentStep: number;
-    totalSteps: number;
-    stepName: string;
-  } | undefined>(undefined);
 
   // Debug progress state changes
   useEffect(() => {
     if (showOnboardingLoader) {
-      logInfo('EnhancedDeviceOnboardingForm', 'Progress state updated', {
-        progress,
-        currentProcess,
-        currentSubStage,
-        stepDetails
+      logInfo('EnhancedDeviceOnboardingForm', 'Onboarding state updated', {
+        currentOnboardingStep,
+        showOnboardingLoader
       });
     }
-  }, [progress, currentProcess, currentSubStage, stepDetails, showOnboardingLoader]);
+  }, [currentOnboardingStep, showOnboardingLoader]);
 
   // Debug step changes
   useEffect(() => {
@@ -325,16 +316,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
     setShowOnboardingLoader(true);
     setOnboardingStartTime(Date.now());
-    setProgress(0);
-    setCurrentProcess('pdf');
-
-    // Start progress simulation
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        const newProgress = prev + Math.random() * 5;
-        return Math.min(newProgress, 100);
-      });
-    }, 500);
+    setCurrentOnboardingStep('pdf_upload');
 
     try {
       logInfo('EnhancedDeviceOnboardingForm', 'Starting unified onboarding process', {
@@ -343,118 +325,78 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         fileSize: uploadedFile.file.size
       });
 
-      // Simulate realistic progress stages
-      const progressStages = [
-        { stage: 'pdf', progress: 30, message: 'Uploading and processing PDF...', duration: 2000 },
-        { stage: 'pdf', progress: 60, message: 'Extracting device specifications...', duration: 1500 },
-        { stage: 'pdf', progress: 100, message: 'PDF processing complete', duration: 1000 },
-        { stage: 'rules', progress: 0, message: 'Starting AI rule generation...', duration: 0 },
-        { stage: 'rules', progress: 40, message: 'Analyzing device specifications...', duration: 2000 },
-        { stage: 'rules', progress: 80, message: 'Generating monitoring rules...', duration: 1500 },
-        { stage: 'rules', progress: 100, message: 'Rules generation complete', duration: 1000 },
-        { stage: 'knowledgebase', progress: 0, message: 'Building AI knowledge base...', duration: 0 },
-        { stage: 'knowledgebase', progress: 50, message: 'Creating knowledge base entries...', duration: 2000 },
-        { stage: 'knowledgebase', progress: 100, message: 'AI setup complete', duration: 1000 }
+      // Define the 5-step onboarding process
+      const onboardingSteps = [
+        { step: 'pdf_upload', duration: 3000 },
+        { step: 'rules_generation', duration: 4000 },
+        { step: 'maintenance_schedule', duration: 3000 },
+        { step: 'safety_procedures', duration: 3000 },
+        { step: 'device_storage', duration: 2000 }
       ];
 
-      let currentStageIndex = 0;
+      let currentStepIndex = 0;
 
-      const updateProgress = () => {
-        if (currentStageIndex < progressStages.length) {
-          const stage = progressStages[currentStageIndex];
-          setCurrentProcess(stage.stage as 'pdf' | 'rules' | 'knowledgebase');
-          setProgress(stage.progress);
-          setCurrentSubStage(stage.message);
+      const updateOnboardingStep = () => {
+        if (currentStepIndex < onboardingSteps.length) {
+          const step = onboardingSteps[currentStepIndex];
+          setCurrentOnboardingStep(step.step);
           
-          logInfo('Onboarding', `Progress Update: ${stage.stage} - ${stage.progress}%`, {
-            stage: stage.stage,
-            progress: stage.progress,
-            message: stage.message
+          logInfo('Onboarding', `Step Update: ${step.step}`, {
+            step: step.step,
+            stepIndex: currentStepIndex + 1,
+            totalSteps: onboardingSteps.length
           });
 
-          currentStageIndex++;
+          currentStepIndex++;
           
-          if (currentStageIndex < progressStages.length) {
-            setTimeout(updateProgress, stage.duration);
+          if (currentStepIndex < onboardingSteps.length) {
+            setTimeout(updateOnboardingStep, step.duration);
           }
         }
       };
 
-      // Start progress updates
-      setTimeout(updateProgress, 1000);
+      // Start step updates
+      setTimeout(updateOnboardingStep, 1000);
 
       // Use the new unified onboarding service with enhanced error handling and progress tracking
       const result = await unifiedOnboardingService.completeUnifiedOnboarding(
         formData,
         uploadedFile.file,
         (progress: UnifiedOnboardingProgress) => {
-          // Update state with progress information
-          setProgress(progress.progress);
-          setCurrentSubStage(progress.message);
-          
-          // Update step details if available
-          if (progress.stepDetails) {
-            setStepDetails(progress.stepDetails);
+          // Map backend progress stages to our 5-step process
+          switch (progress.stage) {
+            case 'upload':
+            case 'device':
+              setCurrentOnboardingStep('pdf_upload');
+              break;
+            case 'rules':
+              setCurrentOnboardingStep('rules_generation');
+              break;
+            case 'maintenance':
+              setCurrentOnboardingStep('maintenance_schedule');
+              break;
+            case 'safety':
+              setCurrentOnboardingStep('safety_procedures');
+              break;
+            case 'complete':
+              setCurrentOnboardingStep('device_storage');
+              break;
           }
+          
+          // Log progress information
+          logInfo('Onboarding', `Progress Update: ${progress.stage}`, {
+            stage: progress.stage,
+            message: progress.message,
+            subMessage: progress.subMessage,
+            error: progress.error
+          });
           
           // Handle error states
           if (progress.error) {
             logError('Onboarding', `Progress Error: ${progress.stage} - ${progress.error}`, new Error(progress.error));
-            setCurrentSubStage(`Error: ${progress.error}`);
-          }
-          
-          // Log detailed progress information
-          logInfo('Onboarding', `Progress Update: ${progress.stage} - ${progress.progress}%`, {
-            stage: progress.stage,
-            progress: progress.progress,
-            message: progress.message,
-            subMessage: progress.subMessage,
-            stepDetails: progress.stepDetails,
-            error: progress.error,
-            retryable: progress.retryable
-          });
-          
-          if (progress.subMessage) {
-            logInfo('Onboarding', progress.subMessage);
-          }
-          
-          // Update current process based on stage with detailed step information
-          switch (progress.stage) {
-            case 'upload':
-              setCurrentProcess('pdf');
-              logInfo('Onboarding', 'Processing upload stage', { progress: progress.progress });
-              break;
-            case 'device':
-              setCurrentProcess('pdf');
-              logInfo('Onboarding', 'Processing device creation stage', { progress: progress.progress });
-              break;
-            case 'rules':
-              setCurrentProcess('rules');
-              logInfo('Onboarding', 'Processing rules generation stage', { progress: progress.progress });
-              break;
-            case 'maintenance':
-              setCurrentProcess('rules');
-              logInfo('Onboarding', 'Processing maintenance schedule stage', { progress: progress.progress });
-              break;
-            case 'safety':
-              setCurrentProcess('knowledgebase');
-              logInfo('Onboarding', 'Processing safety precautions stage', { progress: progress.progress });
-              break;
-            case 'complete':
-              setCurrentProcess('knowledgebase');
-              logInfo('Onboarding', 'Processing completion stage', { progress: progress.progress });
-              break;
-          }
-          
-          // Log detailed step information
-          if (progress.stepDetails) {
-            logInfo('Onboarding', `Step ${progress.stepDetails.currentStep}/${progress.stepDetails.totalSteps}: ${progress.stepDetails.stepName} - ${progress.message}`);
           }
         }
       );
-
-      // Clear progress interval
-      clearInterval(progressInterval);
 
       // Set success result with processing time
       const finalProcessingTime = result.processingTime || (Date.now() - onboardingStartTime);
@@ -502,15 +444,10 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       }, 1000);
 
     } catch (error) {
-      // Clear progress interval on error
-      clearInterval(progressInterval);
-      
       const errorObj = error instanceof Error ? error : new Error(String(error));
       logError('EnhancedDeviceOnboardingForm', 'Onboarding process failed', errorObj);
       
-      // Update progress to show error
-      setProgress(0);
-      setCurrentSubStage(`Onboarding failed: ${errorObj.message}`);
+      // Hide loader on error
       setShowOnboardingLoader(false);
       
       // Determine if error is retryable
@@ -1052,18 +989,14 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
   // Render loading screen within the modal
   const renderLoadingContent = useCallback(() => (
-    <div className="w-full flex items-center justify-center">
-      <AILoadingScreen
-        isProcessing={true}
-        currentProcess={currentProcess}
-        progress={progress}
-        onComplete={() => {}}
-        pdfFileName={uploadedFile?.file.name}
-        currentSubStage={currentSubStage}
-        stepDetails={stepDetails}
-      />
-    </div>
-  ), [currentProcess, progress, uploadedFile?.file.name, currentSubStage]);
+    <DeviceOnboardingLoader
+      isProcessing={true}
+      currentStep={currentOnboardingStep}
+      deviceName={formData.deviceName}
+      pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
+      onComplete={() => {}}
+    />
+  ), [currentOnboardingStep, formData.deviceName, uploadedFile?.file.name]);
 
   // Render success message with integrated chat
   const renderSuccessContent = useCallback(() => (
@@ -1269,7 +1202,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             <DeviceChatInterface
               deviceName={formData.deviceName}
               deviceId={onboardingResult?.deviceId || 'unknown'}
-              pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
+              pdfFileName={onboardingResult?.pdfData?.pdfName || uploadedFile?.file.name || 'device_documentation.pdf'}
               onClose={handleSuccessClose}
               onContinue={handleSuccessClose}
             />

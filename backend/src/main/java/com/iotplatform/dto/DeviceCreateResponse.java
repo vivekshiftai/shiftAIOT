@@ -48,6 +48,46 @@ public class DeviceCreateResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
+    // PDF Processing Data
+    private PDFData pdfData;
+    
+    // PDF Data inner class
+    public static class PDFData {
+        private String pdfName;
+        private String originalFileName;
+        private Long fileSize;
+        private String documentType;
+        private Integer rulesGenerated;
+        private Integer maintenanceItems;
+        private Integer safetyPrecautions;
+        private Long processingTime;
+        
+        // Getters and Setters
+        public String getPdfName() { return pdfName; }
+        public void setPdfName(String pdfName) { this.pdfName = pdfName; }
+        
+        public String getOriginalFileName() { return originalFileName; }
+        public void setOriginalFileName(String originalFileName) { this.originalFileName = originalFileName; }
+        
+        public Long getFileSize() { return fileSize; }
+        public void setFileSize(Long fileSize) { this.fileSize = fileSize; }
+        
+        public String getDocumentType() { return documentType; }
+        public void setDocumentType(String documentType) { this.documentType = documentType; }
+        
+        public Integer getRulesGenerated() { return rulesGenerated; }
+        public void setRulesGenerated(Integer rulesGenerated) { this.rulesGenerated = rulesGenerated; }
+        
+        public Integer getMaintenanceItems() { return maintenanceItems; }
+        public void setMaintenanceItems(Integer maintenanceItems) { this.maintenanceItems = maintenanceItems; }
+        
+        public Integer getSafetyPrecautions() { return safetyPrecautions; }
+        public void setSafetyPrecautions(Integer safetyPrecautions) { this.safetyPrecautions = safetyPrecautions; }
+        
+        public Long getProcessingTime() { return processingTime; }
+        public void setProcessingTime(Long processingTime) { this.processingTime = processingTime; }
+    }
+    
     // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -123,4 +163,7 @@ public class DeviceCreateResponse {
     
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    
+    public PDFData getPdfData() { return pdfData; }
+    public void setPdfData(PDFData pdfData) { this.pdfData = pdfData; }
 }

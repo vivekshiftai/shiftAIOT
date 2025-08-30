@@ -79,14 +79,29 @@ public class KnowledgeController {
             
             KnowledgeDocument document = knowledgeService.uploadDocument(file, organizationId, deviceId, deviceName);
             
+            // Return immediate success response - processing happens in background
+            String message;
+            if (deviceId != null && deviceName != null) {
+                message = String.format(
+                    "✅ PDF '%s' uploaded successfully for device '%s'. We're processing your document in the background. You'll receive a notification when it's ready for AI chat queries.",
+                    file.getOriginalFilename(),
+                    deviceName
+                );
+            } else {
+                message = String.format(
+                    "✅ PDF '%s' uploaded successfully. We're processing your document in the background. You'll receive a notification when it's ready for AI chat queries.",
+                    file.getOriginalFilename()
+                );
+            }
+            
             return ResponseEntity.ok(Map.of(
                 "success", true,
                 "pdf_filename", file.getOriginalFilename(),
-                "processing_status", "uploaded",
+                "processing_status", "processing",
                 "pdfId", document.getId().toString(),
                 "device_id", document.getDeviceId(),
                 "device_name", document.getDeviceName(),
-                "message", "PDF uploaded successfully"
+                "message", message
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(

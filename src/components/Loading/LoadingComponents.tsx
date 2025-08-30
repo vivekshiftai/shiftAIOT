@@ -1,6 +1,5 @@
 import React from 'react';
-import { Loader2, Cpu, Bell, BarChart3, Settings, Users, AlertTriangle } from 'lucide-react';
-import { IoTLoadingScreen, IoTDataLoadingScreen } from './IoTLoadingScreen';
+import { Cpu, Bell, BarChart3, Settings, User, AlertTriangle } from 'lucide-react';
 
 // Main Application Loading Screen
 export const AppLoadingScreen: React.FC = () => (
@@ -35,7 +34,7 @@ export const LoadingSpinner: React.FC<{ size?: 'sm' | 'md' | 'lg'; color?: strin
   };
 
   return (
-    <Loader2 className={`${sizeClasses[size]} ${color} animate-spin`} />
+    <div className={`${sizeClasses[size]} ${color} border-2 border-current border-t-transparent rounded-full animate-spin`} />
   );
 };
 
@@ -242,7 +241,7 @@ export const AnalyticsEmptyLoading: React.FC = () => (
 
 export const UsersEmptyLoading: React.FC = () => (
   <EmptyStateLoading
-    icon={<Users className="w-8 h-8 text-slate-400" />}
+    icon={<User className="w-8 h-8 text-slate-400" />}
     title="Loading Users"
     description="Fetching user management data..."
   />
@@ -255,6 +254,3 @@ export const SettingsEmptyLoading: React.FC = () => (
     description="Loading system configuration options..."
   />
 );
-
-// IoT-specific loading screens
-export { IoTLoadingScreen, IoTDataLoadingScreen };
