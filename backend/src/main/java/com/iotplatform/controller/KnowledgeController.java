@@ -30,7 +30,7 @@ import com.iotplatform.dto.PDFQueryResponse;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@RequestMapping("/knowledge")
+@RequestMapping("/api/knowledge")
 public class KnowledgeController {
 
     @Autowired

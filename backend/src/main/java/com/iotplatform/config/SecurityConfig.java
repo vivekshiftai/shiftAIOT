@@ -85,6 +85,7 @@ public class SecurityConfig {
                 .requestMatchers("/auth/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/knowledge/**").permitAll()
+                .requestMatchers("/api/knowledge/**").permitAll()
                 .requestMatchers("/upload-pdf").permitAll()
                 .requestMatchers("/query").permitAll()
                 .requestMatchers("/pdfs/**").permitAll()

@@ -56,6 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 "/v3/api-docs",
                 "/api/devices/health",
                 "/knowledge/",
+                "/api/knowledge/",
                 "/upload-pdf",
                 "/query",
                 "/pdfs/"

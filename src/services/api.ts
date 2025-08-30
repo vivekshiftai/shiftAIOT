@@ -176,7 +176,7 @@ export const deviceAPI = {
   downloadDocumentation: (deviceId: string, type: string) => api.get(`/api/devices/${deviceId}/documentation/${type}/download`),
   debugDatabase: (email: string) => api.get(`/api/devices/debug-db?email=${email}`),
   healthCheck: () => api.get('/api/devices/health'),
-  deviceOnboard: (formData: FormData) => api.post('/api/devices/device-onboard', formData, {
+  deviceOnboard: (formData: FormData) => api.post('/api/devices/unified-onboarding', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
