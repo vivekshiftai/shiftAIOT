@@ -324,7 +324,7 @@ public class KnowledgeService {
             Notification notification = new Notification();
             notification.setTitle(title);
             notification.setMessage(message);
-            notification.setType(Notification.NotificationType.INFO);
+            notification.setCategory(Notification.NotificationCategory.CUSTOM);
             notification.setOrganizationId(document.getOrganizationId());
             notification.setCreatedAt(LocalDateTime.now());
             notification.setRead(false);
@@ -356,7 +356,7 @@ public class KnowledgeService {
             Notification notification = new Notification();
             notification.setTitle(title);
             notification.setMessage(message);
-            notification.setType(Notification.NotificationType.ERROR);
+            notification.setCategory(Notification.NotificationCategory.CUSTOM);
             notification.setOrganizationId(document.getOrganizationId());
             notification.setCreatedAt(LocalDateTime.now());
             

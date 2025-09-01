@@ -60,7 +60,7 @@ public class NotificationController {
             Notification testNotification = new Notification();
             testNotification.setTitle("Test Notification");
             testNotification.setMessage("This is a test notification to verify the notification system is working.");
-            testNotification.setType(Notification.NotificationType.INFO);
+            testNotification.setCategory(Notification.NotificationCategory.CUSTOM);
             testNotification.setUserId(user.getId());
             testNotification.setOrganizationId(user.getOrganizationId());
             testNotification.setRead(false);

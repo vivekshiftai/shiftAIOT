@@ -77,9 +77,13 @@ export const NotificationTestPanel: React.FC<NotificationTestPanelProps> = ({ us
       const testNotification = {
         title: notification.title,
         message: notification.message,
-        type: notification.type === 'critical_alert' || notification.type === 'security_alert' ? 'ERROR' :
-              notification.type === 'maintenance_alert' || notification.type === 'performance_alert' ? 'WARNING' :
-              notification.type === 'device_online' ? 'SUCCESS' : 'INFO',
+        category: notification.type === 'critical_alert' || notification.type === 'security_alert' ? 'SECURITY_ALERT' :
+                 notification.type === 'maintenance_alert' ? 'MAINTENANCE_ALERT' :
+                 notification.type === 'performance_alert' ? 'PERFORMANCE_ALERT' :
+                 notification.type === 'device_offline' ? 'DEVICE_OFFLINE' :
+                 notification.type === 'device_online' ? 'DEVICE_ONLINE' :
+                 notification.type === 'rule_triggered' ? 'RULE_TRIGGERED' :
+                 notification.type === 'system_update' ? 'SYSTEM_UPDATE' : 'CUSTOM',
         userId: userId,
         organizationId: '1'
       };

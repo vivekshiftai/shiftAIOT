@@ -129,7 +129,7 @@ public class NotificationSettingsService {
     private NotificationType mapCategoryToType(Notification.NotificationCategory category) {
         return switch (category) {
             case DEVICE_ASSIGNMENT, DEVICE_CREATION, DEVICE_UPDATE -> NotificationType.DEVICE_ALERT;
-            case MAINTENANCE_SCHEDULE, MAINTENANCE_REMINDER, MAINTENANCE_ASSIGNMENT -> NotificationType.MAINTENANCE_ALERT;
+            case MAINTENANCE_SCHEDULE, MAINTENANCE_REMINDER, MAINTENANCE_ASSIGNMENT, MAINTENANCE_ALERT -> NotificationType.MAINTENANCE_ALERT;
             case DEVICE_OFFLINE, DEVICE_ONLINE -> NotificationType.DEVICE_ALERT;
             case TEMPERATURE_ALERT, BATTERY_LOW -> NotificationType.PERFORMANCE_ALERT;
             case RULE_TRIGGERED, RULE_CREATED -> NotificationType.RULE_TRIGGER_ALERT;

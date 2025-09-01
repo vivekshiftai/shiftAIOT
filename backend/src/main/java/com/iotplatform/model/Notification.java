@@ -87,6 +87,7 @@ public class Notification {
         MAINTENANCE_SCHEDULE,
         MAINTENANCE_REMINDER,
         MAINTENANCE_ASSIGNMENT,
+        MAINTENANCE_ALERT,
         DEVICE_OFFLINE,
         DEVICE_ONLINE,
         TEMPERATURE_ALERT,

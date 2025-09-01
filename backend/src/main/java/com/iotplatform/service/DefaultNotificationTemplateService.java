@@ -77,7 +77,7 @@ public class DefaultNotificationTemplateService {
             "The device is now ready for monitoring. Please review the device details and ensure it's properly configured.\n\n" +
             "Best regards,\nIoT Platform Team"
         );
-        template.setNotificationType(Notification.NotificationType.INFO);
+        template.setNotificationType(Notification.NotificationCategory.DEVICE_ASSIGNMENT);
         template.setActive(true);
         template.setOrganizationId(organizationId);
         template.setCreatedBy(createdBy);
@@ -114,7 +114,7 @@ public class DefaultNotificationTemplateService {
             "📅 Created: {{timestamp}}\n\n" +
             "The device is now available for assignment and monitoring."
         );
-        template.setNotificationType(Notification.NotificationType.SUCCESS);
+        template.setNotificationType(Notification.NotificationCategory.DEVICE_CREATION);
         template.setActive(true);
         template.setOrganizationId(organizationId);
         template.setCreatedBy(createdBy);
@@ -150,7 +150,7 @@ public class DefaultNotificationTemplateService {
             "📝 Description: {{description}}\n\n" +
             "Please ensure the device is available for maintenance at the scheduled time."
         );
-        template.setNotificationType(Notification.NotificationType.WARNING);
+        template.setNotificationType(Notification.NotificationCategory.MAINTENANCE_SCHEDULE);
         template.setActive(true);
         template.setOrganizationId(organizationId);
         template.setCreatedBy(createdBy);
@@ -187,7 +187,7 @@ public class DefaultNotificationTemplateService {
             "📝 Description: {{description}}\n\n" +
             "Please complete the maintenance task as soon as possible."
         );
-        template.setNotificationType(Notification.NotificationType.WARNING);
+        template.setNotificationType(Notification.NotificationCategory.MAINTENANCE_REMINDER);
         template.setActive(true);
         template.setOrganizationId(organizationId);
         template.setCreatedBy(createdBy);
@@ -222,7 +222,7 @@ public class DefaultNotificationTemplateService {
             "⏰ Offline Since: {{offlineTime}}\n\n" +
             "Please check the device connection and ensure it's properly powered and connected to the network."
         );
-        template.setNotificationType(Notification.NotificationType.ERROR);
+        template.setNotificationType(Notification.NotificationCategory.DEVICE_OFFLINE);
         template.setActive(true);
         template.setOrganizationId(organizationId);
         template.setCreatedBy(createdBy);
@@ -255,7 +255,7 @@ public class DefaultNotificationTemplateService {
             "⏰ Online Since: {{onlineTime}}\n\n" +
             "The device is now actively monitoring and reporting telemetry data."
         );
-        template.setNotificationType(Notification.NotificationType.SUCCESS);
+        template.setNotificationType(Notification.NotificationCategory.DEVICE_ONLINE);
         template.setActive(true);
         template.setOrganizationId(organizationId);
         template.setCreatedBy(createdBy);
@@ -289,7 +289,7 @@ public class DefaultNotificationTemplateService {
             "⏰ Time: {{timestamp}}\n\n" +
             "Please check the device and take necessary action to control the temperature."
         );
-        template.setNotificationType(Notification.NotificationType.ERROR);
+        template.setNotificationType(Notification.NotificationCategory.TEMPERATURE_ALERT);
         template.setActive(true);
         template.setOrganizationId(organizationId);
         template.setCreatedBy(createdBy);
@@ -324,7 +324,7 @@ public class DefaultNotificationTemplateService {
             "⏰ Time: {{timestamp}}\n\n" +
             "Please replace or recharge the battery to prevent device shutdown."
         );
-        template.setNotificationType(Notification.NotificationType.ERROR);
+        template.setNotificationType(Notification.NotificationCategory.BATTERY_LOW);
         template.setActive(true);
         template.setOrganizationId(organizationId);
         template.setCreatedBy(createdBy);
@@ -360,7 +360,7 @@ public class DefaultNotificationTemplateService {
             "⏰ Triggered: {{timestamp}}\n\n" +
             "Please review the rule conditions and take appropriate action."
         );
-        template.setNotificationType(Notification.NotificationType.INFO);
+        template.setNotificationType(Notification.NotificationCategory.RULE_TRIGGERED);
         template.setActive(true);
         template.setOrganizationId(organizationId);
         template.setCreatedBy(createdBy);

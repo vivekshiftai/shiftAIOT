@@ -66,9 +66,9 @@ public class NotificationService {
             logger.info("✅ Notification created successfully with ID: {} for user: {}", savedNotification.getId(), notification.getUserId());
             
             // Log notification details for debugging
-            logger.debug("Notification details - ID: {}, Title: {}, Message: {}, Type: {}, UserId: {}, OrganizationId: {}, DeviceId: {}, Read: {}", 
+            logger.debug("Notification details - ID: {}, Title: {}, Message: {}, Category: {}, UserId: {}, OrganizationId: {}, DeviceId: {}, Read: {}", 
                         savedNotification.getId(), savedNotification.getTitle(), savedNotification.getMessage(), 
-                        savedNotification.getType(), savedNotification.getUserId(), savedNotification.getOrganizationId(), 
+                        savedNotification.getCategory(), savedNotification.getUserId(), savedNotification.getOrganizationId(), 
                         savedNotification.getDeviceId(), savedNotification.isRead());
             
             return savedNotification;
@@ -181,7 +181,7 @@ public class NotificationService {
         notification.setOrganizationId(organizationId);
         
         return notificationSettingsService.createNotificationIfAllowed(
-            userId, notification, NotificationSettingsService.NotificationType.DEVICE_ALERT);
+            userId, notification, Notification.NotificationCategory.DEVICE_ASSIGNMENT);
     }
 
     /**
@@ -198,7 +198,7 @@ public class NotificationService {
         notification.setOrganizationId(organizationId);
         
         return notificationSettingsService.createNotificationIfAllowed(
-            userId, notification, NotificationSettingsService.NotificationType.CRITICAL_ALERT);
+            userId, notification, Notification.NotificationCategory.SECURITY_ALERT);
     }
 
     /**
@@ -216,7 +216,7 @@ public class NotificationService {
         notification.setOrganizationId(organizationId);
         
         return notificationSettingsService.createNotificationIfAllowed(
-            userId, notification, NotificationSettingsService.NotificationType.MAINTENANCE_ALERT);
+            userId, notification, Notification.NotificationCategory.MAINTENANCE_ALERT);
     }
 
     /**
@@ -232,7 +232,7 @@ public class NotificationService {
         notification.setOrganizationId(organizationId);
         
         return notificationSettingsService.createNotificationIfAllowed(
-            userId, notification, NotificationSettingsService.NotificationType.SECURITY_ALERT);
+            userId, notification, Notification.NotificationCategory.SECURITY_ALERT);
     }
 
     /**
@@ -250,7 +250,7 @@ public class NotificationService {
         notification.setOrganizationId(organizationId);
         
         return notificationSettingsService.createNotificationIfAllowed(
-            userId, notification, NotificationSettingsService.NotificationType.PERFORMANCE_ALERT);
+            userId, notification, Notification.NotificationCategory.PERFORMANCE_ALERT);
     }
 
     /**
@@ -266,7 +266,7 @@ public class NotificationService {
         notification.setOrganizationId(organizationId);
         
         return notificationSettingsService.createNotificationIfAllowed(
-            userId, notification, NotificationSettingsService.NotificationType.SYSTEM_UPDATE);
+            userId, notification, notification.getCategory());
     }
 
     /**
@@ -284,7 +284,7 @@ public class NotificationService {
         notification.setOrganizationId(organizationId);
         
         return notificationSettingsService.createNotificationIfAllowed(
-            userId, notification, NotificationSettingsService.NotificationType.RULE_TRIGGER_ALERT);
+            userId, notification, notification.getCategory());
     }
 
     /**
@@ -296,11 +296,11 @@ public class NotificationService {
 
     /**
      * Create a notification with automatic preference checking.
-     * This method automatically determines the notification type based on the notification content.
+     * This method automatically determines the notification category based on the notification content.
      */
     public Optional<Notification> createNotificationWithPreferenceCheck(String userId, Notification notification) {
-        NotificationSettingsService.NotificationType type = determineNotificationType(notification);
-        return notificationSettingsService.createNotificationIfAllowed(userId, notification, type);
+        Notification.NotificationCategory category = determineNotificationCategory(notification);
+        return notificationSettingsService.createNotificationIfAllowed(userId, notification, category);
     }
     
     /**
@@ -379,9 +379,9 @@ public class NotificationService {
     }
 
     /**
-     * Determine notification type based on notification content.
+     * Determine notification category based on notification content.
      */
-    private NotificationSettingsService.NotificationType determineNotificationType(Notification notification) {
+    private Notification.NotificationCategory determineNotificationCategory(Notification notification) {
         String title = notification.getTitle() != null ? notification.getTitle().toLowerCase() : "";
         String message = notification.getMessage() != null ? notification.getMessage().toLowerCase() : "";
         String category = notification.getCategory() != null ? notification.getCategory().toString() : "";
@@ -389,70 +389,70 @@ public class NotificationService {
         // Device-related notifications
         if (title.contains("device") || message.contains("device")) {
             if (title.contains("offline") || message.contains("offline")) {
-                return NotificationSettingsService.NotificationType.DEVICE_ALERT;
+                return Notification.NotificationCategory.DEVICE_OFFLINE;
             }
             if (title.contains("online") || message.contains("online")) {
-                return NotificationSettingsService.NotificationType.DEVICE_ALERT;
+                return Notification.NotificationCategory.DEVICE_ONLINE;
             }
             if (title.contains("added") || message.contains("added")) {
-                return NotificationSettingsService.NotificationType.DEVICE_ALERT;
+                return Notification.NotificationCategory.DEVICE_CREATION;
             }
             if (title.contains("assignment") || message.contains("assignment")) {
-                return NotificationSettingsService.NotificationType.DEVICE_ALERT;
+                return Notification.NotificationCategory.DEVICE_ASSIGNMENT;
             }
             if (title.contains("assigned") || message.contains("assigned")) {
-                return NotificationSettingsService.NotificationType.DEVICE_ALERT;
+                return Notification.NotificationCategory.DEVICE_ASSIGNMENT;
             }
             // Default for any device-related notification
-            return NotificationSettingsService.NotificationType.DEVICE_ALERT;
+            return Notification.NotificationCategory.DEVICE_UPDATE;
         }
 
         // Critical alerts
         if (category.contains("ERROR") || title.contains("critical") || title.contains("error")) {
-            return NotificationSettingsService.NotificationType.CRITICAL_ALERT;
+            return Notification.NotificationCategory.SECURITY_ALERT;
         }
 
         // Security alerts
         if (title.contains("security") || message.contains("security")) {
-            return NotificationSettingsService.NotificationType.SECURITY_ALERT;
+            return Notification.NotificationCategory.SECURITY_ALERT;
         }
 
         // Performance alerts
         if (title.contains("performance") || message.contains("performance")) {
-            return NotificationSettingsService.NotificationType.PERFORMANCE_ALERT;
+            return Notification.NotificationCategory.PERFORMANCE_ALERT;
         }
 
         // Maintenance alerts
         if (title.contains("maintenance") || message.contains("maintenance")) {
-            return NotificationSettingsService.NotificationType.MAINTENANCE_ALERT;
+            return Notification.NotificationCategory.MAINTENANCE_ALERT;
         }
 
         // Rule triggers
         if (title.contains("rule") || message.contains("rule")) {
-            return NotificationSettingsService.NotificationType.RULE_TRIGGER_ALERT;
+            return Notification.NotificationCategory.RULE_TRIGGERED;
         }
 
         // System updates
         if (title.contains("system") || title.contains("update")) {
-            return NotificationSettingsService.NotificationType.SYSTEM_UPDATE;
+            return Notification.NotificationCategory.SYSTEM_UPDATE;
         }
 
         // Weekly reports
         if (title.contains("weekly") || title.contains("report")) {
-            return NotificationSettingsService.NotificationType.WEEKLY_REPORT;
+            return Notification.NotificationCategory.CUSTOM;
         }
 
         // Data backup
         if (title.contains("backup") || message.contains("backup")) {
-            return NotificationSettingsService.NotificationType.DATA_BACKUP_ALERT;
+            return Notification.NotificationCategory.CUSTOM;
         }
 
         // User activity
         if (title.contains("user") || title.contains("login")) {
-            return NotificationSettingsService.NotificationType.USER_ACTIVITY_ALERT;
+            return Notification.NotificationCategory.CUSTOM;
         }
 
-        // Default to device alert for unknown types
-        return NotificationSettingsService.NotificationType.DEVICE_ALERT;
+        // Default to device update for unknown types
+        return Notification.NotificationCategory.DEVICE_UPDATE;
     }
 }

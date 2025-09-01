@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, AlertTriangle, Info, CheckCircle, Bell, Clock, MapPin, Settings, Shield, Wrench } from 'lucide-react';
+import { ChevronDown, ChevronUp, AlertTriangle, Info, CheckCircle, Bell, Clock, MapPin, Settings, Shield, Wrench, Zap } from 'lucide-react';
 import { Notification } from '../../types';
 
 interface EnhancedNotificationItemProps {
@@ -15,14 +15,33 @@ export const EnhancedNotificationItem: React.FC<EnhancedNotificationItemProps> =
   const [details, setDetails] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
-  const getNotificationIcon = (type: Notification['type']) => {
-    switch (type) {
-      case 'ERROR':
+  const getNotificationIcon = (category: Notification['category']) => {
+    switch (category) {
+      case 'SECURITY_ALERT':
+      case 'SAFETY_ALERT':
+      case 'PERFORMANCE_ALERT':
         return <AlertTriangle className="w-5 h-5 text-red-500" />;
-      case 'WARNING':
-        return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
-      case 'SUCCESS':
+      case 'MAINTENANCE_SCHEDULE':
+      case 'MAINTENANCE_REMINDER':
+      case 'MAINTENANCE_ASSIGNMENT':
+      case 'MAINTENANCE_ALERT':
+        return <Wrench className="w-5 h-5 text-orange-500" />;
+      case 'DEVICE_ASSIGNMENT':
+      case 'DEVICE_CREATION':
+      case 'DEVICE_UPDATE':
         return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'RULE_TRIGGERED':
+      case 'RULE_CREATED':
+        return <Zap className="w-5 h-5 text-purple-500" />;
+      case 'DEVICE_OFFLINE':
+        return <AlertTriangle className="w-5 h-5 text-red-500" />;
+      case 'DEVICE_ONLINE':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'TEMPERATURE_ALERT':
+      case 'BATTERY_LOW':
+        return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
+      case 'SYSTEM_UPDATE':
+        return <Info className="w-5 h-5 text-blue-500" />;
       default:
         return <Info className="w-5 h-5 text-blue-500" />;
     }
@@ -96,7 +115,7 @@ export const EnhancedNotificationItem: React.FC<EnhancedNotificationItemProps> =
     <div className={`p-4 transition-all duration-200 cursor-pointer ${style.container}`}>
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0 mt-0.5">
-          {getNotificationIcon(notification.type)}
+          {getNotificationIcon(notification.category)}
         </div>
         
         <div className="flex-1 min-w-0">

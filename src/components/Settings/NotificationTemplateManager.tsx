@@ -47,7 +47,7 @@ export const NotificationTemplateManager: React.FC<NotificationTemplateManagerPr
     type: 'CUSTOM',
     titleTemplate: '',
     messageTemplate: '',
-    notificationType: 'INFO',
+    notificationType: 'CUSTOM',
     active: true,
     description: '',
     variables: {}

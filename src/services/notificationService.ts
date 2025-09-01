@@ -91,23 +91,23 @@ class NotificationService {
   // Get notification title based on event type
   private getNotificationTitle(event: NotificationEvent): string {
     switch (event.type) {
-      case 'DEVICE_ASSIGNMENT':
+      case 'device_assignment':
         return 'Device Assignment';
-      case 'DEVICE_CREATION':
+      case 'device_creation':
         return 'Device Created';
-      case 'MAINTENANCE_SCHEDULE':
+      case 'maintenance_schedule':
         return 'Maintenance Scheduled';
-      case 'RULE_TRIGGERED':
+      case 'rule_triggered':
         return 'Rule Triggered';
-      case 'DEVICE_OFFLINE':
+      case 'device_offline':
         return 'Device Offline';
-      case 'DEVICE_ONLINE':
+      case 'device_online':
         return 'Device Online';
-      case 'SYSTEM_UPDATE':
+      case 'system_update':
         return 'System Update';
-      case 'SECURITY_ALERT':
+      case 'security_alert':
         return 'Security Alert';
-      case 'PERFORMANCE_ALERT':
+      case 'performance_alert':
         return 'Performance Alert';
       default:
         return 'System Notification';
@@ -117,49 +117,30 @@ class NotificationService {
   // Get notification message based on event type
   private getNotificationMessage(event: NotificationEvent): string {
     switch (event.type) {
-      case 'DEVICE_ASSIGNMENT':
+      case 'device_assignment':
         return `Device ${event.deviceId || 'Unknown'} has been assigned to you.`;
-      case 'DEVICE_CREATION':
+      case 'device_creation':
         return `New device ${event.deviceId || 'Unknown'} has been created.`;
-      case 'MAINTENANCE_SCHEDULE':
+      case 'maintenance_schedule':
         return `Maintenance task scheduled for device ${event.deviceId || 'Unknown'}.`;
-      case 'RULE_TRIGGERED':
+      case 'rule_triggered':
         return `Monitoring rule has been triggered for device ${event.deviceId || 'Unknown'}.`;
-      case 'DEVICE_OFFLINE':
+      case 'device_offline':
         return `Device ${event.deviceId || 'Unknown'} is now offline.`;
-      case 'DEVICE_ONLINE':
+      case 'device_online':
         return `Device ${event.deviceId || 'Unknown'} is now online.`;
-      case 'SYSTEM_UPDATE':
+      case 'system_update':
         return 'System has been updated with new features.';
-      case 'SECURITY_ALERT':
+      case 'security_alert':
         return 'Security alert detected. Please review immediately.';
-      case 'PERFORMANCE_ALERT':
+      case 'performance_alert':
         return 'Performance issue detected. Please investigate.';
       default:
         return 'A system event has occurred.';
     }
   }
 
-  // Get notification type based on event type
-  private getNotificationType(event: NotificationEvent): 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS' {
-    switch (event.type) {
-      case 'SECURITY_ALERT':
-      case 'PERFORMANCE_ALERT':
-        return 'ERROR';
-      case 'DEVICE_OFFLINE':
-      case 'RULE_TRIGGERED':
-        return 'WARNING';
-      case 'DEVICE_ASSIGNMENT':
-      case 'DEVICE_CREATION':
-      case 'MAINTENANCE_SCHEDULE':
-        return 'SUCCESS';
-      case 'DEVICE_ONLINE':
-      case 'SYSTEM_UPDATE':
-      default:
-        return 'INFO';
-    }
-  }
-
+  // Get notification category based on event type
   private getNotificationCategory(event: NotificationEvent): string {
     // Map event types to notification categories
     switch (event.type) {
@@ -279,7 +260,7 @@ class NotificationService {
                  notification.id && 
                  notification.title && 
                  notification.message && 
-                 notification.type &&
+                 notification.category &&
                  notification.userId &&
                  notification.organizationId;
         }).map((notification: any) => ({
@@ -375,9 +356,9 @@ class NotificationService {
     this.notifyListeners();
   }
 
-  // Get notifications by type
-  getByType(type: Notification['type']): Notification[] {
-    return this.notifications.filter(n => n.type === type);
+  // Get notifications by category
+  getByCategory(category: Notification['category']): Notification[] {
+    return this.notifications.filter(n => n.category === category);
   }
 
   // Get notifications by device

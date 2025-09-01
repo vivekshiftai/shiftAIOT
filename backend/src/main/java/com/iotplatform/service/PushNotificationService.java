@@ -143,7 +143,7 @@ public class PushNotificationService {
             escapeJson(notification.getTitle()),
             escapeJson(notification.getMessage()),
             notification.getId(),
-            notification.getType().toString()
+            notification.getCategory().toString()
         );
     }
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Settings, AlertTriangle, Info, CheckCircle, Bell } from 'lucide-react';
+import { Settings, AlertTriangle, Info, CheckCircle, Bell, Wrench, Zap } from 'lucide-react';
 import { useIoT } from '../../contexts/IoTContext';
 import { Notification } from '../../types';
 import { EnhancedNotificationItem } from './EnhancedNotificationItem';
@@ -42,14 +42,33 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     console.log('Notification clicked:', notification);
   };
 
-  const getNotificationIcon = (type: Notification['type']) => {
-    switch (type) {
-      case 'ERROR':
+  const getNotificationIcon = (category: Notification['category']) => {
+    switch (category) {
+      case 'SECURITY_ALERT':
+      case 'SAFETY_ALERT':
+      case 'PERFORMANCE_ALERT':
         return <AlertTriangle className="w-4 h-4 text-red-500" />;
-      case 'WARNING':
-        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
-      case 'SUCCESS':
+      case 'MAINTENANCE_SCHEDULE':
+      case 'MAINTENANCE_REMINDER':
+      case 'MAINTENANCE_ASSIGNMENT':
+      case 'MAINTENANCE_ALERT':
+        return <Wrench className="w-4 h-4 text-orange-500" />;
+      case 'DEVICE_ASSIGNMENT':
+      case 'DEVICE_CREATION':
+      case 'DEVICE_UPDATE':
         return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'RULE_TRIGGERED':
+      case 'RULE_CREATED':
+        return <Zap className="w-4 h-4 text-purple-500" />;
+      case 'DEVICE_OFFLINE':
+        return <AlertTriangle className="w-4 h-4 text-red-500" />;
+      case 'DEVICE_ONLINE':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'TEMPERATURE_ALERT':
+      case 'BATTERY_LOW':
+        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+      case 'SYSTEM_UPDATE':
+        return <Info className="w-4 h-4 text-blue-500" />;
       default:
         return <Info className="w-4 h-4 text-blue-500" />;
     }

@@ -101,7 +101,7 @@ export interface NotificationTemplate {
   type: 'DEVICE_ASSIGNMENT' | 'DEVICE_CREATION' | 'MAINTENANCE_SCHEDULE' | 'MAINTENANCE_REMINDER' | 'DEVICE_OFFLINE' | 'DEVICE_ONLINE' | 'TEMPERATURE_ALERT' | 'BATTERY_LOW' | 'RULE_TRIGGERED' | 'SYSTEM_UPDATE' | 'SECURITY_ALERT' | 'PERFORMANCE_ALERT' | 'CUSTOM';
   titleTemplate: string;
   messageTemplate: string;
-  notificationType: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
+  notificationType: Notification['category'];
   active: boolean;
   organizationId: string;
   createdBy?: string;
