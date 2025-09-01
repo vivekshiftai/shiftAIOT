@@ -5,7 +5,7 @@ import { getApiConfig } from '../config/api';
 import { logInfo, logError, logWarn } from '../utils/logger';
 import { Device, Rule, Notification, TelemetryData, Status } from '../types';
 import { tokenService } from '../services/tokenService';
-import NotificationService from '../services/notificationService';
+import { NotificationService } from '../services/notificationService';
 import { websocketService } from '../services/websocketService';
 import { useAuth } from './AuthContext';
 

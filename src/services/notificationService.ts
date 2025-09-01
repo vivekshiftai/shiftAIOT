@@ -214,11 +214,6 @@ class NotificationService {
     return this.notifications.filter(n => !n.read);
   }
 
-  // Get unread count
-  getUnreadCount(): number {
-    return this.notifications.filter(n => !n.read).length;
-  }
-
   // Mark notification as read
   async markAsRead(notificationId: string): Promise<void> {
     try {
@@ -228,8 +223,8 @@ class NotificationService {
       const notification = this.notifications.find(n => n.id === notificationId);
       if (notification) {
         notification.read = true;
-        this.notifyListeners();
-      }
+    this.notifyListeners();
+  }
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
       throw error;
@@ -320,6 +315,24 @@ class NotificationService {
       return createdAt >= startDate && createdAt <= endDate;
     });
   }
+
+  // Subscribe to notification updates (alias for addListener for compatibility)
+  subscribe(callback: (notifications: Notification[]) => void): () => void {
+    const listener = () => callback([...this.notifications]);
+    return this.addListener(listener);
+  }
+
+  // Get current notifications
+  getNotifications(): Notification[] {
+    return [...this.notifications];
+  }
+
+  // Get unread count
+  getUnreadCount(): number {
+    return this.notifications.filter(n => !n.read).length;
+  }
 }
 
+// Export both the class and singleton instance
+export { NotificationService };
 export const notificationService = NotificationService.getInstance();
