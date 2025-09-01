@@ -154,7 +154,7 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setTitle("Rule Triggered: " + rule.getName());
         notification.setMessage("Device " + device.getName() + " has triggered rule \"" + rule.getName() + "\"");
-        notification.setType(Notification.NotificationType.WARNING);
+        notification.setCategory(Notification.NotificationCategory.RULE_TRIGGERED);
         notification.setDeviceId(device.getId());
         notification.setRuleId(rule.getId());
         notification.setOrganizationId(device.getOrganizationId());
@@ -171,11 +171,11 @@ public class NotificationService {
      */
     public Optional<Notification> createDeviceAlertNotification(String userId, String deviceName, String deviceId, 
                                                               String organizationId, String message, 
-                                                              Notification.NotificationType type) {
+                                                              Notification.NotificationCategory category) {
         Notification notification = new Notification();
         notification.setTitle("Device Alert: " + deviceName);
         notification.setMessage(message);
-        notification.setType(type);
+        notification.setCategory(category);
         notification.setDeviceId(deviceId);
         notification.setUserId(userId);
         notification.setOrganizationId(organizationId);
@@ -192,7 +192,7 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setTitle(title);
         notification.setMessage(message);
-        notification.setType(Notification.NotificationType.ERROR);
+        notification.setCategory(Notification.NotificationCategory.SECURITY_ALERT);
         notification.setDeviceId(deviceId);
         notification.setUserId(userId);
         notification.setOrganizationId(organizationId);
@@ -210,7 +210,7 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setTitle("Maintenance Alert: " + deviceName);
         notification.setMessage(message);
-        notification.setType(Notification.NotificationType.WARNING);
+        notification.setCategory(Notification.NotificationCategory.MAINTENANCE_ALERT);
         notification.setDeviceId(deviceId);
         notification.setUserId(userId);
         notification.setOrganizationId(organizationId);
@@ -227,7 +227,7 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setTitle(title);
         notification.setMessage(message);
-        notification.setType(Notification.NotificationType.ERROR);
+        notification.setCategory(Notification.NotificationCategory.SECURITY_ALERT);
         notification.setUserId(userId);
         notification.setOrganizationId(organizationId);
         
@@ -244,7 +244,7 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setTitle("Performance Alert: " + deviceName);
         notification.setMessage(message);
-        notification.setType(Notification.NotificationType.WARNING);
+        notification.setCategory(Notification.NotificationCategory.PERFORMANCE_ALERT);
         notification.setDeviceId(deviceId);
         notification.setUserId(userId);
         notification.setOrganizationId(organizationId);
@@ -261,7 +261,7 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setTitle(title);
         notification.setMessage(message);
-        notification.setType(Notification.NotificationType.INFO);
+        notification.setCategory(Notification.NotificationCategory.SYSTEM_UPDATE);
         notification.setUserId(userId);
         notification.setOrganizationId(organizationId);
         
@@ -278,7 +278,7 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setTitle("Rule Triggered: " + ruleName);
         notification.setMessage("Device " + deviceName + " triggered rule: " + message);
-        notification.setType(Notification.NotificationType.WARNING);
+        notification.setCategory(Notification.NotificationCategory.RULE_TRIGGERED);
         notification.setDeviceId(deviceId);
         notification.setUserId(userId);
         notification.setOrganizationId(organizationId);
@@ -329,7 +329,7 @@ public class NotificationService {
             Notification notification = new Notification();
             notification.setTitle(processed.getTitle());
             notification.setMessage(processed.getMessage());
-            notification.setType(processed.getType());
+            notification.setCategory(Notification.NotificationCategory.RULE_TRIGGERED);
             notification.setUserId(userId);
             notification.setOrganizationId(organizationId);
             notification.setRead(false);
@@ -351,9 +351,31 @@ public class NotificationService {
             return createNotificationWithPreferenceCheck(userId, notification);
             
         } catch (Exception e) {
-            logger.error("Error creating notification from template: {}", e.getMessage(), e);
+            logger.error("Error creating notification from template: {}",
+                        templateType, e);
             return Optional.empty();
         }
+    }
+    
+    /**
+     * Map template type to notification category
+     */
+    private Notification.NotificationCategory mapTemplateTypeToCategory(NotificationTemplate.TemplateType templateType) {
+        return switch (templateType) {
+            case DEVICE_ASSIGNMENT -> Notification.NotificationCategory.DEVICE_ASSIGNMENT;
+            case DEVICE_CREATION -> Notification.NotificationCategory.DEVICE_CREATION;
+            case MAINTENANCE_SCHEDULE -> Notification.NotificationCategory.MAINTENANCE_SCHEDULE;
+            case MAINTENANCE_REMINDER -> Notification.NotificationCategory.MAINTENANCE_REMINDER;
+            case DEVICE_OFFLINE -> Notification.NotificationCategory.DEVICE_OFFLINE;
+            case DEVICE_ONLINE -> Notification.NotificationCategory.DEVICE_ONLINE;
+            case TEMPERATURE_ALERT -> Notification.NotificationCategory.TEMPERATURE_ALERT;
+            case BATTERY_LOW -> Notification.NotificationCategory.BATTERY_LOW;
+            case RULE_TRIGGERED -> Notification.NotificationCategory.RULE_TRIGGERED;
+            case SYSTEM_UPDATE -> Notification.NotificationCategory.SYSTEM_UPDATE;
+            case SECURITY_ALERT -> Notification.NotificationCategory.SECURITY_ALERT;
+            case PERFORMANCE_ALERT -> Notification.NotificationCategory.PERFORMANCE_ALERT;
+            case CUSTOM -> Notification.NotificationCategory.CUSTOM;
+        };
     }
 
     /**
@@ -362,7 +384,7 @@ public class NotificationService {
     private NotificationSettingsService.NotificationType determineNotificationType(Notification notification) {
         String title = notification.getTitle() != null ? notification.getTitle().toLowerCase() : "";
         String message = notification.getMessage() != null ? notification.getMessage().toLowerCase() : "";
-        String type = notification.getType() != null ? notification.getType().toString() : "";
+        String category = notification.getCategory() != null ? notification.getCategory().toString() : "";
 
         // Device-related notifications
         if (title.contains("device") || message.contains("device")) {
@@ -375,10 +397,18 @@ public class NotificationService {
             if (title.contains("added") || message.contains("added")) {
                 return NotificationSettingsService.NotificationType.DEVICE_ALERT;
             }
+            if (title.contains("assignment") || message.contains("assignment")) {
+                return NotificationSettingsService.NotificationType.DEVICE_ALERT;
+            }
+            if (title.contains("assigned") || message.contains("assigned")) {
+                return NotificationSettingsService.NotificationType.DEVICE_ALERT;
+            }
+            // Default for any device-related notification
+            return NotificationSettingsService.NotificationType.DEVICE_ALERT;
         }
 
         // Critical alerts
-        if (type.equals("ERROR") || title.contains("critical") || title.contains("error")) {
+        if (category.contains("ERROR") || title.contains("critical") || title.contains("error")) {
             return NotificationSettingsService.NotificationType.CRITICAL_ALERT;
         }
 

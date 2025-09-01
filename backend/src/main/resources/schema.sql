@@ -234,13 +234,25 @@ CREATE TABLE IF NOT EXISTS notifications (
     id VARCHAR(255) PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
     message TEXT NOT NULL,
-    type VARCHAR(50) NOT NULL, -- 'INFO', 'WARNING', 'ERROR', 'SUCCESS'
+    category VARCHAR(50) NOT NULL, -- 'DEVICE_ASSIGNMENT', 'DEVICE_CREATION', 'MAINTENANCE_SCHEDULE', etc.
     read BOOLEAN DEFAULT false,
     device_id VARCHAR(255),
     rule_id VARCHAR(255),
     user_id VARCHAR(255) NOT NULL,
     organization_id VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Enhanced device information fields
+    device_name VARCHAR(255),
+    device_type VARCHAR(50),
+    device_location VARCHAR(255),
+    device_status VARCHAR(50),
+    maintenance_rules_count INTEGER,
+    safety_rules_count INTEGER,
+    total_rules_count INTEGER,
+    device_manufacturer VARCHAR(100),
+    device_model VARCHAR(100),
+    
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE SET NULL,

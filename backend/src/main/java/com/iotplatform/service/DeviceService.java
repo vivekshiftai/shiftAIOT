@@ -43,6 +43,7 @@ import com.iotplatform.repository.DeviceMaintenanceRepository;
 import com.iotplatform.model.User;
 import com.iotplatform.repository.UserRepository;
 import com.iotplatform.service.NotificationService;
+import com.iotplatform.service.DeviceNotificationEnhancerService;
 
 
 @Service
@@ -103,6 +104,9 @@ public class DeviceService {
 
     @Autowired
     private MaintenanceScheduleRepository maintenanceScheduleRepository;
+
+    @Autowired
+    private DeviceNotificationEnhancerService deviceNotificationEnhancerService;
 
 
     public List<Device> getAllDevices(String organizationId) {
@@ -288,11 +292,18 @@ public class DeviceService {
             try {
                 logger.info("📝 Creating device assignment notification for user: {} for device: {}", 
                            request.getAssignedUserId().trim(), savedDevice.getName());
+                logger.info("📝 Device details - ID: {}, Name: {}, Organization: {}", 
+                           savedDevice.getId(), savedDevice.getName(), organizationId);
                 createDeviceAssignmentNotification(savedDevice, request.getAssignedUserId().trim(), organizationId);
             } catch (Exception e) {
                 logger.error("❌ Failed to create device assignment notification for device: {}", savedDevice.getId(), e);
                 // Don't fail device creation if notification fails
             }
+        } else {
+            logger.info("📝 No notification needed - assignedUserId: {}, currentUserId: {}, condition: {}", 
+                       request.getAssignedUserId(), currentUserId, 
+                       request.getAssignedUserId() != null && !request.getAssignedUserId().trim().isEmpty() 
+                       && !request.getAssignedUserId().trim().equals(currentUserId));
         }
         
         // Create response without file upload information
@@ -698,38 +709,38 @@ public class DeviceService {
             if (assignedUserOpt.isPresent()) {
                 User assignedUser = assignedUserOpt.get();
                 
-                // Create notification with enhanced content
+                // Create enhanced notification with comprehensive device information
                 Notification notification = new Notification();
                 notification.setTitle("New Device Assignment");
-                notification.setMessage(String.format(
-                    "You have been assigned a new device: %s (%s) at location: %s. " +
-                    "The device is currently %s and ready for monitoring.",
-                    device.getName(),
-                    device.getType(),
-                    device.getLocation(),
-                    device.getStatus().toString().toLowerCase()
-                ));
-                notification.setType(Notification.NotificationType.INFO);
+                notification.setMessage("You have been assigned a new device. The device is ready for monitoring and management.");
+                notification.setCategory(Notification.NotificationCategory.DEVICE_ASSIGNMENT);
                 notification.setUserId(assignedUserId);
                 notification.setDeviceId(device.getId());
                 notification.setOrganizationId(organizationId);
                 notification.setRead(false);
                 
+                // Enhance notification with comprehensive device information
+                deviceNotificationEnhancerService.enhanceNotificationWithDeviceInfo(notification, device.getId(), organizationId);
+                
+                // Build enhanced message
+                String enhancedMessage = deviceNotificationEnhancerService.buildEnhancedNotificationMessage(notification);
+                notification.setMessage(enhancedMessage);
+                
                 // Save notification using the notification service with preference check
                 Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(assignedUserId, notification);
                 
                 if (createdNotification.isPresent()) {
-                    logger.info("✅ Created device assignment notification for user: {} for device: {}", 
+                    logger.info("Created enhanced device assignment notification for user: {} for device: {}", 
                                assignedUser.getEmail(), device.getName());
                 } else {
-                    logger.info("⚠️ Device assignment notification blocked by user preferences for user: {}", 
+                    logger.info("Device assignment notification blocked by user preferences for user: {}", 
                                assignedUser.getEmail());
                 }
             } else {
-                logger.warn("⚠️ Could not create notification - assigned user not found: {}", assignedUserId);
+                logger.warn("Could not create notification - assigned user not found: {}", assignedUserId);
             }
         } catch (Exception e) {
-            logger.error("❌ Failed to create device assignment notification for user: {} device: {}", 
+            logger.error("Failed to create device assignment notification for user: {} device: {}", 
                         assignedUserId, device.getId(), e);
             // Don't fail the device creation if notification fails
         }
@@ -757,7 +768,7 @@ public class DeviceService {
                     device.getType(),
                     device.getLocation()
                 ));
-                notification.setType(Notification.NotificationType.INFO);
+                notification.setCategory(Notification.NotificationCategory.DEVICE_UPDATE);
                 notification.setUserId(assignedUserId);
                 notification.setDeviceId(device.getId());
                 notification.setOrganizationId(organizationId);

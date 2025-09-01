@@ -38,7 +38,7 @@ public class NotificationTemplate {
     @NotNull(message = "Notification type is required")
     @Enumerated(EnumType.STRING)
     @Column(name = "notification_type", nullable = false)
-    private Notification.NotificationType notificationType = Notification.NotificationType.INFO;
+    private Notification.NotificationCategory notificationType = Notification.NotificationCategory.DEVICE_ASSIGNMENT;
     
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
@@ -108,8 +108,8 @@ public class NotificationTemplate {
     public String getMessageTemplate() { return messageTemplate; }
     public void setMessageTemplate(String messageTemplate) { this.messageTemplate = messageTemplate; }
     
-    public Notification.NotificationType getNotificationType() { return notificationType; }
-    public void setNotificationType(Notification.NotificationType notificationType) { this.notificationType = notificationType; }
+    public Notification.NotificationCategory getNotificationType() { return notificationType; }
+    public void setNotificationType(Notification.NotificationCategory notificationType) { this.notificationType = notificationType; }
     
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }

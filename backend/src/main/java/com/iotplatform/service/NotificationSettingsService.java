@@ -104,23 +104,41 @@ public class NotificationSettingsService {
     /**
      * Create a notification only if the user has enabled that type of notification.
      */
-    public Optional<Notification> createNotificationIfAllowed(String userId, Notification notification, NotificationType type) {
-        log.info("🔔 Checking if notification is allowed for user: {} type: {}", userId, type);
+    public Optional<Notification> createNotificationIfAllowed(String userId, Notification notification, Notification.NotificationCategory category) {
+        log.info("🔔 Checking if notification is allowed for user: {} category: {}", userId, category);
         
-        if (shouldSendNotification(userId, type)) {
-            log.info("✅ Notification allowed for user: {} type: {}", userId, type);
+        if (shouldSendNotification(userId, mapCategoryToType(category))) {
+            log.info("✅ Notification allowed for user: {} category: {}", userId, category);
             try {
                 Notification createdNotification = notificationService.createNotification(notification);
-                log.info("✅ Notification created successfully for user: {} type: {}", userId, type);
+                log.info("✅ Notification created successfully for user: {} category: {}", userId, category);
                 return Optional.of(createdNotification);
             } catch (Exception e) {
-                log.error("❌ Failed to create notification for user: {} type: {}", userId, type, e);
+                log.error("❌ Failed to create notification for user: {} category: {}", userId, category, e);
                 return Optional.empty();
             }
         } else {
-            log.info("⚠️ Notification blocked for user: {} type: {} (preference disabled)", userId, type);
+            log.info("⚠️ Notification blocked for user: {} category: {} (preference disabled)", userId, category);
             return Optional.empty();
         }
+    }
+    
+    /**
+     * Map notification category to notification type for preference checking
+     */
+    private NotificationType mapCategoryToType(Notification.NotificationCategory category) {
+        return switch (category) {
+            case DEVICE_ASSIGNMENT, DEVICE_CREATION, DEVICE_UPDATE -> NotificationType.DEVICE_ALERT;
+            case MAINTENANCE_SCHEDULE, MAINTENANCE_REMINDER, MAINTENANCE_ASSIGNMENT -> NotificationType.MAINTENANCE_ALERT;
+            case DEVICE_OFFLINE, DEVICE_ONLINE -> NotificationType.DEVICE_ALERT;
+            case TEMPERATURE_ALERT, BATTERY_LOW -> NotificationType.PERFORMANCE_ALERT;
+            case RULE_TRIGGERED, RULE_CREATED -> NotificationType.RULE_TRIGGER_ALERT;
+            case SYSTEM_UPDATE -> NotificationType.SYSTEM_UPDATE;
+            case SECURITY_ALERT -> NotificationType.SECURITY_ALERT;
+            case PERFORMANCE_ALERT -> NotificationType.PERFORMANCE_ALERT;
+            case SAFETY_ALERT -> NotificationType.SECURITY_ALERT;
+            case CUSTOM -> NotificationType.USER_ACTIVITY_ALERT;
+        };
     }
 
     /**

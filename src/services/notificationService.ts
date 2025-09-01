@@ -56,7 +56,7 @@ class NotificationService {
     const notification: any = {
       title: this.getNotificationTitle(event) || 'System Notification',
       message: this.getNotificationMessage(event) || 'A system event has occurred.',
-      type: this.getNotificationType(event),
+      category: this.getNotificationCategory(event),
       read: false,
       userId: event.userId,
       deviceId: event.deviceId || null,
@@ -65,31 +65,26 @@ class NotificationService {
     };
 
     try {
-      // Store notification in database - backend will handle preference checking
-      const response = await notificationAPI.create(notification);
-      const savedNotification = response.data;
-      
-      // Add to local state only if notification was created (not blocked by preferences)
-      if (savedNotification) {
-        this.notifications.unshift(savedNotification);
+      const response = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.getAuthToken()}`
+        },
+        body: JSON.stringify(notification)
+      });
+
+      if (response.ok) {
+        const createdNotification = await response.json();
         this.notifyListeners();
-        
-        // Log notification creation for debugging
-        console.log('Notification created:', {
-          id: savedNotification.id,
-          title: savedNotification.title,
-          type: savedNotification.type,
-          userId: savedNotification.userId
-        });
+        return createdNotification;
       } else {
-        console.log('Notification blocked by user preferences:', event.type);
+        console.error('Failed to create notification:', response.statusText);
+        return null;
       }
-      
-      return savedNotification;
     } catch (error) {
-      console.error('Failed to save notification to database:', error);
-      // Don't create fallback notification - let the error propagate
-      throw error;
+      console.error('Error creating notification:', error);
+      return null;
     }
   }
 
@@ -162,6 +157,107 @@ class NotificationService {
       case 'SYSTEM_UPDATE':
       default:
         return 'INFO';
+    }
+  }
+
+  private getNotificationCategory(event: NotificationEvent): string {
+    // Map event types to notification categories
+    switch (event.type) {
+      case 'device_assignment':
+        return 'DEVICE_ASSIGNMENT';
+      case 'device_creation':
+        return 'DEVICE_CREATION';
+      case 'maintenance_assignment':
+        return 'MAINTENANCE_ASSIGNMENT';
+      case 'rule_created':
+        return 'RULE_CREATED';
+      case 'device_offline':
+        return 'DEVICE_OFFLINE';
+      case 'device_online':
+        return 'DEVICE_ONLINE';
+      case 'temperature_alert':
+        return 'TEMPERATURE_ALERT';
+      case 'battery_low':
+        return 'BATTERY_LOW';
+      case 'rule_triggered':
+        return 'RULE_TRIGGERED';
+      case 'system_update':
+        return 'SYSTEM_UPDATE';
+      case 'security_alert':
+        return 'SECURITY_ALERT';
+      case 'performance_alert':
+        return 'PERFORMANCE_ALERT';
+      case 'safety_alert':
+        return 'SAFETY_ALERT';
+      default:
+        return 'CUSTOM';
+    }
+  }
+
+  private getAuthToken(): string {
+    return localStorage.getItem('token') || '';
+  }
+
+  private getNotificationIcon(notification: Notification): string {
+    switch (notification.category) {
+      case 'DEVICE_ASSIGNMENT':
+      case 'DEVICE_CREATION':
+      case 'DEVICE_UPDATE':
+        return 'device';
+      case 'MAINTENANCE_SCHEDULE':
+      case 'MAINTENANCE_REMINDER':
+      case 'MAINTENANCE_ASSIGNMENT':
+        return 'maintenance';
+      case 'RULE_TRIGGERED':
+      case 'RULE_CREATED':
+        return 'rule';
+      case 'DEVICE_OFFLINE':
+      case 'DEVICE_ONLINE':
+        return 'status';
+      case 'TEMPERATURE_ALERT':
+      case 'BATTERY_LOW':
+        return 'alert';
+      case 'SECURITY_ALERT':
+      case 'SAFETY_ALERT':
+        return 'security';
+      case 'PERFORMANCE_ALERT':
+        return 'performance';
+      case 'SYSTEM_UPDATE':
+        return 'system';
+      default:
+        return 'info';
+    }
+  }
+
+  private getNotificationColor(notification: Notification): string {
+    switch (notification.category) {
+      case 'DEVICE_ASSIGNMENT':
+      case 'DEVICE_CREATION':
+      case 'DEVICE_UPDATE':
+        return 'blue';
+      case 'MAINTENANCE_SCHEDULE':
+      case 'MAINTENANCE_REMINDER':
+      case 'MAINTENANCE_ASSIGNMENT':
+        return 'orange';
+      case 'RULE_TRIGGERED':
+      case 'RULE_CREATED':
+        return 'purple';
+      case 'DEVICE_OFFLINE':
+        return 'red';
+      case 'DEVICE_ONLINE':
+        return 'green';
+      case 'TEMPERATURE_ALERT':
+      case 'BATTERY_LOW':
+        return 'yellow';
+      case 'SECURITY_ALERT':
+      case 'SAFETY_ALERT':
+        return 'red';
+      case 'PERFORMANCE_ALERT':
+        return 'yellow';
+      case 'SYSTEM_UPDATE':
+        return 'blue';
+      default:
+        return 'gray';
     }
   }
 

@@ -41,6 +41,8 @@ import java.util.stream.Collectors;
 import java.util.concurrent.CompletableFuture;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of PDF processing service with external MinerU integration.
@@ -56,11 +58,11 @@ import org.springframework.web.client.HttpServerErrorException;
  * @author IoT Platform Team
  * @version 1.0
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PDFProcessingServiceImpl implements PDFProcessingService {
     
+    private static final Logger log = LoggerFactory.getLogger(PDFProcessingServiceImpl.class);
     private final RestTemplate restTemplate;
     private final PDFProcessingConfig config;
     private final PDFDocumentRepository pdfDocumentRepository;

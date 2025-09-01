@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.iotplatform.model.Notification;
 
 @Service
 public class NotificationTemplateService {
@@ -255,9 +256,9 @@ public class NotificationTemplateService {
     public static class ProcessedTemplate {
         private final String title;
         private final String message;
-        private final com.iotplatform.model.Notification.NotificationType type;
+        private final Notification.NotificationCategory type;
         
-        public ProcessedTemplate(String title, String message, com.iotplatform.model.Notification.NotificationType type) {
+        public ProcessedTemplate(String title, String message, Notification.NotificationCategory type) {
             this.title = title;
             this.message = message;
             this.type = type;
@@ -265,6 +266,6 @@ public class NotificationTemplateService {
         
         public String getTitle() { return title; }
         public String getMessage() { return message; }
-        public com.iotplatform.model.Notification.NotificationType getType() { return type; }
+        public Notification.NotificationCategory getType() { return type; }
     }
 }

@@ -31,6 +31,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.function.Consumer;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.iotplatform.service.DeviceNotificationEnhancerService;
 
 /**
  * Unified service for handling sequential device onboarding workflow.
@@ -64,6 +66,9 @@ public class UnifiedOnboardingService {
     private final ConsolidatedNotificationService consolidatedNotificationService;
     private final DeviceDocumentationService deviceDocumentationService;
     private final ObjectMapper objectMapper;
+
+    @Autowired
+    private DeviceNotificationEnhancerService deviceNotificationEnhancerService;
 
     /**
      * Complete unified onboarding workflow with real-time progress tracking
@@ -137,8 +142,7 @@ public class UnifiedOnboardingService {
         // Step 3: Create notification for device assignment (regardless of PDF processing success)
         log.info("Step 3: Creating notification for device assignment...");
         try {
-            if (deviceRequest.getAssignedUserId() != null && !deviceRequest.getAssignedUserId().trim().isEmpty() 
-                && !deviceRequest.getAssignedUserId().equals(currentUserId)) {
+            if (deviceRequest.getAssignedUserId() != null && !deviceRequest.getAssignedUserId().trim().isEmpty()) {
                 
                 log.info("📝 Creating device assignment notification for user: {} for device: {}", 
                        deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
@@ -157,28 +161,32 @@ public class UnifiedOnboardingService {
                 } catch (Exception consolidatedError) {
                     log.warn("⚠️ Consolidated notification failed, creating basic notification instead: {}", consolidatedError.getMessage());
                     
-                    // Fallback to basic device assignment notification
-                    Notification basicNotification = new Notification();
-                    basicNotification.setTitle("New Device Assignment");
-                    basicNotification.setMessage(String.format(
-                        "Device '%s' has been successfully onboarded and assigned to you. " +
-                        "The device is now ready for monitoring and management.",
-                        deviceRequest.getName()
-                    ));
-                    basicNotification.setType(Notification.NotificationType.INFO);
-                    basicNotification.setUserId(deviceRequest.getAssignedUserId().trim());
-                    basicNotification.setDeviceId(deviceResponse.getId());
-                    basicNotification.setOrganizationId(organizationId);
-                    basicNotification.setRead(false);
+                    // Fallback to enhanced device assignment notification
+                    Notification enhancedNotification = new Notification();
+                    enhancedNotification.setTitle("New Device Assignment");
+                    enhancedNotification.setMessage("Device has been successfully onboarded and assigned to you. The device is now ready for monitoring and management.");
+                    enhancedNotification.setCategory(Notification.NotificationCategory.DEVICE_ASSIGNMENT);
+                    enhancedNotification.setUserId(deviceRequest.getAssignedUserId().trim());
+                    enhancedNotification.setDeviceId(deviceResponse.getId());
+                    enhancedNotification.setOrganizationId(organizationId);
+                    enhancedNotification.setRead(false);
+                    
+                    // Enhance notification with comprehensive device information
+                    deviceNotificationEnhancerService.enhanceNotificationWithDeviceInfo(
+                        enhancedNotification, deviceResponse.getId(), organizationId);
+                    
+                    // Build enhanced message
+                    String enhancedMessage = deviceNotificationEnhancerService.buildEnhancedNotificationMessage(enhancedNotification);
+                    enhancedNotification.setMessage(enhancedMessage);
                     
                     notificationService.createNotificationWithPreferenceCheck(
-                        deviceRequest.getAssignedUserId().trim(), basicNotification);
+                        deviceRequest.getAssignedUserId().trim(), enhancedNotification);
                     
-                    log.info("✅ Basic notification sent to user: {} for device: {}", 
+                    log.info("✅ Enhanced notification sent to user: {} for device: {}", 
                            deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
                 }
             } else {
-                log.info("📝 No notification needed - device assigned to creator or no assignment specified");
+                log.info("📝 No notification needed - no assignment specified");
             }
         } catch (Exception e) {
             log.error("❌ Failed to create notification for device: {}", deviceResponse.getId(), e);

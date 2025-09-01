@@ -10,7 +10,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,13 +28,13 @@ import com.iotplatform.service.NotificationService;
  * REST Controller for maintenance operations.
  * Provides endpoints for managing maintenance tasks and schedules.
  */
-@Slf4j
 @RestController
 @RequestMapping("/api/maintenance")
 @RequiredArgsConstructor
 @Tag(name = "Maintenance", description = "Maintenance task and schedule management")
 public class MaintenanceController {
     
+    private static final Logger log = LoggerFactory.getLogger(MaintenanceController.class);
     private final MaintenanceScheduleService maintenanceScheduleService;
     private final NotificationService notificationService;
 
@@ -188,9 +189,8 @@ public class MaintenanceController {
             maintenance.setOrganizationId(userDetails.getUser().getOrganizationId());
             DeviceMaintenance createdMaintenance = maintenanceScheduleService.createMaintenance(maintenance);
 
-            // Send notification to assigned user if different from creator
-            if (maintenance.getAssignedTo() != null && !maintenance.getAssignedTo().trim().isEmpty() 
-                && !maintenance.getAssignedTo().equals(userDetails.getUser().getId())) {
+            // Send notification to assigned user
+            if (maintenance.getAssignedTo() != null && !maintenance.getAssignedTo().trim().isEmpty()) {
                 try {
                     Notification notification = new Notification();
                     notification.setUserId(maintenance.getAssignedTo());
@@ -202,7 +202,7 @@ public class MaintenanceController {
                         maintenance.getDeviceName() != null ? maintenance.getDeviceName() : "Unknown Device",
                         maintenance.getPriority() != null ? maintenance.getPriority().toString() : "Medium"
                     ));
-                    notification.setType(Notification.NotificationType.INFO);
+                    notification.setCategory(Notification.NotificationCategory.MAINTENANCE_ASSIGNMENT);
                     notification.setOrganizationId(userDetails.getUser().getOrganizationId());
                     notification.setDeviceId(maintenance.getDeviceId());
                     notification.setRead(false);
@@ -212,12 +212,13 @@ public class MaintenanceController {
                         log.info("✅ Created maintenance task notification for user: {} for task: {}", 
                                maintenance.getAssignedTo(), maintenance.getTaskName());
                     } else {
-                        log.warn("⚠️ Maintenance task notification blocked by user preferences for user: {}", 
+                        log.info("⚠️ Maintenance task notification blocked by user preferences for user: {}", 
                                maintenance.getAssignedTo());
                     }
                 } catch (Exception e) {
                     log.error("❌ Failed to create maintenance task notification for user: {} task: {}", 
                              maintenance.getAssignedTo(), maintenance.getTaskName(), e);
+                    // Don't fail the maintenance creation if notification fails
                 }
             }
 
@@ -619,7 +620,7 @@ public class MaintenanceController {
                 assignedTask.getDeviceName() != null ? assignedTask.getDeviceName() : "Unknown Device",
                 assignedTask.getPriority() != null ? assignedTask.getPriority().toString() : "Medium"
             ));
-            notification.setType(Notification.NotificationType.INFO);
+            notification.setCategory(Notification.NotificationCategory.MAINTENANCE_ASSIGNMENT);
             notification.setOrganizationId(user.getOrganizationId());
             notification.setDeviceId(assignedTask.getDeviceId());
             notification.setRead(false);

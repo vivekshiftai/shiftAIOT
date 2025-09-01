@@ -3,7 +3,8 @@ package com.iotplatform.service;
 import com.iotplatform.dto.MaintenanceNotificationRequest;
 import com.iotplatform.repository.MaintenanceScheduleRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -19,11 +20,11 @@ import java.util.concurrent.Executors;
  * Runs every day at 6 AM to fetch today's maintenance tasks and send notifications
  * to assigned users via the conversation flow endpoint.
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MaintenanceNotificationScheduler {
     
+    private static final Logger log = LoggerFactory.getLogger(MaintenanceNotificationScheduler.class);
     private final MaintenanceScheduleRepository maintenanceScheduleRepository;
     private final ConversationNotificationService conversationNotificationService;
     private final ExecutorService executorService = Executors.newFixedThreadPool(5);

@@ -35,7 +35,7 @@ public class NotificationTemplateRequest {
     private String messageTemplate;
     
     @NotNull(message = "Notification type is required")
-    private Notification.NotificationType notificationType;
+    private Notification.NotificationCategory notificationType;
     
     private boolean active = true;
     

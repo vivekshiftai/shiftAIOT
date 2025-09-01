@@ -23,8 +23,8 @@ public class Notification {
     private String message;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private NotificationType type = NotificationType.INFO;
+    @Column(name = "category", nullable = false)
+    private NotificationCategory category = NotificationCategory.DEVICE_ASSIGNMENT;
 
     @Column(nullable = false)
     private boolean read = false;
@@ -52,8 +52,52 @@ public class Notification {
     @CollectionTable(name = "notification_metadata", joinColumns = @JoinColumn(name = "notification_id"))
     private Map<String, String> metadata;
 
-    public enum NotificationType {
-        INFO, WARNING, ERROR, SUCCESS
+    // Enhanced device information fields
+    @Column(name = "device_name")
+    private String deviceName;
+
+    @Column(name = "device_type")
+    private String deviceType;
+
+    @Column(name = "device_location")
+    private String deviceLocation;
+
+    @Column(name = "device_status")
+    private String deviceStatus;
+
+    @Column(name = "maintenance_rules_count")
+    private Integer maintenanceRulesCount;
+
+    @Column(name = "safety_rules_count")
+    private Integer safetyRulesCount;
+
+    @Column(name = "total_rules_count")
+    private Integer totalRulesCount;
+
+    @Column(name = "device_manufacturer")
+    private String deviceManufacturer;
+
+    @Column(name = "device_model")
+    private String deviceModel;
+
+    public enum NotificationCategory {
+        DEVICE_ASSIGNMENT,
+        DEVICE_CREATION,
+        DEVICE_UPDATE,
+        MAINTENANCE_SCHEDULE,
+        MAINTENANCE_REMINDER,
+        MAINTENANCE_ASSIGNMENT,
+        DEVICE_OFFLINE,
+        DEVICE_ONLINE,
+        TEMPERATURE_ALERT,
+        BATTERY_LOW,
+        RULE_TRIGGERED,
+        RULE_CREATED,
+        SYSTEM_UPDATE,
+        SECURITY_ALERT,
+        PERFORMANCE_ALERT,
+        SAFETY_ALERT,
+        CUSTOM
     }
 
     @PrePersist
@@ -71,8 +115,8 @@ public class Notification {
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
 
-    public NotificationType getType() { return type; }
-    public void setType(NotificationType type) { this.type = type; }
+    public NotificationCategory getCategory() { return category; }
+    public void setCategory(NotificationCategory category) { this.category = category; }
 
     public boolean isRead() { return read; }
     public void setRead(boolean read) { this.read = read; }
@@ -94,4 +138,32 @@ public class Notification {
 
     public Map<String, String> getMetadata() { return metadata; }
     public void setMetadata(Map<String, String> metadata) { this.metadata = metadata; }
+
+    // Enhanced device information getters and setters
+    public String getDeviceName() { return deviceName; }
+    public void setDeviceName(String deviceName) { this.deviceName = deviceName; }
+
+    public String getDeviceType() { return deviceType; }
+    public void setDeviceType(String deviceType) { this.deviceType = deviceType; }
+
+    public String getDeviceLocation() { return deviceLocation; }
+    public void setDeviceLocation(String deviceLocation) { this.deviceLocation = deviceLocation; }
+
+    public String getDeviceStatus() { return deviceStatus; }
+    public void setDeviceStatus(String deviceStatus) { this.deviceStatus = deviceStatus; }
+
+    public Integer getMaintenanceRulesCount() { return maintenanceRulesCount; }
+    public void setMaintenanceRulesCount(Integer maintenanceRulesCount) { this.maintenanceRulesCount = maintenanceRulesCount; }
+
+    public Integer getSafetyRulesCount() { return safetyRulesCount; }
+    public void setSafetyRulesCount(Integer safetyRulesCount) { this.safetyRulesCount = safetyRulesCount; }
+
+    public Integer getTotalRulesCount() { return totalRulesCount; }
+    public void setTotalRulesCount(Integer totalRulesCount) { this.totalRulesCount = totalRulesCount; }
+
+    public String getDeviceManufacturer() { return deviceManufacturer; }
+    public void setDeviceManufacturer(String deviceManufacturer) { this.deviceManufacturer = deviceManufacturer; }
+
+    public String getDeviceModel() { return deviceModel; }
+    public void setDeviceModel(String deviceModel) { this.deviceModel = deviceModel; }
 }

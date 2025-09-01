@@ -24,7 +24,10 @@ public class NotificationValidator {
         validateMessage(notification.getMessage());
         validateUserId(notification.getUserId());
         validateOrganizationId(notification.getOrganizationId());
-        validateType(notification.getType());
+        // Validate notification type
+        if (notification.getCategory() == null) {
+            throw new IllegalArgumentException("Notification category is required");
+        }
     }
     
     /**
@@ -80,13 +83,13 @@ public class NotificationValidator {
     }
     
     /**
-     * Validates notification type
-     * @param type the type to validate
+     * Validates notification category
+     * @param category the category to validate
      * @throws IllegalArgumentException if validation fails
      */
-    public static void validateType(Notification.NotificationType type) {
-        if (type == null) {
-            throw new IllegalArgumentException("Notification type is required");
+    public static void validateCategory(Notification.NotificationCategory category) {
+        if (category == null) {
+            throw new IllegalArgumentException("Notification category is required");
         }
     }
     
@@ -145,8 +148,8 @@ public class NotificationValidator {
         }
         
         // Set defaults
-        if (notification.getType() == null) {
-            notification.setType(Notification.NotificationType.INFO);
+        if (notification.getCategory() == null) {
+            notification.setCategory(Notification.NotificationCategory.DEVICE_ASSIGNMENT);
         }
         
         // Ensure read status is false for new notifications

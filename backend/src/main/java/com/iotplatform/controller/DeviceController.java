@@ -63,6 +63,7 @@ import com.iotplatform.repository.DeviceRepository;
 import com.iotplatform.repository.UserRepository;
 import com.iotplatform.model.Notification;
 import com.iotplatform.service.NotificationService;
+import com.iotplatform.service.DeviceNotificationEnhancerService;
 
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
@@ -98,8 +99,9 @@ public class DeviceController {
     private final NotificationService notificationService;
     private final DeviceWebSocketService deviceWebSocketService;
     private final MaintenanceScheduleService maintenanceScheduleService;
+    private final DeviceNotificationEnhancerService deviceNotificationEnhancerService;
 
-    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, DeviceDocumentationService deviceDocumentationService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService, MaintenanceScheduleService maintenanceScheduleService) {
+    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, DeviceDocumentationService deviceDocumentationService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService, MaintenanceScheduleService maintenanceScheduleService, DeviceNotificationEnhancerService deviceNotificationEnhancerService) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.deviceDocumentationService = deviceDocumentationService;
@@ -116,6 +118,7 @@ public class DeviceController {
         this.notificationService = notificationService;
         this.deviceWebSocketService = deviceWebSocketService;
         this.maintenanceScheduleService = maintenanceScheduleService;
+        this.deviceNotificationEnhancerService = deviceNotificationEnhancerService;
     }
 
     @GetMapping
@@ -1541,6 +1544,8 @@ public class DeviceController {
         }
     }
 
+
+
     private String convertEmptyToNull(String value) {
         return (value != null && value.trim().isEmpty()) ? null : value;
     }
@@ -1556,35 +1561,38 @@ public class DeviceController {
                 Optional<User> updatedByUserOpt = userRepository.findById(updatedBy);
                 String updatedByUserName = updatedByUserOpt.map(user -> user.getFirstName() + " " + user.getLastName()).orElse("System");
                 
-                // Create notification for device assignment
+                // Create enhanced notification for device assignment
                 Notification notification = new Notification();
                 notification.setTitle("Device Assignment Updated");
                 notification.setMessage(String.format(
-                    "You have been assigned a device by %s. " +
-                    "Device: %s (%s) at location: %s is now assigned to you.",
-                    updatedByUserName,
-                    device.getName(),
-                    device.getType(),
-                    device.getLocation()
+                    "You have been assigned a device by %s. The device is now ready for monitoring and management.",
+                    updatedByUserName
                 ));
-                notification.setType(Notification.NotificationType.INFO);
+                notification.setCategory(Notification.NotificationCategory.DEVICE_ASSIGNMENT);
                 notification.setUserId(assignedUserId);
                 notification.setDeviceId(device.getId());
                 notification.setOrganizationId(organizationId);
                 notification.setRead(false);
                 
+                // Enhance notification with comprehensive device information
+                deviceNotificationEnhancerService.enhanceNotificationWithDeviceInfo(notification, device.getId(), organizationId);
+                
+                // Build enhanced message
+                String enhancedMessage = deviceNotificationEnhancerService.buildEnhancedNotificationMessage(notification);
+                notification.setMessage(enhancedMessage);
+                
                 // Save notification using the notification service with preference check
                 Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(assignedUserId, notification);
                 
                 if (createdNotification.isPresent()) {
-                    logger.info("✅ Created device assignment notification for user: {} for device: {}", 
+                    logger.info("✅ Created enhanced device assignment notification for user: {} for device: {}", 
                                assignedUser.getEmail(), device.getName());
                 } else {
                     logger.info("⚠️ Device assignment notification blocked by user preferences for user: {}", 
                                assignedUser.getEmail());
                 }
             } else {
-                logger.warn("⚠️ Could not create assignment notification - assigned user not found: {}", assignedUserId);
+                logger.warn("⚠️ Could not create notification - assigned user not found: {}", assignedUserId);
             }
         } catch (Exception e) {
             logger.error("❌ Failed to create device assignment notification for user: {} device: {}", 

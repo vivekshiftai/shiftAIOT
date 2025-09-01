@@ -71,7 +71,7 @@ public class RuleService {
                             "Description: %s. Please review the monitoring configuration.",
                             rule.getName(), device.getName(), rule.getDescription()
                         ));
-                        notification.setType(Notification.NotificationType.INFO);
+                        notification.setCategory(Notification.NotificationCategory.RULE_CREATED);
                         notification.setOrganizationId(organizationId);
                         notification.setDeviceId(rule.getDeviceId());
                         notification.setRuleId(rule.getId());
@@ -198,7 +198,7 @@ public class RuleService {
                                 createdRules.size(), device.getName(),
                                 createdRules.stream().map(Rule::getName).limit(3).collect(java.util.stream.Collectors.joining(", "))
                             ));
-                            notification.setType(Notification.NotificationType.INFO);
+                            notification.setCategory(Notification.NotificationCategory.RULE_CREATED);
                             notification.setOrganizationId(organizationId);
                             notification.setDeviceId(deviceId);
                             notification.setRead(false);

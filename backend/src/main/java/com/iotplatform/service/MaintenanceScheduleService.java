@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Service for managing maintenance schedules with proper date calculations.
@@ -25,6 +28,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MaintenanceScheduleService {
     
+    private static final Logger log = LoggerFactory.getLogger(MaintenanceScheduleService.class);
     private final MaintenanceScheduleRepository maintenanceScheduleRepository;
     private final DeviceMaintenanceRepository deviceMaintenanceRepository;
     

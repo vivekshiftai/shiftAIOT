@@ -92,7 +92,7 @@ public class ConsolidatedNotificationService {
             notification.setUserId(assignedUserId);
             notification.setTitle("🎯 New Device Assignment - Complete Overview");
             notification.setMessage(buildConsolidatedMessage(consolidatedData));
-            notification.setType(Notification.NotificationType.INFO);
+            notification.setCategory(Notification.NotificationCategory.DEVICE_ASSIGNMENT);
             notification.setOrganizationId(organizationId);
             notification.setDeviceId(deviceId);
             notification.setRead(false);

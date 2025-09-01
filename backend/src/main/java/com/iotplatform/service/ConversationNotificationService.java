@@ -2,7 +2,8 @@ package com.iotplatform.service;
 
 import com.iotplatform.dto.MaintenanceNotificationRequest;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -22,11 +23,12 @@ import java.util.concurrent.CompletableFuture;
  * Service for sending maintenance notifications to the conversation flow endpoint.
  * Handles retry logic, error handling, and async processing.
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ConversationNotificationService {
     
+    private static final Logger log = LoggerFactory.getLogger(ConversationNotificationService.class);
+
     private final RestTemplate restTemplate;
 
     @Value("${conversation.api.base-url:http://localhost:8100/api/chat}")

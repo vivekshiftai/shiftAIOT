@@ -64,7 +64,7 @@ export interface Notification {
   id: string;
   title: string;
   message: string;
-  type: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS';
+  category: 'DEVICE_ASSIGNMENT' | 'DEVICE_CREATION' | 'DEVICE_UPDATE' | 'MAINTENANCE_SCHEDULE' | 'MAINTENANCE_REMINDER' | 'MAINTENANCE_ASSIGNMENT' | 'DEVICE_OFFLINE' | 'DEVICE_ONLINE' | 'TEMPERATURE_ALERT' | 'BATTERY_LOW' | 'RULE_TRIGGERED' | 'RULE_CREATED' | 'SYSTEM_UPDATE' | 'SECURITY_ALERT' | 'PERFORMANCE_ALERT' | 'SAFETY_ALERT' | 'CUSTOM';
   read: boolean;
   deviceId?: string | null;
   ruleId?: string | null;
@@ -72,11 +72,22 @@ export interface Notification {
   organizationId: string;
   createdAt: string;
   metadata?: Record<string, string> | null;
+  
+  // Enhanced device information fields
+  deviceName?: string | null;
+  deviceType?: string | null;
+  deviceLocation?: string | null;
+  deviceStatus?: string | null;
+  maintenanceRulesCount?: number | null;
+  safetyRulesCount?: number | null;
+  totalRulesCount?: number | null;
+  deviceManufacturer?: string | null;
+  deviceModel?: string | null;
 }
 
 // Notification Event Types
 export interface NotificationEvent {
-  type: 'DEVICE_ASSIGNMENT' | 'DEVICE_CREATION' | 'MAINTENANCE_SCHEDULE' | 'MAINTENANCE_REMINDER' | 'DEVICE_OFFLINE' | 'DEVICE_ONLINE' | 'TEMPERATURE_ALERT' | 'BATTERY_LOW' | 'RULE_TRIGGERED' | 'SYSTEM_UPDATE' | 'SECURITY_ALERT' | 'PERFORMANCE_ALERT';
+  type: 'device_assignment' | 'device_creation' | 'device_update' | 'maintenance_schedule' | 'maintenance_reminder' | 'maintenance_assignment' | 'device_offline' | 'device_online' | 'temperature_alert' | 'battery_low' | 'rule_triggered' | 'rule_created' | 'system_update' | 'security_alert' | 'performance_alert' | 'safety_alert' | 'custom';
   deviceId?: string;
   deviceName?: string;
   userId: string;
