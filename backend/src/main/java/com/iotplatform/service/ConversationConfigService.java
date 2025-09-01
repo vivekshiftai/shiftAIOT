@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.iotplatform.model.ConversationConfig;
+import com.iotplatform.model.PlatformType;
 import com.iotplatform.repository.ConversationConfigRepository;
 
 @Service

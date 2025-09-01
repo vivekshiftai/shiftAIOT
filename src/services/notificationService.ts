@@ -1,18 +1,10 @@
-import { Notification, Device, Rule, TelemetryData } from '../types';
 import { notificationAPI } from './api';
-
-export interface NotificationEvent {
-  type: 'device_added' | 'device_assigned' | 'device_offline' | 'device_online' | 'rule_triggered' | 'temperature_alert' | 'battery_low' | 'maintenance_due';
-  deviceId?: string;
-  deviceName?: string;
-  userId: string;
-  data?: any;
-}
+import { Notification, NotificationEvent } from '../types';
 
 class NotificationService {
   private static instance: NotificationService;
   private notifications: Notification[] = [];
-  private listeners: ((notifications: Notification[]) => void)[] = [];
+  private listeners: (() => void)[] = [];
 
   private constructor() {}
 
@@ -23,17 +15,19 @@ class NotificationService {
     return NotificationService.instance;
   }
 
-  // Subscribe to notification updates
-  subscribe(listener: (notifications: Notification[]) => void) {
+  // Add listener for notification updates
+  addListener(listener: () => void): () => void {
     this.listeners.push(listener);
     return () => {
-      this.listeners = this.listeners.filter(l => l !== listener);
+      const index = this.listeners.indexOf(listener);
+      if (index > -1) {
+        this.listeners.splice(index, 1);
+      }
     };
   }
 
-  // Notify all listeners
-  private notifyListeners() {
-    this.listeners.forEach(listener => listener(this.notifications));
+  private notifyListeners(): void {
+    this.listeners.forEach(listener => listener());
   }
 
   // Create a new notification
@@ -57,7 +51,7 @@ class NotificationService {
     // Get current user from localStorage for organization ID
     const userStr = localStorage.getItem('user');
     const user = userStr ? JSON.parse(userStr) : null;
-    const organizationId = user?.organizationId || '1';
+    const organizationId = user?.organizationId || 'default';
 
     const notification: any = {
       title: this.getNotificationTitle(event) || 'System Notification',
@@ -102,22 +96,24 @@ class NotificationService {
   // Get notification title based on event type
   private getNotificationTitle(event: NotificationEvent): string {
     switch (event.type) {
-      case 'device_added':
-        return 'New Device Added';
-      case 'device_assigned':
-        return 'Device Assigned';
-      case 'device_offline':
-        return 'Device Offline';
-      case 'device_online':
-        return 'Device Online';
-      case 'rule_triggered':
+      case 'DEVICE_ASSIGNMENT':
+        return 'Device Assignment';
+      case 'DEVICE_CREATION':
+        return 'Device Created';
+      case 'MAINTENANCE_SCHEDULE':
+        return 'Maintenance Scheduled';
+      case 'RULE_TRIGGERED':
         return 'Rule Triggered';
-      case 'temperature_alert':
-        return 'Temperature Alert';
-      case 'battery_low':
-        return 'Low Battery Warning';
-      case 'maintenance_due':
-        return 'Maintenance Due';
+      case 'DEVICE_OFFLINE':
+        return 'Device Offline';
+      case 'DEVICE_ONLINE':
+        return 'Device Online';
+      case 'SYSTEM_UPDATE':
+        return 'System Update';
+      case 'SECURITY_ALERT':
+        return 'Security Alert';
+      case 'PERFORMANCE_ALERT':
+        return 'Performance Alert';
       default:
         return 'System Notification';
     }
@@ -125,60 +121,47 @@ class NotificationService {
 
   // Get notification message based on event type
   private getNotificationMessage(event: NotificationEvent): string {
-    const deviceName = event.deviceName || 'Unknown Device';
-    const ruleName = event.data?.ruleName || 'Unknown Rule';
-    const temperature = event.data?.temperature || 'unknown';
-    const batteryLevel = event.data?.batteryLevel || 'unknown';
-    const additionalMessage = event.data?.message || '';
-
     switch (event.type) {
-      case 'device_added':
-        return `New device "${deviceName}" has been added to the platform.`;
-      case 'device_assigned':
-        return `Device "${deviceName}" has been assigned to your organization.`;
-      case 'device_offline':
-        return `Device "${deviceName}" has gone offline. Please check the connection.`;
-      case 'device_online':
-        return `Device "${deviceName}" is now online and reporting data.`;
-      case 'rule_triggered':
-        return `Rule "${ruleName}" has been triggered.${additionalMessage ? ` ${additionalMessage}` : ''}`;
-      case 'temperature_alert':
-        return `Temperature sensor "${deviceName}" reported ${temperature}°C, which exceeds the threshold.`;
-      case 'battery_low':
-        return `Device "${deviceName}" battery level is critically low (${batteryLevel}%). Please replace or recharge.`;
-      case 'maintenance_due':
-        return `Device "${deviceName}" is due for maintenance. Schedule a service appointment.`;
+      case 'DEVICE_ASSIGNMENT':
+        return `Device ${event.deviceId || 'Unknown'} has been assigned to you.`;
+      case 'DEVICE_CREATION':
+        return `New device ${event.deviceId || 'Unknown'} has been created.`;
+      case 'MAINTENANCE_SCHEDULE':
+        return `Maintenance task scheduled for device ${event.deviceId || 'Unknown'}.`;
+      case 'RULE_TRIGGERED':
+        return `Monitoring rule has been triggered for device ${event.deviceId || 'Unknown'}.`;
+      case 'DEVICE_OFFLINE':
+        return `Device ${event.deviceId || 'Unknown'} is now offline.`;
+      case 'DEVICE_ONLINE':
+        return `Device ${event.deviceId || 'Unknown'} is now online.`;
+      case 'SYSTEM_UPDATE':
+        return 'System has been updated with new features.';
+      case 'SECURITY_ALERT':
+        return 'Security alert detected. Please review immediately.';
+      case 'PERFORMANCE_ALERT':
+        return 'Performance issue detected. Please investigate.';
       default:
         return 'A system event has occurred.';
     }
   }
 
   // Get notification type based on event type
-  private getNotificationType(event: NotificationEvent): Notification['type'] {
+  private getNotificationType(event: NotificationEvent): 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS' {
     switch (event.type) {
-      case 'device_offline':
-      case 'temperature_alert':
-      case 'battery_low':
+      case 'SECURITY_ALERT':
+      case 'PERFORMANCE_ALERT':
         return 'ERROR';
-      case 'maintenance_due':
+      case 'DEVICE_OFFLINE':
+      case 'RULE_TRIGGERED':
         return 'WARNING';
-      case 'device_added':
-      case 'device_assigned':
-      case 'device_online':
+      case 'DEVICE_ASSIGNMENT':
+      case 'DEVICE_CREATION':
+      case 'MAINTENANCE_SCHEDULE':
         return 'SUCCESS';
-      case 'rule_triggered':
-        return 'INFO';
+      case 'DEVICE_ONLINE':
+      case 'SYSTEM_UPDATE':
       default:
         return 'INFO';
-    }
-  }
-
-  // Mark notification as read
-  markAsRead(notificationId: string) {
-    const notification = this.notifications.find(n => n.id === notificationId);
-    if (notification) {
-      notification.read = true;
-      this.notifyListeners();
     }
   }
 
@@ -231,25 +214,50 @@ class NotificationService {
     return this.notifications.filter(n => !n.read);
   }
 
-  // Clear all notifications
-  clearAll() {
-    this.notifications = [];
-    this.notifyListeners();
+  // Get unread count
+  getUnreadCount(): number {
+    return this.notifications.filter(n => !n.read).length;
   }
 
-  // Delete a specific notification
-  async deleteNotification(notificationId: string): Promise<void> {
-    // Validate input
-    if (!notificationId || typeof notificationId !== 'string') {
-      throw new Error('Valid notification ID is required');
+  // Mark notification as read
+  async markAsRead(notificationId: string): Promise<void> {
+    try {
+      await notificationAPI.markAsRead(notificationId);
+      
+      // Update local state
+      const notification = this.notifications.find(n => n.id === notificationId);
+      if (notification) {
+        notification.read = true;
+        this.notifyListeners();
+      }
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+      throw error;
     }
+  }
 
+  // Mark all notifications as read
+  async markAllAsRead(): Promise<void> {
+    try {
+      await notificationAPI.markAllAsRead();
+      
+      // Update local state
+      this.notifications.forEach(n => n.read = true);
+      this.notifyListeners();
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+      throw error;
+    }
+  }
+
+  // Delete notification
+  async deleteNotification(notificationId: string): Promise<void> {
     try {
       await notificationAPI.delete(notificationId);
+      
       // Remove from local state
       this.notifications = this.notifications.filter(n => n.id !== notificationId);
       this.notifyListeners();
-      console.log('Notification deleted:', notificationId);
     } catch (error) {
       console.error('Failed to delete notification:', error);
       throw error;
@@ -260,158 +268,58 @@ class NotificationService {
   async deleteAllNotifications(): Promise<void> {
     try {
       await notificationAPI.deleteAll();
+      
       // Clear local state
       this.notifications = [];
       this.notifyListeners();
-      console.log('All notifications deleted');
     } catch (error) {
       console.error('Failed to delete all notifications:', error);
       throw error;
     }
   }
 
-  // Check rules and trigger notifications (disabled to prevent unwanted notifications)
-  checkRules(devices: Device[], rules: Rule[], telemetryData: TelemetryData[], userId: string) {
-    // Disabled automatic rule checking to prevent unwanted notifications
-    console.log('Rule checking disabled to prevent unwanted notifications');
+  // Clear notifications (remove from local state without deleting from database)
+  clearNotifications(): void {
+    this.notifications = [];
+    this.notifyListeners();
   }
 
-  // Evaluate a rule against current device and telemetry data
-  private evaluateRule(rule: Rule, devices: Device[], telemetryData: TelemetryData[]): boolean {
-    return rule.conditions.every(condition => {
-      switch (condition.type) {
-        case 'telemetry_threshold':
-          return this.evaluateTelemetryThreshold(condition, telemetryData);
-        case 'device_status':
-          return this.evaluateDeviceStatus(condition, devices);
-        case 'time_based':
-          return this.evaluateTimeBased(condition);
-        default:
-          return false;
-      }
-    });
+  // Get notifications by type
+  getByType(type: Notification['type']): Notification[] {
+    return this.notifications.filter(n => n.type === type);
   }
 
-  private evaluateTelemetryThreshold(condition: any, telemetryData: TelemetryData[]): boolean {
-    const relevantData = telemetryData.filter(data => 
-      !condition.deviceId || data.deviceId === condition.deviceId
+  // Get notifications by device
+  getByDevice(deviceId: string): Notification[] {
+    return this.notifications.filter(n => n.deviceId === deviceId);
+  }
+
+  // Get notifications by rule
+  getByRule(ruleId: string): Notification[] {
+    return this.notifications.filter(n => n.ruleId === ruleId);
+  }
+
+  // Search notifications
+  search(query: string): Notification[] {
+    const lowerQuery = query.toLowerCase();
+    return this.notifications.filter(n => 
+      n.title.toLowerCase().includes(lowerQuery) ||
+      n.message.toLowerCase().includes(lowerQuery)
     );
-
-    if (relevantData.length === 0) return false;
-
-    const latestData = relevantData[relevantData.length - 1];
-    const value = latestData.metrics[condition.metric];
-
-    if (value === undefined) return false;
-
-    switch (condition.operator) {
-      case '>':
-        return value > condition.value;
-      case '<':
-        return value < condition.value;
-      case '=':
-        return value === condition.value;
-      case '>=':
-        return value >= condition.value;
-      case '<=':
-        return value <= condition.value;
-      default:
-        return false;
-    }
   }
 
-  private evaluateDeviceStatus(condition: any, devices: Device[]): boolean {
-    const relevantDevices = devices.filter(device => 
-      !condition.deviceId || device.id === condition.deviceId
-    );
-
-    return relevantDevices.some(device => device.status === condition.value);
+  // Get recent notifications (last N)
+  getRecent(count: number = 10): Notification[] {
+    return this.notifications.slice(0, count);
   }
 
-  private evaluateTimeBased(condition: any): boolean {
-    const now = new Date();
-    const hour = now.getHours();
-    
-    // Simple time-based evaluation - can be extended
-    return hour >= 9 && hour <= 17; // Business hours
-  }
-
-  // Get notification details
-  async getNotificationDetails(notificationId: string): Promise<any> {
-    try {
-      const response = await notificationAPI.getDetails(notificationId);
-      return response.data;
-    } catch (error) {
-      console.error('Failed to fetch notification details:', error);
-      throw error;
-    }
-  }
-
-  // Device event notifications
-  async onDeviceAdded(device: Device, userId: string) {
-    await this.createNotification({
-      type: 'device_added',
-      deviceId: device.id,
-      deviceName: device.name,
-      userId
-    });
-  }
-
-  async onDeviceAssigned(device: Device, userId: string) {
-    await this.createNotification({
-      type: 'device_assigned',
-      deviceId: device.id,
-      deviceName: device.name,
-      userId
-    });
-  }
-
-  async onDeviceStatusChange(device: Device, userId: string) {
-    if (device.status === 'OFFLINE') {
-      await this.createNotification({
-        type: 'device_offline',
-        deviceId: device.id,
-        deviceName: device.name,
-        userId
-      });
-    } else if (device.status === 'ONLINE') {
-      await this.createNotification({
-        type: 'device_online',
-        deviceId: device.id,
-        deviceName: device.name,
-        userId
-      });
-    }
-  }
-
-  async onTemperatureAlert(device: Device, temperature: number, userId: string) {
-    await this.createNotification({
-      type: 'temperature_alert',
-      deviceId: device.id,
-      deviceName: device.name,
-      userId,
-      data: { temperature }
-    });
-  }
-
-  async onBatteryLow(device: Device, batteryLevel: number, userId: string) {
-    await this.createNotification({
-      type: 'battery_low',
-      deviceId: device.id,
-      deviceName: device.name,
-      userId,
-      data: { batteryLevel }
-    });
-  }
-
-  async onMaintenanceDue(device: Device, userId: string) {
-    await this.createNotification({
-      type: 'maintenance_due',
-      deviceId: device.id,
-      deviceName: device.name,
-      userId
+  // Get notifications by date range
+  getByDateRange(startDate: Date, endDate: Date): Notification[] {
+    return this.notifications.filter(n => {
+      const createdAt = new Date(n.createdAt);
+      return createdAt >= startDate && createdAt <= endDate;
     });
   }
 }
 
-export default NotificationService;
+export const notificationService = NotificationService.getInstance();

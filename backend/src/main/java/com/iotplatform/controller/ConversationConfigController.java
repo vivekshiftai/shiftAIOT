@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.iotplatform.dto.ConversationConfigRequest;
 import com.iotplatform.model.ConversationConfig;
+import com.iotplatform.model.PlatformType;
 import com.iotplatform.model.User;
 import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.service.ConversationConfigService;
@@ -89,7 +90,7 @@ public class ConversationConfigController {
             
             ConversationConfig config = new ConversationConfig();
             config.setPlatformName(request.getPlatformName());
-            config.setPlatformType(request.getPlatformType());
+            config.setPlatformType(PlatformType.fromString(request.getPlatformType()));
             config.setCredentials(request.getCredentials());
             config.setActive(request.isActive());
 
@@ -121,7 +122,7 @@ public class ConversationConfigController {
             
             ConversationConfig config = new ConversationConfig();
             config.setPlatformName(request.getPlatformName());
-            config.setPlatformType(request.getPlatformType());
+            config.setPlatformType(PlatformType.fromString(request.getPlatformType()));
             config.setCredentials(request.getCredentials());
             config.setActive(request.isActive());
 

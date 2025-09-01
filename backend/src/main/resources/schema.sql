@@ -32,8 +32,6 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
 
 -- Add assigned_user_id column to devices table if it doesn't exist
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS assigned_user_id VARCHAR(255);
-
--- Add assigned_by column to devices table if it doesn't exist
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS assigned_by VARCHAR(255);
 
 -- Add new columns to rules table if they don't exist
@@ -45,13 +43,35 @@ ALTER TABLE rules ADD COLUMN IF NOT EXISTS device_id VARCHAR(255);
 
 -- User Permissions table
 CREATE TABLE IF NOT EXISTS user_permissions (
+    id VARCHAR(255) PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
-    permissions VARCHAR(100) NOT NULL,
-    PRIMARY KEY (user_id, permissions),
+    permission VARCHAR(100) NOT NULL,
+    granted BOOLEAN DEFAULT true,
+    granted_by VARCHAR(255),
+    granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Devices table - Cleaned up schema with only necessary fields used in onboarding
+-- Organizations table
+CREATE TABLE IF NOT EXISTS organizations (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    address TEXT,
+    contact_email VARCHAR(255),
+    contact_phone VARCHAR(20),
+    website VARCHAR(255),
+    logo_url VARCHAR(500),
+    subscription_plan VARCHAR(50) DEFAULT 'FREE',
+    subscription_status VARCHAR(50) DEFAULT 'ACTIVE',
+    subscription_expires_at TIMESTAMP,
+    max_users INTEGER DEFAULT 5,
+    max_devices INTEGER DEFAULT 10,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Devices table
 CREATE TABLE IF NOT EXISTS devices (
     id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -88,7 +108,11 @@ CREATE TABLE IF NOT EXISTS devices (
     -- COAP specific fields (nullable) - only fields used in onboarding form
     coap_host VARCHAR(255),
     coap_port INTEGER,
-    coap_path VARCHAR(255)
+    coap_path VARCHAR(255),
+    
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Device Documentation table for onboarding flow
@@ -115,105 +139,53 @@ CREATE TABLE IF NOT EXISTS device_documentation (
 -- Device Maintenance table for onboarding flow - Updated to match new model
 CREATE TABLE IF NOT EXISTS device_maintenance (
     id VARCHAR(255) PRIMARY KEY,
-    task_name VARCHAR(255) NOT NULL,
     device_id VARCHAR(255) NOT NULL,
-    device_name VARCHAR(255),
+    task_name VARCHAR(255) NOT NULL,
+    description TEXT,
     component_name VARCHAR(255),
-    maintenance_type VARCHAR(100), -- 'PREVENTIVE', 'CORRECTIVE', 'PREDICTIVE'
+    maintenance_type VARCHAR(50), -- 'PREVENTIVE', 'CORRECTIVE', 'PREDICTIVE', 'GENERAL'
     frequency VARCHAR(100) NOT NULL,
     last_maintenance DATE,
     next_maintenance DATE NOT NULL,
-    description TEXT,
-    priority VARCHAR(20) DEFAULT 'MEDIUM', -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
+    priority VARCHAR(50) DEFAULT 'MEDIUM', -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
+    status VARCHAR(50) DEFAULT 'ACTIVE', -- 'ACTIVE', 'COMPLETED', 'CANCELLED', 'OVERDUE', 'PENDING'
     estimated_cost DECIMAL(10,2),
-    estimated_duration VARCHAR(100), -- New field for estimated duration
-    required_tools TEXT, -- New field for required tools
-    safety_notes TEXT, -- New field for safety notes
-    category VARCHAR(100), -- New field for maintenance category
+    estimated_duration VARCHAR(100), -- e.g., "2 hours", "1 day"
+    required_tools TEXT,
+    safety_notes TEXT,
+    category VARCHAR(100),
     assigned_to VARCHAR(255),
-    status VARCHAR(50) DEFAULT 'ACTIVE', -- 'ACTIVE', 'COMPLETED', 'CANCELLED', 'OVERDUE'
+    assigned_by VARCHAR(255),
+    assigned_at TIMESTAMP,
+    completed_by VARCHAR(255),
+    completed_at TIMESTAMP,
     organization_id VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 
--- Add organization_id column to device_maintenance if it doesn't exist
-ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS organization_id VARCHAR(255) NOT NULL DEFAULT 'default';
-
--- Add new columns to device_maintenance for enhanced maintenance data
-ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS estimated_duration VARCHAR(100);
-ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS required_tools TEXT;
-ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS safety_notes TEXT;
-
--- Add new columns to device_maintenance for assignment tracking
-ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS assigned_by VARCHAR(255);
-ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMP;
-ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS completed_by VARCHAR(255);
-ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
-
--- Add category column to device_maintenance if it doesn't exist
-ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS category VARCHAR(100);
-
--- Device Safety Precautions table for onboarding flow - Updated to match new model
+-- Device Safety Precautions table for onboarding flow
 CREATE TABLE IF NOT EXISTS device_safety_precautions (
     id VARCHAR(255) PRIMARY KEY,
     device_id VARCHAR(255) NOT NULL,
+    precaution_type VARCHAR(100) NOT NULL, -- 'electrical', 'mechanical', 'chemical', 'environmental'
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
-    type VARCHAR(50) NOT NULL, -- 'warning', 'procedure', 'caution', 'note'
-    category VARCHAR(100) NOT NULL, -- 'thermal_hazard', 'electrical_hazard', 'mechanical_hazard', 'emergency_procedures', 'ppe_requirements'
-    severity VARCHAR(20) DEFAULT 'MEDIUM', -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
-    recommended_action TEXT,
-    about_reaction TEXT,
-    causes TEXT,
-    how_to_avoid TEXT,
-    safety_info TEXT,
+    risk_level VARCHAR(50) DEFAULT 'MEDIUM', -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
+    mitigation_steps TEXT,
+    required_ppe TEXT, -- Personal Protective Equipment
+    emergency_procedures TEXT,
     is_active BOOLEAN DEFAULT true,
     organization_id VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
-);
-
--- Add organization_id column to device_safety_precautions if it doesn't exist
-ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS organization_id VARCHAR(255) NOT NULL DEFAULT 'default';
-
--- Add new columns to device_safety_precautions table if they don't exist
-ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS type VARCHAR(50) NOT NULL DEFAULT 'warning';
-ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS about_reaction TEXT;
-ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS causes TEXT;
-ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS how_to_avoid TEXT;
-ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS safety_info TEXT;
-
--- Update any existing records that might have NULL type values
-UPDATE device_safety_precautions SET type = 'warning' WHERE type IS NULL;
-
--- Add new columns to device_documentation table for external PDF processing response
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS collection_name VARCHAR(255);
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS pdf_name VARCHAR(255);
-
--- Add new column to pdf_documents table for external PDF processing response
-ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS pdf_name VARCHAR(255);
-
--- Fix rule_conditions table column name to avoid reserved keyword
-ALTER TABLE rule_conditions RENAME COLUMN IF EXISTS value TO condition_value;
-
--- Device Tags table
-CREATE TABLE IF NOT EXISTS device_tags (
-    device_id VARCHAR(255) NOT NULL,
-    tag VARCHAR(255) NOT NULL,
-    PRIMARY KEY (device_id, tag),
-    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
-);
-
--- Device Config table
-CREATE TABLE IF NOT EXISTS device_config (
-    device_id VARCHAR(255) NOT NULL,
-    config_key VARCHAR(255) NOT NULL,
-    config_value VARCHAR(255),
-    PRIMARY KEY (device_id, config_key),
-    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 
 -- Rules table
@@ -221,17 +193,15 @@ CREATE TABLE IF NOT EXISTS rules (
     id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    metric VARCHAR(100),
-    metric_value VARCHAR(100),
-    threshold VARCHAR(200),
-    consequence TEXT,
-    device_id VARCHAR(255),
-    active BOOLEAN DEFAULT true,
+    type VARCHAR(50) NOT NULL, -- 'DEVICE_STATUS', 'TELEMETRY_THRESHOLD', 'TIME_BASED', 'COMPOSITE'
+    status VARCHAR(50) DEFAULT 'ACTIVE', -- 'ACTIVE', 'INACTIVE', 'DRAFT'
+    priority VARCHAR(50) DEFAULT 'MEDIUM', -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
     organization_id VARCHAR(255) NOT NULL,
-    last_triggered TIMESTAMP,
+    created_by VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Rule Conditions table - Updated to match new model
@@ -259,17 +229,31 @@ CREATE TABLE IF NOT EXISTS rule_actions (
     FOREIGN KEY (rule_id) REFERENCES rules(id) ON DELETE CASCADE
 );
 
--- Notifications table
+-- Notifications table - UPDATED to match entity model
 CREATE TABLE IF NOT EXISTS notifications (
     id VARCHAR(255) PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL,
-    title VARCHAR(255) NOT NULL,
+    title VARCHAR(200) NOT NULL,
     message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL, -- 'INFO', 'WARNING', 'ERROR', 'SUCCESS'
     read BOOLEAN DEFAULT false,
+    device_id VARCHAR(255),
+    rule_id VARCHAR(255),
+    user_id VARCHAR(255) NOT NULL,
     organization_id VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE SET NULL,
+    FOREIGN KEY (rule_id) REFERENCES rules(id) ON DELETE SET NULL
+);
+
+-- Notification Metadata table - ADDED for storing additional notification data
+CREATE TABLE IF NOT EXISTS notification_metadata (
+    notification_id VARCHAR(255) NOT NULL,
+    metadata_key VARCHAR(255) NOT NULL,
+    metadata_value TEXT,
+    PRIMARY KEY (notification_id, metadata_key),
+    FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE
 );
 
 -- Notification Templates table
@@ -286,6 +270,15 @@ CREATE TABLE IF NOT EXISTS notification_templates (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     description VARCHAR(500)
+);
+
+-- Notification Template Variables table - ADDED for storing template variables
+CREATE TABLE IF NOT EXISTS notification_template_variables (
+    template_id VARCHAR(255) NOT NULL,
+    variable_key VARCHAR(255) NOT NULL,
+    variable_description TEXT,
+    PRIMARY KEY (template_id, variable_key),
+    FOREIGN KEY (template_id) REFERENCES notification_templates(id) ON DELETE CASCADE
 );
 
 -- Knowledge Documents table - Fixed schema
@@ -345,7 +338,7 @@ CREATE TABLE IF NOT EXISTS conversation_configs (
     id VARCHAR(255) PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
     platform_name VARCHAR(100) NOT NULL,
-    platform_type VARCHAR(50) NOT NULL, -- 'slack', 'gmail', 'teams', 'google_chat', 'sms'
+    platform_type VARCHAR(50) NOT NULL CHECK (platform_type IN ('slack', 'gmail', 'teams', 'google_chat', 'sms')),
     credentials JSONB NOT NULL,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -410,6 +403,10 @@ CREATE INDEX IF NOT EXISTS idx_devices_assigned_by ON devices(assigned_by);
 CREATE INDEX IF NOT EXISTS idx_rules_organization ON rules(organization_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_organization ON notifications(organization_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_device ON notifications(device_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_rule ON notifications(rule_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
 CREATE INDEX IF NOT EXISTS idx_notification_templates_organization ON notification_templates(organization_id);
 CREATE INDEX IF NOT EXISTS idx_notification_templates_type ON notification_templates(type);
 CREATE INDEX IF NOT EXISTS idx_notification_templates_active ON notification_templates(is_active);
@@ -418,6 +415,10 @@ CREATE INDEX IF NOT EXISTS idx_knowledge_organization ON knowledge_documents(org
 CREATE INDEX IF NOT EXISTS idx_device_documentation_device ON device_documentation(device_id);
 CREATE INDEX IF NOT EXISTS idx_device_maintenance_device ON device_maintenance(device_id);
 CREATE INDEX IF NOT EXISTS idx_device_maintenance_organization ON device_maintenance(organization_id);
+CREATE INDEX IF NOT EXISTS idx_device_maintenance_assigned_to ON device_maintenance(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_device_maintenance_status ON device_maintenance(status);
+CREATE INDEX IF NOT EXISTS idx_device_maintenance_next_maintenance ON device_maintenance(next_maintenance);
+CREATE INDEX IF NOT EXISTS idx_device_maintenance_priority ON device_maintenance(priority);
 CREATE INDEX IF NOT EXISTS idx_device_safety_device ON device_safety_precautions(device_id);
 CREATE INDEX IF NOT EXISTS idx_device_safety_active ON device_safety_precautions(is_active);
 CREATE INDEX IF NOT EXISTS idx_conversation_configs_user ON conversation_configs(user_id);

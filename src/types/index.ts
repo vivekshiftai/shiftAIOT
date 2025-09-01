@@ -74,6 +74,15 @@ export interface Notification {
   metadata?: Record<string, string> | null;
 }
 
+// Notification Event Types
+export interface NotificationEvent {
+  type: 'DEVICE_ASSIGNMENT' | 'DEVICE_CREATION' | 'MAINTENANCE_SCHEDULE' | 'MAINTENANCE_REMINDER' | 'DEVICE_OFFLINE' | 'DEVICE_ONLINE' | 'TEMPERATURE_ALERT' | 'BATTERY_LOW' | 'RULE_TRIGGERED' | 'SYSTEM_UPDATE' | 'SECURITY_ALERT' | 'PERFORMANCE_ALERT';
+  deviceId?: string;
+  deviceName?: string;
+  userId: string;
+  data?: Record<string, any>;
+}
+
 // Notification Template Types
 export interface NotificationTemplate {
   id: string;
