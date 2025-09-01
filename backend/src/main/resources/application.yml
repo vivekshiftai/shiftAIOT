@@ -31,26 +31,26 @@ spring:
       location: ${java.io.tmpdir}
       resolve-lazily: false
 
-  datasource:
-    url: jdbc:postgresql://localhost:5432/iotplatform
-    driver-class-name: org.postgresql.Driver
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:Vivek@1234}
-  
-  #changes of the IOTdb password
-  
   # datasource:
   #   url: jdbc:postgresql://localhost:5432/iotplatform
   #   driver-class-name: org.postgresql.Driver
   #   username: ${DB_USERNAME:postgres}
-  #   password: ${DB_PASSWORD:123}
-  #   hikari:
-  #     maximum-pool-size: 10
-  #     minimum-idle: 5
-  #     connection-timeout: 30000
-  #     idle-timeout: 600000
-  #     max-lifetime: 1800000
-  #     connection-test-query: SELECT 1
+  #   password: ${DB_PASSWORD:Vivek@1234}
+  
+  #changes of the IOTdb password
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/iotplatform
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:123}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
 
   jpa:
     hibernate:
