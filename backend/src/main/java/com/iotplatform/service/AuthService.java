@@ -39,6 +39,9 @@ public class AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private NotificationSettingsService notificationSettingsService;
+
     public JwtResponse login(LoginRequest loginRequest) {
         try {
             Authentication authentication = authenticationManager.authenticate(
@@ -128,6 +131,16 @@ public class AuthService {
             User savedUser = userRepository.save(user);
             logger.info("✅ User successfully saved to database: ID={}, Email={}", 
                        savedUser.getId(), savedUser.getEmail());
+            
+            // Initialize user preferences for the new user
+            try {
+                notificationSettingsService.ensureUserPreferencesInitialized(savedUser.getId());
+                logger.info("✅ User preferences initialized for user: {}", savedUser.getEmail());
+            } catch (Exception e) {
+                logger.warn("⚠️ Failed to initialize user preferences for user: {}", savedUser.getEmail(), e);
+                // Don't fail the signup if preferences initialization fails
+            }
+            
             return savedUser;
         } catch (Exception e) {
             logger.error("❌ Failed to save user to database: Email={}, Error={}", 

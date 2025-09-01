@@ -27,6 +27,42 @@ public class NotificationSettingsService {
     private final NotificationService notificationService;
 
     /**
+     * Ensure user preferences are initialized for a user.
+     * This method should be called when a new user is created.
+     */
+    public void ensureUserPreferencesInitialized(String userId) {
+        try {
+            Optional<UserPreferences> preferencesOpt = userPreferencesRepository.findByUserId(userId);
+            
+            if (preferencesOpt.isEmpty()) {
+                log.info("Initializing default preferences for new user: {}", userId);
+                UserPreferences defaultPreferences = new UserPreferences();
+                defaultPreferences.setUserId(userId);
+                // Set all notification types to true by default
+                defaultPreferences.setDeviceAlerts(true);
+                defaultPreferences.setSystemUpdates(false);
+                defaultPreferences.setWeeklyReports(true);
+                defaultPreferences.setCriticalAlerts(true);
+                defaultPreferences.setPerformanceAlerts(true);
+                defaultPreferences.setSecurityAlerts(true);
+                defaultPreferences.setMaintenanceAlerts(true);
+                defaultPreferences.setDataBackupAlerts(true);
+                defaultPreferences.setUserActivityAlerts(false);
+                defaultPreferences.setRuleTriggerAlerts(true);
+                defaultPreferences.setEmailNotifications(true);
+                defaultPreferences.setPushNotifications(true);
+                
+                userPreferencesRepository.save(defaultPreferences);
+                log.info("✅ Default preferences initialized for user: {}", userId);
+            } else {
+                log.debug("User preferences already exist for user: {}", userId);
+            }
+        } catch (Exception e) {
+            log.error("Failed to initialize user preferences for user: {}", userId, e);
+        }
+    }
+
+    /**
      * Check if a user should receive a specific type of notification
      * based on their preferences.
      */

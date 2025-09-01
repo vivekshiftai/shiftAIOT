@@ -77,7 +77,7 @@ export const KnowledgeSection: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [showOnlyDevicePDFs, setShowOnlyDevicePDFs] = useState(false);
+
   const [showDeviceSummary, setShowDeviceSummary] = useState(false);
 
   // Refs for scrolling
@@ -525,8 +525,7 @@ export const KnowledgeSection: React.FC = () => {
 
   const filteredDocuments = documents.filter(doc =>
     doc.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    (!selectedDeviceForUpload || doc.deviceId === selectedDeviceForUpload) &&
-    (!showOnlyDevicePDFs || doc.deviceName)
+    (!selectedDeviceForUpload || doc.deviceId === selectedDeviceForUpload)
   );
 
   // Get device summary statistics
@@ -774,16 +773,7 @@ export const KnowledgeSection: React.FC = () => {
                     📊 {showDeviceSummary ? 'Hide Summary' : 'Device Summary'}
                   </button>
                 )}
-                <button
-                  onClick={() => setShowOnlyDevicePDFs(!showOnlyDevicePDFs)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
-                    showOnlyDevicePDFs 
-                      ? 'bg-blue-100 text-blue-700 border border-blue-300' 
-                      : 'bg-gray-100 text-gray-700 border border-gray-300'
-                  }`}
-                >
-                  📱 {showOnlyDevicePDFs ? 'All PDFs' : 'Device PDFs Only'}
-                </button>
+
                 <button
                   onClick={refreshCollections}
                   disabled={loading}

@@ -1573,11 +1573,16 @@ public class DeviceController {
                 notification.setOrganizationId(organizationId);
                 notification.setRead(false);
                 
-                // Save notification using the notification service
-                notificationService.createNotification(notification);
+                // Save notification using the notification service with preference check
+                Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(assignedUserId, notification);
                 
-                logger.info("✅ Created device assignment notification for user: {} for device: {}", 
-                           assignedUser.getEmail(), device.getName());
+                if (createdNotification.isPresent()) {
+                    logger.info("✅ Created device assignment notification for user: {} for device: {}", 
+                               assignedUser.getEmail(), device.getName());
+                } else {
+                    logger.info("⚠️ Device assignment notification blocked by user preferences for user: {}", 
+                               assignedUser.getEmail());
+                }
             } else {
                 logger.warn("⚠️ Could not create assignment notification - assigned user not found: {}", assignedUserId);
             }

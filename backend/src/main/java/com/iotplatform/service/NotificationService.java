@@ -48,15 +48,23 @@ public class NotificationService {
     }
 
     public Notification createNotification(Notification notification) {
-        // Sanitize and validate notification
-        NotificationValidator.sanitizeNotification(notification);
-        NotificationValidator.validateForCreation(notification);
-        
-        logger.info("Creating notification: '{}' for user: {}", notification.getTitle(), notification.getUserId());
-        notification.setId(UUID.randomUUID().toString());
-        Notification savedNotification = notificationRepository.save(notification);
-        logger.info("Notification created with ID: {}", savedNotification.getId());
-        return savedNotification;
+        try {
+            // Sanitize and validate notification
+            NotificationValidator.sanitizeNotification(notification);
+            NotificationValidator.validateForCreation(notification);
+            
+            logger.info("Creating notification: '{}' for user: {}", notification.getTitle(), notification.getUserId());
+            notification.setId(UUID.randomUUID().toString());
+            Notification savedNotification = notificationRepository.save(notification);
+            logger.info("✅ Notification created successfully with ID: {} for user: {}", savedNotification.getId(), notification.getUserId());
+            return savedNotification;
+        } catch (IllegalArgumentException e) {
+            logger.error("❌ Notification validation failed: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            logger.error("❌ Failed to create notification for user: {} title: {}", notification.getUserId(), notification.getTitle(), e);
+            throw new RuntimeException("Failed to create notification: " + e.getMessage(), e);
+        }
     }
 
     public void markAsRead(String notificationId) {

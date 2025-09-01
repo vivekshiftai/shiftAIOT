@@ -23,6 +23,9 @@ public class DatabaseMigrationService implements CommandLineRunner {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private NotificationSettingsService notificationSettingsService;
+
     @Override
     public void run(String... args) throws Exception {
         logger.info("🚀 Starting database migration and initialization...");
@@ -103,6 +106,13 @@ public class DatabaseMigrationService implements CommandLineRunner {
                     logger.info("✅ Updated user: {}", email);
                 }
                 
+                // Ensure user preferences are initialized
+                try {
+                    notificationSettingsService.ensureUserPreferencesInitialized(user.getId());
+                } catch (Exception e) {
+                    logger.warn("⚠️ Failed to initialize user preferences for user: {}", email, e);
+                }
+                
             } else {
                 // Create new user
                 User newUser = new User();
@@ -120,6 +130,14 @@ public class DatabaseMigrationService implements CommandLineRunner {
                 User savedUser = userRepository.save(newUser);
                 logger.info("✅ Created new user: {} (ID: {}, Role: {})", 
                            email, savedUser.getId(), savedUser.getRole());
+                
+                // Initialize user preferences for the new user
+                try {
+                    notificationSettingsService.ensureUserPreferencesInitialized(savedUser.getId());
+                    logger.info("✅ User preferences initialized for user: {}", email);
+                } catch (Exception e) {
+                    logger.warn("⚠️ Failed to initialize user preferences for user: {}", email, e);
+                }
             }
             
         } catch (Exception e) {
