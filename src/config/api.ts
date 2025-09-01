@@ -2,8 +2,8 @@
 // Update these endpoints to match your external services
 
 export const API_CONFIG = {
-  // Backend API (your Spring Boot application) - using VM IP for development
-  BACKEND_BASE_URL: 'http://20.57.36.66:8100',
+  // Backend API (your Spring Boot application) - using localhost for development
+  BACKEND_BASE_URL: 'http://localhost:8100',
   
   // PDF Processing is handled by the backend, no direct frontend calls needed
   

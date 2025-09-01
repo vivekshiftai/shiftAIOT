@@ -87,7 +87,9 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       });
 
       // Connect to WebSocket
-      websocketService.connect(user.organizationId);
+      websocketService.connect(user.organizationId).catch(error => {
+        logError('IoT', 'Failed to connect to WebSocket', error instanceof Error ? error : new Error('Unknown error'));
+      });
 
       // Cleanup on unmount
       return () => {

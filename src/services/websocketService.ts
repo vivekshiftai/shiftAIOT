@@ -20,7 +20,7 @@ class WebSocketService {
     this.callbacks = callbacks;
   }
 
-  connect(organizationId: string) {
+  async connect(organizationId: string) {
     if (this.isConnecting || this.socket?.readyState === WebSocket.OPEN) {
       return;
     }
@@ -29,8 +29,9 @@ class WebSocketService {
     this.organizationId = organizationId;
 
     try {
-      // Get the backend URL from the API config
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+      // Get the backend URL from the API config instead of environment variable
+      const { getApiConfig } = await import('../config/api');
+      const backendUrl = getApiConfig().BACKEND_BASE_URL;
       const wsUrl = backendUrl.replace('http', 'ws') + '/ws';
       
       logInfo('WebSocket', 'Connecting to WebSocket', { wsUrl, organizationId });
