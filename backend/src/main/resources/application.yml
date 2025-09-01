@@ -36,11 +36,14 @@ spring:
   #   driver-class-name: org.postgresql.Driver
   #   username: ${DB_USERNAME:superuser}
   #   password: ${DB_PASSWORD:Vivek@1234}
+  
+  #changes of the IOTdb password
+  
   datasource:
     url: jdbc:postgresql://localhost:5432/iotplatform
     driver-class-name: org.postgresql.Driver
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    password: ${DB_PASSWORD:123}
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5

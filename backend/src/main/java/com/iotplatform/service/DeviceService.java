@@ -156,7 +156,13 @@ public class DeviceService {
         device.setType(request.getType());
         device.setLocation(request.getLocation());
         device.setProtocol(request.getProtocol());
-        device.setStatus(request.getStatus());
+        
+        // Use the status from the request if provided, otherwise default to ONLINE
+        if (request.getStatus() != null) {
+            device.setStatus(request.getStatus());
+        } else {
+            device.setStatus(Device.DeviceStatus.ONLINE);
+        }
         
         // Set optional basic device info
         device.setManufacturer(request.getManufacturer());
