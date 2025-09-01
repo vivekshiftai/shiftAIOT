@@ -860,6 +860,76 @@ public class DeviceController {
 
 
     
+    /**
+     * Debug endpoint to check device documentation status
+     */
+    @GetMapping("/{id}/debug-documentation")
+    public ResponseEntity<?> debugDeviceDocumentation(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        try {
+            String organizationId = user.getOrganizationId();
+            
+            Optional<Device> deviceOpt = deviceService.getDevice(id, organizationId);
+            if (deviceOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            Device device = deviceOpt.get();
+            
+            // Get all possible PDF-related data
+            List<Rule> rules = pdfProcessingService.getDeviceRules(id);
+            List<DeviceMaintenance> maintenance = pdfProcessingService.getDeviceMaintenance(id);
+            List<DeviceSafetyPrecaution> safetyPrecautions = pdfProcessingService.getDeviceSafetyPrecautions(id);
+            List<DeviceDocumentation> pdfDocuments = deviceDocumentationService.getByDeviceId(id);
+            
+            // Create detailed debug response
+            Map<String, Object> debugInfo = new HashMap<>();
+            debugInfo.put("deviceId", id);
+            debugInfo.put("deviceName", device.getName());
+            debugInfo.put("organizationId", organizationId);
+            debugInfo.put("rulesCount", rules.size());
+            debugInfo.put("maintenanceCount", maintenance.size());
+            debugInfo.put("safetyCount", safetyPrecautions.size());
+            debugInfo.put("pdfDocumentsCount", pdfDocuments.size());
+            
+            // Detailed PDF documents info
+            List<Map<String, Object>> pdfDocsDebug = new ArrayList<>();
+            for (DeviceDocumentation doc : pdfDocuments) {
+                Map<String, Object> docInfo = new HashMap<>();
+                docInfo.put("id", doc.getId());
+                docInfo.put("pdfName", doc.getPdfName());
+                docInfo.put("originalFilename", doc.getOriginalFilename());
+                docInfo.put("filename", doc.getFilename());
+                docInfo.put("documentType", doc.getDocumentType());
+                docInfo.put("processingStatus", doc.getProcessingStatus());
+                docInfo.put("processedChunks", doc.getProcessedChunks());
+                docInfo.put("fileSize", doc.getFileSize());
+                docInfo.put("createdAt", doc.getCreatedAt());
+                docInfo.put("updatedAt", doc.getUpdatedAt());
+                pdfDocsDebug.add(docInfo);
+            }
+            debugInfo.put("pdfDocuments", pdfDocsDebug);
+            
+            // Check device config for PDF processing info
+            if (device.getConfig() != null) {
+                debugInfo.put("deviceConfig", device.getConfig());
+            }
+            
+            logger.info("🔍 Debug documentation info for device: {} - PDFs: {}, Rules: {}, Maintenance: {}, Safety: {}", 
+                       id, pdfDocuments.size(), rules.size(), maintenance.size(), safetyPrecautions.size());
+            
+            return ResponseEntity.ok(debugInfo);
+            
+        } catch (Exception e) {
+            logger.error("Error debugging device documentation for device: {}", id, e);
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to debug device documentation: " + e.getMessage()));
+        }
+    }
+
     @GetMapping("/{id}/pdf-results")
     public ResponseEntity<?> getDevicePDFResults(@PathVariable String id, @AuthenticationPrincipal CustomUserDetails userDetails) {
         if (userDetails == null || userDetails.getUser() == null) {

@@ -357,6 +357,44 @@ export const DeviceDetailsSection: React.FC = () => {
     }
   };
 
+  const debugDeviceDocumentation = async () => {
+    if (!device) return;
+    
+    try {
+      console.log('🔍 Debugging device documentation for:', device.id);
+      
+      // Call the debug endpoint
+      const debugResponse = await deviceAPI.getDeviceDebugDocumentation(device.id);
+      console.log('🔍 Debug response:', debugResponse);
+      
+      // Display debug info in an alert for now
+      const debugInfo = debugResponse.data;
+      const debugMessage = `
+Device Documentation Debug Info:
+- Device: ${debugInfo.deviceName} (${debugInfo.deviceId})
+- Organization: ${debugInfo.organizationId}
+- Rules: ${debugInfo.rulesCount}
+- Maintenance: ${debugInfo.maintenanceCount}
+- Safety: ${debugInfo.safetyCount}
+- PDF Documents: ${debugInfo.pdfDocumentsCount}
+
+PDF Documents:
+${debugInfo.pdfDocuments.map((doc: any) => 
+  `- ${doc.originalFilename} (${doc.documentType}) - Status: ${doc.processingStatus}`
+).join('\n')}
+
+Device Config:
+${JSON.stringify(debugInfo.deviceConfig, null, 2)}
+      `;
+      
+      alert(debugMessage);
+      
+    } catch (error) {
+      console.error('❌ Failed to debug device documentation:', error);
+      alert('Failed to debug device documentation. Check console for details.');
+    }
+  };
+
   const loadDevicePDFs = async () => {
     if (!device) return;
     
@@ -1057,14 +1095,23 @@ export const DeviceDetailsSection: React.FC = () => {
             
             {devicePDFs.length === 0 && (
               <div className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-yellow-100 rounded-lg">
+                      <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-yellow-800">No PDF Documents Found</h4>
+                      <p className="text-xs text-yellow-600">This device doesn't have any associated PDF documents yet.</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-medium text-yellow-800">No PDF Documents Found</h4>
-                    <p className="text-xs text-yellow-600">This device doesn't have any associated PDF documents yet.</p>
-                  </div>
+                  <button
+                    onClick={debugDeviceDocumentation}
+                    className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                    title="Debug device documentation"
+                  >
+                    🔍 Debug
+                  </button>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-yellow-200">
                   <p className="text-sm text-yellow-700 mb-2">

@@ -182,6 +182,7 @@ export const deviceAPI = {
     },
   }),
   getDevicePDFResults: (deviceId: string) => api.get(`/api/devices/${deviceId}/pdf-results`),
+  getDeviceDebugDocumentation: (deviceId: string) => api.get(`/api/devices/${deviceId}/debug-documentation`),
 };
 
 // Rule API
