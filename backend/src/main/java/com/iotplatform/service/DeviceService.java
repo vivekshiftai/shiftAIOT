@@ -282,6 +282,19 @@ public class DeviceService {
             throw new RuntimeException("Failed to create device: " + e.getMessage(), e);
         }
         
+        // Create notification for device assignment if assigned to different user
+        if (request.getAssignedUserId() != null && !request.getAssignedUserId().trim().isEmpty() 
+            && !request.getAssignedUserId().trim().equals(currentUserId)) {
+            try {
+                logger.info("📝 Creating device assignment notification for user: {} for device: {}", 
+                           request.getAssignedUserId().trim(), savedDevice.getName());
+                createDeviceAssignmentNotification(savedDevice, request.getAssignedUserId().trim(), organizationId);
+            } catch (Exception e) {
+                logger.error("❌ Failed to create device assignment notification for device: {}", savedDevice.getId(), e);
+                // Don't fail device creation if notification fails
+            }
+        }
+        
         // Create response without file upload information
         DeviceCreateResponse response = new DeviceCreateResponse();
         response.setId(savedDevice.getId());

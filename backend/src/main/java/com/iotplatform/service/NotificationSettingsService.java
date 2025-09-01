@@ -105,17 +105,20 @@ public class NotificationSettingsService {
      * Create a notification only if the user has enabled that type of notification.
      */
     public Optional<Notification> createNotificationIfAllowed(String userId, Notification notification, NotificationType type) {
+        log.info("🔔 Checking if notification is allowed for user: {} type: {}", userId, type);
+        
         if (shouldSendNotification(userId, type)) {
+            log.info("✅ Notification allowed for user: {} type: {}", userId, type);
             try {
                 Notification createdNotification = notificationService.createNotification(notification);
-                log.info("Notification created for user: {} type: {}", userId, type);
+                log.info("✅ Notification created successfully for user: {} type: {}", userId, type);
                 return Optional.of(createdNotification);
             } catch (Exception e) {
-                log.error("Failed to create notification for user: {} type: {}", userId, type, e);
+                log.error("❌ Failed to create notification for user: {} type: {}", userId, type, e);
                 return Optional.empty();
             }
         } else {
-            log.debug("Notification blocked for user: {} type: {} (preference disabled)", userId, type);
+            log.info("⚠️ Notification blocked for user: {} type: {} (preference disabled)", userId, type);
             return Optional.empty();
         }
     }

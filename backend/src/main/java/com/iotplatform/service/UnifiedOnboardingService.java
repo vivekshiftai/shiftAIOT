@@ -101,20 +101,6 @@ public class UnifiedOnboardingService {
         sendProgressUpdate(progressCallback, "device", 20, "Device created successfully", 
                           "Device configuration saved to database", null, 1, 5, "Device Creation");
         
-        // Send consolidated notification to device assignee if different from creator
-        if (deviceRequest.getAssignedUserId() != null && !deviceRequest.getAssignedUserId().trim().isEmpty() 
-            && !deviceRequest.getAssignedUserId().equals(currentUserId)) {
-            try {
-                // Create consolidated notification after all processing is complete
-                // This will be called at the end of the method after rules, maintenance, and safety are processed
-                log.info("📝 Will create consolidated notification for user: {} for device: {}", 
-                       deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
-            } catch (Exception e) {
-                log.error("❌ Failed to prepare consolidated notification for user: {} device: {}", 
-                         deviceRequest.getAssignedUserId().trim(), deviceRequest.getName(), e);
-            }
-        }
-        
         // Step 2: Upload PDF to PDF Processing Service and process - This is non-transactional
         log.info("Step 2: Uploading PDF to processing service and generating content...");
         try {
@@ -131,7 +117,7 @@ public class UnifiedOnboardingService {
                 pdfData.setRulesGenerated(pdfResult.rulesGenerated);
                 pdfData.setMaintenanceItems(pdfResult.maintenanceItems);
                 pdfData.setSafetyPrecautions(pdfResult.safetyPrecautions);
-                pdfData.setProcessingTime(pdfResult.processingTime);
+                pdfResult.processingTime = pdfResult.processingTime;
                 
                 deviceResponse.setPdfData(pdfData);
                 
@@ -146,6 +132,57 @@ public class UnifiedOnboardingService {
                               "Device created but PDF processing encountered an error", e.getMessage(), 0, 5, "Error");
             
             // Don't fail the entire onboarding if PDF processing fails
+        }
+        
+        // Step 3: Create notification for device assignment (regardless of PDF processing success)
+        log.info("Step 3: Creating notification for device assignment...");
+        try {
+            if (deviceRequest.getAssignedUserId() != null && !deviceRequest.getAssignedUserId().trim().isEmpty() 
+                && !deviceRequest.getAssignedUserId().equals(currentUserId)) {
+                
+                log.info("📝 Creating device assignment notification for user: {} for device: {}", 
+                       deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
+                
+                // Create consolidated notification if PDF processing succeeded, otherwise create basic notification
+                try {
+                    consolidatedNotificationService.createConsolidatedDeviceNotification(
+                        deviceResponse.getId(),
+                        deviceRequest.getAssignedUserId().trim(),
+                        organizationId,
+                        currentUserId
+                    );
+                    
+                    log.info("✅ Consolidated notification sent to user: {} for device: {}", 
+                           deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
+                } catch (Exception consolidatedError) {
+                    log.warn("⚠️ Consolidated notification failed, creating basic notification instead: {}", consolidatedError.getMessage());
+                    
+                    // Fallback to basic device assignment notification
+                    Notification basicNotification = new Notification();
+                    basicNotification.setTitle("New Device Assignment");
+                    basicNotification.setMessage(String.format(
+                        "Device '%s' has been successfully onboarded and assigned to you. " +
+                        "The device is now ready for monitoring and management.",
+                        deviceRequest.getName()
+                    ));
+                    basicNotification.setType(Notification.NotificationType.INFO);
+                    basicNotification.setUserId(deviceRequest.getAssignedUserId().trim());
+                    basicNotification.setDeviceId(deviceResponse.getId());
+                    basicNotification.setOrganizationId(organizationId);
+                    basicNotification.setRead(false);
+                    
+                    notificationService.createNotificationWithPreferenceCheck(
+                        deviceRequest.getAssignedUserId().trim(), basicNotification);
+                    
+                    log.info("✅ Basic notification sent to user: {} for device: {}", 
+                           deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
+                }
+            } else {
+                log.info("📝 No notification needed - device assigned to creator or no assignment specified");
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to create notification for device: {}", deviceResponse.getId(), e);
+            // Don't fail the onboarding if notification fails
         }
         
         // Send final completion progress
@@ -356,39 +393,6 @@ public class UnifiedOnboardingService {
             sendProgressUpdate(progressCallback, "safety", 95, "Safety procedures configured", 
                               pdfResult.safetyPrecautions + " safety protocols established", null, 5, 5, "Safety Procedures");
 
-            // Step 2.5: Create consolidated notification
-            log.info("Step 2.5: Creating consolidated notification...");
-            try {
-                if (deviceRequest.getAssignedUserId() != null && !deviceRequest.getAssignedUserId().trim().isEmpty() 
-                    && !deviceRequest.getAssignedUserId().equals(currentUserId)) {
-                    
-                    String notificationMessage = String.format(
-                        "Device '%s' has been successfully onboarded with AI-generated configurations:\n" +
-                        "• %d monitoring rules created\n" +
-                        "• %d maintenance tasks scheduled\n" +
-                        "• %d safety protocols established\n" +
-                        "• PDF documentation processed and stored\n\n" +
-                        "The device is now ready for monitoring and management.",
-                        deviceRequest.getName(),
-                        pdfResult.rulesGenerated,
-                        pdfResult.maintenanceItems,
-                        pdfResult.safetyPrecautions
-                    );
-                    
-                    consolidatedNotificationService.createConsolidatedDeviceNotification(
-                        deviceId,
-                        deviceRequest.getAssignedUserId().trim(),
-                        organizationId,
-                        currentUserId
-                    );
-                    
-                    log.info("✅ Consolidated notification sent to user: {} for device: {}", 
-                           deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
-                }
-            } catch (Exception e) {
-                log.error("❌ Failed to create consolidated notification for device: {}", deviceId, e);
-            }
-            
             // Convert processing time string to long if possible, otherwise use current time
             try {
                 pdfResult.processingTime = Long.parseLong(uploadResponse.getProcessingTime());

@@ -49,14 +49,28 @@ public class NotificationService {
 
     public Notification createNotification(Notification notification) {
         try {
+            logger.info("🔔 Starting notification creation process for user: {} with title: '{}'", 
+                       notification.getUserId(), notification.getTitle());
+            
             // Sanitize and validate notification
+            logger.debug("Sanitizing notification data...");
             NotificationValidator.sanitizeNotification(notification);
+            logger.debug("Validating notification data...");
             NotificationValidator.validateForCreation(notification);
             
             logger.info("Creating notification: '{}' for user: {}", notification.getTitle(), notification.getUserId());
             notification.setId(UUID.randomUUID().toString());
+            
+            logger.debug("Saving notification to database...");
             Notification savedNotification = notificationRepository.save(notification);
             logger.info("✅ Notification created successfully with ID: {} for user: {}", savedNotification.getId(), notification.getUserId());
+            
+            // Log notification details for debugging
+            logger.debug("Notification details - ID: {}, Title: {}, Message: {}, Type: {}, UserId: {}, OrganizationId: {}, DeviceId: {}, Read: {}", 
+                        savedNotification.getId(), savedNotification.getTitle(), savedNotification.getMessage(), 
+                        savedNotification.getType(), savedNotification.getUserId(), savedNotification.getOrganizationId(), 
+                        savedNotification.getDeviceId(), savedNotification.isRead());
+            
             return savedNotification;
         } catch (IllegalArgumentException e) {
             logger.error("❌ Notification validation failed: {}", e.getMessage());
