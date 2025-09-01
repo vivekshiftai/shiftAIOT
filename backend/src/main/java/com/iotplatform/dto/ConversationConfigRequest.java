@@ -2,6 +2,7 @@ package com.iotplatform.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
+import java.util.Arrays;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import com.iotplatform.model.PlatformType;
@@ -32,7 +33,7 @@ public class ConversationConfigRequest {
         // Validate platform type
         if (!PlatformType.isValid(platformType)) {
             throw new IllegalArgumentException("Invalid platform type: " + platformType + 
-                ". Supported types: " + String.join(", ", PlatformType.values().stream()
+                ". Supported types: " + String.join(", ", Arrays.stream(PlatformType.values())
                     .map(PlatformType::getValue).toArray(String[]::new)));
         }
         
