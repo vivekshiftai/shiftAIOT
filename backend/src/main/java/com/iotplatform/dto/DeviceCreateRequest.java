@@ -50,7 +50,7 @@ public class DeviceCreateRequest {
     private String coapPath;
     
     // Status field (optional)
-    private Device.DeviceStatus status = Device.DeviceStatus.OFFLINE;
+    private Device.DeviceStatus status = Device.DeviceStatus.ONLINE;
     
     // Assigned user field (optional)
     private String assignedUserId;

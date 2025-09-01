@@ -49,7 +49,7 @@ public class Device {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private DeviceStatus status = DeviceStatus.OFFLINE;
+    private DeviceStatus status = DeviceStatus.ONLINE;
 
     @NotBlank
     @Size(max = 200)
