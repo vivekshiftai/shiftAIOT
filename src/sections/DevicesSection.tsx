@@ -99,21 +99,50 @@ export const DevicesSection: React.FC = () => {
           response: error instanceof Error && 'response' in error ? (error as any).response : undefined
         });
         
-        // Provide more specific error messages
+        // Enhanced error message parsing
         let errorMessage = 'Unknown error occurred';
+        let errorType = 'Error';
+        
         if (error instanceof Error) {
-          if (error.message.includes('401') || error.message.includes('403')) {
-            errorMessage = 'Permission denied. You do not have the required permissions to delete devices.';
-          } else if (error.message.includes('404')) {
+          const errorText = error.message.toLowerCase();
+          
+          // Check for specific error types from backend
+          if (errorText.includes('authentication failed') || errorText.includes('401')) {
+            errorType = 'Authentication Error';
+            errorMessage = 'Your session has expired. Please log in again.';
+          } else if (errorText.includes('device not found') || errorText.includes('404')) {
+            errorType = 'Device Not Found';
             errorMessage = 'Device not found. It may have already been deleted.';
-          } else if (error.message.includes('500')) {
-            errorMessage = 'Server error. Please try again later.';
+          } else if (errorText.includes('permission denied') || errorText.includes('403')) {
+            errorType = 'Permission Denied';
+            errorMessage = 'You do not have the required permissions to delete devices.';
+          } else if (errorText.includes('connection deletion failed')) {
+            errorType = 'Connection Error';
+            errorMessage = 'Failed to delete device connections. The device may be currently in use.';
+          } else if (errorText.includes('rules deletion failed')) {
+            errorType = 'Rules Error';
+            errorMessage = 'Failed to delete device rules and configurations.';
+          } else if (errorText.includes('maintenance deletion failed')) {
+            errorType = 'Maintenance Error';
+            errorMessage = 'Failed to delete maintenance schedules and tasks.';
+          } else if (errorText.includes('500') || errorText.includes('server error')) {
+            errorType = 'Server Error';
+            errorMessage = 'Server error occurred. Please try again later.';
+          } else if (errorText.includes('network error') || errorText.includes('fetch')) {
+            errorType = 'Network Error';
+            errorMessage = 'Network connection error. Please check your internet connection.';
           } else {
+            // Use the actual error message if it's meaningful
             errorMessage = error.message;
           }
         }
         
-        alert(`Failed to delete device "${deviceName}". ${errorMessage}`);
+        // Show error with better formatting
+        const fullErrorMessage = `${errorType}: ${errorMessage}`;
+        console.error('DevicesSection: Formatted error:', fullErrorMessage);
+        
+        // Use a more user-friendly alert or consider using a toast notification
+        alert(`Failed to delete device "${deviceName}".\n\n${fullErrorMessage}`);
       }
     }
   }, [deleteDevice]);

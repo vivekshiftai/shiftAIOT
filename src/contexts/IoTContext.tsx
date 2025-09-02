@@ -469,10 +469,8 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     try {
       logInfo('IoT', 'Deleting device', { deviceId });
       
-      
       // Check token before deletion
       const token = tokenService.getToken();
-
       
       if (!token) {
         throw new Error('No authentication token found. Please log in again.');
@@ -481,24 +479,21 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       // Validate token before proceeding
       const isValidToken = await tokenService.validateToken();
       
-      
       if (!isValidToken) {
         console.warn('⚠️ IoTContext: Token validation failed, attempting token refresh...');
         const refreshedToken = await tokenService.refreshToken();
         if (!refreshedToken) {
           throw new Error('Authentication token is invalid and could not be refreshed. Please log in again.');
         }
-        
       }
       
       // First, verify the device exists
       try {
-
         const deviceCheck = await deviceAPI.getById(deviceId);
-        
+        console.log('✅ IoTContext: Device verification successful:', deviceCheck);
       } catch (checkError) {
         console.error('❌ IoTContext: Device not found during verification:', checkError);
-        throw new Error(`Device not found: ${deviceId}`);
+        throw new Error(`Device not found: ${deviceId}. The device may have already been deleted or you don't have access to it.`);
       }
       
       console.log('🔍 IoTContext: Proceeding with device deletion...');
@@ -508,14 +503,25 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       await refreshDevices();
     } catch (error) {
       console.error('❌ IoTContext: Device deletion failed:', error);
-      console.error('❌ IoTContext: Error details:', {
+      
+      // Enhanced error logging
+      const errorDetails = {
         deviceId,
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
-        response: error instanceof Error && 'response' in error ? (error as any).response : undefined
-      });
+        timestamp: new Date().toISOString(),
+        userAgent: navigator.userAgent
+      };
+      
+      console.error('❌ IoTContext: Detailed error information:', errorDetails);
       logError('IoT', 'Failed to delete device', error instanceof Error ? error : new Error('Unknown error'));
-      throw error;
+      
+      // Re-throw with enhanced error message
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error(`Failed to delete device: ${String(error)}`);
+      }
     }
   };
 
