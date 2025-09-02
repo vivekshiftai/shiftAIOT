@@ -5,17 +5,19 @@ import com.iotplatform.model.Device.DeviceType;
 import com.iotplatform.model.Device.Protocol;
 
 import jakarta.validation.constraints.Size;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
 public class DeviceUpdateRequest {
     
-    // Optional fields for updates - can be null
+    // REQUIRED fields for updates - cannot be null or empty
+    @NotBlank(message = "Device name is required")
     @Size(max = 100, message = "Device name must be less than 100 characters")
     private String name;
     
     // Type can be null for updates
     private DeviceType type;
     
+    @NotBlank(message = "Location is required")
     @Size(max = 200, message = "Location must be less than 200 characters")
     private String location;
     

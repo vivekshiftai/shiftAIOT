@@ -316,7 +316,7 @@ public class UnifiedOnboardingService {
             sendProgressUpdate(progressCallback, "upload", 40, "PDF uploaded successfully", 
                               "Document received and queued for processing", null, 2, 5, "PDF Upload");
             
-            // Step 1.5: Store PDF metadata in device documentation table
+            // Step 1.5: Store PDF metadata in device documentation table AND knowledge system
             try {
                 String documentType = manualFile != null ? "manual" : 
                                     datasheetFile != null ? "datasheet" : 
@@ -342,6 +342,26 @@ public class UnifiedOnboardingService {
                 
                 log.info("✅ Stored PDF metadata in device documentation: {} for device: {}", 
                        documentation.getId(), deviceId);
+                
+                // Step 1.6: ALSO store PDF reference in knowledge system for chat queries
+                try {
+                    deviceDocumentationService.storePDFInKnowledgeSystem(
+                        deviceId,
+                        deviceRequest.getName(), // Device name
+                        pdfResult.originalFileName, // Use the actual uploaded filename
+                        pdfResult.fileSize,
+                        documentType,
+                        organizationId
+                    );
+                    
+                    log.info("✅ PDF reference stored in knowledge system for device: {} PDF: {}", 
+                           deviceId, pdfResult.originalFileName);
+                           
+                } catch (Exception knowledgeError) {
+                    log.error("❌ Failed to store PDF reference in knowledge system for device: {} - {}", 
+                             deviceId, knowledgeError.getMessage(), knowledgeError);
+                    // Continue with processing even if knowledge storage fails
+                }
                 
             } catch (Exception e) {
                 log.error("❌ Failed to store PDF metadata for device: {} - {}", deviceId, e.getMessage(), e);

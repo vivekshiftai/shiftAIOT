@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Date;
 import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,7 @@ import com.iotplatform.dto.DeviceUpdateRequest;
 import com.iotplatform.model.Device;
 import com.iotplatform.model.Device.Protocol;
 import com.iotplatform.model.DeviceDocumentation;
+import com.iotplatform.model.KnowledgeDocument;
 import com.iotplatform.model.User;
 import com.iotplatform.service.DeviceService;
 import com.iotplatform.service.DeviceDocumentationService;
@@ -276,7 +278,7 @@ public class DeviceController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateDevice(@PathVariable String id, @RequestBody DeviceUpdateRequest deviceRequest, 
+    public ResponseEntity<?> updateDevice(@PathVariable String id, @Valid @RequestBody DeviceUpdateRequest deviceRequest, 
                                        @AuthenticationPrincipal CustomUserDetails userDetails) {
         logger.info("🔄 PUT /api/devices/{} - Device update request received from user: {}", 
                    id, userDetails.getUser().getEmail());
@@ -319,13 +321,17 @@ public class DeviceController {
             
             // Update device fields only if they are not null (partial update)
             // Log each field update for debugging
+            
+            // REQUIRED FIELDS - always update if provided (even if empty string)
             if (deviceRequest.getName() != null) {
-                String newName = convertEmptyToNull(deviceRequest.getName());
+                // For required fields, preserve empty strings - validation will handle them
+                String newName = deviceRequest.getName().trim();
                 logger.info("📝 Updating device name from '{}' to '{}'", existingDevice.getName(), newName);
                 existingDevice.setName(newName);
             }
             if (deviceRequest.getLocation() != null) {
-                String newLocation = convertEmptyToNull(deviceRequest.getLocation());
+                // For required fields, preserve empty strings - validation will handle them
+                String newLocation = deviceRequest.getLocation().trim();
                 logger.info("📝 Updating device location from '{}' to '{}'", existingDevice.getLocation(), newLocation);
                 existingDevice.setLocation(newLocation);
             }
@@ -815,6 +821,67 @@ public class DeviceController {
             
         } catch (Exception e) {
             logger.error("Failed to get device documentation info: device={}, error={}", id, e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Get device PDF references from knowledge system for chat functionality
+     */
+    @GetMapping("/{id}/pdf-references")
+    public ResponseEntity<Map<String, Object>> getDevicePDFReferences(
+            @PathVariable String id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User user = userDetails.getUser();
+        
+        String userEmail = user.getEmail();
+        String organizationId = user.getOrganizationId();
+        
+        logger.info("User {} requesting device PDF references: device={}", userEmail, id);
+        
+        if (id == null || id.trim().isEmpty()) {
+            logger.warn("Invalid device ID provided by user {}", userEmail);
+            return ResponseEntity.badRequest().build();
+        }
+        
+        try {
+            Optional<Device> device = deviceService.getDevice(id.trim(), organizationId);
+            if (device.isEmpty()) {
+                logger.warn("Device {} not found for user {}", id, userEmail);
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Get PDF references from knowledge system
+            List<KnowledgeDocument> pdfReferences = deviceDocumentationService.getDevicePDFReferences(id, organizationId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("deviceId", id);
+            response.put("deviceName", device.get().getName());
+            response.put("pdfReferences", pdfReferences.stream().map(doc -> {
+                Map<String, Object> docMap = new HashMap<>();
+                docMap.put("id", doc.getId());
+                docMap.put("name", doc.getName());
+                docMap.put("type", doc.getType());
+                docMap.put("size", doc.getSize());
+                docMap.put("status", doc.getStatus());
+                docMap.put("vectorized", doc.getVectorized());
+                docMap.put("uploadedAt", doc.getUploadedAt());
+                docMap.put("processedAt", doc.getProcessedAt());
+                docMap.put("deviceId", doc.getDeviceId());
+                docMap.put("deviceName", doc.getDeviceName());
+                return docMap;
+            }).collect(Collectors.toList()));
+            response.put("totalCount", pdfReferences.size());
+            
+            logger.debug("PDF references retrieved for device {}: {} documents", id, pdfReferences.size());
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Failed to get device PDF references: device={}, error={}", id, e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }

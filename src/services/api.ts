@@ -4,6 +4,17 @@ import { tokenService } from './tokenService';
 import { logWarn, logError, logApiError } from '../utils/logger';
 import { NotificationTemplateRequest } from '../types';
 
+// Custom error class for authentication errors
+class AuthenticationError extends Error {
+  public status: number;
+  
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'AuthenticationError';
+    this.status = status;
+  }
+}
+
 const API_BASE_URL = getApiConfig().BACKEND_BASE_URL;
 
 // Create axios instance with default config
@@ -117,16 +128,17 @@ api.interceptors.response.use(
           console.warn('❌ Token refresh failed');
           logWarn('API', 'Token refresh failed');
           
-          // Don't automatically redirect to login - let the component handle it
-          // This prevents automatic logout on temporary network issues
-          return Promise.reject(error);
+          // Create a more user-friendly error for auth failures
+          const authError = new AuthenticationError('Authentication failed. Please log in again.', status);
+          return Promise.reject(authError);
         }
       } catch (refreshErr: any) {
         console.error('❌ Token refresh error:', refreshErr);
         logWarn('API', 'Token refresh failed', undefined, refreshErr);
         
-        // Don't automatically redirect to login - let the component handle it
-        return Promise.reject(error);
+        // Create a more user-friendly error for auth failures
+        const authError = new AuthenticationError('Authentication failed. Please log in again.', status);
+        return Promise.reject(authError);
       }
     }
 
@@ -179,7 +191,7 @@ export const deviceAPI = {
       'Content-Type': 'multipart/form-data',
     },
   }),
-  getDevicePDFResults: (deviceId: string) => api.get(`/api/devices/${deviceId}/pdf-results`),
+  getDevicePDFResults: (deviceId: string) => api.get(`/api/devices/${deviceId}/pdf-references`),
 };
 
 // Rule API

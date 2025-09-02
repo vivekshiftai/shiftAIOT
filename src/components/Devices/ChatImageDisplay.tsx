@@ -18,8 +18,22 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
     if (images && images.length > 0) {
       logInfo('ChatImageDisplay', 'Rendering images', { 
         imageCount: images.length,
-        imageNames: images.map(img => img.filename)
+        imageNames: images.map(img => img.filename),
+        imageData: images.map(img => ({
+          filename: img.filename,
+          hasData: !!img.data,
+          dataLength: img.data?.length || 0,
+          mimeType: img.mime_type,
+          size: img.size,
+          isValid: img.data && img.data.trim() !== '' && img.mime_type && img.size > 0
+        }))
       });
+      
+      // Log any invalid images
+      const invalidImages = images.filter(img => !img.data || img.data.trim() === '' || !img.mime_type || img.size <= 0);
+      if (invalidImages.length > 0) {
+        logError('ChatImageDisplay', 'Found invalid images', new Error(`Invalid images: ${invalidImages.map(img => img.filename).join(', ')}`));
+      }
     }
   }, [images]);
 
@@ -40,12 +54,22 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
 
   const downloadImage = (image: PDFImage, index: number) => {
     try {
+      // Validate image data before download
+      if (!image.data || image.data.trim() === '') {
+        logError('ChatImageDisplay', 'Cannot download image with no data', new Error('No image data available'));
+        return;
+      }
+      
       const link = document.createElement('a');
-      link.href = `data:${image.mime_type};base64,${image.data}`;
+      // Use default MIME type if none provided
+      const mimeType = image.mime_type || 'image/png';
+      link.href = `data:${mimeType};base64,${image.data}`;
+      
       // Use a cleaner filename for download
       const cleanFilename = getDisplayImageName(image.filename, index).replace(/\s+/g, '_').toLowerCase();
-      const extension = image.mime_type.split('/')[1] || 'png';
+      const extension = mimeType.split('/')[1] || 'png';
       link.download = `${cleanFilename}.${extension}`;
+      
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -65,6 +89,28 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
     return null;
   }
 
+  // Filter out invalid images
+  const validImages = images.filter(img => 
+    img.data && 
+    img.data.trim() !== '' && 
+    img.mime_type && 
+    img.size > 0
+  );
+
+  if (validImages.length === 0) {
+    return (
+      <div className={`p-4 bg-yellow-50 border border-yellow-200 rounded-lg ${className}`}>
+        <div className="flex items-center gap-2 text-yellow-800">
+          <AlertTriangle className="w-4 h-4" />
+          <span className="text-sm">
+            Found {images.length} image(s) but they appear to be corrupted or incomplete. 
+            Please try asking a different question or contact support if this persists.
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`space-y-3 ${className}`}>
       <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
@@ -72,7 +118,7 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {images.map((image, index) => {
+        {validImages.map((image, index) => {
           const isExpanded = expandedImages.has(image.filename);
           const hasError = imageErrors.has(image.filename);
           
@@ -120,12 +166,17 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
                     <AlertTriangle className="w-6 h-6 mr-2" />
                     <span className="text-sm">Failed to load image</span>
                   </div>
+                ) : !image.data || image.data.trim() === '' ? (
+                  <div className="flex items-center justify-center py-8 text-gray-500">
+                    <AlertTriangle className="w-6 h-6 mr-2" />
+                    <span className="text-sm">No image data available</span>
+                  </div>
                 ) : (
                   <div className={`transition-all duration-300 ${
                     isExpanded ? 'max-h-96' : 'max-h-32'
                   } overflow-hidden`}>
                     <img
-                      src={`data:${image.mime_type};base64,${image.data}`}
+                      src={`data:${image.mime_type || 'image/png'};base64,${image.data}`}
                       alt={getDisplayImageName(image.filename, index)}
                       className={`w-full h-auto object-contain rounded ${
                         isExpanded ? 'max-h-80' : 'max-h-24'

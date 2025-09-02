@@ -47,8 +47,8 @@ export const validateDeviceId = (deviceId: string): DeviceValidationResult => {
 };
 
 /**
- * Validates device data for updates, ensuring all fields can accept null values
- * and providing proper validation feedback
+ * Validates device data for updates, ensuring only name and location are required
+ * while all other fields can accept null values
  */
 export const validateDeviceUpdate = (deviceData: any): DeviceValidationResult => {
   const errors: Record<string, string> = {};
@@ -61,12 +61,16 @@ export const validateDeviceUpdate = (deviceData: any): DeviceValidationResult =>
     errors.id = 'Device ID is required';
   }
 
-  // Validate string field lengths (allow null values)
-  if (deviceData.name !== null && deviceData.name !== undefined && deviceData.name.length > 100) {
+  // REQUIRED FIELDS - cannot be null or empty
+  if (deviceData.name === null || deviceData.name === undefined || deviceData.name.trim() === '') {
+    errors.name = 'Device name is required and cannot be empty';
+  } else if (deviceData.name.length > 100) {
     errors.name = 'Device name must be less than 100 characters';
   }
 
-  if (deviceData.location !== null && deviceData.location !== undefined && deviceData.location.length > 200) {
+  if (deviceData.location === null || deviceData.location === undefined || deviceData.location.trim() === '') {
+    errors.location = 'Location is required and cannot be empty';
+  } else if (deviceData.location.length > 200) {
     errors.location = 'Location must be less than 200 characters';
   }
 
@@ -208,24 +212,37 @@ export const validateDeviceForDeletion = (device: any): DeviceValidationResult =
 
 /**
  * Sanitizes device data for API calls, ensuring proper null handling
+ * while preserving required fields (name and location)
  */
 export const sanitizeDeviceData = (deviceData: any): any => {
   const sanitized: any = {};
   
+  // Define required fields that should not be converted to null
+  const requiredFields = ['name', 'location'];
+  
   Object.keys(deviceData).forEach(key => {
     const value = deviceData[key];
     
-    // Convert empty strings to null for better backend handling
-    if (value === '') {
-      sanitized[key] = null;
-    } else if (value !== undefined) {
-      sanitized[key] = value;
+    if (requiredFields.includes(key)) {
+      // For required fields, preserve the value as-is (including empty strings)
+      // Validation will handle empty string checks
+      if (value !== undefined) {
+        sanitized[key] = value;
+      }
+    } else {
+      // For optional fields, convert empty strings to null for better backend handling
+      if (value === '') {
+        sanitized[key] = null;
+      } else if (value !== undefined) {
+        sanitized[key] = value;
+      }
     }
   });
   
   logInfo('DeviceValidation', 'Device data sanitized', { 
     original: deviceData, 
-    sanitized 
+    sanitized,
+    requiredFields: requiredFields
   });
   
   return sanitized;

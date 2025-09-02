@@ -42,7 +42,7 @@ public class KnowledgeDocument {
     @Column(name = "uploaded_at", nullable = false)
     private LocalDateTime uploadedAt;
     
-    @Column(name = "processed_at")
+    @Column(name = "processed_at", nullable = true) // Allow null for devices without processing
     private LocalDateTime processedAt;
     
     @Column(name = "created_at", nullable = false)
@@ -51,10 +51,10 @@ public class KnowledgeDocument {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
     
-    @Column(name = "device_id")
+    @Column(name = "device_id", nullable = true) // Allow null for general documents
     private String deviceId;
     
-    @Column(name = "device_name")
+    @Column(name = "device_name", nullable = true) // Allow null for general documents
     private String deviceName;
     
     // Constructors

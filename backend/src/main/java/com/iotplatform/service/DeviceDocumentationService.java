@@ -1,5 +1,7 @@
 package com.iotplatform.service;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -9,7 +11,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.iotplatform.model.DeviceDocumentation;
+import com.iotplatform.model.KnowledgeDocument;
 import com.iotplatform.repository.DeviceDocumentationRepository;
+import com.iotplatform.repository.KnowledgeDocumentRepository;
+import com.iotplatform.model.Device;
+import com.iotplatform.repository.DeviceRepository;
 
 @Service
 public class DeviceDocumentationService {
@@ -18,6 +24,12 @@ public class DeviceDocumentationService {
     
     @Autowired
     private DeviceDocumentationRepository deviceDocumentationRepository;
+    
+    @Autowired
+    private KnowledgeDocumentRepository knowledgeDocumentRepository;
+    
+    @Autowired
+    private DeviceRepository deviceRepository;
     
     /**
      * Create a new device documentation entry
@@ -195,5 +207,225 @@ public class DeviceDocumentationService {
      */
     public long countByDeviceId(String deviceId) {
         return deviceDocumentationRepository.countByDeviceId(deviceId);
+    }
+
+    /**
+     * Store PDF reference in knowledge_documents table for device chat queries
+     * This ensures that PDFs can be queried by name from device details
+     */
+    public void storePDFInKnowledgeSystem(String deviceId, String deviceName, String originalFileName, 
+                                        Long fileSize, String documentType, String organizationId) {
+        try {
+            // Validate required parameters
+            if (deviceId == null || deviceId.trim().isEmpty()) {
+                logger.error("❌ Device ID cannot be null or empty");
+                return;
+            }
+            if (originalFileName == null || originalFileName.trim().isEmpty()) {
+                logger.error("❌ Original filename cannot be null or empty for device: {}", deviceId);
+                return;
+            }
+            if (fileSize == null || fileSize <= 0) {
+                logger.error("❌ File size cannot be null or <= 0 for device: {}", deviceId);
+                return;
+            }
+            if (organizationId == null || organizationId.trim().isEmpty()) {
+                logger.error("❌ Organization ID cannot be null or empty for device: {}", deviceId);
+                return;
+            }
+            
+            logger.info("Storing PDF reference in knowledge system for device: {} PDF: {}", deviceId, originalFileName);
+            
+            // Create knowledge document entry using the actual uploaded file details
+            KnowledgeDocument knowledgeDoc = new KnowledgeDocument();
+            knowledgeDoc.setName(originalFileName.trim()); // Use the actual uploaded filename
+            knowledgeDoc.setType("pdf");
+            knowledgeDoc.setFilePath("device_onboarding"); // Mark as uploaded during device onboarding
+            knowledgeDoc.setSize(fileSize);
+            knowledgeDoc.setStatus("completed"); // Already processed
+            knowledgeDoc.setVectorized(true); // Already vectorized by external service
+            knowledgeDoc.setOrganizationId(organizationId.trim());
+            knowledgeDoc.setDeviceId(deviceId.trim());
+            knowledgeDoc.setDeviceName(deviceName != null ? deviceName.trim() : null); // Allow null device name
+            knowledgeDoc.setUploadedAt(LocalDateTime.now());
+            knowledgeDoc.setProcessedAt(LocalDateTime.now()); // Set processing time
+            
+            // Save to knowledge documents table
+            KnowledgeDocument savedDoc = knowledgeDocumentRepository.save(knowledgeDoc);
+            
+            logger.info("✅ PDF reference stored in knowledge system: {} for device: {}", 
+                    savedDoc.getId(), deviceId);
+                    
+        } catch (Exception e) {
+            logger.error("❌ Failed to store PDF reference in knowledge system for device: {} PDF: {} - {}", 
+                     deviceId, originalFileName, e.getMessage(), e);
+            // Don't fail the entire process if knowledge storage fails
+        }
+    }
+
+    /**
+     * Get all PDF references for a device from knowledge system
+     * Automatically migrates existing documentation if none found in knowledge system
+     */
+    public List<KnowledgeDocument> getDevicePDFReferences(String deviceId, String organizationId) {
+        try {
+            // Validate required parameters
+            if (deviceId == null || deviceId.trim().isEmpty()) {
+                logger.error("❌ Device ID cannot be null or empty");
+                return new ArrayList<>();
+            }
+            if (organizationId == null || organizationId.trim().isEmpty()) {
+                logger.error("❌ Organization ID cannot be null or empty");
+                return new ArrayList<>();
+            }
+            
+            logger.debug("Fetching PDF references for device: {} in organization: {}", deviceId, organizationId);
+            
+            List<KnowledgeDocument> documents = knowledgeDocumentRepository
+                .findByOrganizationIdAndDeviceIdOrderByUploadedAtDesc(organizationId.trim(), deviceId.trim());
+            
+            // If no documents found in knowledge system, try to migrate existing documentation
+            if (documents.isEmpty()) {
+                logger.info("No PDF references found in knowledge system for device: {}, attempting migration...", deviceId);
+                migrateExistingDeviceDocumentation(deviceId, organizationId);
+                
+                // Try to fetch again after migration
+                documents = knowledgeDocumentRepository
+                    .findByOrganizationIdAndDeviceIdOrderByUploadedAtDesc(organizationId, deviceId);
+                
+                if (!documents.isEmpty()) {
+                    logger.info("✅ Migration successful - found {} PDF references for device: {}", documents.size(), deviceId);
+                } else {
+                    logger.info("No PDF references found for device: {} even after migration", deviceId);
+                }
+            } else {
+                logger.debug("Found {} PDF references for device: {}", documents.size(), deviceId);
+            }
+            
+            return documents;
+            
+        } catch (Exception e) {
+            logger.error("Failed to fetch PDF references for device: {} - {}", deviceId, e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Get PDF reference by name for device chat queries
+     */
+    public KnowledgeDocument getPDFReferenceByName(String pdfName, String organizationId) {
+        try {
+            // Validate required parameters
+            if (pdfName == null || pdfName.trim().isEmpty()) {
+                logger.error("❌ PDF name cannot be null or empty");
+                return null;
+            }
+            if (organizationId == null || organizationId.trim().isEmpty()) {
+                logger.error("❌ Organization ID cannot be null or empty");
+                return null;
+            }
+            
+            logger.debug("Fetching PDF reference by name: {} in organization: {}", pdfName, organizationId);
+            
+            Optional<KnowledgeDocument> document = knowledgeDocumentRepository
+                .findByNameAndOrganizationId(pdfName.trim(), organizationId.trim());
+            
+            if (document.isPresent()) {
+                logger.debug("Found PDF reference: {} for device: {}", pdfName, document.get().getDeviceId());
+                return document.get();
+            } else {
+                logger.debug("No PDF reference found for name: {}", pdfName);
+                return null;
+            }
+            
+        } catch (Exception e) {
+            logger.error("Failed to fetch PDF reference by name: {} - {}", pdfName, e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * Migrate existing device documentation to knowledge system for existing devices
+     * This ensures that devices created before this fix can still use chat functionality
+     */
+    public void migrateExistingDeviceDocumentation(String deviceId, String organizationId) {
+        try {
+            // Validate required parameters
+            if (deviceId == null || deviceId.trim().isEmpty()) {
+                logger.error("❌ Device ID cannot be null or empty for migration");
+                return;
+            }
+            if (organizationId == null || organizationId.trim().isEmpty()) {
+                logger.error("❌ Organization ID cannot be null or empty for migration");
+                return;
+            }
+            
+            logger.info("Migrating existing device documentation to knowledge system for device: {}", deviceId);
+            
+            // Get existing device documentation
+            List<DeviceDocumentation> existingDocs = deviceDocumentationRepository.findByDeviceId(deviceId.trim());
+            
+            if (existingDocs.isEmpty()) {
+                logger.info("No existing device documentation found for device: {}", deviceId);
+                return;
+            }
+            
+            // Get device name for association
+            Optional<Device> deviceOpt = deviceRepository.findById(deviceId);
+            if (deviceOpt.isEmpty()) {
+                logger.warn("Device not found for migration: {}", deviceId);
+                return;
+            }
+            
+            String deviceName = deviceOpt.get().getName();
+            int migratedCount = 0;
+            
+            for (DeviceDocumentation doc : existingDocs) {
+                try {
+                    // Check if already exists in knowledge system
+                    Optional<KnowledgeDocument> existingKnowledge = knowledgeDocumentRepository
+                        .findByNameAndOrganizationId(doc.getOriginalFilename(), organizationId);
+                    
+                    if (existingKnowledge.isPresent()) {
+                        logger.debug("PDF reference already exists in knowledge system: {} for device: {}", 
+                                   doc.getOriginalFilename(), deviceId);
+                        continue;
+                    }
+                    
+                    // Create knowledge document entry
+                    KnowledgeDocument knowledgeDoc = new KnowledgeDocument();
+                    knowledgeDoc.setName(doc.getOriginalFilename() != null ? doc.getOriginalFilename().trim() : "unknown_filename"); // Use the actual uploaded filename
+                    knowledgeDoc.setType("pdf");
+                    knowledgeDoc.setFilePath("device_onboarding"); // Mark as uploaded during device onboarding
+                    knowledgeDoc.setSize(doc.getFileSize() != null ? doc.getFileSize() : 0L); // Handle null file size
+                    knowledgeDoc.setStatus("completed"); // Already processed
+                    knowledgeDoc.setVectorized(true); // Already vectorized by external service
+                    knowledgeDoc.setOrganizationId(organizationId.trim());
+                    knowledgeDoc.setDeviceId(deviceId.trim());
+                    knowledgeDoc.setDeviceName(deviceName != null ? deviceName.trim() : null); // Allow null device name
+                    
+                    // Handle null timestamps safely - DeviceDocumentation already uses LocalDateTime
+                    LocalDateTime now = LocalDateTime.now();
+                    knowledgeDoc.setUploadedAt(doc.getCreatedAt() != null ? doc.getCreatedAt() : now);
+                    knowledgeDoc.setProcessedAt(doc.getUpdatedAt() != null ? doc.getUpdatedAt() : now);
+                    
+                    // Save to knowledge documents table
+                    KnowledgeDocument savedDoc = knowledgeDocumentRepository.save(knowledgeDoc);
+                    migratedCount++;
+                    
+                    logger.debug("✅ Migrated PDF reference: {} for device: {}", savedDoc.getId(), deviceId);
+                    
+                } catch (Exception e) {
+                    logger.error("❌ Failed to migrate PDF reference: {} for device: {} - {}", 
+                               doc.getOriginalFilename() != null ? doc.getOriginalFilename() : "unknown", deviceId, e.getMessage(), e);
+                    // Continue with other documents
+                }
+            }
+            
+            logger.info("✅ Migration completed for device: {} - {} PDF references migrated", deviceId, migratedCount);
+            
+        } catch (Exception e) {
+            logger.error("❌ Failed to migrate device documentation for device: {} - {}", deviceId, e.getMessage(), e);
+        }
     }
 }

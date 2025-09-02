@@ -35,15 +35,15 @@ import { DeviceChatInterface } from '../components/Devices/DeviceChatInterface';
 import DeviceSafetyInfo from '../components/Devices/DeviceSafetyInfo';
 import { DeviceRules } from '../components/Devices/DeviceRules';
 import { DeviceConnectionManager } from '../components/Devices/DeviceConnectionManager';
-import ChatImageDisplay from '../components/Devices/ChatImageDisplay';
-import ChatTableDisplay from '../components/Devices/ChatTableDisplay';
-import { deviceAPI } from '../services/api';
+// ChatImageDisplay and ChatTableDisplay imports removed - using inline implementation like Knowledge Section
+import { deviceAPI, knowledgeAPI } from '../services/api';
 import { pdfAPI } from '../services/api';
 import { pdfProcessingService, PDFListResponse } from '../services/pdfprocess';
 import { DeviceStatsService, DeviceStats } from '../services/deviceStatsService';
 import { logInfo, logError } from '../utils/logger';
 import { validateDeviceUpdate, sanitizeDeviceData, getChangedFields } from '../utils/deviceValidation';
 import { TabLoadingScreen, DataLoadingState, LoadingSpinner } from '../components/Loading/LoadingComponents';
+import { tokenService } from '../services/tokenService';
 import { PDFImage } from '../services/chatService';
 
 interface DocumentationInfo {
@@ -63,6 +63,8 @@ interface ChatMessage {
   timestamp: Date;
   images?: PDFImage[];
   tables?: string[];
+  chunks_used?: string[];
+  processing_time?: string;
 }
 
 interface KnowledgeDocument {
@@ -235,7 +237,7 @@ export const DeviceDetailsSection: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [devicePDFs, setDevicePDFs] = useState<KnowledgeDocument[]>([]);
-  const [selectedPDF, setSelectedPDF] = useState<KnowledgeDocument | null>(null);
+  // selectedPDF state removed - we automatically use the first available PDF
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -262,8 +264,49 @@ export const DeviceDetailsSection: React.FC = () => {
   const [editedDevice, setEditedDevice] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
 
   const device = devices.find(d => d.id === deviceId);
+  
+  // Debug logging for device state
+  useEffect(() => {
+    console.log('🔍 DeviceDetailsSection state:', {
+      deviceId,
+      devicesCount: devices.length,
+      deviceFound: !!device,
+      device: device,
+      isEditing,
+      editedDevice: !!editedDevice,
+      isSaving
+    });
+    
+    // Clear any previous errors when device changes
+    setError(null);
+  }, [deviceId, devices, device, isEditing, editedDevice, isSaving]);
+
+  // Test function to debug image handling
+  const testImageHandling = () => {
+    console.log('🧪 Testing image handling...');
+    
+    // Test with sample image data
+    const testImage: PDFImage = {
+      filename: 'test-image.png',
+      data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // 1x1 transparent PNG
+      mime_type: 'image/png',
+      size: 95
+    };
+    
+    console.log('🧪 Test image created:', testImage);
+    console.log('🧪 Test image data length:', testImage.data.length);
+    console.log('🧪 Test image MIME type:', testImage.mime_type);
+    console.log('🧪 Test image size:', testImage.size);
+    
+    // Test if it can be displayed
+    const img = new Image();
+    img.onload = () => console.log('✅ Test image loaded successfully');
+    img.onerror = () => console.log('❌ Test image failed to load');
+    img.src = `data:${testImage.mime_type};base64,${testImage.data}`;
+  };
 
   // Function definitions - must be before useEffect that calls them
   const fetchRealTimeData = async () => {
@@ -353,38 +396,43 @@ export const DeviceDetailsSection: React.FC = () => {
   const loadDevicePDFs = async () => {
     if (!device) return;
     
+    // Check authentication before making the request
+    const token = tokenService.getToken();
+    if (!token) {
+      logError('DeviceDetails', 'No authentication token found for PDF loading');
+      setError('Authentication required. Please log in again.');
+      return;
+    }
+    
     try {
       // Get device PDF results which includes PDF documents
       const pdfResultsResponse = await deviceAPI.getDevicePDFResults(device.id);
       
-      if (pdfResultsResponse.data.pdfDocuments && pdfResultsResponse.data.pdfDocuments.length > 0) {
-        const pdfDocuments = pdfResultsResponse.data.pdfDocuments;
+      if (pdfResultsResponse.data.pdfReferences && pdfResultsResponse.data.pdfReferences.length > 0) {
+        const pdfDocuments = pdfResultsResponse.data.pdfReferences;
         
         const filteredPDFs: KnowledgeDocument[] = pdfDocuments.map((doc: any) => ({
           id: doc.id,
-          name: doc.pdfName || doc.originalFilename,
+          name: doc.name,
           type: 'pdf',
-          uploadedAt: doc.createdAt || new Date().toISOString(),
-          processedAt: doc.updatedAt || new Date().toISOString(),
-          size: doc.fileSize || 0,
-          status: doc.processingStatus || 'completed',
-          vectorized: true,
-          chunk_count: doc.processedChunks || 0,
+          uploadedAt: doc.uploadedAt || new Date().toISOString(),
+          processedAt: doc.processedAt || new Date().toISOString(),
+          size: doc.size || 0,
+          status: doc.status || 'completed',
+          vectorized: doc.vectorized || true,
+          chunk_count: doc.chunk_count || 0,
           deviceId: device.id,
           deviceName: device.name,
-          documentType: doc.documentType
+          documentType: doc.documentType || 'manual'
         }));
         
         setDevicePDFs(filteredPDFs);
         
-        // Auto-select the first PDF if available
-        if (filteredPDFs.length > 0 && !selectedPDF) {
-          setSelectedPDF(filteredPDFs[0]);
-        }
+        // No need to auto-select PDF since we'll use the first one automatically
         
         // Update initial chat message if PDFs are found
         if (filteredPDFs.length > 0) {
-          setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. How can I help you with this device?`);
+          setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!`);
         }
         
         logInfo('DeviceDetails', 'Device PDFs loaded successfully', { 
@@ -393,55 +441,13 @@ export const DeviceDetailsSection: React.FC = () => {
           filteredPDFs: filteredPDFs.length 
         });
       } else {
-        // Fallback to old method if no PDF documents found
+        // Fallback to knowledge API method if no PDF documents found
         
-        // Load all PDFs from backend API with timeout
-        const pdfPromise = pdfAPI.listPDFs(0, 100);
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('PDF loading timeout')), 5000)
-        );
-        const pdfListResponse = await Promise.race([pdfPromise, timeoutPromise]) as any;
+                // No fallback needed - we're using the primary endpoint that should work
+        setDevicePDFs([]);
+        setInitialChatMessage(`I don't have any PDF documents specifically associated with ${device.name} yet. To enable AI-powered assistance, upload device manuals, datasheets, or other documentation in the Knowledge Base section.`);
         
-        // Filter PDFs that might be associated with this device
-        const deviceNameLower = device.name.toLowerCase();
-        const deviceTypeLower = device.type.toLowerCase();
-        
-        const filteredPDFs: KnowledgeDocument[] = pdfListResponse.data.pdfs
-          .map((pdf: any, index: number) => ({
-            id: pdf.id || index.toString(),
-            name: pdf.name || pdf.filename || `PDF_${index}`,
-            type: 'pdf',
-            uploadedAt: pdf.uploaded_at || pdf.created_at || new Date().toISOString(),
-            processedAt: pdf.processed_at || pdf.created_at || new Date().toISOString(),
-            size: pdf.file_size || pdf.size_bytes || 0,
-            status: pdf.status || 'completed',
-            vectorized: pdf.vectorized || true,
-            chunk_count: pdf.chunk_count || 0,
-            deviceId: device.id,
-            deviceName: device.name
-          }))
-          .filter((pdf: any) => {
-            const pdfNameLower = pdf.name.toLowerCase();
-            return pdfNameLower.includes(deviceNameLower) ||
-                   pdfNameLower.includes(deviceTypeLower) ||
-                   pdfNameLower.includes('manual') ||
-                   pdfNameLower.includes('datasheet') ||
-                   pdfNameLower.includes('specification') ||
-                   pdfNameLower.includes('guide') ||
-                   pdfNameLower.includes('instruction') ||
-                   pdfNameLower.includes('user') ||
-                   pdfNameLower.includes('technical');
-          });
-        
-        setDevicePDFs(filteredPDFs);
-        
-        if (filteredPDFs.length > 0 && !selectedPDF) {
-          setSelectedPDF(filteredPDFs[0]);
-        }
-        
-        if (filteredPDFs.length > 0) {
-          setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. How can I help you with this device?`);
-        }
+        logInfo('DeviceDetails', 'No PDFs found for device', { deviceId: device.id });
       }
       
     } catch (error) {
@@ -524,6 +530,8 @@ export const DeviceDetailsSection: React.FC = () => {
   // Redirect if device not found
   if (!device) {
     console.log('❌ Device not found, redirecting to devices list');
+    console.log('Device ID:', deviceId);
+    console.log('Available devices:', devices.map(d => ({ id: d.id, name: d.name })));
     navigate('/devices');
     return null;
   }
@@ -631,7 +639,10 @@ export const DeviceDetailsSection: React.FC = () => {
 
   // Edit functions
   const handleEditClick = () => {
-    setEditedDevice({
+    console.log('🔧 handleEditClick called');
+    console.log('Device data:', device);
+    
+    const editData = {
       name: device.name,
       location: device.location,
       manufacturer: device.manufacturer || '',
@@ -649,32 +660,54 @@ export const DeviceDetailsSection: React.FC = () => {
       coapHost: device.coapHost || '',
       coapPort: device.coapPort || '',
       coapPath: device.coapPath || ''
-    });
+    };
+    
+    console.log('📝 Setting editedDevice:', editData);
+    setEditedDevice(editData);
     setIsEditing(true);
     setValidationErrors({}); // Clear any previous validation errors
+    setError(null); // Clear any previous errors
+    
+    console.log('✅ Edit mode activated');
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditedDevice(null);
     setValidationErrors({}); // Clear validation errors when canceling
+    setError(null); // Clear any errors when canceling
   };
 
   const handleSaveEdit = async () => {
-    if (!device || !editedDevice) return;
+    console.log('🔍 handleSaveEdit called');
+    console.log('Device:', device);
+    console.log('Edited device:', editedDevice);
+    
+    if (!device || !editedDevice) {
+      console.log('❌ Missing device or editedDevice');
+      console.log('Device exists:', !!device);
+      console.log('EditedDevice exists:', !!editedDevice);
+      return;
+    }
 
+    console.log('✅ Starting save process...');
     setIsSaving(true);
+    
     try {
       // Get only the changed fields to minimize payload
       const changedFields = getChangedFields(device, editedDevice);
+      console.log('📝 Changed fields:', changedFields);
       
       // Sanitize the data to ensure proper null handling
       const sanitizedData = sanitizeDeviceData(changedFields);
+      console.log('🧹 Sanitized data:', sanitizedData);
       
       // Validate the update data
       const validation = validateDeviceUpdate(sanitizedData);
+      console.log('✅ Validation result:', validation);
       
       if (!validation.isValid) {
+        console.log('❌ Validation failed:', validation.errors);
         logError('DeviceDetails', 'Device validation failed', new Error('Validation errors: ' + JSON.stringify(validation.errors)));
         setValidationErrors(validation.errors);
         setIsSaving(false);
@@ -687,6 +720,7 @@ export const DeviceDetailsSection: React.FC = () => {
       // Add device ID
       sanitizedData.id = device.id;
 
+      console.log('🚀 Sending update to API...');
       logInfo('DeviceDetails', 'Sending device update payload', { 
         deviceId: device.id, 
         payload: sanitizedData,
@@ -694,6 +728,7 @@ export const DeviceDetailsSection: React.FC = () => {
       });
 
       await deviceAPI.update(device.id, sanitizedData);
+      console.log('✅ API update successful');
       
       // Update the device in the IoT context
       updateDeviceStatus(device.id, { ...device, ...editedDevice });
@@ -701,8 +736,10 @@ export const DeviceDetailsSection: React.FC = () => {
       setIsEditing(false);
       setEditedDevice(null);
       
+      console.log('✅ Save completed successfully');
       logInfo('DeviceDetails', 'Device updated successfully', { deviceId: device.id });
     } catch (error) {
+      console.log('❌ Save failed:', error);
       logError('DeviceDetails', 'Failed to update device', error instanceof Error ? error : new Error('Unknown error'));
     } finally {
       setIsSaving(false);
@@ -710,25 +747,61 @@ export const DeviceDetailsSection: React.FC = () => {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    if (!editedDevice) return;
+    console.log('🔧 handleInputChange called:', { field, value });
+    console.log('Current editedDevice:', editedDevice);
     
-    // Convert empty strings to null for better backend handling
-    const processedValue = value === '' ? null : value;
+    if (!editedDevice) {
+      console.log('❌ No editedDevice found');
+      return;
+    }
     
-    setEditedDevice((prev: any) => ({
-      ...prev,
-      [field]: processedValue
-    }));
+    // Define required fields that should preserve empty strings for validation
+    const requiredFields = ['name', 'location'];
+    
+    let processedValue;
+    if (requiredFields.includes(field)) {
+      // For required fields, preserve empty strings for validation
+      processedValue = value;
+      console.log('📝 Required field - preserving value as-is:', { field, value });
+    } else {
+      // For optional fields, convert empty strings to null for better backend handling
+      processedValue = value === '' ? null : value;
+      console.log('📝 Optional field - processing value:', { field, originalValue: value, processedValue });
+    }
+    
+    setEditedDevice((prev: any) => {
+      const updated = {
+        ...prev,
+        [field]: processedValue
+      };
+      console.log('🔄 Updated editedDevice:', updated);
+      return updated;
+    });
     
     logInfo('DeviceDetails', 'Field value changed', { 
       field, 
       originalValue: value, 
-      processedValue: processedValue 
+      processedValue: processedValue,
+      isRequired: requiredFields.includes(field)
     });
   };
 
   const sendMessage = async () => {
     if (!newMessage.trim() || isTyping) return;
+
+    // Check authentication before sending message
+    const token = tokenService.getToken();
+    if (!token) {
+      setError('Authentication required. Please log in again.');
+      const errorMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content: 'I apologize, but I need you to log in again to continue our conversation. Please refresh the page and log in.',
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+      return;
+    }
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -742,32 +815,131 @@ export const DeviceDetailsSection: React.FC = () => {
     setIsTyping(true);
 
     try {
-      // If we have a selected PDF, query it specifically
-      if (selectedPDF) {
+      // Automatically use the first available PDF if we have any
+      const pdfToUse = devicePDFs.length > 0 ? devicePDFs[0] : null;
+      
+      if (pdfToUse) {
         try {
           const queryRequest = {
-            pdf_name: selectedPDF.name,
+            pdf_name: pdfToUse.name, // Use PDF name behind the scenes
             query: userMessage.content,
             top_k: 5
           };
           
+          // Use the chat service with device context for better results
           const queryResponse = await pdfProcessingService.queryPDF(queryRequest);
+          
+          // Debug logging for images and tables
+          console.log('🔍 PDF Query Response:', {
+            response: queryResponse.response?.substring(0, 100) + '...',
+            imagesCount: queryResponse.images?.length || 0,
+            images: queryResponse.images,
+            tablesCount: queryResponse.tables?.length || 0,
+            tables: queryResponse.tables
+          });
+          
+          // Enhanced image debugging
+          if (queryResponse.images && queryResponse.images.length > 0) {
+            console.log('🖼️ Images found in response:', queryResponse.images.map((img, idx) => ({
+              index: idx,
+              filename: img.filename,
+              hasData: !!img.data,
+              dataLength: img.data?.length || 0,
+              mimeType: img.mime_type,
+              size: img.size,
+              dataPreview: img.data ? img.data.substring(0, 50) + '...' : 'No data'
+            })));
+          } else {
+            console.log('⚠️ No images found in PDF query response');
+          }
+          
+          // Enhanced table debugging
+          if (queryResponse.tables && queryResponse.tables.length > 0) {
+            console.log('📊 Tables found in response:', queryResponse.tables.map((table, idx) => ({
+              index: idx,
+              tableLength: table.length,
+              tablePreview: table.substring(0, 100) + '...'
+            })));
+          } else {
+            console.log('⚠️ No tables found in PDF query response');
+          }
+          
+          // Enhance content with image/table information (NO PDF name shown to user)
+          let enhancedContent = queryResponse.response || `I found relevant information in the device documentation. ${queryResponse.chunks_used.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 300) + '...' : 'Would you like me to search for more specific information?'}`;
+          
+          // Add information about found images and tables
+          if (queryResponse.images && queryResponse.images.length > 0) {
+            // Validate image data before including
+            const validImages = queryResponse.images.filter(img => 
+              img.data && 
+              img.data.trim() !== '' && 
+              img.mime_type && 
+              img.size > 0
+            );
+            
+            if (validImages.length > 0) {
+              enhancedContent += `\n\n📸 I found ${validImages.length} image(s) related to your query. You can view them below.`;
+              // Use only valid images
+              queryResponse.images = validImages;
+            } else {
+              console.log('⚠️ All images in response have invalid data');
+              enhancedContent += `\n\n⚠️ I found ${queryResponse.images.length} image(s) but they appear to be corrupted or incomplete.`;
+            }
+          }
+          
+          if (queryResponse.tables && queryResponse.tables.length > 0) {
+            // Validate table data before including
+            const validTables = queryResponse.tables.filter(table => 
+              table && 
+              table.trim() !== '' && 
+              table.length > 10
+            );
+            
+            if (validTables.length > 0) {
+              enhancedContent += `\n\n📊 I found ${validTables.length} table(s) with relevant data. You can view them below.`;
+              // Use only valid tables
+              queryResponse.tables = validTables;
+            } else {
+              console.log('⚠️ All tables in response have invalid data');
+              enhancedContent += `\n\n⚠️ I found ${queryResponse.tables.length} table(s) but they appear to be corrupted or incomplete.`;
+            }
+          }
           
           const assistantMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
             type: 'assistant',
-            content: queryResponse.response || `I found relevant information in the "${selectedPDF.name}" document. ${queryResponse.chunks_used.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 300) + '...' : 'Would you like me to search for more specific information?'}`,
+            content: enhancedContent,
             timestamp: new Date(),
             images: queryResponse.images || [],
-            tables: queryResponse.tables || []
+            tables: queryResponse.tables || [],
+            chunks_used: queryResponse.chunks_used || [],
+            processing_time: queryResponse.processing_time
           };
           setChatMessages(prev => [...prev, assistantMessage]);
         } catch (queryError) {
           logError('DeviceDetails', 'Failed to query PDF', queryError instanceof Error ? queryError : new Error('Unknown error'));
+          
+          // Enhanced error message with debugging info (NO PDF name shown to user)
+          let errorContent = `I encountered an error while searching the device documentation. `;
+          
+          if (queryError instanceof Error) {
+            if (queryError.message.includes('401') || queryError.message.includes('Unauthorized')) {
+              errorContent += 'This appears to be an authentication issue. Please refresh the page and log in again.';
+            } else if (queryError.message.includes('500') || queryError.message.includes('Internal Server Error')) {
+              errorContent += 'The server encountered an error. Please try again in a few moments.';
+            } else if (queryError.message.includes('timeout') || queryError.message.includes('Timeout')) {
+              errorContent += 'The request timed out. Please try a simpler question or try again later.';
+            } else {
+              errorContent += `Error: ${queryError.message}. Please try again or ask a different question.`;
+            }
+          } else {
+            errorContent += 'Please try again or ask a different question.';
+          }
+          
           const errorMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
             type: 'assistant',
-            content: `I encountered an error while searching the "${selectedPDF.name}" document. Please try again or ask a different question.`,
+            content: errorContent,
             timestamp: new Date()
           };
           setChatMessages(prev => [...prev, errorMessage]);
@@ -806,7 +978,11 @@ export const DeviceDetailsSection: React.FC = () => {
               <h2 className="text-xl font-semibold text-slate-800">Device Profile</h2>
               {!isEditing ? (
                 <button
-                  onClick={handleEditClick}
+                  onClick={() => {
+                    console.log('🔘 Edit button clicked');
+                    console.log('Current device:', device);
+                    handleEditClick();
+                  }}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
                   <Edit className="w-4 h-4" />
@@ -815,7 +991,12 @@ export const DeviceDetailsSection: React.FC = () => {
               ) : (
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={handleSaveEdit}
+                    onClick={() => {
+                      console.log('🔘 Save button clicked');
+                      console.log('Button disabled:', isSaving);
+                      console.log('Current state - isEditing:', isEditing, 'editedDevice:', editedDevice);
+                      handleSaveEdit();
+                    }}
                     disabled={isSaving}
                     className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
                   >
@@ -1016,59 +1197,41 @@ export const DeviceDetailsSection: React.FC = () => {
       case 'chat':
         return (
           <div className="flex flex-col h-96">
-            {/* PDF Selection */}
-            {devicePDFs.length > 0 && (
-              <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center justify-between mb-3">
+            {/* Error Display */}
+            {error && (
+              <div className="mb-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-800">Available PDF Documents ({devicePDFs.length})</span>
+                    <AlertTriangle className="w-5 h-5 text-red-600" />
+                    <span className="text-sm font-medium text-red-800">Authentication Error</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
-                      📱 Device-specific
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="mb-3">
-                  <label className="block text-sm font-medium text-blue-700 mb-2">
-                    Select PDF for AI Chat:
-                  </label>
-                  <select
-                    value={selectedPDF?.id || ''}
-                    onChange={(e) => {
-                      const pdf = devicePDFs.find(p => p.id === e.target.value);
-                      setSelectedPDF(pdf || null);
-                    }}
-                    className="w-full text-sm border border-blue-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  <button
+                    onClick={() => setError(null)}
+                    className="text-red-400 hover:text-red-600"
                   >
-                    <option value="">🤖 Choose a PDF to ask questions about...</option>
-                    {devicePDFs.map((pdf) => (
-                      <option key={pdf.id} value={pdf.id}>
-                        📄 {pdf.name}
-                      </option>
-                    ))}
-                  </select>
+                    ✕
+                  </button>
                 </div>
-                
-                {selectedPDF && (
-                  <div className="p-3 bg-white rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FileText className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-800">Currently querying:</span>
-                    </div>
-                    <p className="text-sm text-blue-700 font-medium mb-1">{selectedPDF.name}</p>
-                    {selectedPDF.chunk_count && (
-                      <p className="text-xs text-blue-600">
-                        📊 Contains {selectedPDF.chunk_count} knowledge chunks for AI analysis
-                      </p>
-                    )}
-                    <p className="text-xs text-blue-500 mt-1">
-                      💡 Ask me anything about this document - setup, maintenance, troubleshooting, specifications, etc.
-                    </p>
-                  </div>
-                )}
+                <p className="text-sm text-red-700 mt-2">{error}</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-2 px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                >
+                  🔄 Refresh Page
+                </button>
+              </div>
+            )}
+            
+            {/* PDF Info - Hidden from user, only shown if no PDFs available */}
+            {devicePDFs.length > 0 && (
+              <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">AI Chat Ready</span>
+                </div>
+                <p className="text-sm text-green-700 mt-2">
+                  I have access to {devicePDFs.length} PDF document(s) related to this device. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!
+                </p>
               </div>
             )}
             
@@ -1106,6 +1269,33 @@ export const DeviceDetailsSection: React.FC = () => {
               </div>
             )}
 
+            {/* Debug Tools */}
+            <div className="mb-4 p-3 bg-gray-100 rounded-lg border border-gray-300">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-700">Debug Tools</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={testImageHandling}
+                    className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                    title="Test image handling functionality"
+                  >
+                    🧪 Test Images
+                  </button>
+                  <button
+                    onClick={() => console.log('📊 Chat state:', { 
+                      messagesCount: chatMessages.length, 
+                      devicePDFsCount: devicePDFs.length,
+                      availablePDFs: devicePDFs.map(pdf => pdf.name)
+                    })}
+                    className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                    title="Log chat state"
+                  >
+                    📊 Log State
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-slate-50 rounded-lg">
               {chatMessages.map((message) => (
@@ -1130,20 +1320,81 @@ export const DeviceDetailsSection: React.FC = () => {
                     >
                       <p className="text-sm leading-relaxed">{message.content}</p>
                       
-                      {/* Display Images */}
+                      {/* Display Images - Using same implementation as Knowledge Section */}
                       {message.images && message.images.length > 0 && (
-                        <ChatImageDisplay 
-                          images={message.images} 
-                          className="mt-3"
-                        />
+                        <div className="mt-3 space-y-2">
+                          <p className="text-xs font-medium text-gray-500">📷 Related Images:</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {message.images.map((image, index) => (
+                              <div key={index} className="relative group">
+                                <img
+                                  src={`data:${image.mime_type};base64,${image.data}`}
+                                  alt={image.filename || `Image ${index + 1}`}
+                                  title={image.filename || `Image ${index + 1}`}
+                                  className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={() => {
+                                    const newWindow = window.open();
+                                    if (newWindow) {
+                                      newWindow.document.write(`
+                                        <html>
+                                          <head><title>${image.filename || `Image ${index + 1}`}</title></head>
+                                          <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f0f0f0;">
+                                            <img src="data:${image.mime_type};base64,${image.data}" 
+                                                 alt="${image.filename || `Image ${index + 1}`}" 
+                                                 style="max-width:90%;max-height:90%;object-fit:contain;box-shadow:0 4px 20px rgba(0,0,0,0.3);border-radius:8px;">
+                                          </body>
+                                        </html>
+                                      `);
+                                    }
+                                  }}
+                                />
+                                <div className="absolute bottom-1 left-1 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                                  {image.filename || `Image ${index + 1}`}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       )}
                       
-                      {/* Display Tables */}
+                      {/* Display Tables - Using same implementation as Knowledge Section */}
                       {message.tables && message.tables.length > 0 && (
-                        <ChatTableDisplay 
-                          tables={message.tables} 
-                          className="mt-3"
-                        />
+                        <div className="mt-3 space-y-2">
+                          <p className="text-xs font-medium text-gray-500">📊 Related Tables:</p>
+                          <div className="space-y-3">
+                            {message.tables.map((table, index) => (
+                              <div key={index} className="overflow-x-auto">
+                                <div className="text-xs text-gray-500 mb-1">Table {index + 1}:</div>
+                                <div 
+                                  className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm"
+                                  dangerouslySetInnerHTML={{ __html: table }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Display Chunks Used - Using same implementation as Knowledge Section */}
+                      {message.chunks_used && message.chunks_used.length > 0 && (
+                        <div className="mt-3">
+                          <p className="text-xs font-medium text-gray-500 mb-2">📄 Sources Used:</p>
+                          <div className="space-y-2">
+                            {message.chunks_used.map((chunk, index) => (
+                              <div key={index} className="text-xs bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg">
+                                <span className="text-blue-600 font-medium">Source {index + 1}:</span>
+                                <span className="text-gray-700 ml-2">{chunk}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Display Processing Time - Using same implementation as Knowledge Section */}
+                      {message.processing_time && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          ⏱️ Processed in {message.processing_time}
+                        </p>
                       )}
                       
                       <p className={`text-xs mt-1 ${
@@ -1180,7 +1431,7 @@ export const DeviceDetailsSection: React.FC = () => {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                placeholder={selectedPDF ? `Ask about "${selectedPDF.name}"...` : "Ask about this device..."}
+                placeholder="Ask about this device..."
                 className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               <button

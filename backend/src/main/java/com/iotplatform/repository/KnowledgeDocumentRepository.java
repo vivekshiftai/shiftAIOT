@@ -31,4 +31,7 @@ public interface KnowledgeDocumentRepository extends JpaRepository<KnowledgeDocu
     
     @Query("SELECT d FROM KnowledgeDocument d WHERE d.organizationId = :organizationId AND (d.deviceId = :deviceId OR :deviceId IS NULL) ORDER BY d.uploadedAt DESC")
     List<KnowledgeDocument> findByOrganizationIdAndOptionalDeviceIdOrderByUploadedAtDesc(@Param("organizationId") String organizationId, @Param("deviceId") String deviceId);
+    
+    // Find by name and organization ID for duplicate checking
+    Optional<KnowledgeDocument> findByNameAndOrganizationId(String name, String organizationId);
 }
