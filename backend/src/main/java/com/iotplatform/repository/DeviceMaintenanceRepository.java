@@ -52,6 +52,5 @@ public interface DeviceMaintenanceRepository extends JpaRepository<DeviceMainten
     @Query("SELECT dm FROM DeviceMaintenance dm WHERE dm.status = :status AND dm.nextMaintenance <= :date")
     List<DeviceMaintenance> findByStatusAndNextMaintenanceLessThanEqual(@Param("status") DeviceMaintenance.Status status, @Param("date") LocalDate date);
     
-    @Query("DELETE FROM DeviceMaintenance dm WHERE dm.device.id = :deviceId")
-    void deleteByDeviceId(@Param("deviceId") String deviceId);
+    void deleteByDeviceId(String deviceId);
 }
