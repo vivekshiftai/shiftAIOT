@@ -7,6 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
@@ -59,8 +60,7 @@ public class KnowledgeDocument {
     
     // Constructors
     public KnowledgeDocument() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        // Timestamps will be set by @PrePersist and @PreUpdate
     }
     
     public KnowledgeDocument(String name, String type, String filePath, Long size, String organizationId) {
@@ -70,8 +70,8 @@ public class KnowledgeDocument {
         this.filePath = filePath;
         this.size = size;
         this.organizationId = organizationId;
-        this.uploadedAt = LocalDateTime.now();
         this.status = "processing";
+        // Timestamps will be set by @PrePersist and @PreUpdate
     }
     
     // Getters and Setters
@@ -185,6 +185,14 @@ public class KnowledgeDocument {
     
     public void setDeviceName(String deviceName) {
         this.deviceName = deviceName;
+    }
+    
+    @PrePersist
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+        this.uploadedAt = now;
     }
     
     @PreUpdate

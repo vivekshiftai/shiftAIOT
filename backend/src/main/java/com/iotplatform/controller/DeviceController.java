@@ -66,6 +66,7 @@ import com.iotplatform.repository.UserRepository;
 import com.iotplatform.model.Notification;
 import com.iotplatform.service.NotificationService;
 import com.iotplatform.service.DeviceNotificationEnhancerService;
+import com.iotplatform.repository.KnowledgeDocumentRepository;
 
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
@@ -102,8 +103,9 @@ public class DeviceController {
     private final DeviceWebSocketService deviceWebSocketService;
     private final MaintenanceScheduleService maintenanceScheduleService;
     private final DeviceNotificationEnhancerService deviceNotificationEnhancerService;
+    private final KnowledgeDocumentRepository knowledgeDocumentRepository;
 
-    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, DeviceDocumentationService deviceDocumentationService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService, MaintenanceScheduleService maintenanceScheduleService, DeviceNotificationEnhancerService deviceNotificationEnhancerService) {
+    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, DeviceDocumentationService deviceDocumentationService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService, MaintenanceScheduleService maintenanceScheduleService, DeviceNotificationEnhancerService deviceNotificationEnhancerService, KnowledgeDocumentRepository knowledgeDocumentRepository) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.deviceDocumentationService = deviceDocumentationService;
@@ -121,6 +123,7 @@ public class DeviceController {
         this.deviceWebSocketService = deviceWebSocketService;
         this.maintenanceScheduleService = maintenanceScheduleService;
         this.deviceNotificationEnhancerService = deviceNotificationEnhancerService;
+        this.knowledgeDocumentRepository = knowledgeDocumentRepository;
     }
 
     @GetMapping
@@ -883,6 +886,140 @@ public class DeviceController {
         } catch (Exception e) {
             logger.error("Failed to get device PDF references: device={}, error={}", id, e.getMessage());
             return ResponseEntity.internalServerError().build();
+        }
+    }
+    
+    /**
+     * Test endpoint to manually store a PDF reference in the knowledge system
+     * This is for debugging purposes only
+     */
+    @PostMapping("/{id}/test-pdf-storage")
+    public ResponseEntity<Map<String, Object>> testPDFStorage(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> testData,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        String organizationId = userDetails.getUser().getOrganizationId();
+        
+        try {
+            // Extract test data
+            String deviceName = (String) testData.get("deviceName");
+            String fileName = (String) testData.get("fileName");
+            Long fileSize = Long.valueOf(testData.get("fileSize").toString());
+            String documentType = (String) testData.get("documentType");
+            
+            logger.info("🧪 Testing PDF storage for device: {} with file: {}", id, fileName);
+            
+            // Test the storage method
+            deviceDocumentationService.storePDFInKnowledgeSystem(
+                id, deviceName, fileName, fileSize, documentType, organizationId
+            );
+            
+            // Try to retrieve it
+            List<KnowledgeDocument> pdfReferences = deviceDocumentationService.getDevicePDFReferences(id, organizationId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "PDF storage test completed");
+            response.put("storedCount", pdfReferences.size());
+            response.put("pdfReferences", pdfReferences.stream().map(doc -> {
+                Map<String, Object> docMap = new HashMap<>();
+                docMap.put("id", doc.getId());
+                docMap.put("name", doc.getName());
+                docMap.put("type", doc.getType());
+                docMap.put("size", doc.getSize());
+                docMap.put("status", doc.getStatus());
+                docMap.put("vectorized", doc.getVectorized());
+                docMap.put("uploadedAt", doc.getUploadedAt());
+                docMap.put("processedAt", doc.getProcessedAt());
+                docMap.put("deviceId", doc.getDeviceId());
+                docMap.put("deviceName", doc.getDeviceName());
+                return docMap;
+            }).collect(Collectors.toList()));
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("❌ PDF storage test failed for device: {} - {}", id, e.getMessage(), e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("exceptionType", e.getClass().getSimpleName());
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+
+    /**
+     * Test endpoint to verify database connection and knowledge_documents table
+     */
+    @GetMapping("/{id}/test-db-connection")
+    public ResponseEntity<Map<String, Object>> testDatabaseConnection(
+            @PathVariable String id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        String organizationId = userDetails.getUser().getOrganizationId();
+        
+        try {
+            Map<String, Object> response = new HashMap<>();
+            
+            // Test 1: Check if we can access the knowledge_documents table
+            try {
+                long totalDocs = knowledgeDocumentRepository.count();
+                response.put("knowledgeTableAccessible", true);
+                response.put("totalDocumentsInSystem", totalDocs);
+                logger.info("✅ Knowledge documents table is accessible. Total documents: {}", totalDocs);
+            } catch (Exception e) {
+                response.put("knowledgeTableAccessible", false);
+                response.put("knowledgeTableError", e.getMessage());
+                logger.error("❌ Cannot access knowledge_documents table: {}", e.getMessage());
+            }
+            
+            // Test 2: Check if we can find any documents for this organization
+            try {
+                List<KnowledgeDocument> orgDocs = knowledgeDocumentRepository.findByOrganizationIdOrderByUploadedAtDesc(organizationId);
+                response.put("organizationDocsAccessible", true);
+                response.put("organizationDocumentsCount", orgDocs.size());
+                logger.info("✅ Organization documents accessible. Count: {}", orgDocs.size());
+            } catch (Exception e) {
+                response.put("organizationDocsAccessible", false);
+                response.put("organizationDocsError", e.getMessage());
+                logger.error("❌ Cannot access organization documents: {}", e.getMessage());
+            }
+            
+            // Test 3: Check if we can find any documents for this device
+            try {
+                List<KnowledgeDocument> deviceDocs = knowledgeDocumentRepository.findByOrganizationIdAndDeviceIdOrderByUploadedAtDesc(organizationId, id);
+                response.put("deviceDocsAccessible", true);
+                response.put("deviceDocumentsCount", deviceDocs.size());
+                logger.info("✅ Device documents accessible. Count: {}", deviceDocs.size());
+            } catch (Exception e) {
+                response.put("deviceDocsAccessible", false);
+                response.put("deviceDocsError", e.getMessage());
+                logger.error("❌ Cannot access device documents: {}", e.getMessage());
+            }
+            
+            response.put("success", true);
+            response.put("message", "Database connection test completed");
+            response.put("deviceId", id);
+            response.put("organizationId", organizationId);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("❌ Database connection test failed for device: {} - {}", id, e.getMessage(), e);
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", e.getMessage());
+            errorResponse.put("exceptionType", e.getClass().getSimpleName());
+            return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
 

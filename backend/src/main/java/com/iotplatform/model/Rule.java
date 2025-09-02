@@ -3,8 +3,7 @@ package com.iotplatform.model;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+// Logger imports removed - no longer needed
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -29,7 +28,7 @@ import jakarta.validation.constraints.Size;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Rule {
     
-    private static final Logger logger = LoggerFactory.getLogger(Rule.class);
+    // Logger removed - no longer needed
     
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -88,20 +87,18 @@ public class Rule {
 
     @PrePersist
     protected void onCreate() {
-        logger.debug("Creating new rule: {}", name);
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
-        logger.debug("Updating rule: {}", id);
         updatedAt = LocalDateTime.now();
     }
 
     @PostLoad
     protected void onLoad() {
-        logger.debug("Loaded rule from PostgreSQL: {}", id);
+        // Rule loaded from database
     }
 
     // Getters and Setters
@@ -131,7 +128,6 @@ public class Rule {
 
     public boolean isActive() { return active; }
     public void setActive(boolean active) { 
-        logger.info("Rule {} active status changed from {} to {}", id, this.active, active);
         this.active = active; 
     }
 
@@ -152,7 +148,6 @@ public class Rule {
 
     public LocalDateTime getLastTriggered() { return lastTriggered; }
     public void setLastTriggered(LocalDateTime lastTriggered) { 
-        logger.info("Rule {} last triggered updated to: {}", id, lastTriggered);
         this.lastTriggered = lastTriggered; 
     }
 }

@@ -268,45 +268,13 @@ export const DeviceDetailsSection: React.FC = () => {
 
   const device = devices.find(d => d.id === deviceId);
   
-  // Debug logging for device state
+  // Device state monitoring
   useEffect(() => {
-    console.log('🔍 DeviceDetailsSection state:', {
-      deviceId,
-      devicesCount: devices.length,
-      deviceFound: !!device,
-      device: device,
-      isEditing,
-      editedDevice: !!editedDevice,
-      isSaving
-    });
-    
     // Clear any previous errors when device changes
     setError(null);
   }, [deviceId, devices, device, isEditing, editedDevice, isSaving]);
 
-  // Test function to debug image handling
-  const testImageHandling = () => {
-    console.log('🧪 Testing image handling...');
-    
-    // Test with sample image data
-    const testImage: PDFImage = {
-      filename: 'test-image.png',
-      data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', // 1x1 transparent PNG
-      mime_type: 'image/png',
-      size: 95
-    };
-    
-    console.log('🧪 Test image created:', testImage);
-    console.log('🧪 Test image data length:', testImage.data.length);
-    console.log('🧪 Test image MIME type:', testImage.mime_type);
-    console.log('🧪 Test image size:', testImage.size);
-    
-    // Test if it can be displayed
-    const img = new Image();
-    img.onload = () => console.log('✅ Test image loaded successfully');
-    img.onerror = () => console.log('❌ Test image failed to load');
-    img.src = `data:${testImage.mime_type};base64,${testImage.data}`;
-  };
+// Test function removed - no longer needed for production
 
   // Function definitions - must be before useEffect that calls them
   const fetchRealTimeData = async () => {
@@ -323,7 +291,7 @@ export const DeviceDetailsSection: React.FC = () => {
           setTimeout(() => reject(new Error('Device stats timeout')), 5000)
         );
         const stats = await Promise.race([statsPromise, timeoutPromise]) as any;
-        console.log('📊 Device stats:', stats);
+        // Device stats loaded successfully
         setDeviceStats(stats);
       } catch (error) {
         console.warn('⚠️ Failed to fetch device stats:', error);
@@ -343,17 +311,9 @@ export const DeviceDetailsSection: React.FC = () => {
         Promise.race([DeviceStatsService.getDeviceSafety(device.id), timeoutPromise])
       ]);
       
-      console.log('📋 Rules result:', rules);
-      console.log('🔧 Maintenance result:', maintenance);
-      console.log('🛡️ Safety result:', safety);
-      
       const rulesData = rules.status === 'fulfilled' ? rules.value : [];
       const maintenanceData = maintenance.status === 'fulfilled' ? maintenance.value : [];
       const safetyData = safety.status === 'fulfilled' ? safety.value : [];
-      
-      console.log('📋 Rules data:', rulesData);
-      console.log('🔧 Maintenance data:', maintenanceData);
-      console.log('🛡️ Safety data:', safetyData);
       
       // Transform maintenance data to match MaintenanceTask interface
       const transformedMaintenanceData: MaintenanceTask[] = maintenanceData.map((task: any) => ({
@@ -460,14 +420,14 @@ export const DeviceDetailsSection: React.FC = () => {
   const fetchDocumentationInfo = async () => {
     if (!device) return;
     try {
-      console.log('📚 Fetching documentation info for device:', device.id);
+      // Fetching documentation info for device
       const docPromise = deviceAPI.getDocumentation(device.id);
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Documentation timeout')), 5000)
       );
       const response = await Promise.race([docPromise, timeoutPromise]) as any;
       setDocumentationInfo(response.data);
-      console.log('✅ Documentation info loaded:', response.data);
+              // Documentation info loaded successfully
     } catch (error) {
       console.error('❌ Failed to fetch documentation info:', error);
       logError('DeviceDetails', 'Failed to fetch documentation info', error instanceof Error ? error : new Error('Unknown error'));
@@ -479,17 +439,17 @@ export const DeviceDetailsSection: React.FC = () => {
   // Clear loading state if device is found and we're still loading
   useEffect(() => {
     if (device && deviceId && isInitialLoading) {
-      console.log('🔄 Device found, clearing initial loading state');
+              // Device found, clearing initial loading state
       setIsInitialLoading(false);
     }
   }, [device, deviceId, isInitialLoading]);
 
   // Main data loading effect
   useEffect(() => {
-    console.log('🔄 useEffect triggered with:', { deviceId, devicesLength: devices.length, deviceFound: !!device });
+          // useEffect triggered with device data
     
     if (device && deviceId) {
-      console.log('🚀 Starting data loading for device:', device.id);
+              // Starting data loading for device
       setIsInitialLoading(true);
       
       // Add timeout to prevent infinite loading
@@ -503,42 +463,36 @@ export const DeviceDetailsSection: React.FC = () => {
         loadDevicePDFs(),
         fetchRealTimeData()
       ]).then((results) => {
-        console.log('📊 Data loading results:', results);
+        // Data loading results processed
         results.forEach((result, index) => {
           if (result.status === 'rejected') {
             console.error(`❌ Data loading failed for index ${index}:`, result.reason);
           }
         });
       }).finally(() => {
-        console.log('✅ Data loading completed');
+        // Data loading completed
         clearTimeout(timeoutId);
         setIsInitialLoading(false);
       });
     } else if (deviceId && devices.length > 0) {
       // Device not found but devices are loaded, stop loading
-      console.log('❌ Device not found in devices array, stopping loading');
       setIsInitialLoading(false);
     }
   }, [deviceId, devices.length, device]);
 
   // Show loading if devices are still being loaded
   if (devices.length === 0) {
-    console.log('🔄 Devices array is empty, showing loading screen');
     return <TabLoadingScreen />;
   }
 
   // Redirect if device not found
   if (!device) {
-    console.log('❌ Device not found, redirecting to devices list');
-    console.log('Device ID:', deviceId);
-    console.log('Available devices:', devices.map(d => ({ id: d.id, name: d.name })));
     navigate('/devices');
     return null;
   }
 
   // Show loading screen while initial data is being fetched
   if (isInitialLoading) {
-    console.log('🔄 Showing initial loading screen');
     return <TabLoadingScreen />;
   }
 
@@ -639,8 +593,7 @@ export const DeviceDetailsSection: React.FC = () => {
 
   // Edit functions
   const handleEditClick = () => {
-    console.log('🔧 handleEditClick called');
-    console.log('Device data:', device);
+    // handleEditClick called
     
     const editData = {
       name: device.name,
@@ -662,13 +615,13 @@ export const DeviceDetailsSection: React.FC = () => {
       coapPath: device.coapPath || ''
     };
     
-    console.log('📝 Setting editedDevice:', editData);
+          // Setting editedDevice
     setEditedDevice(editData);
     setIsEditing(true);
     setValidationErrors({}); // Clear any previous validation errors
     setError(null); // Clear any previous errors
     
-    console.log('✅ Edit mode activated');
+          // Edit mode activated
   };
 
   const handleCancelEdit = () => {
@@ -679,35 +632,31 @@ export const DeviceDetailsSection: React.FC = () => {
   };
 
   const handleSaveEdit = async () => {
-    console.log('🔍 handleSaveEdit called');
-    console.log('Device:', device);
-    console.log('Edited device:', editedDevice);
+    // handleSaveEdit called
     
     if (!device || !editedDevice) {
-      console.log('❌ Missing device or editedDevice');
-      console.log('Device exists:', !!device);
-      console.log('EditedDevice exists:', !!editedDevice);
+              // Missing device or editedDevice
       return;
     }
 
-    console.log('✅ Starting save process...');
+          // Starting save process
     setIsSaving(true);
     
     try {
       // Get only the changed fields to minimize payload
       const changedFields = getChangedFields(device, editedDevice);
-      console.log('📝 Changed fields:', changedFields);
+              // Changed fields identified
       
       // Sanitize the data to ensure proper null handling
       const sanitizedData = sanitizeDeviceData(changedFields);
-      console.log('🧹 Sanitized data:', sanitizedData);
+              // Data sanitized
       
       // Validate the update data
       const validation = validateDeviceUpdate(sanitizedData);
-      console.log('✅ Validation result:', validation);
+              // Validation completed
       
       if (!validation.isValid) {
-        console.log('❌ Validation failed:', validation.errors);
+                  // Validation failed
         logError('DeviceDetails', 'Device validation failed', new Error('Validation errors: ' + JSON.stringify(validation.errors)));
         setValidationErrors(validation.errors);
         setIsSaving(false);
@@ -720,7 +669,7 @@ export const DeviceDetailsSection: React.FC = () => {
       // Add device ID
       sanitizedData.id = device.id;
 
-      console.log('🚀 Sending update to API...');
+              // Sending update to API
       logInfo('DeviceDetails', 'Sending device update payload', { 
         deviceId: device.id, 
         payload: sanitizedData,
@@ -728,7 +677,7 @@ export const DeviceDetailsSection: React.FC = () => {
       });
 
       await deviceAPI.update(device.id, sanitizedData);
-      console.log('✅ API update successful');
+              // API update successful
       
       // Update the device in the IoT context
       updateDeviceStatus(device.id, { ...device, ...editedDevice });
@@ -736,10 +685,10 @@ export const DeviceDetailsSection: React.FC = () => {
       setIsEditing(false);
       setEditedDevice(null);
       
-      console.log('✅ Save completed successfully');
+              // Save completed successfully
       logInfo('DeviceDetails', 'Device updated successfully', { deviceId: device.id });
     } catch (error) {
-      console.log('❌ Save failed:', error);
+              // Save failed
       logError('DeviceDetails', 'Failed to update device', error instanceof Error ? error : new Error('Unknown error'));
     } finally {
       setIsSaving(false);
@@ -747,11 +696,10 @@ export const DeviceDetailsSection: React.FC = () => {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    console.log('🔧 handleInputChange called:', { field, value });
-    console.log('Current editedDevice:', editedDevice);
+    // handleInputChange called
     
     if (!editedDevice) {
-      console.log('❌ No editedDevice found');
+              // No editedDevice found
       return;
     }
     
@@ -762,11 +710,11 @@ export const DeviceDetailsSection: React.FC = () => {
     if (requiredFields.includes(field)) {
       // For required fields, preserve empty strings for validation
       processedValue = value;
-      console.log('📝 Required field - preserving value as-is:', { field, value });
+              // Required field - preserving value as-is
     } else {
       // For optional fields, convert empty strings to null for better backend handling
       processedValue = value === '' ? null : value;
-      console.log('📝 Optional field - processing value:', { field, originalValue: value, processedValue });
+              // Optional field - processing value
     }
     
     setEditedDevice((prev: any) => {
@@ -774,7 +722,7 @@ export const DeviceDetailsSection: React.FC = () => {
         ...prev,
         [field]: processedValue
       };
-      console.log('🔄 Updated editedDevice:', updated);
+      // Updated editedDevice
       return updated;
     });
     
@@ -829,40 +777,7 @@ export const DeviceDetailsSection: React.FC = () => {
           // Use the chat service with device context for better results
           const queryResponse = await pdfProcessingService.queryPDF(queryRequest);
           
-          // Debug logging for images and tables
-          console.log('🔍 PDF Query Response:', {
-            response: queryResponse.response?.substring(0, 100) + '...',
-            imagesCount: queryResponse.images?.length || 0,
-            images: queryResponse.images,
-            tablesCount: queryResponse.tables?.length || 0,
-            tables: queryResponse.tables
-          });
-          
-          // Enhanced image debugging
-          if (queryResponse.images && queryResponse.images.length > 0) {
-            console.log('🖼️ Images found in response:', queryResponse.images.map((img, idx) => ({
-              index: idx,
-              filename: img.filename,
-              hasData: !!img.data,
-              dataLength: img.data?.length || 0,
-              mimeType: img.mime_type,
-              size: img.size,
-              dataPreview: img.data ? img.data.substring(0, 50) + '...' : 'No data'
-            })));
-          } else {
-            console.log('⚠️ No images found in PDF query response');
-          }
-          
-          // Enhanced table debugging
-          if (queryResponse.tables && queryResponse.tables.length > 0) {
-            console.log('📊 Tables found in response:', queryResponse.tables.map((table, idx) => ({
-              index: idx,
-              tableLength: table.length,
-              tablePreview: table.substring(0, 100) + '...'
-            })));
-          } else {
-            console.log('⚠️ No tables found in PDF query response');
-          }
+          // Response processed successfully
           
           // Enhance content with image/table information (NO PDF name shown to user)
           let enhancedContent = queryResponse.response || `I found relevant information in the device documentation. ${queryResponse.chunks_used.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 300) + '...' : 'Would you like me to search for more specific information?'}`;
@@ -882,7 +797,6 @@ export const DeviceDetailsSection: React.FC = () => {
               // Use only valid images
               queryResponse.images = validImages;
             } else {
-              console.log('⚠️ All images in response have invalid data');
               enhancedContent += `\n\n⚠️ I found ${queryResponse.images.length} image(s) but they appear to be corrupted or incomplete.`;
             }
           }
@@ -900,7 +814,6 @@ export const DeviceDetailsSection: React.FC = () => {
               // Use only valid tables
               queryResponse.tables = validTables;
             } else {
-              console.log('⚠️ All tables in response have invalid data');
               enhancedContent += `\n\n⚠️ I found ${queryResponse.tables.length} table(s) but they appear to be corrupted or incomplete.`;
             }
           }
@@ -978,11 +891,7 @@ export const DeviceDetailsSection: React.FC = () => {
               <h2 className="text-xl font-semibold text-slate-800">Device Profile</h2>
               {!isEditing ? (
                 <button
-                  onClick={() => {
-                    console.log('🔘 Edit button clicked');
-                    console.log('Current device:', device);
-                    handleEditClick();
-                  }}
+                  onClick={handleEditClick}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                 >
                   <Edit className="w-4 h-4" />
@@ -991,12 +900,7 @@ export const DeviceDetailsSection: React.FC = () => {
               ) : (
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => {
-                      console.log('🔘 Save button clicked');
-                      console.log('Button disabled:', isSaving);
-                      console.log('Current state - isEditing:', isEditing, 'editedDevice:', editedDevice);
-                      handleSaveEdit();
-                    }}
+                    onClick={handleSaveEdit}
                     disabled={isSaving}
                     className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
                   >
@@ -1247,13 +1151,7 @@ export const DeviceDetailsSection: React.FC = () => {
                       <p className="text-xs text-yellow-600">This device doesn't have any associated PDF documents yet.</p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => navigate('/knowledge-base')}
-                    className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                    title="Debug device documentation"
-                  >
-                    🔍 Debug
-                  </button>
+
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-yellow-200">
                   <p className="text-sm text-yellow-700 mb-2">
@@ -1269,32 +1167,7 @@ export const DeviceDetailsSection: React.FC = () => {
               </div>
             )}
 
-            {/* Debug Tools */}
-            <div className="mb-4 p-3 bg-gray-100 rounded-lg border border-gray-300">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-gray-700">Debug Tools</span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={testImageHandling}
-                    className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                    title="Test image handling functionality"
-                  >
-                    🧪 Test Images
-                  </button>
-                  <button
-                    onClick={() => console.log('📊 Chat state:', { 
-                      messagesCount: chatMessages.length, 
-                      devicePDFsCount: devicePDFs.length,
-                      availablePDFs: devicePDFs.map(pdf => pdf.name)
-                    })}
-                    className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-                    title="Log chat state"
-                  >
-                    📊 Log State
-                  </button>
-                </div>
-              </div>
-            </div>
+
 
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-slate-50 rounded-lg">
