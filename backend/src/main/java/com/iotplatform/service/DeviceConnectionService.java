@@ -50,14 +50,20 @@ public class DeviceConnectionService {
     }
 
     public void deleteConnection(String deviceId, String organizationId) {
-        DeviceConnection connection = deviceConnectionRepository.findByDeviceIdAndOrganizationId(deviceId, organizationId)
-                .orElseThrow(() -> new RuntimeException("Device connection not found"));
-        deviceConnectionRepository.delete(connection);
+        Optional<DeviceConnection> connectionOpt = deviceConnectionRepository.findByDeviceIdAndOrganizationId(deviceId, organizationId);
+        if (connectionOpt.isPresent()) {
+            deviceConnectionRepository.delete(connectionOpt.get());
+        }
+        // If no connection exists, that's fine - just return without error
     }
 
     public DeviceConnection connectDevice(String deviceId, String organizationId) {
-        DeviceConnection connection = deviceConnectionRepository.findByDeviceIdAndOrganizationId(deviceId, organizationId)
-                .orElseThrow(() -> new RuntimeException("Device connection not found"));
+        Optional<DeviceConnection> connectionOpt = deviceConnectionRepository.findByDeviceIdAndOrganizationId(deviceId, organizationId);
+        if (!connectionOpt.isPresent()) {
+            throw new RuntimeException("Device connection not found");
+        }
+        
+        DeviceConnection connection = connectionOpt.get();
 
         // Simulate connection process
         connection.setStatus(DeviceConnection.ConnectionStatus.CONNECTING);
@@ -70,8 +76,12 @@ public class DeviceConnectionService {
     }
 
     public DeviceConnection disconnectDevice(String deviceId, String organizationId) {
-        DeviceConnection connection = deviceConnectionRepository.findByDeviceIdAndOrganizationId(deviceId, organizationId)
-                .orElseThrow(() -> new RuntimeException("Device connection not found"));
+        Optional<DeviceConnection> connectionOpt = deviceConnectionRepository.findByDeviceIdAndOrganizationId(deviceId, organizationId);
+        if (!connectionOpt.isPresent()) {
+            throw new RuntimeException("Device connection not found");
+        }
+        
+        DeviceConnection connection = connectionOpt.get();
 
         connection.setStatus(DeviceConnection.ConnectionStatus.DISCONNECTED);
         connection.setLastDisconnected(LocalDateTime.now());
