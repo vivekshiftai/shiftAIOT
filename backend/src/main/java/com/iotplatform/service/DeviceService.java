@@ -46,6 +46,7 @@ import com.iotplatform.repository.UserRepository;
 import com.iotplatform.service.NotificationService;
 import com.iotplatform.service.DeviceNotificationEnhancerService;
 import com.iotplatform.repository.DeviceConnectionRepository;
+import com.iotplatform.model.DeviceConnection;
 
 
 @Service
@@ -509,9 +510,10 @@ public class DeviceService {
         
         // Check if device has active connections
         try {
-            long activeConnections = deviceConnectionRepository.countByDeviceIdAndStatus(trimmedId, "CONNECTED");
-            if (activeConnections > 0) {
-                logger.warn("⚠️ Device {} has {} active connections", trimmedId, activeConnections);
+            // Check if this specific device has any active connections
+            Optional<DeviceConnection> deviceConnection = deviceConnectionRepository.findByDeviceIdAndOrganizationId(trimmedId, trimmedOrgId);
+            if (deviceConnection.isPresent() && deviceConnection.get().getStatus() == DeviceConnection.ConnectionStatus.CONNECTED) {
+                logger.warn("⚠️ Device {} has an active connection", trimmedId);
             }
         } catch (Exception e) {
             logger.warn("Could not check device connections: {}", e.getMessage());
@@ -519,7 +521,7 @@ public class DeviceService {
         
         // Check if device has pending maintenance tasks
         try {
-            long pendingMaintenance = deviceMaintenanceRepository.countByDeviceIdAndStatus(trimmedId, "PENDING");
+            long pendingMaintenance = deviceMaintenanceRepository.countByDeviceIdAndStatus(trimmedId, DeviceMaintenance.Status.PENDING);
             if (pendingMaintenance > 0) {
                 logger.warn("⚠️ Device {} has {} pending maintenance tasks", trimmedId, pendingMaintenance);
             }

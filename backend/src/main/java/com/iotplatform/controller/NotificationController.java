@@ -151,23 +151,21 @@ public class NotificationController {
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/test")
-    public ResponseEntity<String> testEndpoint(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails == null || userDetails.getUser() == null) {
-            return ResponseEntity.status(401).build();
-        }
-        return ResponseEntity.ok("Notification endpoint is working!");
-    }
-
     @GetMapping("/unread-count")
     @PreAuthorize("hasAuthority('NOTIFICATION_READ')")
-    public ResponseEntity<Long> getUnreadCount(@AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<Map<String, Object>> getUnreadCount(@AuthenticationPrincipal CustomUserDetails userDetails) {
         if (userDetails == null || userDetails.getUser() == null) {
             return ResponseEntity.status(401).build();
         }
         User user = userDetails.getUser();
-        Long count = notificationService.getUnreadCount(user.getOrganizationId(), user.getId());
-        return ResponseEntity.ok(count);
+        
+        try {
+            long unreadCount = notificationService.getUnreadCount(user.getOrganizationId(), user.getId());
+            return ResponseEntity.ok(Map.of("unreadCount", unreadCount));
+        } catch (Exception e) {
+            log.error("Error getting unread count for user: {}", user.getEmail(), e);
+            return ResponseEntity.status(500).build();
+        }
     }
 
     @DeleteMapping("/{id}")

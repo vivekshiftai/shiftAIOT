@@ -122,6 +122,8 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   const { user } = useAuth();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [statusUpdateError, setStatusUpdateError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Add additional safety checks
   if (!device) {
@@ -148,35 +150,17 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   const canUpdateStatus = user?.role === 'ADMIN' && onStatusChange;
 
   // Simulate PDF processing progress
-  useEffect(() => {
-    if (isOnboarding && pdfProcessingStatus === 'processing' && startTime) {
-      const elapsed = Date.now() - startTime;
-      const progressPercent = Math.min((elapsed / (25 * 60 * 1000)) * 100, 95); // 25 minutes max
-      // setProcessingProgress(progressPercent); // This state was removed
-      
-      // Update current stage based on progress
-      // const stageProgress = (progressPercent / 100) * pdfProcessingStages.length;
-      // setCurrentProcessingStage(Math.min(Math.floor(stageProgress), pdfProcessingStages.length - 1)); // This state was removed
-    } else if (isOnboarding && pdfProcessingStatus === 'completed') {
-      // setProcessingProgress(100); // This state was removed
-      // setCurrentProcessingStage(pdfProcessingStages.length - 1); // This state was removed
-    }
-  }, [isOnboarding, pdfProcessingStatus, startTime]);
+  const [progress, setProgress] = useState(0);
+  const [startTime] = useState(Date.now());
 
   // Real PDF processing progress based on status
   useEffect(() => {
     if (isOnboarding && pdfProcessingStatus === 'processing' && startTime) {
-      // Calculate progress based on time elapsed
       const elapsed = Date.now() - startTime;
       const progressPercent = Math.min((elapsed / (25 * 60 * 1000)) * 100, 95); // 25 minutes max
-      // setProcessingProgress(progressPercent); // This state was removed
-      
-      // Update current stage based on progress
-      // const stageProgress = (progressPercent / 100) * pdfProcessingStages.length;
-      // setCurrentProcessingStage(Math.min(Math.floor(stageProgress), pdfProcessingStages.length - 1)); // This state was removed
+      setProgress(progressPercent);
     } else if (isOnboarding && pdfProcessingStatus === 'completed') {
-      // setProcessingProgress(100); // This state was removed
-      // setCurrentProcessingStage(pdfProcessingStages.length - 1); // This state was removed
+      setProgress(100);
     }
   }, [isOnboarding, pdfProcessingStatus, startTime]);
 
@@ -403,25 +387,6 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               title="Delete Device"
             >
               <Trash2 className="w-4 h-4" />
-            </button>
-          )}
-          
-          {/* Test Status Change Button - Only for admins and not onboarding */}
-          {canUpdateStatus && !isOnboarding && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleTestStatusChange();
-              }}
-              disabled={isUpdatingStatus}
-              className={`p-2 rounded-lg transition-colors ${
-                isUpdatingStatus 
-                  ? 'text-slate-400 cursor-not-allowed' 
-                  : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50'
-              }`}
-              title={isUpdatingStatus ? "Updating status..." : "Test Real-time Status Change"}
-            >
-              <Zap className={`w-4 h-4 ${isUpdatingStatus ? 'animate-spin' : ''}`} />
             </button>
           )}
         </div>

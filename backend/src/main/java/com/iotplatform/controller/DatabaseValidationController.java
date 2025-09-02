@@ -22,12 +22,9 @@ public class DatabaseValidationController {
     @Autowired
     private DatabaseValidator databaseValidator;
     
-    /**
-     * Validate database connection
-     */
-    @GetMapping("/validate/connection")
-    public ResponseEntity<Map<String, Object>> validateConnection() {
-        logger.info("🔍 Validating database connection...");
+    @PostMapping("/validate/connection")
+    public ResponseEntity<Map<String, Object>> validateDatabaseConnection() {
+        logger.info("🔍 Database connection validation request received");
         
         Map<String, Object> response = new HashMap<>();
         try {
@@ -46,76 +43,45 @@ public class DatabaseValidationController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
-    /**
-     * Validate conversation_configs table structure
-     */
-    @GetMapping("/validate/table")
-    public ResponseEntity<Map<String, Object>> validateTable() {
-        logger.info("🔍 Validating conversation_configs table structure...");
+
+    @PostMapping("/validate/schema")
+    public ResponseEntity<Map<String, Object>> validateDatabaseSchema() {
+        logger.info("🔍 Database schema validation request received");
         
         Map<String, Object> response = new HashMap<>();
         try {
             boolean isValid = databaseValidator.validateConversationConfigsTable();
             response.put("success", isValid);
-            response.put("message", isValid ? "Table structure validation successful" : "Table structure validation failed");
+            response.put("message", isValid ? "Database schema validation successful" : "Database schema validation failed");
             response.put("timestamp", System.currentTimeMillis());
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.error("❌ Error validating table structure: {}", e.getMessage(), e);
+            logger.error("❌ Error validating database schema: {}", e.getMessage(), e);
             response.put("success", false);
-            response.put("message", "Error validating table structure: " + e.getMessage());
+            response.put("message", "Error validating database schema: " + e.getMessage());
             response.put("timestamp", System.currentTimeMillis());
             
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
-    /**
-     * Test JSONB insertion
-     */
-    @PostMapping("/test/jsonb")
-    public ResponseEntity<Map<String, Object>> testJsonbInsertion() {
-        logger.info("🔍 Testing JSONB insertion...");
-        
-        Map<String, Object> response = new HashMap<>();
-        try {
-            boolean isValid = databaseValidator.testJsonbInsertion();
-            response.put("success", isValid);
-            response.put("message", isValid ? "JSONB insertion test successful" : "JSONB insertion test failed");
-            response.put("timestamp", System.currentTimeMillis());
-            
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            logger.error("❌ Error testing JSONB insertion: {}", e.getMessage(), e);
-            response.put("success", false);
-            response.put("message", "Error testing JSONB insertion: " + e.getMessage());
-            response.put("timestamp", System.currentTimeMillis());
-            
-            return ResponseEntity.internalServerError().body(response);
-        }
-    }
-    
-    /**
-     * Run all validations
-     */
+
     @PostMapping("/validate/all")
     public ResponseEntity<Map<String, Object>> runAllValidations() {
-        logger.info("🔍 Running all database validations...");
+        logger.info("🔍 Running all database validations");
         
         Map<String, Object> response = new HashMap<>();
         try {
             databaseValidator.runAllValidations();
             response.put("success", true);
-            response.put("message", "All database validations completed");
+            response.put("message", "All validations completed");
             response.put("timestamp", System.currentTimeMillis());
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            logger.error("❌ Error running database validations: {}", e.getMessage(), e);
+            logger.error("❌ Error running all validations: {}", e.getMessage(), e);
             response.put("success", false);
-            response.put("message", "Error running database validations: " + e.getMessage());
+            response.put("message", "Error running all validations: " + e.getMessage());
             response.put("timestamp", System.currentTimeMillis());
             
             return ResponseEntity.internalServerError().body(response);

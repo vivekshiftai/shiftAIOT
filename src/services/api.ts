@@ -171,10 +171,8 @@ export const deviceAPI = {
   update: (id: string, deviceData: any) => api.put(`/api/devices/${id}`, deviceData),
   delete: (id: string) => api.delete(`/api/devices/${id}`),
   updateStatus: (id: string, status: string) => api.patch(`/api/devices/${id}/status`, status),
-  testStatusChange: (id: string) => api.post(`/api/devices/${id}/test-status-change`),
   getDocumentation: (deviceId: string) => api.get(`/api/devices/${deviceId}/documentation`),
   downloadDocumentation: (deviceId: string, type: string) => api.get(`/api/devices/${deviceId}/documentation/${type}/download`),
-  debugDatabase: (email: string) => api.get(`/api/devices/debug-db?email=${email}`),
   healthCheck: () => api.get('/api/devices/health'),
   deviceOnboard: (formData: FormData) => api.post('/api/devices/unified-onboarding', formData, {
     headers: {
@@ -182,7 +180,6 @@ export const deviceAPI = {
     },
   }),
   getDevicePDFResults: (deviceId: string) => api.get(`/api/devices/${deviceId}/pdf-results`),
-  getDeviceDebugDocumentation: (deviceId: string) => api.get(`/api/devices/${deviceId}/debug-documentation`),
 };
 
 // Rule API
@@ -561,34 +558,6 @@ export const pdfAPI = {
   getServiceInfo: async () => {
     return api.get('/api/pdf/info');
   },
-
-  // Debug endpoints
-  debug: {
-    // Debug collection analysis
-    collectionAnalysis: async (pdfName: string) => {
-      return api.get(`/api/pdf/debug/collection/${pdfName}`);
-    },
-
-    // Test query pipeline
-    testQueryPipeline: async (pdfName: string, query: string) => {
-      return api.post(`/api/pdf/debug/test-query/${pdfName}`, { query });
-    },
-
-    // List all collections
-    listAllCollections: async () => {
-      return api.get('/api/pdf/debug/collections');
-    },
-
-    // Debug health check
-    healthCheck: async () => {
-      return api.get('/api/pdf/debug/health');
-    },
-
-    // Test images
-    testImages: async (pdfName: string) => {
-      return api.get(`/api/pdf/debug/test-images/${pdfName}`);
-    }
-  }
 };
 
 // Push Notification API
