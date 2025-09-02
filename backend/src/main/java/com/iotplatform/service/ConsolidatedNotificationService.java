@@ -144,78 +144,94 @@ public class ConsolidatedNotificationService {
      * Build consolidated data structure with all device-related information
      */
     private Map<String, Object> buildConsolidatedData(String deviceId, Device device, User assignedUser, String creatorName) {
+        logger.debug("🔍 Building consolidated data for device: {} with assigned user: {}", deviceId, assignedUser.getEmail());
         Map<String, Object> data = new java.util.HashMap<>();
 
         // Basic device information
-        data.put("device", Map.of(
-            "id", device.getId(),
-            "name", device.getName(),
-            "type", device.getType(),
-            "status", device.getStatus(),
-            "location", device.getLocation(),
-            "protocol", device.getProtocol(),
-            "manufacturer", device.getManufacturer(),
-            "model", device.getModel(),
-            "description", device.getDescription(),
-            "createdAt", device.getCreatedAt()
-        ));
+        Map<String, Object> deviceInfo = new java.util.HashMap<>();
+        deviceInfo.put("id", device.getId());
+        deviceInfo.put("name", device.getName() != null ? device.getName() : "Unknown Device");
+        deviceInfo.put("type", device.getType() != null ? device.getType() : "UNKNOWN");
+        deviceInfo.put("status", device.getStatus() != null ? device.getStatus() : "UNKNOWN");
+        deviceInfo.put("location", device.getLocation() != null ? device.getLocation() : "Unknown Location");
+        deviceInfo.put("protocol", device.getProtocol() != null ? device.getProtocol() : "UNKNOWN");
+        deviceInfo.put("manufacturer", device.getManufacturer());
+        deviceInfo.put("model", device.getModel());
+        deviceInfo.put("description", device.getDescription());
+        deviceInfo.put("createdAt", device.getCreatedAt());
+        data.put("device", deviceInfo);
+        
+        logger.debug("✅ Device info built successfully: {}", deviceInfo.get("name"));
 
         // User information
-        data.put("assignedUser", Map.of(
-            "id", assignedUser.getId(),
-            "name", assignedUser.getFirstName() + " " + assignedUser.getLastName(),
-            "email", assignedUser.getEmail()
-        ));
+        Map<String, Object> userInfo = new java.util.HashMap<>();
+        userInfo.put("id", assignedUser.getId());
+        userInfo.put("name", assignedUser.getFirstName() + " " + assignedUser.getLastName());
+        userInfo.put("email", assignedUser.getEmail());
+        data.put("assignedUser", userInfo);
+        logger.debug("✅ User info built successfully: {}", userInfo.get("name"));
 
         data.put("createdBy", creatorName);
 
         // Rules information
         List<Rule> rules = ruleRepository.findByDeviceId(deviceId);
-        data.put("rules", rules.stream().map(rule -> Map.of(
-            "id", rule.getId(),
-            "name", rule.getName(),
-            "description", rule.getDescription(),
-            "active", rule.isActive(),
-            "metric", rule.getMetric(),
-            "threshold", rule.getThreshold()
-        )).collect(Collectors.toList()));
+        logger.debug("📋 Found {} rules for device: {}", rules.size(), deviceId);
+        data.put("rules", rules.stream().map(rule -> {
+            Map<String, Object> ruleInfo = new java.util.HashMap<>();
+            ruleInfo.put("id", rule.getId());
+            ruleInfo.put("name", rule.getName());
+            ruleInfo.put("description", rule.getDescription());
+            ruleInfo.put("active", rule.isActive());
+            ruleInfo.put("metric", rule.getMetric());
+            ruleInfo.put("threshold", rule.getThreshold());
+            return ruleInfo;
+        }).collect(Collectors.toList()));
 
         // Maintenance information
         List<DeviceMaintenance> maintenanceTasks = maintenanceRepository.findByDeviceId(deviceId);
-        data.put("maintenance", maintenanceTasks.stream().map(maintenance -> Map.of(
-            "id", maintenance.getId(),
-            "taskName", maintenance.getTaskName(),
-            "componentName", maintenance.getComponentName(),
-            "maintenanceType", maintenance.getMaintenanceType(),
-            "frequency", maintenance.getFrequency(),
-            "nextMaintenance", maintenance.getNextMaintenance(),
-            "priority", maintenance.getPriority(),
-            "status", maintenance.getStatus(),
-            "description", maintenance.getDescription()
-        )).collect(Collectors.toList()));
+        logger.debug("🔧 Found {} maintenance tasks for device: {}", maintenanceTasks.size(), deviceId);
+        data.put("maintenance", maintenanceTasks.stream().map(maintenance -> {
+            Map<String, Object> maintenanceInfo = new java.util.HashMap<>();
+            maintenanceInfo.put("id", maintenance.getId());
+            maintenanceInfo.put("taskName", maintenance.getTaskName());
+            maintenanceInfo.put("componentName", maintenance.getComponentName());
+            maintenanceInfo.put("maintenanceType", maintenance.getMaintenanceType());
+            maintenanceInfo.put("frequency", maintenance.getFrequency());
+            maintenanceInfo.put("nextMaintenance", maintenance.getNextMaintenance());
+            maintenanceInfo.put("priority", maintenance.getPriority());
+            maintenanceInfo.put("status", maintenance.getStatus());
+            maintenanceInfo.put("description", maintenance.getDescription());
+            return maintenanceInfo;
+        }).collect(Collectors.toList()));
 
         // Safety precautions
         List<DeviceSafetyPrecaution> safetyPrecautions = safetyRepository.findByDeviceId(deviceId);
-        data.put("safety", safetyPrecautions.stream().map(safety -> Map.of(
-            "id", safety.getId(),
-            "title", safety.getTitle(),
-            "description", safety.getDescription(),
-            "type", safety.getType(),
-            "category", safety.getCategory(),
-            "severity", safety.getSeverity(),
-            "recommendedAction", safety.getRecommendedAction(),
-            "isActive", safety.getIsActive()
-        )).collect(Collectors.toList()));
+        logger.debug("⚠️ Found {} safety precautions for device: {}", safetyPrecautions.size(), deviceId);
+        data.put("safety", safetyPrecautions.stream().map(safety -> {
+            Map<String, Object> safetyInfo = new java.util.HashMap<>();
+            safetyInfo.put("id", safety.getId());
+            safetyInfo.put("title", safety.getTitle());
+            safetyInfo.put("description", safety.getDescription());
+            safetyInfo.put("type", safety.getType());
+            safetyInfo.put("category", safety.getCategory());
+            safetyInfo.put("severity", safety.getSeverity());
+            safetyInfo.put("recommendedAction", safety.getRecommendedAction());
+            safetyInfo.put("isActive", safety.getIsActive());
+            return safetyInfo;
+        }).collect(Collectors.toList()));
 
         // Summary statistics
-        data.put("summary", Map.of(
-            "totalRules", rules.size(),
-            "totalMaintenanceTasks", maintenanceTasks.size(),
-            "totalSafetyPrecautions", safetyPrecautions.size(),
-            "activeRules", rules.stream().filter(Rule::isActive).count(),
-            "activeMaintenanceTasks", maintenanceTasks.stream().filter(m -> "ACTIVE".equals(m.getStatus())).count(),
-            "criticalSafetyPrecautions", safetyPrecautions.stream().filter(s -> "CRITICAL".equals(s.getSeverity())).count()
-        ));
+        Map<String, Object> summaryInfo = new java.util.HashMap<>();
+        summaryInfo.put("totalRules", rules.size());
+        summaryInfo.put("totalMaintenanceTasks", maintenanceTasks.size());
+        summaryInfo.put("totalSafetyPrecautions", safetyPrecautions.size());
+        summaryInfo.put("activeRules", rules.stream().filter(Rule::isActive).count());
+        summaryInfo.put("activeMaintenanceTasks", maintenanceTasks.stream().filter(m -> "ACTIVE".equals(m.getStatus())).count());
+        summaryInfo.put("criticalSafetyPrecautions", safetyPrecautions.stream().filter(s -> "CRITICAL".equals(s.getSeverity())).count());
+        data.put("summary", summaryInfo);
+        
+        logger.debug("📊 Summary built successfully - Rules: {}, Maintenance: {}, Safety: {}", 
+                   summaryInfo.get("totalRules"), summaryInfo.get("totalMaintenanceTasks"), summaryInfo.get("totalSafetyPrecautions"));
 
         return data;
     }
@@ -298,12 +314,16 @@ public class ConsolidatedNotificationService {
         try {
             Optional<Notification> notificationOpt = notificationRepository.findById(notificationId);
             if (notificationOpt.isEmpty()) {
-                return Map.of("error", "Notification not found");
+                Map<String, Object> errorMap = new java.util.HashMap<>();
+                errorMap.put("error", "Notification not found");
+                return errorMap;
             }
 
             Notification notification = notificationOpt.get();
             if (notification.getMetadata() == null || notification.getMetadata().isEmpty()) {
-                return Map.of("error", "No detailed data available");
+                Map<String, Object> errorMap = new java.util.HashMap<>();
+                errorMap.put("error", "No detailed data available");
+                return errorMap;
             }
 
             // For consolidated notifications, rebuild detailed data from device ID
@@ -326,7 +346,9 @@ public class ConsolidatedNotificationService {
 
         } catch (Exception e) {
             logger.error("❌ Failed to get notification details: {}", e.getMessage(), e);
-            return Map.of("error", "Failed to load notification details");
+            Map<String, Object> errorMap = new java.util.HashMap<>();
+            errorMap.put("error", "Failed to load notification details");
+            return errorMap;
         }
     }
 }
