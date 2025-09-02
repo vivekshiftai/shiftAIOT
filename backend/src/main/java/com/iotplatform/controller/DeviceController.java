@@ -277,8 +277,12 @@ public class DeviceController {
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateDevice(@PathVariable String id, @RequestBody DeviceUpdateRequest deviceRequest, 
-                                        @AuthenticationPrincipal CustomUserDetails userDetails) {
-        logger.info("🔧 Update device request received for device ID: {}", id);
+                                       @AuthenticationPrincipal CustomUserDetails userDetails) {
+        logger.info("🔄 PUT /api/devices/{} - Device update request received from user: {}", 
+                   id, userDetails.getUser().getEmail());
+        
+        // Log the incoming request data for debugging
+        logger.info("📝 Device update request data: {}", deviceRequest);
         
         if (userDetails == null || userDetails.getUser() == null) {
             logger.error("❌ No authenticated user found for device update request");
@@ -286,7 +290,6 @@ public class DeviceController {
         }
         
         User currentUser = userDetails.getUser();
-        logger.info("👤 User {} requesting to update device: {}", currentUser.getEmail(), id);
         
         // Validate device ID
         if (id == null || id.trim().isEmpty()) {
@@ -312,57 +315,92 @@ public class DeviceController {
                 return ResponseEntity.status(403).build();
             }
             
+            logger.info("✅ Device found and access verified. Proceeding with update for device: {}", existingDevice.getName());
+            
             // Update device fields only if they are not null (partial update)
+            // Log each field update for debugging
             if (deviceRequest.getName() != null) {
-                existingDevice.setName(convertEmptyToNull(deviceRequest.getName()));
+                String newName = convertEmptyToNull(deviceRequest.getName());
+                logger.info("📝 Updating device name from '{}' to '{}'", existingDevice.getName(), newName);
+                existingDevice.setName(newName);
             }
             if (deviceRequest.getLocation() != null) {
-                existingDevice.setLocation(convertEmptyToNull(deviceRequest.getLocation()));
+                String newLocation = convertEmptyToNull(deviceRequest.getLocation());
+                logger.info("📝 Updating device location from '{}' to '{}'", existingDevice.getLocation(), newLocation);
+                existingDevice.setLocation(newLocation);
             }
             if (deviceRequest.getManufacturer() != null) {
-                existingDevice.setManufacturer(convertEmptyToNull(deviceRequest.getManufacturer()));
+                String newManufacturer = convertEmptyToNull(deviceRequest.getManufacturer());
+                logger.info("📝 Updating device manufacturer from '{}' to '{}'", existingDevice.getManufacturer(), newManufacturer);
+                existingDevice.setManufacturer(newManufacturer);
             }
             if (deviceRequest.getModel() != null) {
-                existingDevice.setModel(convertEmptyToNull(deviceRequest.getModel()));
+                String newModel = convertEmptyToNull(deviceRequest.getModel());
+                logger.info("📝 Updating device model from '{}' to '{}'", existingDevice.getModel(), newModel);
+                existingDevice.setModel(newModel);
             }
             if (deviceRequest.getDescription() != null) {
-                existingDevice.setDescription(convertEmptyToNull(deviceRequest.getDescription()));
+                String newDescription = convertEmptyToNull(deviceRequest.getDescription());
+                logger.info("📝 Updating device description from '{}' to '{}'", existingDevice.getDescription(), newDescription);
+                existingDevice.setDescription(newDescription);
             }
             if (deviceRequest.getIpAddress() != null) {
-                existingDevice.setIpAddress(convertEmptyToNull(deviceRequest.getIpAddress()));
+                String newIpAddress = convertEmptyToNull(deviceRequest.getIpAddress());
+                logger.info("📝 Updating device IP address from '{}' to '{}'", existingDevice.getIpAddress(), newIpAddress);
+                existingDevice.setIpAddress(newIpAddress);
             }
             if (deviceRequest.getPort() != null) {
+                logger.info("📝 Updating device port from {} to {}", existingDevice.getPort(), deviceRequest.getPort());
                 existingDevice.setPort(deviceRequest.getPort());
             }
             if (deviceRequest.getMqttBroker() != null) {
-                existingDevice.setMqttBroker(convertEmptyToNull(deviceRequest.getMqttBroker()));
+                String newMqttBroker = convertEmptyToNull(deviceRequest.getMqttBroker());
+                logger.info("📝 Updating device MQTT broker from '{}' to '{}'", existingDevice.getMqttBroker(), newMqttBroker);
+                existingDevice.setMqttBroker(newMqttBroker);
             }
             if (deviceRequest.getMqttTopic() != null) {
-                existingDevice.setMqttTopic(convertEmptyToNull(deviceRequest.getMqttTopic()));
+                String newMqttTopic = convertEmptyToNull(deviceRequest.getMqttTopic());
+                logger.info("📝 Updating device MQTT topic from '{}' to '{}'", existingDevice.getMqttTopic(), newMqttTopic);
+                existingDevice.setMqttTopic(newMqttTopic);
             }
             if (deviceRequest.getMqttUsername() != null) {
-                existingDevice.setMqttUsername(convertEmptyToNull(deviceRequest.getMqttUsername()));
+                String newMqttUsername = convertEmptyToNull(deviceRequest.getMqttUsername());
+                logger.info("📝 Updating device MQTT username from '{}' to '{}'", existingDevice.getMqttUsername(), newMqttUsername);
+                existingDevice.setMqttUsername(newMqttUsername);
             }
             if (deviceRequest.getMqttPassword() != null) {
-                existingDevice.setMqttPassword(convertEmptyToNull(deviceRequest.getMqttPassword()));
+                String newMqttPassword = convertEmptyToNull(deviceRequest.getMqttPassword());
+                logger.info("📝 Updating device MQTT password from '{}' to '{}'", existingDevice.getMqttPassword(), newMqttPassword);
+                existingDevice.setMqttPassword(newMqttPassword);
             }
             if (deviceRequest.getHttpEndpoint() != null) {
-                existingDevice.setHttpEndpoint(convertEmptyToNull(deviceRequest.getHttpEndpoint()));
+                String newHttpEndpoint = convertEmptyToNull(deviceRequest.getHttpEndpoint());
+                logger.info("📝 Updating device HTTP endpoint from '{}' to '{}'", existingDevice.getHttpEndpoint(), newHttpEndpoint);
+                existingDevice.setHttpEndpoint(newHttpEndpoint);
             }
             if (deviceRequest.getHttpMethod() != null) {
-                existingDevice.setHttpMethod(convertEmptyToNull(deviceRequest.getHttpMethod()));
+                String newHttpMethod = convertEmptyToNull(deviceRequest.getHttpMethod());
+                logger.info("📝 Updating device HTTP method from '{}' to '{}'", existingDevice.getHttpMethod(), newHttpMethod);
+                existingDevice.setHttpMethod(newHttpMethod);
             }
             if (deviceRequest.getHttpHeaders() != null) {
-                existingDevice.setHttpHeaders(convertEmptyToNull(deviceRequest.getHttpHeaders()));
+                String newHttpHeaders = convertEmptyToNull(deviceRequest.getHttpHeaders());
+                logger.info("📝 Updating device HTTP headers from '{}' to '{}'", existingDevice.getHttpHeaders(), newHttpHeaders);
+                existingDevice.setHttpHeaders(newHttpHeaders);
             }
             if (deviceRequest.getCoapHost() != null) {
-                existingDevice.setCoapHost(convertEmptyToNull(deviceRequest.getCoapHost()));
+                String newCoapHost = convertEmptyToNull(deviceRequest.getCoapHost());
+                logger.info("📝 Updating device COAP host from '{}' to '{}'", existingDevice.getCoapHost(), newCoapHost);
+                existingDevice.setCoapHost(newCoapHost);
             }
             if (deviceRequest.getCoapPort() != null) {
+                logger.info("📝 Updating device COAP port from {} to {}", existingDevice.getCoapPort(), deviceRequest.getCoapPort());
                 existingDevice.setCoapPort(deviceRequest.getCoapPort());
             }
             if (deviceRequest.getCoapPath() != null) {
-                existingDevice.setCoapPath(convertEmptyToNull(deviceRequest.getCoapPath()));
+                String newCoapPath = convertEmptyToNull(deviceRequest.getCoapPath());
+                logger.info("📝 Updating device COAP path from '{}' to '{}'", existingDevice.getCoapPath(), newCoapPath);
+                existingDevice.setCoapPath(newCoapPath);
             }
             
             // Check if assigned user has changed
@@ -1221,7 +1259,15 @@ public class DeviceController {
 
 
     private String convertEmptyToNull(String value) {
-        return (value != null && value.trim().isEmpty()) ? null : value;
+        if (value == null) {
+            return null;
+        }
+        String trimmedValue = value.trim();
+        if (trimmedValue.isEmpty()) {
+            logger.debug("🔄 Converting empty string to null for field update");
+            return null;
+        }
+        return value;
     }
 
     private void createDeviceAssignmentNotification(Device device, String assignedUserId, String organizationId, String updatedBy) {

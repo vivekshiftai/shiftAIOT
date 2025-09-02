@@ -1,12 +1,9 @@
-/**
- * Device validation utilities for the IoT platform
- * Provides validation functions for device operations including deletion
- */
+import { logInfo, logWarn, logError } from './logger';
 
 export interface DeviceValidationResult {
   isValid: boolean;
-  errors: string[];
-  warnings: string[];
+  errors: Record<string, string>;
+  warnings: Record<string, string>;
 }
 
 /**
@@ -47,6 +44,118 @@ export const validateDeviceId = (deviceId: string): DeviceValidationResult => {
   }
   
   return { isValid: true, errors, warnings };
+};
+
+/**
+ * Validates device data for updates, ensuring all fields can accept null values
+ * and providing proper validation feedback
+ */
+export const validateDeviceUpdate = (deviceData: any): DeviceValidationResult => {
+  const errors: Record<string, string> = {};
+  const warnings: Record<string, string> = {};
+  
+  logInfo('DeviceValidation', 'Validating device update data', { deviceData });
+
+  // Check for required fields that should not be null
+  if (deviceData.id === null || deviceData.id === undefined) {
+    errors.id = 'Device ID is required';
+  }
+
+  // Validate string field lengths (allow null values)
+  if (deviceData.name !== null && deviceData.name !== undefined && deviceData.name.length > 100) {
+    errors.name = 'Device name must be less than 100 characters';
+  }
+
+  if (deviceData.location !== null && deviceData.location !== undefined && deviceData.location.length > 200) {
+    errors.location = 'Location must be less than 200 characters';
+  }
+
+  if (deviceData.manufacturer !== null && deviceData.manufacturer !== undefined && deviceData.manufacturer.length > 100) {
+    errors.manufacturer = 'Manufacturer must be less than 100 characters';
+  }
+
+  if (deviceData.model !== null && deviceData.model !== undefined && deviceData.model.length > 100) {
+    errors.model = 'Model must be less than 100 characters';
+  }
+
+  if (deviceData.description !== null && deviceData.description !== undefined && deviceData.description.length > 500) {
+    errors.description = 'Description must be less than 500 characters';
+  }
+
+  if (deviceData.ipAddress !== null && deviceData.ipAddress !== undefined && deviceData.ipAddress.length > 45) {
+    errors.ipAddress = 'IP address must be less than 45 characters';
+  }
+
+  // Validate port numbers (allow null values)
+  if (deviceData.port !== null && deviceData.port !== undefined) {
+    if (deviceData.port < 1 || deviceData.port > 65535) {
+      errors.port = 'Port must be between 1 and 65535';
+    }
+  }
+
+  if (deviceData.coapPort !== null && deviceData.coapPort !== undefined) {
+    if (deviceData.coapPort < 1 || deviceData.coapPort > 65535) {
+      errors.coapPort = 'COAP port must be between 1 and 65535';
+    }
+  }
+
+  // Validate MQTT fields (allow null values)
+  if (deviceData.mqttBroker !== null && deviceData.mqttBroker !== undefined && deviceData.mqttBroker.length > 255) {
+    errors.mqttBroker = 'MQTT broker must be less than 255 characters';
+  }
+
+  if (deviceData.mqttTopic !== null && deviceData.mqttTopic !== undefined && deviceData.mqttTopic.length > 255) {
+    errors.mqttTopic = 'MQTT topic must be less than 255 characters';
+  }
+
+  if (deviceData.mqttUsername !== null && deviceData.mqttUsername !== undefined && deviceData.mqttUsername.length > 100) {
+    errors.mqttUsername = 'MQTT username must be less than 100 characters';
+  }
+
+  if (deviceData.mqttPassword !== null && deviceData.mqttPassword !== undefined && deviceData.mqttPassword.length > 255) {
+    errors.mqttPassword = 'MQTT password must be less than 255 characters';
+  }
+
+  // Validate HTTP fields (allow null values)
+  if (deviceData.httpEndpoint !== null && deviceData.httpEndpoint !== undefined && deviceData.httpEndpoint.length > 500) {
+    errors.httpEndpoint = 'HTTP endpoint must be less than 500 characters';
+  }
+
+  if (deviceData.httpMethod !== null && deviceData.httpMethod !== undefined && deviceData.httpMethod.length > 10) {
+    errors.httpMethod = 'HTTP method must be less than 10 characters';
+  }
+
+  if (deviceData.httpHeaders !== null && deviceData.httpHeaders !== undefined && deviceData.httpHeaders.length > 1000) {
+    errors.httpHeaders = 'HTTP headers must be less than 1000 characters';
+  }
+
+  // Validate COAP fields (allow null values)
+  if (deviceData.coapHost !== null && deviceData.coapHost !== undefined && deviceData.coapHost.length > 255) {
+    errors.coapHost = 'COAP host must be less than 255 characters';
+  }
+
+  if (deviceData.coapPath !== null && deviceData.coapPath !== undefined && deviceData.coapPath.length > 255) {
+    errors.coapPath = 'COAP path must be less than 255 characters';
+  }
+
+  // Log validation results
+  const isValid = Object.keys(errors).length === 0;
+  
+  if (isValid) {
+    logInfo('DeviceValidation', 'Device validation passed successfully');
+  } else {
+    logWarn('DeviceValidation', 'Device validation failed', { errors });
+  }
+
+  if (Object.keys(warnings).length > 0) {
+    logWarn('DeviceValidation', 'Device validation warnings', { warnings });
+  }
+
+  return {
+    isValid,
+    errors,
+    warnings
+  };
 };
 
 /**
@@ -95,6 +204,70 @@ export const validateDeviceForDeletion = (device: any): DeviceValidationResult =
     errors, 
     warnings 
   };
+};
+
+/**
+ * Sanitizes device data for API calls, ensuring proper null handling
+ */
+export const sanitizeDeviceData = (deviceData: any): any => {
+  const sanitized: any = {};
+  
+  Object.keys(deviceData).forEach(key => {
+    const value = deviceData[key];
+    
+    // Convert empty strings to null for better backend handling
+    if (value === '') {
+      sanitized[key] = null;
+    } else if (value !== undefined) {
+      sanitized[key] = value;
+    }
+  });
+  
+  logInfo('DeviceValidation', 'Device data sanitized', { 
+    original: deviceData, 
+    sanitized 
+  });
+  
+  return sanitized;
+};
+
+/**
+ * Checks if a field value has changed from the original device
+ */
+export const hasFieldChanged = (originalValue: any, newValue: any): boolean => {
+  // Handle null/undefined cases
+  if (originalValue === null && newValue === null) return false;
+  if (originalValue === undefined && newValue === undefined) return false;
+  if (originalValue === null || newValue === null) return true;
+  if (originalValue === undefined || newValue === undefined) return true;
+  
+  // Handle string comparisons
+  if (typeof originalValue === 'string' && typeof newValue === 'string') {
+    return originalValue.trim() !== newValue.trim();
+  }
+  
+  // Handle other types
+  return originalValue !== newValue;
+};
+
+/**
+ * Gets only the changed fields from the device update
+ */
+export const getChangedFields = (originalDevice: any, updatedDevice: any): any => {
+  const changedFields: any = {};
+  
+  Object.keys(updatedDevice).forEach(key => {
+    if (hasFieldChanged(originalDevice[key], updatedDevice[key])) {
+      changedFields[key] = updatedDevice[key];
+    }
+  });
+  
+  logInfo('DeviceValidation', 'Changed fields identified', { 
+    changedFields,
+    totalFields: Object.keys(updatedDevice).length 
+  });
+  
+  return changedFields;
 };
 
 /**

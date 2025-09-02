@@ -42,6 +42,7 @@ import { pdfAPI } from '../services/api';
 import { pdfProcessingService, PDFListResponse } from '../services/pdfprocess';
 import { DeviceStatsService, DeviceStats } from '../services/deviceStatsService';
 import { logInfo, logError } from '../utils/logger';
+import { validateDeviceUpdate, sanitizeDeviceData, getChangedFields } from '../utils/deviceValidation';
 import { TabLoadingScreen, DataLoadingState, LoadingSpinner } from '../components/Loading/LoadingComponents';
 import { PDFImage } from '../services/chatService';
 
@@ -260,6 +261,7 @@ export const DeviceDetailsSection: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedDevice, setEditedDevice] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const device = devices.find(d => d.id === deviceId);
 
@@ -649,11 +651,13 @@ export const DeviceDetailsSection: React.FC = () => {
       coapPath: device.coapPath || ''
     });
     setIsEditing(true);
+    setValidationErrors({}); // Clear any previous validation errors
   };
 
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditedDevice(null);
+    setValidationErrors({}); // Clear validation errors when canceling
   };
 
   const handleSaveEdit = async () => {
@@ -661,21 +665,35 @@ export const DeviceDetailsSection: React.FC = () => {
 
     setIsSaving(true);
     try {
-      // Create update payload with only non-null and non-empty values
-      const updatePayload: any = {};
+      // Get only the changed fields to minimize payload
+      const changedFields = getChangedFields(device, editedDevice);
       
-      // Only include fields that have been changed and are not empty strings
-      Object.keys(editedDevice).forEach(key => {
-        const value = editedDevice[key];
-        if (value !== null && value !== undefined && value !== '') {
-          updatePayload[key] = value;
-        }
-      });
+      // Sanitize the data to ensure proper null handling
+      const sanitizedData = sanitizeDeviceData(changedFields);
+      
+      // Validate the update data
+      const validation = validateDeviceUpdate(sanitizedData);
+      
+      if (!validation.isValid) {
+        logError('DeviceDetails', 'Device validation failed', new Error('Validation errors: ' + JSON.stringify(validation.errors)));
+        setValidationErrors(validation.errors);
+        setIsSaving(false);
+        return;
+      }
+      
+      // Clear any previous validation errors
+      setValidationErrors({});
 
       // Add device ID
-      updatePayload.id = device.id;
+      sanitizedData.id = device.id;
 
-      await deviceAPI.update(device.id, updatePayload);
+      logInfo('DeviceDetails', 'Sending device update payload', { 
+        deviceId: device.id, 
+        payload: sanitizedData,
+        validationWarnings: validation.warnings
+      });
+
+      await deviceAPI.update(device.id, sanitizedData);
       
       // Update the device in the IoT context
       updateDeviceStatus(device.id, { ...device, ...editedDevice });
@@ -693,10 +711,20 @@ export const DeviceDetailsSection: React.FC = () => {
 
   const handleInputChange = (field: string, value: string) => {
     if (!editedDevice) return;
+    
+    // Convert empty strings to null for better backend handling
+    const processedValue = value === '' ? null : value;
+    
     setEditedDevice((prev: any) => ({
       ...prev,
-      [field]: value
+      [field]: processedValue
     }));
+    
+    logInfo('DeviceDetails', 'Field value changed', { 
+      field, 
+      originalValue: value, 
+      processedValue: processedValue 
+    });
   };
 
   const sendMessage = async () => {
@@ -818,12 +846,19 @@ export const DeviceDetailsSection: React.FC = () => {
                 <div>
                   <label className="text-sm font-medium text-slate-600">Device Name</label>
                   {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedDevice?.name || ''}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <div>
+                      <input
+                        type="text"
+                        value={editedDevice?.name || ''}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
+                          validationErrors.name ? 'border-red-500' : 'border-slate-300'
+                        }`}
+                      />
+                      {validationErrors.name && (
+                        <p className="text-red-500 text-sm mt-1">{validationErrors.name}</p>
+                      )}
+                    </div>
                   ) : (
                     <p className="text-slate-800">{device.name}</p>
                   )}

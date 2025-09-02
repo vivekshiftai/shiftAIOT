@@ -5,6 +5,7 @@ import com.iotplatform.model.Device.DeviceType;
 import com.iotplatform.model.Device.Protocol;
 
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
 
 public class DeviceUpdateRequest {
     
@@ -12,14 +13,16 @@ public class DeviceUpdateRequest {
     @Size(max = 100, message = "Device name must be less than 100 characters")
     private String name;
     
+    // Type can be null for updates
     private DeviceType type;
     
     @Size(max = 200, message = "Location must be less than 200 characters")
     private String location;
     
+    // Protocol can be null for updates
     private Protocol protocol;
     
-    // Basic device info (optional)
+    // Basic device info (optional) - all can be null
     @Size(max = 100, message = "Manufacturer must be less than 100 characters")
     private String manufacturer;
     
@@ -29,13 +32,14 @@ public class DeviceUpdateRequest {
     @Size(max = 500, message = "Description must be less than 500 characters")
     private String description;
     
-    // Connection details (optional)
+    // Connection details (optional) - all can be null
     @Size(max = 45, message = "IP address must be less than 45 characters")
     private String ipAddress;
     
+    // Port can be null for updates
     private Integer port;
     
-    // MQTT specific fields (optional)
+    // MQTT specific fields (optional) - all can be null
     @Size(max = 255, message = "MQTT broker must be less than 255 characters")
     private String mqttBroker;
     
@@ -48,7 +52,7 @@ public class DeviceUpdateRequest {
     @Size(max = 255, message = "MQTT password must be less than 255 characters")
     private String mqttPassword;
     
-    // HTTP specific fields (optional)
+    // HTTP specific fields (optional) - all can be null
     @Size(max = 500, message = "HTTP endpoint must be less than 500 characters")
     private String httpEndpoint;
     
@@ -58,22 +62,23 @@ public class DeviceUpdateRequest {
     @Size(max = 1000, message = "HTTP headers must be less than 1000 characters")
     private String httpHeaders;
     
-    // COAP specific fields (optional)
+    // COAP specific fields (optional) - all can be null
     @Size(max = 255, message = "COAP host must be less than 255 characters")
     private String coapHost;
     
+    // COAP port can be null for updates
     private Integer coapPort;
     
     @Size(max = 255, message = "COAP path must be less than 255 characters")
     private String coapPath;
     
-    // Status field (optional)
+    // Status field (optional) - can be null
     private Device.DeviceStatus status;
     
-    // Assigned user field (optional)
+    // Assigned user field (optional) - can be null
     private String assignedUserId;
     
-    // Assigned by field (optional)
+    // Assigned by field (optional) - can be null
     private String assignedBy;
     
     // Getters and Setters
