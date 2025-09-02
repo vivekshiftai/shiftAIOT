@@ -1,11 +1,11 @@
 @echo off
 echo ========================================
-echo Fixing Notifications Table Schema
+echo Updating shiftAIOT Database Schema
 echo ========================================
 echo.
 
-echo This script will fix the notifications table schema by adding missing columns.
-echo This is required to resolve device deletion errors.
+echo This script will update your existing database schema to include
+echo all required columns for the notifications table.
 echo.
 
 echo Please ensure your PostgreSQL database is running and accessible.
@@ -32,24 +32,26 @@ if "%DB_USER%"=="" (
 )
 
 echo.
-echo Running database migration...
+echo Updating database schema...
 echo.
 
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "backend/src/main/resources/db-migration-fix-notifications-schema.sql"
+psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "backend/src/main/resources/schema.sql"
 
 if %ERRORLEVEL% EQU 0 (
     echo.
     echo ========================================
-    echo ✅ Schema fix completed successfully!
+    echo ✅ Schema update completed successfully!
     echo ========================================
     echo.
-    echo The notifications table has been updated with all required columns.
-    echo Device deletion should now work properly.
+    echo Your database now has the complete schema including:
+    echo - All required notifications table columns
+    echo - Proper indexes for optimal performance
+    echo - Device deletion should now work properly
     echo.
 ) else (
     echo.
     echo ========================================
-    echo ❌ Schema fix failed!
+    echo ❌ Schema update failed!
     echo ========================================
     echo.
     echo Please check the error messages above and try again.

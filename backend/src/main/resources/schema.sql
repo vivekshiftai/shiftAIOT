@@ -1,5 +1,13 @@
 -- Complete Database Schema for shiftAIOT Platform
 -- This script creates all necessary tables with proper existence checks
+--
+-- NOTIFICATIONS TABLE STRUCTURE:
+-- The notifications table includes all required columns for the Java entity:
+-- - Basic fields: id, title, message, category, read, device_id, rule_id, user_id, organization_id, created_at
+-- - Enhanced device info: device_name, device_type, device_location, device_status, device_manufacturer, device_model
+-- - Rules counts: maintenance_rules_count, safety_rules_count, total_rules_count
+-- - All fields have proper defaults and constraints
+-- - Comprehensive indexing for optimal performance
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
@@ -244,14 +252,14 @@ CREATE TABLE IF NOT EXISTS notifications (
     
     -- Enhanced device information fields
     device_name VARCHAR(255),
-    device_type VARCHAR(50),
+    device_type VARCHAR(100),
     device_location VARCHAR(255),
     device_status VARCHAR(50),
-    maintenance_rules_count INTEGER,
-    safety_rules_count INTEGER,
-    total_rules_count INTEGER,
-    device_manufacturer VARCHAR(100),
-    device_model VARCHAR(100),
+    maintenance_rules_count INTEGER DEFAULT 0,
+    safety_rules_count INTEGER DEFAULT 0,
+    total_rules_count INTEGER DEFAULT 0,
+    device_manufacturer VARCHAR(255),
+    device_model VARCHAR(255),
     
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
@@ -413,12 +421,16 @@ CREATE INDEX IF NOT EXISTS idx_devices_organization ON devices(organization_id);
 CREATE INDEX IF NOT EXISTS idx_devices_assigned_user ON devices(assigned_user_id);
 CREATE INDEX IF NOT EXISTS idx_devices_assigned_by ON devices(assigned_by);
 CREATE INDEX IF NOT EXISTS idx_rules_organization ON rules(organization_id);
-CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
-CREATE INDEX IF NOT EXISTS idx_notifications_organization ON notifications(organization_id);
-CREATE INDEX IF NOT EXISTS idx_notifications_device ON notifications(device_id);
-CREATE INDEX IF NOT EXISTS idx_notifications_rule ON notifications(rule_id);
+
+-- Comprehensive notifications table indexes
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_organization_id ON notifications(organization_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_device_id ON notifications(device_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_rule_id ON notifications(rule_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);
 CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
+CREATE INDEX IF NOT EXISTS idx_notifications_category ON notifications(category);
+
 CREATE INDEX IF NOT EXISTS idx_notification_templates_organization ON notification_templates(organization_id);
 CREATE INDEX IF NOT EXISTS idx_notification_templates_type ON notification_templates(type);
 CREATE INDEX IF NOT EXISTS idx_notification_templates_active ON notification_templates(is_active);
