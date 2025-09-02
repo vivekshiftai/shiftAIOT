@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -52,5 +53,7 @@ public interface DeviceMaintenanceRepository extends JpaRepository<DeviceMainten
     @Query("SELECT dm FROM DeviceMaintenance dm WHERE dm.status = :status AND dm.nextMaintenance <= :date")
     List<DeviceMaintenance> findByStatusAndNextMaintenanceLessThanEqual(@Param("status") DeviceMaintenance.Status status, @Param("date") LocalDate date);
     
-    void deleteByDeviceId(String deviceId);
+    @Modifying
+    @Query("DELETE FROM DeviceMaintenance dm WHERE dm.device.id = :deviceId")
+    void deleteByDeviceId(@Param("deviceId") String deviceId);
 }
