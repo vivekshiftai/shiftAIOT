@@ -691,9 +691,9 @@ public class PDFProcessingController {
      */
     @Operation(
         summary = "List All Collections",
-        description = "List all available collections"
+        description = "List all available PDF collections"
     )
-    @GetMapping("/debug/collections")
+    @GetMapping("/collections")
     public ResponseEntity<?> listAllCollections() {
         
         log.info("List all collections request received");
@@ -701,29 +701,14 @@ public class PDFProcessingController {
         try {
             // Call external service directly
             String url = config.getBaseUrl() + "/debug/collections";
-            log.info("Calling external service: {}", url);
+            ResponseEntity<Object> response = restTemplate.getForEntity(url, Object.class);
             
-            // Add headers for better compatibility
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-            
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-            
-            ResponseEntity<Object> response = restTemplate.exchange(url, HttpMethod.GET, entity, Object.class);
-            
-            log.info("List all collections completed successfully. Response status: {}", response.getStatusCode());
-            log.debug("Response body: {}", response.getBody());
-            
+            log.info("List all collections completed successfully");
             return ResponseEntity.ok(response.getBody());
             
         } catch (org.springframework.web.client.HttpClientErrorException e) {
-            log.error("HTTP client error when listing collections: {} - {}", e.getStatusCode(), e.getMessage());
+            log.error("HTTP client error when listing collections: {}", e.getMessage());
             return ResponseEntity.status(e.getStatusCode())
-                .body(ErrorResponse.of("External service error: " + e.getMessage()));
-        } catch (org.springframework.web.client.HttpServerErrorException e) {
-            log.error("HTTP server error when listing collections: {} - {}", e.getStatusCode(), e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ErrorResponse.of("External service error: " + e.getMessage()));
         } catch (org.springframework.web.client.ResourceAccessException e) {
             log.error("Resource access error when listing collections: {}", e.getMessage());
@@ -735,67 +720,6 @@ public class PDFProcessingController {
                 .body(ErrorResponse.of("Failed to list collections from external service: " + e.getMessage()));
         }
     }
-
-    /**
-     * Debug health check.
-     * 
-     * @return Debug health check response
-     */
-    @Operation(
-        summary = "Debug Health Check",
-        description = "Comprehensive health check"
-    )
-    @GetMapping("/debug/health")
-    public ResponseEntity<?> debugHealthCheck() {
-        
-        log.info("Debug health check request received");
-        
-        try {
-            // Call external service directly
-            String url = config.getBaseUrl() + "/debug/health";
-            ResponseEntity<Object> response = restTemplate.getForEntity(url, Object.class);
-            
-            log.info("Debug health check completed successfully");
-            return ResponseEntity.ok(response.getBody());
-            
-        } catch (Exception e) {
-            log.error("Debug health check failed: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ErrorResponse.of("Failed to perform debug health check from external service"));
-        }
-    }
-
-    /**
-     * Test images.
-     * 
-     * @param pdfName The name of the PDF
-     * @return Test images response
-     */
-    @Operation(
-        summary = "Test Images",
-        description = "Test image storage and retrieval"
-    )
-    @GetMapping("/debug/test-images/{pdfName}")
-    public ResponseEntity<?> testImages(@PathVariable String pdfName) {
-        
-        log.info("Test images request received for: {}", pdfName);
-        
-        try {
-            // Call external service directly
-            String url = config.getBaseUrl() + "/debug/test-images/" + pdfName;
-            ResponseEntity<Object> response = restTemplate.getForEntity(url, Object.class);
-            
-            log.info("Test images completed successfully: {}", pdfName);
-            return ResponseEntity.ok(response.getBody());
-            
-        } catch (Exception e) {
-            log.error("Test images failed for {}: {}", pdfName, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ErrorResponse.of("Failed to test images from external service"));
-        }
-    }
-
-
 
     /**
      * Global health check.

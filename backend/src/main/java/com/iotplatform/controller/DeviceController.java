@@ -781,53 +781,6 @@ public class DeviceController {
         }
     }
 
-    @GetMapping("/debug-db")
-    public ResponseEntity<?> debugDatabase(@RequestParam String email) {
-        logger.info("🔍 Debug database endpoint called for email: {}", email);
-        
-        try {
-            // Check if user exists in database
-            Optional<User> userOpt = userRepository.findByEmail(email);
-            
-            if (userOpt.isPresent()) {
-                User user = userOpt.get();
-                logger.info("✅ User found in database: {}", user.getEmail());
-                
-                Map<String, Object> userMap = new HashMap<>();
-                userMap.put("id", user.getId());
-                userMap.put("email", user.getEmail());
-                userMap.put("firstName", user.getFirstName());
-                userMap.put("lastName", user.getLastName());
-                userMap.put("role", user.getRole());
-                userMap.put("organizationId", user.getOrganizationId());
-                userMap.put("enabled", user.isEnabled());
-                userMap.put("createdAt", user.getCreatedAt());
-                userMap.put("updatedAt", user.getUpdatedAt());
-                
-                Map<String, Object> response = new HashMap<>();
-                response.put("status", "found");
-                response.put("user", userMap);
-                response.put("timestamp", new Date());
-                return ResponseEntity.ok(response);
-            } else {
-                logger.warn("❌ User not found in database for email: {}", email);
-                return ResponseEntity.status(404).body(Map.of(
-                    "status", "not_found",
-                    "message", "User not found in database",
-                    "email", email,
-                    "timestamp", new Date()
-                ));
-            }
-        } catch (Exception e) {
-            logger.error("❌ Database check failed for email: {}", email, e);
-            return ResponseEntity.status(500).body(Map.of(
-                "status", "error",
-                "message", "Database check failed: " + e.getMessage(),
-                "timestamp", new Date()
-            ));
-        }
-    }
-
     @GetMapping("/health")
     public ResponseEntity<?> healthCheck() {
         logger.info("🏥 Health check endpoint called");
@@ -837,50 +790,6 @@ public class DeviceController {
             "service", "IoT Platform Backend",
             "version", "1.0.0"
         ));
-    }
-
-    @GetMapping("/debug-auth")
-    public ResponseEntity<?> debugAuthentication(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        logger.info("🔍 Debug authentication endpoint called");
-        
-        if (userDetails == null) {
-            logger.warn("❌ userDetails is null");
-            return ResponseEntity.status(401).body(Map.of(
-                "status", "unauthenticated",
-                "message", "No user details found",
-                "timestamp", new Date()
-            ));
-        }
-        
-        if (userDetails.getUser() == null) {
-            logger.warn("❌ userDetails.getUser() is null");
-            return ResponseEntity.status(401).body(Map.of(
-                "status", "unauthenticated",
-                "message", "User object is null",
-                "timestamp", new Date()
-            ));
-        }
-        
-        User user = userDetails.getUser();
-        logger.info("✅ User authenticated successfully: {}", user.getEmail());
-        
-        Map<String, Object> userMap = new HashMap<>();
-        userMap.put("id", user.getId());
-        userMap.put("email", user.getEmail());
-        userMap.put("firstName", user.getFirstName());
-        userMap.put("lastName", user.getLastName());
-        userMap.put("role", user.getRole());
-        userMap.put("organizationId", user.getOrganizationId());
-        userMap.put("enabled", user.isEnabled());
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "authenticated");
-        response.put("user", userMap);
-        response.put("authorities", userDetails.getAuthorities().stream()
-            .map(Object::toString)
-            .collect(java.util.stream.Collectors.toList()));
-        response.put("timestamp", new Date());
-        return ResponseEntity.ok(response);
     }
 
     /**

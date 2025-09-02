@@ -263,15 +263,6 @@ export const DeviceDetailsSection: React.FC = () => {
 
   const device = devices.find(d => d.id === deviceId);
 
-  // Debug logging
-  console.log('🔍 DeviceDetailsSection Debug:', {
-    deviceId,
-    devicesCount: devices.length,
-    deviceFound: !!device,
-    isInitialLoading,
-    device: device
-  });
-
   // Function definitions - must be before useEffect that calls them
   const fetchRealTimeData = async () => {
     if (!device) return;
@@ -357,50 +348,10 @@ export const DeviceDetailsSection: React.FC = () => {
     }
   };
 
-  const debugDeviceDocumentation = async () => {
-    if (!device) return;
-    
-    try {
-      console.log('🔍 Debugging device documentation for:', device.id);
-      
-      // Call the debug endpoint
-      const debugResponse = await deviceAPI.getDeviceDebugDocumentation(device.id);
-      console.log('🔍 Debug response:', debugResponse);
-      
-      // Display debug info in an alert for now
-      const debugInfo = debugResponse.data;
-      const debugMessage = `
-Device Documentation Debug Info:
-- Device: ${debugInfo.deviceName} (${debugInfo.deviceId})
-- Organization: ${debugInfo.organizationId}
-- Rules: ${debugInfo.rulesCount}
-- Maintenance: ${debugInfo.maintenanceCount}
-- Safety: ${debugInfo.safetyCount}
-- PDF Documents: ${debugInfo.pdfDocumentsCount}
-
-PDF Documents:
-${debugInfo.pdfDocuments.map((doc: any) => 
-  `- ${doc.originalFilename} (${doc.documentType}) - Status: ${doc.processingStatus}`
-).join('\n')}
-
-Device Config:
-${JSON.stringify(debugInfo.deviceConfig, null, 2)}
-      `;
-      
-      alert(debugMessage);
-      
-    } catch (error) {
-      console.error('❌ Failed to debug device documentation:', error);
-      alert('Failed to debug device documentation. Check console for details.');
-    }
-  };
-
   const loadDevicePDFs = async () => {
     if (!device) return;
     
     try {
-      console.log('📄 Loading PDFs for device:', device.id);
-      
       // Get device PDF results which includes PDF documents
       const pdfResultsResponse = await deviceAPI.getDevicePDFResults(device.id);
       
@@ -434,12 +385,6 @@ ${JSON.stringify(debugInfo.deviceConfig, null, 2)}
           setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. How can I help you with this device?`);
         }
         
-        console.log('✅ Device PDFs loaded successfully:', { 
-          deviceId: device.id, 
-          totalPDFs: pdfDocuments.length,
-          filteredPDFs: filteredPDFs.length 
-        });
-        
         logInfo('DeviceDetails', 'Device PDFs loaded successfully', { 
           deviceId: device.id, 
           totalPDFs: pdfDocuments.length,
@@ -447,7 +392,6 @@ ${JSON.stringify(debugInfo.deviceConfig, null, 2)}
         });
       } else {
         // Fallback to old method if no PDF documents found
-        console.log('📄 No PDF documents found, trying fallback method...');
         
         // Load all PDFs from backend API with timeout
         const pdfPromise = pdfAPI.listPDFs(0, 100);
@@ -1106,7 +1050,7 @@ ${JSON.stringify(debugInfo.deviceConfig, null, 2)}
                     </div>
                   </div>
                   <button
-                    onClick={debugDeviceDocumentation}
+                    onClick={() => navigate('/knowledge-base')}
                     className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                     title="Debug device documentation"
                   >

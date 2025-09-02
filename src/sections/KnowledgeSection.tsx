@@ -95,7 +95,7 @@ export const KnowledgeSection: React.FC = () => {
   const refreshCollections = async () => {
     try {
       setLoading(true);
-      const collectionsResponse = await pdfAPI.debug.listAllCollections();
+      const collectionsResponse = await pdfAPI.listAllCollections();
       console.log('Collections refresh response:', collectionsResponse);
       
       // Handle both response formats from external service
@@ -144,7 +144,7 @@ export const KnowledgeSection: React.FC = () => {
         
         // Load PDF documents from external collections API
         try {
-          const collectionsResponse = await pdfAPI.debug.listAllCollections();
+          const collectionsResponse = await pdfAPI.listAllCollections();
           console.log('Collections response:', collectionsResponse);
           
           // Handle both response formats from external service

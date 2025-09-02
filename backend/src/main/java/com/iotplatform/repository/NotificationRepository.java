@@ -25,5 +25,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Stri
     long countUnreadByOrganizationIdAndUserId(@Param("organizationId") String organizationId, 
                                               @Param("userId") String userId);
     
+    @Query("SELECT n FROM Notification n WHERE n.deviceId = :deviceId")
+    List<Notification> findByDeviceId(@Param("deviceId") String deviceId);
+    
     void deleteByDeviceId(String deviceId);
 }

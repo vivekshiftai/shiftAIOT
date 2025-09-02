@@ -558,6 +558,11 @@ export const pdfAPI = {
   getServiceInfo: async () => {
     return api.get('/api/pdf/info');
   },
+
+  // List all collections from external service
+  listAllCollections: async () => {
+    return api.get('/api/pdf/collections');
+  },
 };
 
 // Push Notification API

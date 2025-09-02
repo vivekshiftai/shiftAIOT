@@ -37,59 +37,15 @@ public class NotificationController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('NOTIFICATION_READ')")
-    public ResponseEntity<List<Notification>> getAllNotifications(@AuthenticationPrincipal CustomUserDetails userDetails) {
+    public ResponseEntity<List<Notification>> getNotifications(@AuthenticationPrincipal CustomUserDetails userDetails) {
         if (userDetails == null || userDetails.getUser() == null) {
             return ResponseEntity.status(401).build();
         }
+        
         User user = userDetails.getUser();
         List<Notification> notifications = notificationService.getUserNotifications(user.getOrganizationId(), user.getId());
         return ResponseEntity.ok(notifications);
     }
-
-    @PostMapping("/test")
-    @PreAuthorize("hasAuthority('NOTIFICATION_WRITE')")
-    public ResponseEntity<?> createTestNotification(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails == null || userDetails.getUser() == null) {
-            return ResponseEntity.status(401).build();
-        }
-        
-        User user = userDetails.getUser();
-        
-        try {
-            // Create a test notification
-            Notification testNotification = new Notification();
-            testNotification.setTitle("Test Notification");
-            testNotification.setMessage("This is a test notification to verify the notification system is working.");
-            testNotification.setCategory(Notification.NotificationCategory.CUSTOM);
-            testNotification.setUserId(user.getId());
-            testNotification.setOrganizationId(user.getOrganizationId());
-            testNotification.setRead(false);
-            
-            // Use preference checking
-            Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(user.getId(), testNotification);
-            
-            if (createdNotification.isPresent()) {
-                return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Test notification created successfully",
-                    "notification", createdNotification.get()
-                ));
-            } else {
-                return ResponseEntity.ok(Map.of(
-                    "success", false,
-                    "message", "Test notification blocked by user preferences",
-                    "userId", user.getId()
-                ));
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of(
-                "success", false,
-                "error", "Failed to create test notification: " + e.getMessage()
-            ));
-        }
-    }
-
-
 
     @PostMapping
     @PreAuthorize("hasAuthority('NOTIFICATION_WRITE')")

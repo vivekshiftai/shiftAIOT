@@ -18,7 +18,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { userAPI } from '../services/api';
 import { ConversationConfigTab } from '../components/Settings/ConversationConfigTab';
 import { ComprehensiveProfileEditor } from '../components/Settings/ComprehensiveProfileEditor';
-import { NotificationTestPanel } from '../components/Settings/NotificationTestPanel';
 import { NotificationTemplateManager } from '../components/Settings/NotificationTemplateManager';
 import { NotificationSettingsTab } from '../components/Settings/NotificationSettingsTab';
 import { DashboardSettingsTab } from '../components/Settings/DashboardSettingsTab';

@@ -355,101 +355,13 @@ export class PDFProcessingService {
   // Get service info
   async getServiceInfo(): Promise<any> {
     try {
-      console.log('Getting service info');
-
       const response = await pdfAPI.getServiceInfo();
-      
-      console.log('Service info successful:', response.data);
       return response.data;
-
     } catch (error) {
       console.error('Service info failed:', error);
       throw error;
     }
   }
-
-  // Debug methods
-  debug = {
-    // Debug collection analysis
-    collectionAnalysis: async (pdfName: string): Promise<any> => {
-      try {
-        console.log('Performing debug collection analysis for PDF:', pdfName);
-
-        const response = await pdfAPI.debug.collectionAnalysis(pdfName);
-        
-        console.log('Debug collection analysis successful:', response.data);
-        return response.data;
-
-      } catch (error) {
-        console.error('Debug collection analysis failed:', error);
-        throw error;
-      }
-    },
-
-    // Test query pipeline
-    testQueryPipeline: async (pdfName: string, query: string): Promise<any> => {
-      try {
-        console.log('Testing query pipeline for PDF:', pdfName, 'Query:', query);
-
-        const response = await pdfAPI.debug.testQueryPipeline(pdfName, query);
-        
-        console.log('Test query pipeline successful:', response.data);
-        return response.data;
-
-      } catch (error) {
-        console.error('Test query pipeline failed:', error);
-        throw error;
-      }
-    },
-
-    // List all collections
-    listAllCollections: async (): Promise<any> => {
-      try {
-        console.log('Listing all collections');
-
-        const response = await pdfAPI.debug.listAllCollections();
-        
-        console.log('List all collections successful:', response.data);
-        return response.data;
-
-      } catch (error) {
-        console.error('List all collections failed:', error);
-        throw error;
-      }
-    },
-
-    // Debug health check
-    healthCheck: async (): Promise<any> => {
-      try {
-        console.log('Performing debug health check');
-
-        const response = await pdfAPI.debug.healthCheck();
-        
-        console.log('Debug health check successful:', response.data);
-        return response.data;
-
-      } catch (error) {
-        console.error('Debug health check failed:', error);
-        throw error;
-      }
-    },
-
-    // Test images
-    testImages: async (pdfName: string): Promise<any> => {
-      try {
-        console.log('Testing images for PDF:', pdfName);
-
-        const response = await pdfAPI.debug.testImages(pdfName);
-        
-        console.log('Test images successful:', response.data);
-        return response.data;
-
-      } catch (error) {
-        console.error('Test images failed:', error);
-        throw error;
-      }
-    }
-  };
 
   // Query PDF content through backend
   async queryPDF(request: PDFQueryRequest): Promise<PDFQueryResponse> {

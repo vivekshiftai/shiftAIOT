@@ -690,9 +690,23 @@ public class DeviceService {
             
             // 7. Delete notifications related to this device
             try {
-                notificationRepository.deleteByDeviceId(trimmedId);
-                logger.info("✅ Deleted notifications for device: {}", trimmedId);
-                successfulDeletions.add("notifications");
+                // Check if notifications table has the required columns before attempting deletion
+                try {
+                    notificationRepository.deleteByDeviceId(trimmedId);
+                    logger.info("✅ Deleted notifications for device: {}", trimmedId);
+                    successfulDeletions.add("notifications");
+                } catch (Exception e) {
+                    // Check if this is a schema mismatch error
+                    if (e.getMessage() != null && e.getMessage().contains("column") && e.getMessage().contains("does not exist")) {
+                        logger.warn("⚠️ Notifications table schema mismatch detected for device: {}. Skipping notification deletion.", trimmedId);
+                        logger.warn("⚠️ Schema error: {}", e.getMessage());
+                        successfulDeletions.add("notifications (skipped due to schema mismatch)");
+                        deletionErrors.add("Notifications deletion skipped due to schema mismatch: " + e.getMessage());
+                    } else {
+                        // Re-throw if it's not a schema issue
+                        throw e;
+                    }
+                }
             } catch (Exception e) {
                 String errorMsg = "Failed to delete notifications: " + e.getMessage();
                 logger.error("❌ {}", errorMsg, e);
@@ -702,9 +716,23 @@ public class DeviceService {
             
             // 8. Delete maintenance schedules related to this device
             try {
-                maintenanceScheduleRepository.deleteByDeviceId(trimmedId);
-                logger.info("✅ Deleted maintenance schedules for device: {}", trimmedId);
-                successfulDeletions.add("maintenance schedules");
+                // Check if maintenance_schedule table exists and has required columns
+                try {
+                    maintenanceScheduleRepository.deleteByDeviceId(trimmedId);
+                    logger.info("✅ Deleted maintenance schedules for device: {}", trimmedId);
+                    successfulDeletions.add("maintenance schedules");
+                } catch (Exception e) {
+                    // Check if this is a schema mismatch error
+                    if (e.getMessage() != null && e.getMessage().contains("column") && e.getMessage().contains("does not exist")) {
+                        logger.warn("⚠️ Maintenance schedules table schema mismatch detected for device: {}. Skipping maintenance schedule deletion.", trimmedId);
+                        logger.warn("⚠️ Schema error: {}", e.getMessage());
+                        successfulDeletions.add("maintenance schedules (skipped due to schema mismatch)");
+                        deletionErrors.add("Maintenance schedules deletion skipped due to schema mismatch: " + e.getMessage());
+                    } else {
+                        // Re-throw if it's not a schema issue
+                        throw e;
+                    }
+                }
             } catch (Exception e) {
                 String errorMsg = "Failed to delete maintenance schedules: " + e.getMessage();
                 logger.error("❌ {}", errorMsg, e);
