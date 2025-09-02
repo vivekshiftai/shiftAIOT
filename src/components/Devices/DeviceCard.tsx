@@ -151,7 +151,6 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 
   // Simulate PDF processing progress
   const [progress, setProgress] = useState(0);
-  const [startTime] = useState(Date.now());
 
   // Real PDF processing progress based on status
   useEffect(() => {
