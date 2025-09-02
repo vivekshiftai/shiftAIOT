@@ -91,24 +91,36 @@ class NotificationService {
   // Get notification title based on event type
   private getNotificationTitle(event: NotificationEvent): string {
     switch (event.type) {
-      case 'device_assignment':
+      case 'DEVICE_CREATION':
+        return 'New Device Created';
+      case 'DEVICE_ASSIGNMENT':
         return 'Device Assignment';
-      case 'device_creation':
-        return 'Device Created';
-      case 'maintenance_schedule':
+      case 'DEVICE_UPDATE':
+        return 'Device Updated';
+      case 'MAINTENANCE_SCHEDULE':
         return 'Maintenance Scheduled';
-      case 'rule_triggered':
-        return 'Rule Triggered';
-      case 'device_offline':
-        return 'Device Offline';
-      case 'device_online':
+      case 'MAINTENANCE_REMINDER':
+        return 'Maintenance Reminder';
+      case 'DEVICE_OFFLINE':
+        return 'Device Offline Alert';
+      case 'DEVICE_ONLINE':
         return 'Device Online';
-      case 'system_update':
+      case 'TEMPERATURE_ALERT':
+        return 'Temperature Alert';
+      case 'BATTERY_LOW':
+        return 'Battery Low Alert';
+      case 'RULE_TRIGGERED':
+        return 'Rule Triggered';
+      case 'RULE_CREATED':
+        return 'New Rule Created';
+      case 'SYSTEM_UPDATE':
         return 'System Update';
-      case 'security_alert':
+      case 'SECURITY_ALERT':
         return 'Security Alert';
-      case 'performance_alert':
+      case 'PERFORMANCE_ALERT':
         return 'Performance Alert';
+      case 'SAFETY_ALERT':
+        return 'Safety Alert';
       default:
         return 'System Notification';
     }
@@ -117,62 +129,44 @@ class NotificationService {
   // Get notification message based on event type
   private getNotificationMessage(event: NotificationEvent): string {
     switch (event.type) {
-      case 'device_assignment':
-        return `Device ${event.deviceId || 'Unknown'} has been assigned to you.`;
-      case 'device_creation':
-        return `New device ${event.deviceId || 'Unknown'} has been created.`;
-      case 'maintenance_schedule':
-        return `Maintenance task scheduled for device ${event.deviceId || 'Unknown'}.`;
-      case 'rule_triggered':
-        return `Monitoring rule has been triggered for device ${event.deviceId || 'Unknown'}.`;
-      case 'device_offline':
-        return `Device ${event.deviceId || 'Unknown'} is now offline.`;
-      case 'device_online':
-        return `Device ${event.deviceId || 'Unknown'} is now online.`;
-      case 'system_update':
-        return 'System has been updated with new features.';
-      case 'security_alert':
-        return 'Security alert detected. Please review immediately.';
-      case 'performance_alert':
-        return 'Performance issue detected. Please investigate.';
+      case 'DEVICE_CREATION':
+        return `A new device has been created: ${event.deviceName || 'Unknown Device'}`;
+      case 'DEVICE_ASSIGNMENT':
+        return `You have been assigned a new device: ${event.deviceName || 'Unknown Device'}`;
+      case 'DEVICE_UPDATE':
+        return `Device ${event.deviceName || 'Unknown Device'} has been updated`;
+      case 'MAINTENANCE_SCHEDULE':
+        return `Maintenance has been scheduled for device: ${event.deviceName || 'Unknown Device'}`;
+      case 'MAINTENANCE_REMINDER':
+        return `Maintenance reminder for device: ${event.deviceName || 'Unknown Device'}`;
+      case 'DEVICE_OFFLINE':
+        return `Device ${event.deviceName || 'Unknown Device'} is offline`;
+      case 'DEVICE_ONLINE':
+        return `Device ${event.deviceName || 'Unknown Device'} is back online`;
+      case 'TEMPERATURE_ALERT':
+        return `Temperature alert for device: ${event.deviceName || 'Unknown Device'}`;
+      case 'BATTERY_LOW':
+        return `Battery low alert for device: ${event.deviceName || 'Unknown Device'}`;
+      case 'RULE_TRIGGERED':
+        return `Monitoring rule triggered for device: ${event.deviceName || 'Unknown Device'}`;
+      case 'RULE_CREATED':
+        return `New monitoring rule created for device: ${event.deviceName || 'Unknown Device'}`;
+      case 'SYSTEM_UPDATE':
+        return 'System has been updated';
+      case 'SECURITY_ALERT':
+        return 'Security alert detected';
+      case 'PERFORMANCE_ALERT':
+        return 'Performance issue detected';
+      case 'SAFETY_ALERT':
+        return 'Safety alert detected';
       default:
-        return 'A system event has occurred.';
+        return 'A system event has occurred';
     }
   }
 
   // Get notification category based on event type
   private getNotificationCategory(event: NotificationEvent): string {
-    // Map event types to notification categories
-    switch (event.type) {
-      case 'device_assignment':
-        return 'DEVICE_ASSIGNMENT';
-      case 'device_creation':
-        return 'DEVICE_CREATION';
-      case 'maintenance_assignment':
-        return 'MAINTENANCE_ASSIGNMENT';
-      case 'rule_created':
-        return 'RULE_CREATED';
-      case 'device_offline':
-        return 'DEVICE_OFFLINE';
-      case 'device_online':
-        return 'DEVICE_ONLINE';
-      case 'temperature_alert':
-        return 'TEMPERATURE_ALERT';
-      case 'battery_low':
-        return 'BATTERY_LOW';
-      case 'rule_triggered':
-        return 'RULE_TRIGGERED';
-      case 'system_update':
-        return 'SYSTEM_UPDATE';
-      case 'security_alert':
-        return 'SECURITY_ALERT';
-      case 'performance_alert':
-        return 'PERFORMANCE_ALERT';
-      case 'safety_alert':
-        return 'SAFETY_ALERT';
-      default:
-        return 'CUSTOM';
-    }
+    return event.type; // The event type directly maps to the notification category
   }
 
   private getAuthToken(): string {

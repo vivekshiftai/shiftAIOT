@@ -2,6 +2,11 @@
 -- This script updates the notifications table to use categories instead of types
 -- and adds enhanced device information fields
 
+-- Step 0: Fix device_maintenance component_name constraint issue
+-- This ensures component_name can be null and has a default value
+ALTER TABLE device_maintenance ALTER COLUMN component_name DROP NOT NULL;
+ALTER TABLE device_maintenance ALTER COLUMN component_name SET DEFAULT 'General';
+
 -- Step 1: Add new columns to notifications table
 ALTER TABLE notifications 
 ADD COLUMN IF NOT EXISTS category VARCHAR(50),

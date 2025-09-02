@@ -357,7 +357,10 @@ public class MaintenanceScheduleService {
                 
                 // Set validated fields with actual values (no defaults)
                 maintenance.setTaskName(taskTitle);
+                maintenance.setComponentName(taskTitle != null && !taskTitle.trim().isEmpty() ? taskTitle.trim() : "General");
                 maintenance.setDescription(maintenanceData.getDescription().trim());
+                
+                log.debug("Set componentName to: '{}' for task: '{}'", maintenance.getComponentName(), taskTitle);
                 maintenance.setFrequency(maintenanceData.getFrequency().trim());
                 maintenance.setPriority(convertPriority(maintenanceData.getPriority().trim()));
                 maintenance.setEstimatedDuration(maintenanceData.getEstimatedDuration().trim());

@@ -59,29 +59,45 @@ export const NotificationsSection: React.FC = () => {
     }
   };
 
-  const getNotificationIcon = (type: Notification['type']) => {
-    switch (type) {
-      case 'error':
-        return <AlertTriangle className="w-5 h-5 text-error-500" />;
-      case 'warning':
-        return <AlertTriangle className="w-5 h-5 text-warning-500" />;
-      case 'success':
-        return <CheckCircle className="w-5 h-5 text-success-500" />;
+  const getNotificationIcon = (category: Notification['category']) => {
+    switch (category) {
+      case 'DEVICE_OFFLINE':
+      case 'TEMPERATURE_ALERT':
+      case 'BATTERY_LOW':
+      case 'SECURITY_ALERT':
+      case 'SAFETY_ALERT':
+        return <AlertTriangle className="w-5 h-5 text-red-500" />;
+      case 'DEVICE_ONLINE':
+      case 'DEVICE_CREATION':
+      case 'RULE_CREATED':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'MAINTENANCE_SCHEDULE':
+      case 'MAINTENANCE_REMINDER':
+      case 'MAINTENANCE_ASSIGNMENT':
+        return <Info className="w-5 h-5 text-blue-500" />;
       default:
-        return <Info className="w-5 h-5 text-secondary-500" />;
+        return <Bell className="w-5 h-5 text-gray-500" />;
     }
   };
 
-  const getNotificationBadge = (type: Notification['type']) => {
-    switch (type) {
-      case 'error':
-        return 'bg-error-500/20 text-error-300';
-      case 'warning':
-        return 'bg-warning-500/20 text-warning-300';
-      case 'success':
-        return 'bg-success-500/20 text-success-300';
+  const getNotificationBadge = (category: Notification['category']) => {
+    switch (category) {
+      case 'DEVICE_OFFLINE':
+      case 'TEMPERATURE_ALERT':
+      case 'BATTERY_LOW':
+      case 'SECURITY_ALERT':
+      case 'SAFETY_ALERT':
+        return 'bg-red-100 text-red-800';
+      case 'DEVICE_ONLINE':
+      case 'DEVICE_CREATION':
+      case 'RULE_CREATED':
+        return 'bg-green-100 text-green-800';
+      case 'MAINTENANCE_SCHEDULE':
+      case 'MAINTENANCE_REMINDER':
+      case 'MAINTENANCE_ASSIGNMENT':
+        return 'bg-blue-100 text-blue-800';
       default:
-        return 'bg-secondary-500/20 text-secondary-300';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -230,7 +246,7 @@ export const NotificationsSection: React.FC = () => {
                     
                     {/* Icon */}
                     <div className="flex-shrink-0 mt-1">
-                      {getNotificationIcon(notification.type)}
+                      {getNotificationIcon(notification.category)}
                     </div>
                     
                     {/* Content */}
@@ -243,8 +259,8 @@ export const NotificationsSection: React.FC = () => {
                             }`}>
                               {notification.title}
                             </h3>
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getNotificationBadge(notification.type)}`}>
-                              {notification.type}
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getNotificationBadge(notification.category)}`}>
+                              {notification.category}
                             </span>
                             {!notification.read && (
                               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>

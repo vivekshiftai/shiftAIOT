@@ -133,6 +133,11 @@ public class DeviceMaintenance {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        
+        // Ensure componentName is never null
+        if (componentName == null || componentName.trim().isEmpty()) {
+            componentName = "General";
+        }
     }
 
     @PreUpdate

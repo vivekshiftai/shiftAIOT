@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -67,5 +68,7 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
     List<Object[]> findTodaysMaintenanceTasksWithDetails(@Param("organizationId") String organizationId);
     
     // Delete by device ID
-    void deleteByDeviceId(String deviceId);
+    @Modifying
+    @Query("DELETE FROM MaintenanceSchedule m WHERE m.deviceId = :deviceId")
+    void deleteByDeviceId(@Param("deviceId") String deviceId);
 }

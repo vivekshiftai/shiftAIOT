@@ -161,18 +161,19 @@ public class DeviceService {
         device.setId(UUID.randomUUID().toString());
         device.setOrganizationId(organizationId);
         
+        // Always set status to ONLINE during creation - ignore any status from request
+        device.setStatus(Device.DeviceStatus.ONLINE);
+        logger.info("📱 Device status set to ONLINE for creation - device: {}", request.getName());
+        
         // Set basic device information
         device.setName(request.getName());
         device.setType(request.getType());
         device.setLocation(request.getLocation());
         device.setProtocol(request.getProtocol());
         
-        // Use the status from the request if provided, otherwise default to ONLINE
-        if (request.getStatus() != null) {
-            device.setStatus(request.getStatus());
-        } else {
-            device.setStatus(Device.DeviceStatus.ONLINE);
-        }
+        // Always set status to ONLINE during creation - ignore any status from request
+        device.setStatus(Device.DeviceStatus.ONLINE);
+        logger.info("📱 Device status set to ONLINE for creation - device: {}", request.getName());
         
         // Set optional basic device info
         device.setManufacturer(request.getManufacturer());
@@ -212,7 +213,24 @@ public class DeviceService {
                 break;
         }
         
-        return deviceRepository.save(device);
+        // Save the device
+        Device savedDevice = deviceRepository.save(device);
+        logger.info("📱 Device created successfully with ID: {}", savedDevice.getId());
+        
+        // Create device creation notification for the creator
+        try {
+            String creatorId = device.getAssignedBy() != null ? device.getAssignedBy() : device.getAssignedUserId();
+            if (creatorId != null && !creatorId.trim().isEmpty()) {
+                logger.info("📝 Creating device creation notification for creator: {} for device: {}", 
+                           creatorId, savedDevice.getName());
+                createDeviceCreationNotification(savedDevice, creatorId, organizationId);
+            }
+        } catch (Exception e) {
+            logger.error("❌ Failed to create device creation notification for device: {}", savedDevice.getId(), e);
+            // Don't fail device creation if notification fails
+        }
+        
+        return savedDevice;
     }
 
     /**
@@ -238,12 +256,9 @@ public class DeviceService {
         }
         device.setAssignedBy(currentUserId);
         
-        // Use the status from the request if provided, otherwise default to ONLINE
-        if (request.getStatus() != null) {
-            device.setStatus(request.getStatus());
-        } else {
-            device.setStatus(Device.DeviceStatus.ONLINE);
-        }
+        // Always set status to ONLINE during onboarding - ignore any status from request
+        device.setStatus(Device.DeviceStatus.ONLINE);
+        logger.info("📱 Device status set to ONLINE for onboarding - device: {}", request.getName());
         
         // Set basic device information
         device.setName(request.getName());
@@ -286,7 +301,7 @@ public class DeviceService {
         Device savedDevice;
         try {
             savedDevice = deviceRepository.save(device);
-            logger.info("Device created successfully with ID: {}", savedDevice.getId());
+            logger.info("Device created successfully with ID: {} and status: {}", savedDevice.getId(), savedDevice.getStatus());
         } catch (Exception e) {
             logger.error("Failed to create device: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to create device: " + e.getMessage(), e);
@@ -488,35 +503,45 @@ public class DeviceService {
 
     @Transactional(rollbackFor = Exception.class)
     public void deleteDevice(String id, String organizationId) {
-        // Validate input parameters
+        // Enhanced input validation with detailed logging
         if (id == null || id.trim().isEmpty()) {
+            logger.error("❌ Device deletion failed: Device ID cannot be null or empty");
             throw new IllegalArgumentException("Device ID cannot be null or empty");
         }
         if (organizationId == null || organizationId.trim().isEmpty()) {
+            logger.error("❌ Device deletion failed: Organization ID cannot be null or empty");
             throw new IllegalArgumentException("Organization ID cannot be null or empty");
         }
         
         String trimmedId = id.trim();
         String trimmedOrgId = organizationId.trim();
         
-        // Find and validate device exists
-        Device device = deviceRepository.findByIdAndOrganizationId(trimmedId, trimmedOrgId)
-                .orElseThrow(() -> new RuntimeException("Device not found with ID: " + trimmedId + " in organization: " + trimmedOrgId));
+        logger.info("🔍 Starting device deletion process for device: {} in organization: {}", trimmedId, trimmedOrgId);
         
-        // Additional validation checks
+        // Find and validate device exists
+        Device device;
+        try {
+            device = deviceRepository.findByIdAndOrganizationId(trimmedId, trimmedOrgId)
+                    .orElseThrow(() -> new RuntimeException("Device not found with ID: " + trimmedId + " in organization: " + trimmedOrgId));
+            logger.info("✅ Device found: {} ({})", device.getName(), trimmedId);
+        } catch (Exception e) {
+            logger.error("❌ Device deletion failed: Could not find device {} in organization {}", trimmedId, trimmedOrgId, e);
+            throw new RuntimeException("Device not found with ID: " + trimmedId + " in organization: " + trimmedOrgId, e);
+        }
+        
+        // Additional validation checks with warnings
         if (device.getStatus() == Device.DeviceStatus.ONLINE) {
             logger.warn("⚠️ Attempting to delete ONLINE device: {} - {}", trimmedId, device.getName());
         }
         
         // Check if device has active connections
         try {
-            // Check if this specific device has any active connections
             Optional<DeviceConnection> deviceConnection = deviceConnectionRepository.findByDeviceIdAndOrganizationId(trimmedId, trimmedOrgId);
             if (deviceConnection.isPresent() && deviceConnection.get().getStatus() == DeviceConnection.ConnectionStatus.CONNECTED) {
-                logger.warn("⚠️ Device {} has an active connection", trimmedId);
+                logger.warn("⚠️ Device {} has an active connection - this may cause issues during deletion", trimmedId);
             }
         } catch (Exception e) {
-            logger.warn("Could not check device connections: {}", e.getMessage());
+            logger.warn("⚠️ Could not check device connections: {}", e.getMessage());
         }
         
         // Check if device has pending maintenance tasks
@@ -526,10 +551,10 @@ public class DeviceService {
                 logger.warn("⚠️ Device {} has {} pending maintenance tasks", trimmedId, pendingMaintenance);
             }
         } catch (Exception e) {
-            logger.warn("Could not check pending maintenance: {}", e.getMessage());
+            logger.warn("⚠️ Could not check pending maintenance: {}", e.getMessage());
         }
         
-        logger.info("Starting comprehensive deletion of device: {} and all related data", trimmedId);
+        logger.info("🚀 Starting comprehensive deletion of device: {} and all related data", trimmedId);
         
         // Track deletion progress and failures
         List<String> deletionErrors = new ArrayList<>();
@@ -541,180 +566,190 @@ public class DeviceService {
             // 1. Delete device connections
             try {
                 deviceConnectionService.deleteConnection(trimmedId, trimmedOrgId);
-                logger.info("Deleted device connections for device: {}", trimmedId);
+                logger.info("✅ Deleted device connections for device: {}", trimmedId);
                 successfulDeletions.add("device connections");
             } catch (Exception e) {
                 String errorMsg = "Failed to delete device connections: " + e.getMessage();
                 logger.error("❌ {}", errorMsg, e);
                 deletionErrors.add(errorMsg);
-                throw new RuntimeException(errorMsg, e);
+                // Continue with other deletions instead of throwing immediately
             }
             
             // 2. Delete device safety precautions
             try {
                 deviceSafetyPrecautionService.deleteSafetyPrecautionsByDevice(trimmedId, trimmedOrgId);
-                logger.info("Deleted safety precautions for device: {}", trimmedId);
+                logger.info("✅ Deleted safety precautions for device: {}", trimmedId);
                 successfulDeletions.add("safety precautions");
             } catch (Exception e) {
                 String errorMsg = "Failed to delete safety precautions: " + e.getMessage();
                 logger.error("❌ {}", errorMsg, e);
                 deletionErrors.add(errorMsg);
-                throw new RuntimeException(errorMsg, e);
+                // Continue with other deletions
             }
             
             // 3. Delete device maintenance tasks
             try {
                 deviceMaintenanceRepository.deleteByDeviceId(trimmedId);
-                logger.info("Deleted maintenance tasks for device: {}", trimmedId);
+                logger.info("✅ Deleted maintenance tasks for device: {}", trimmedId);
                 successfulDeletions.add("maintenance tasks");
             } catch (Exception e) {
                 String errorMsg = "Failed to delete maintenance tasks: " + e.getMessage();
                 logger.error("❌ {}", errorMsg, e);
                 deletionErrors.add(errorMsg);
-                throw new RuntimeException(errorMsg, e);
+                // Continue with other deletions
             }
             
             // 4. Delete device rules and rule conditions
             try {
                 List<Rule> deviceRules = ruleRepository.findByDeviceId(trimmedId);
-                logger.info("Found {} rules to delete for device: {}", deviceRules.size(), trimmedId);
+                logger.info("🔍 Found {} rules to delete for device: {}", deviceRules.size(), trimmedId);
                 
                 if (!deviceRules.isEmpty()) {
                     for (Rule rule : deviceRules) {
-                        logger.info("Deleting rule: {} (ID: {}) for device: {}", rule.getName(), rule.getId(), trimmedId);
+                        logger.info("🗑️ Deleting rule: {} (ID: {}) for device: {}", rule.getName(), rule.getId(), trimmedId);
                         
                         // Delete rule conditions first
                         try {
                             ruleConditionRepository.deleteByRuleId(rule.getId());
-                            logger.debug("Deleted rule conditions for rule: {}", rule.getId());
+                            logger.debug("✅ Deleted rule conditions for rule: {}", rule.getId());
                         } catch (Exception e) {
                             String errorMsg = "Failed to delete rule conditions for rule " + rule.getId() + ": " + e.getMessage();
                             logger.error("❌ {}", errorMsg, e);
                             deletionErrors.add(errorMsg);
-                            throw new RuntimeException(errorMsg, e);
+                            // Continue with other deletions
                         }
                         
                         // Delete rule actions
                         try {
                             ruleActionRepository.deleteByRuleId(rule.getId());
-                            logger.debug("Deleted rule actions for rule: {}", rule.getId());
+                            logger.debug("✅ Deleted rule actions for rule: {}", rule.getId());
                         } catch (Exception e) {
                             String errorMsg = "Failed to delete rule actions for rule " + rule.getId() + ": " + e.getMessage();
                             logger.error("❌ {}", errorMsg, e);
                             deletionErrors.add(errorMsg);
-                            throw new RuntimeException(errorMsg, e);
+                            // Continue with other deletions
                         }
                     }
                     
                     // Delete the rules
-                    ruleRepository.deleteByDeviceId(trimmedId);
-                    logger.info("Deleted {} rules for device: {}", deviceRules.size(), trimmedId);
-                    successfulDeletions.add("rules (" + deviceRules.size() + " rules)");
-                    
-                    // Verify deletion
-                    List<Rule> remainingRules = ruleRepository.findByDeviceId(trimmedId);
-                    if (!remainingRules.isEmpty()) {
-                        String errorMsg = "Verification failed: " + remainingRules.size() + " rules still remain for device: " + trimmedId;
-                        logger.error("❌ {}", errorMsg);
-                        for (Rule remainingRule : remainingRules) {
-                            logger.error("Remaining rule: {} (ID: {})", remainingRule.getName(), remainingRule.getId());
+                    try {
+                        ruleRepository.deleteByDeviceId(trimmedId);
+                        logger.info("✅ Deleted {} rules for device: {}", deviceRules.size(), trimmedId);
+                        successfulDeletions.add("rules (" + deviceRules.size() + " rules)");
+                        
+                        // Verify deletion
+                        List<Rule> remainingRules = ruleRepository.findByDeviceId(trimmedId);
+                        if (!remainingRules.isEmpty()) {
+                            String errorMsg = "Verification failed: " + remainingRules.size() + " rules still remain for device: " + trimmedId;
+                            logger.error("❌ {}", errorMsg);
+                            for (Rule remainingRule : remainingRules) {
+                                logger.error("Remaining rule: {} (ID: {})", remainingRule.getName(), remainingRule.getId());
+                            }
+                            deletionErrors.add(errorMsg);
                         }
+                    } catch (Exception e) {
+                        String errorMsg = "Failed to delete rules: " + e.getMessage();
+                        logger.error("❌ {}", errorMsg, e);
                         deletionErrors.add(errorMsg);
-                        throw new RuntimeException(errorMsg);
                     }
                 } else {
-                    logger.info("No rules found for device: {}", trimmedId);
+                    logger.info("ℹ️ No rules found for device: {}", trimmedId);
                     successfulDeletions.add("rules (0 rules)");
                 }
                 
             } catch (Exception e) {
-                if (!deletionErrors.contains("Failed to delete rules")) {
-                    String errorMsg = "Failed to delete rules: " + e.getMessage();
-                    logger.error("❌ {}", errorMsg, e);
-                    deletionErrors.add(errorMsg);
-                }
-                throw new RuntimeException("Failed to delete rules: " + e.getMessage(), e);
+                String errorMsg = "Failed to process rules deletion: " + e.getMessage();
+                logger.error("❌ {}", errorMsg, e);
+                deletionErrors.add(errorMsg);
+                // Continue with other deletions
             }
             
             // 5. Delete device documentation
             try {
                 deviceDocumentationRepository.deleteByDeviceId(trimmedId);
-                logger.info("Deleted device documentation for device: {}", trimmedId);
+                logger.info("✅ Deleted device documentation for device: {}", trimmedId);
                 successfulDeletions.add("device documentation");
             } catch (Exception e) {
                 String errorMsg = "Failed to delete device documentation: " + e.getMessage();
                 logger.error("❌ {}", errorMsg, e);
                 deletionErrors.add(errorMsg);
-                throw new RuntimeException(errorMsg, e);
+                // Continue with other deletions
             }
             
             // 6. Delete PDF queries related to this device
             try {
                 int deletedQueries = pdfQueryRepository.deleteByDeviceId(trimmedId, LocalDateTime.now());
-                logger.info("Deleted {} PDF queries for device: {}", deletedQueries, trimmedId);
+                logger.info("✅ Deleted {} PDF queries for device: {}", deletedQueries, trimmedId);
                 successfulDeletions.add("PDF queries (" + deletedQueries + " queries)");
             } catch (Exception e) {
                 String errorMsg = "Failed to delete PDF queries: " + e.getMessage();
                 logger.error("❌ {}", errorMsg, e);
                 deletionErrors.add(errorMsg);
-                throw new RuntimeException(errorMsg, e);
+                // Continue with other deletions
             }
             
             // 7. Delete notifications related to this device
             try {
                 notificationRepository.deleteByDeviceId(trimmedId);
-                logger.info("Deleted notifications for device: {}", trimmedId);
+                logger.info("✅ Deleted notifications for device: {}", trimmedId);
                 successfulDeletions.add("notifications");
             } catch (Exception e) {
                 String errorMsg = "Failed to delete notifications: " + e.getMessage();
                 logger.error("❌ {}", errorMsg, e);
                 deletionErrors.add(errorMsg);
-                throw new RuntimeException(errorMsg, e);
+                // Continue with other deletions
             }
             
             // 8. Delete maintenance schedules related to this device
             try {
                 maintenanceScheduleRepository.deleteByDeviceId(trimmedId);
-                logger.info("Deleted maintenance schedules for device: {}", trimmedId);
+                logger.info("✅ Deleted maintenance schedules for device: {}", trimmedId);
                 successfulDeletions.add("maintenance schedules");
             } catch (Exception e) {
                 String errorMsg = "Failed to delete maintenance schedules: " + e.getMessage();
                 logger.error("❌ {}", errorMsg, e);
                 deletionErrors.add(errorMsg);
-                throw new RuntimeException(errorMsg, e);
+                // Continue with other deletions
             }
             
             // 9. Finally, delete the device itself
             try {
                 deviceRepository.delete(device);
-                logger.info("Successfully deleted device: {} and all related data", trimmedId);
+                logger.info("✅ Successfully deleted device: {} and all related data", trimmedId);
                 successfulDeletions.add("device entity");
             } catch (Exception e) {
                 String errorMsg = "Failed to delete device entity: " + e.getMessage();
                 logger.error("❌ {}", errorMsg, e);
                 deletionErrors.add(errorMsg);
-                throw new RuntimeException(errorMsg, e);
+                throw new RuntimeException("Critical failure: Could not delete device entity", e);
             }
             
             // Log successful deletion summary
-            logger.info("✅ Device deletion completed successfully for device: {}", trimmedId);
+            logger.info("🎉 Device deletion completed successfully for device: {}", trimmedId);
             logger.info("✅ Successfully deleted: {}", String.join(", ", successfulDeletions));
+            
+            // If there were any errors during the process, log them but don't fail the deletion
+            if (!deletionErrors.isEmpty()) {
+                logger.warn("⚠️ Device deletion completed with some errors for device: {}", trimmedId);
+                logger.warn("❌ Errors encountered: {}", String.join("; ", deletionErrors));
+                logger.warn("✅ Successful deletions: {}", String.join("; ", successfulDeletions));
+            }
             
         } catch (Exception e) {
             // Log comprehensive error information
-            logger.error("❌ Error during comprehensive device deletion for device: {}", trimmedId, e);
+            logger.error("💥 Device deletion failed for device: {}", trimmedId, e);
             logger.error("❌ Deletion errors encountered: {}", deletionErrors);
-            logger.error("❌ Successful deletions before failure: {}", successfulDeletions);
+            logger.error("✅ Successful deletions before failure: {}", successfulDeletions);
             
-            // Create detailed error message
-            String errorMessage = "Failed to delete device and related data. ";
-            if (!deletionErrors.isEmpty()) {
-                errorMessage += "Errors: " + String.join("; ", deletionErrors);
-            } else {
-                errorMessage += "Error: " + e.getMessage();
-            }
+            // Provide detailed error context
+            String errorContext = String.format(
+                "Device deletion failed for device %s. Errors: %s. Successful deletions: %s",
+                trimmedId,
+                String.join("; ", deletionErrors),
+                String.join("; ", successfulDeletions)
+            );
             
-            throw new RuntimeException(errorMessage, e);
+            throw new RuntimeException(errorContext, e);
         }
     }
 
@@ -900,6 +935,55 @@ public class DeviceService {
             logger.error("❌ Failed to create device update notification for user: {} device: {}", 
                         assignedUserId, device.getId(), e);
             // Don't fail the device update if notification fails
+        }
+    }
+
+    private void createDeviceCreationNotification(Device device, String creatorId, String organizationId) {
+        try {
+            // Get the creator user
+            Optional<User> creatorUserOpt = userRepository.findById(creatorId);
+            if (creatorUserOpt.isPresent()) {
+                User creatorUser = creatorUserOpt.get();
+                
+                // Create enhanced notification with comprehensive device information
+                Notification notification = new Notification();
+                notification.setTitle("New Device Created");
+                notification.setMessage(String.format(
+                    "A new device has been created. Device: %s (%s) at location: %s is assigned to you.",
+                    device.getName(),
+                    device.getType(),
+                    device.getLocation()
+                ));
+                notification.setCategory(Notification.NotificationCategory.DEVICE_CREATION);
+                notification.setUserId(creatorId);
+                notification.setDeviceId(device.getId());
+                notification.setOrganizationId(organizationId);
+                notification.setRead(false);
+                
+                // Enhance notification with comprehensive device information
+                deviceNotificationEnhancerService.enhanceNotificationWithDeviceInfo(notification, device.getId(), organizationId);
+                
+                // Build enhanced message
+                String enhancedMessage = deviceNotificationEnhancerService.buildEnhancedNotificationMessage(notification);
+                notification.setMessage(enhancedMessage);
+                
+                // Save notification using the notification service with preference check
+                Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(creatorId, notification);
+                
+                if (createdNotification.isPresent()) {
+                    logger.info("✅ Created device creation notification for user: {} for device: {}", 
+                               creatorUser.getEmail(), device.getName());
+                } else {
+                    logger.info("⚠️ Device creation notification blocked by user preferences for user: {}", 
+                               creatorUser.getEmail());
+                }
+            } else {
+                logger.warn("Could not create notification - creator user not found: {}", creatorId);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to create device creation notification for user: {} device: {}", 
+                        creatorId, device.getId(), e);
+            // Don't fail the device creation if notification fails
         }
     }
 }

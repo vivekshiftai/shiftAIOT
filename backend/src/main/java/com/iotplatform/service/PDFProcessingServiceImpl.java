@@ -1279,10 +1279,16 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
      */
     private String processComponentName(Object componentName) {
         if (componentName == null) {
+            log.debug("Component name is null, using default value 'General'");
             return "General";
         }
         String comp = String.valueOf(componentName).trim();
-        return comp.isEmpty() ? "General" : comp;
+        if (comp.isEmpty()) {
+            log.debug("Component name is empty, using default value 'General'");
+            return "General";
+        }
+        log.debug("Processed component name: '{}'", comp);
+        return comp;
     }
 
     /**

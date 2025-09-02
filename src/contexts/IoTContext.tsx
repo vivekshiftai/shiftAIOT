@@ -343,7 +343,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   };
 
   const addNotification = (notification: Notification) => {
-    logInfo('IoT', 'Adding notification', { notificationId: notification.id, type: notification.type });
+    logInfo('IoT', 'Adding notification', { notificationId: notification.id });
     setNotifications((prev: Notification[]) => [notification, ...prev]);
   };
 
@@ -447,6 +447,30 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       const response = await deviceAPI.create(device);
       logInfo('IoT', 'Device created successfully', { deviceId: response.data?.id });
       await refreshDevices();
+      
+      // Create notification for device creation
+      try {
+        const { notificationService } = await import('../services/notificationService');
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        if (currentUser.id) {
+          await notificationService.createNotification({
+            type: 'DEVICE_CREATION',
+            deviceId: response.data?.id,
+            deviceName: device.name || 'Unknown Device',
+            userId: currentUser.id,
+            data: {
+              deviceType: device.type,
+              deviceLocation: device.location,
+              deviceStatus: device.status
+            }
+          });
+          logInfo('IoT', 'Device creation notification sent successfully');
+        }
+      } catch (notificationError) {
+        logError('IoT', 'Failed to send device creation notification', notificationError instanceof Error ? notificationError : new Error('Unknown notification error'));
+        // Don't fail device creation if notification fails
+      }
     } catch (error) {
       logError('IoT', 'Failed to create device', error instanceof Error ? error : new Error('Unknown error'));
       throw error;

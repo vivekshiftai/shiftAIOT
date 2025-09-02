@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS device_maintenance (
     device_id VARCHAR(255) NOT NULL,
     task_name VARCHAR(255) NOT NULL,
     description TEXT,
-    component_name VARCHAR(255),
+    component_name VARCHAR(255) DEFAULT 'General',
     maintenance_type VARCHAR(50), -- 'PREVENTIVE', 'CORRECTIVE', 'PREDICTIVE', 'GENERAL'
     frequency VARCHAR(100) NOT NULL,
     last_maintenance DATE,

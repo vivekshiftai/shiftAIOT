@@ -492,8 +492,10 @@ public class UnifiedOnboardingService {
                     
                     // Set required fields with actual values (no defaults)
                     maintenance.setTaskName(taskTitle);
-                    maintenance.setComponentName(taskTitle);
+                    maintenance.setComponentName(taskTitle != null && !taskTitle.trim().isEmpty() ? taskTitle.trim() : "General");
                     maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
+                    
+                    log.debug("Set componentName to: '{}' for task: '{}'", maintenance.getComponentName(), taskTitle);
                     
                     // Set device information (required for foreign key constraint)
                     setDeviceInformation(maintenance, deviceId);
@@ -545,6 +547,14 @@ public class UnifiedOnboardingService {
             }
             
             if (!maintenanceToSave.isEmpty()) {
+                // Final validation: ensure all maintenance records have valid component names
+                for (DeviceMaintenance maintenance : maintenanceToSave) {
+                    if (maintenance.getComponentName() == null || maintenance.getComponentName().trim().isEmpty()) {
+                        log.warn("Fixing null/empty componentName for task: '{}', setting to 'General'", maintenance.getTaskName());
+                        maintenance.setComponentName("General");
+                    }
+                }
+                
                 maintenanceRepository.saveAll(maintenanceToSave);
                 log.info("Successfully stored {} maintenance items for device: {} (skipped: {}, auto-assigned: {})", 
                     processedCount, deviceId, skippedCount, assignedCount);

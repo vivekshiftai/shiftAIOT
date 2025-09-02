@@ -267,6 +267,7 @@ public interface PDFQueryRepository extends JpaRepository<PDFQuery, Long> {
     /**
      * Delete queries by device ID
      */
+    @Modifying
     @Query("UPDATE PDFQuery q SET q.deleted = true, q.deletedAt = :deletedAt " +
            "WHERE q.deviceId = :deviceId AND q.deleted = false")
     int deleteByDeviceId(

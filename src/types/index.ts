@@ -87,7 +87,7 @@ export interface Notification {
 
 // Notification Event Types
 export interface NotificationEvent {
-  type: 'device_assignment' | 'device_creation' | 'device_update' | 'maintenance_schedule' | 'maintenance_reminder' | 'maintenance_assignment' | 'device_offline' | 'device_online' | 'temperature_alert' | 'battery_low' | 'rule_triggered' | 'rule_created' | 'system_update' | 'security_alert' | 'performance_alert' | 'safety_alert' | 'custom';
+  type: 'DEVICE_ASSIGNMENT' | 'DEVICE_CREATION' | 'DEVICE_UPDATE' | 'MAINTENANCE_SCHEDULE' | 'MAINTENANCE_REMINDER' | 'MAINTENANCE_ASSIGNMENT' | 'DEVICE_OFFLINE' | 'DEVICE_ONLINE' | 'TEMPERATURE_ALERT' | 'BATTERY_LOW' | 'RULE_TRIGGERED' | 'RULE_CREATED' | 'SYSTEM_UPDATE' | 'SECURITY_ALERT' | 'PERFORMANCE_ALERT' | 'SAFETY_ALERT' | 'CUSTOM';
   deviceId?: string;
   deviceName?: string;
   userId: string;
@@ -98,7 +98,7 @@ export interface NotificationEvent {
 export interface NotificationTemplate {
   id: string;
   name: string;
-  type: 'DEVICE_ASSIGNMENT' | 'DEVICE_CREATION' | 'MAINTENANCE_SCHEDULE' | 'MAINTENANCE_REMINDER' | 'DEVICE_OFFLINE' | 'DEVICE_ONLINE' | 'TEMPERATURE_ALERT' | 'BATTERY_LOW' | 'RULE_TRIGGERED' | 'SYSTEM_UPDATE' | 'SECURITY_ALERT' | 'PERFORMANCE_ALERT' | 'CUSTOM';
+  type: 'DEVICE_ASSIGNMENT' | 'DEVICE_CREATION' | 'DEVICE_UPDATE' | 'MAINTENANCE_SCHEDULE' | 'MAINTENANCE_REMINDER' | 'MAINTENANCE_ASSIGNMENT' | 'DEVICE_OFFLINE' | 'DEVICE_ONLINE' | 'TEMPERATURE_ALERT' | 'BATTERY_LOW' | 'RULE_TRIGGERED' | 'RULE_CREATED' | 'SYSTEM_UPDATE' | 'SECURITY_ALERT' | 'PERFORMANCE_ALERT' | 'SAFETY_ALERT' | 'CUSTOM';
   titleTemplate: string;
   messageTemplate: string;
   notificationType: Notification['category'];

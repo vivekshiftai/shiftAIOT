@@ -18,11 +18,12 @@ export const DevicesSection: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [sortBy, setSortBy] = useState<'name' | 'status' | 'lastSeen'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'status' | 'updatedAt'>('name');
   const [showAddForm, setShowAddForm] = useState(false);
 
   // const [isRefreshing, setIsRefreshing] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Debug logging
   logInfo('DevicesSection', 'Devices data', { devices: devices, loading, count: devices?.length || 0 });
@@ -52,7 +53,7 @@ export const DevicesSection: React.FC = () => {
     const sorted = [...base].sort((a, b) => {
       if (sortBy === 'name') return a.name.localeCompare(b.name);
       if (sortBy === 'status') return a.status.localeCompare(b.status);
-      if (sortBy === 'lastSeen') return new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime();
+      if (sortBy === 'updatedAt') return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       return 0;
     });
     return sorted;
@@ -139,10 +140,17 @@ export const DevicesSection: React.FC = () => {
         
         // Show error with better formatting
         const fullErrorMessage = `${errorType}: ${errorMessage}`;
-        console.error('DevicesSection: Formatted error:', fullErrorMessage);
+        setErrorMessage(fullErrorMessage);
         
-        // Use a more user-friendly alert or consider using a toast notification
-        alert(`Failed to delete device "${deviceName}".\n\n${fullErrorMessage}`);
+        // Auto-clear error message after 10 seconds
+        setTimeout(() => setErrorMessage(''), 10000);
+        
+        // Log the categorized error
+        console.error('DevicesSection: Categorized error:', {
+          errorType,
+          errorMessage,
+          originalError: error
+        });
       }
     }
   }, [deleteDevice]);
@@ -167,6 +175,24 @@ export const DevicesSection: React.FC = () => {
               className="text-success-400 hover:text-success-300"
             >
               <CheckCircle className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {errorMessage && (
+        <div className="mb-4 p-4 bg-danger-500/20 border border-danger-500/30 rounded-lg glass">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-danger-500 mr-3"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+              <span className="text-danger-300">{errorMessage}</span>
+            </div>
+            <button
+              onClick={() => setErrorMessage('')}
+              className="text-danger-400 hover:text-danger-300"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
             </button>
           </div>
         </div>

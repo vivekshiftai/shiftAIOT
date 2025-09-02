@@ -405,27 +405,45 @@ public class DeviceController {
         logger.info("🔍 DELETE request received for device ID: {}", id);
         logger.info("🔍 User details: {}", userDetails != null ? "present" : "null");
         
+        // Enhanced authentication validation
         if (userDetails == null || userDetails.getUser() == null) {
             logger.error("❌ Authentication failed - user details or user is null");
             return ResponseEntity.status(401).body(Map.of(
                 "success", false,
                 "error", "Authentication failed",
-                "message", "User not authenticated"
+                "message", "User not authenticated",
+                "timestamp", java.time.LocalDateTime.now().toString(),
+                "errorCode", "AUTH_001"
             ));
         }
-        User user = userDetails.getUser();
         
+        User user = userDetails.getUser();
         String userEmail = user.getEmail();
         String organizationId = user.getOrganizationId();
         
+        // Validate user organization
+        if (organizationId == null || organizationId.trim().isEmpty()) {
+            logger.error("❌ User {} has no organization ID", userEmail);
+            return ResponseEntity.status(400).body(Map.of(
+                "success", false,
+                "error", "Invalid user configuration",
+                "message", "User is not associated with any organization",
+                "timestamp", java.time.LocalDateTime.now().toString(),
+                "errorCode", "USER_001"
+            ));
+        }
+        
         logger.info("🔍 User {} (org: {}) attempting to delete device: {}", userEmail, organizationId, id);
         
+        // Enhanced device ID validation
         if (id == null || id.trim().isEmpty()) {
             logger.warn("❌ Invalid device ID provided by user {}: '{}'", userEmail, id);
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
                 "error", "Invalid device ID",
-                "message", "Device ID cannot be null or empty"
+                "message", "Device ID cannot be null or empty",
+                "timestamp", java.time.LocalDateTime.now().toString(),
+                "errorCode", "DEVICE_001"
             ));
         }
         
@@ -436,26 +454,34 @@ public class DeviceController {
         try {
             Optional<Device> existingDevice = deviceRepository.findByIdAndOrganizationId(trimmedId, organizationId);
             if (existingDevice.isEmpty()) {
-                logger.error("❌ Device not found - ID: {}, Organization: {}", trimmedId, organizationId);
-                logger.error("❌ Available devices for org {}: {}", organizationId, 
-                    deviceRepository.findByOrganizationId(organizationId).stream()
-                        .map(Device::getId)
-                        .collect(java.util.stream.Collectors.toList()));
+                logger.warn("❌ Device {} not found in organization {} for user {}", trimmedId, organizationId, userEmail);
                 return ResponseEntity.status(404).body(Map.of(
                     "success", false,
                     "error", "Device not found",
-                    "message", "Device with ID " + trimmedId + " not found in your organization",
+                    "message", "Device was not found or you don't have access to it",
                     "deviceId", trimmedId,
-                    "organizationId", organizationId
+                    "timestamp", java.time.LocalDateTime.now().toString(),
+                    "errorCode", "DEVICE_002"
                 ));
             }
-            logger.info("✅ Device found: {} - {}", existingDevice.get().getId(), existingDevice.get().getName());
+            
+            Device device = existingDevice.get();
+            logger.info("✅ Device found: {} ({}) - Status: {}", device.getName(), trimmedId, device.getStatus());
+            
+            // Check if device is currently in use
+            if (device.getStatus() == Device.DeviceStatus.ONLINE) {
+                logger.warn("⚠️ User {} attempting to delete ONLINE device: {} - {}", userEmail, trimmedId, device.getName());
+            }
+            
         } catch (Exception e) {
-            logger.error("❌ Error checking device existence: {}", e.getMessage(), e);
+            logger.error("❌ Error checking device existence for device {}: {}", trimmedId, e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of(
                 "success", false,
                 "error", "Database error",
-                "message", "Failed to verify device existence: " + e.getMessage()
+                "message", "Failed to verify device existence",
+                "deviceId", trimmedId,
+                "timestamp", java.time.LocalDateTime.now().toString(),
+                "errorCode", "DB_001"
             ));
         }
         
@@ -466,6 +492,7 @@ public class DeviceController {
             Optional<Device> deviceToDelete = deviceRepository.findByIdAndOrganizationId(trimmedId, organizationId);
             String deviceName = deviceToDelete.map(Device::getName).orElse("Unknown Device");
             
+            // Perform the actual deletion
             deviceService.deleteDevice(trimmedId, organizationId);
             logger.info("✅ Device {} deleted successfully", trimmedId);
             
@@ -483,7 +510,9 @@ public class DeviceController {
                 "message", "Device deleted successfully",
                 "deviceId", trimmedId,
                 "deviceName", deviceName,
-                "deletedAt", java.time.LocalDateTime.now().toString()
+                "deletedAt", java.time.LocalDateTime.now().toString(),
+                "deletedBy", userEmail,
+                "organizationId", organizationId
             ));
             
         } catch (RuntimeException e) {
@@ -492,19 +521,36 @@ public class DeviceController {
             // Provide more specific error messages based on the exception
             String errorType = "Deletion failed";
             String errorMessage = e.getMessage();
+            String errorCode = "DELETION_001";
             
             if (errorMessage.contains("Device not found")) {
                 errorType = "Device not found";
                 errorMessage = "Device was not found or has already been deleted";
+                errorCode = "DEVICE_003";
             } else if (errorMessage.contains("Failed to delete device connections")) {
                 errorType = "Connection deletion failed";
                 errorMessage = "Failed to delete device connections. Device may be in use.";
+                errorCode = "CONNECTION_001";
             } else if (errorMessage.contains("Failed to delete rules")) {
                 errorType = "Rules deletion failed";
                 errorMessage = "Failed to delete device rules and configurations.";
+                errorCode = "RULES_001";
             } else if (errorMessage.contains("Failed to delete maintenance")) {
                 errorType = "Maintenance deletion failed";
                 errorMessage = "Failed to delete maintenance schedules and tasks.";
+                errorCode = "MAINTENANCE_001";
+            } else if (errorMessage.contains("Failed to delete device documentation")) {
+                errorType = "Documentation deletion failed";
+                errorMessage = "Failed to delete device documentation.";
+                errorCode = "DOCS_001";
+            } else if (errorMessage.contains("Failed to delete PDF queries")) {
+                errorType = "PDF queries deletion failed";
+                errorMessage = "Failed to delete PDF queries related to the device.";
+                errorCode = "PDF_001";
+            } else if (errorMessage.contains("Failed to delete notifications")) {
+                errorType = "Notifications deletion failed";
+                errorMessage = "Failed to delete device notifications.";
+                errorCode = "NOTIFICATION_001";
             }
             
             return ResponseEntity.status(500).body(Map.of(
@@ -512,8 +558,11 @@ public class DeviceController {
                 "error", errorType,
                 "message", errorMessage,
                 "deviceId", trimmedId,
+                "errorCode", errorCode,
+                "timestamp", java.time.LocalDateTime.now().toString(),
                 "details", e.getMessage()
             ));
+            
         } catch (Exception e) {
             logger.error("❌ Unexpected error during device deletion {}: {}", trimmedId, e.getMessage(), e);
             return ResponseEntity.status(500).body(Map.of(
@@ -521,6 +570,8 @@ public class DeviceController {
                 "error", "Unexpected error",
                 "message", "An unexpected error occurred during device deletion",
                 "deviceId", trimmedId,
+                "errorCode", "UNKNOWN_001",
+                "timestamp", java.time.LocalDateTime.now().toString(),
                 "details", e.getMessage()
             ));
         }
