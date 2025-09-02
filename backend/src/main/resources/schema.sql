@@ -38,9 +38,40 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS team_id VARCHAR(255);
 -- Add phone column to users table if it doesn't exist
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(20);
 
+-- Add missing columns to organizations table if they don't exist
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255);
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(20);
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS website VARCHAR(255);
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS logo_url VARCHAR(500);
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS subscription_plan VARCHAR(50) DEFAULT 'FREE';
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(50) DEFAULT 'ACTIVE';
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMP;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS max_users INTEGER DEFAULT 5;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS max_devices INTEGER DEFAULT 10;
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
 -- Add assigned_user_id column to devices table if it doesn't exist
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS assigned_user_id VARCHAR(255);
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS assigned_by VARCHAR(255);
+
+-- Add missing columns to devices table if they don't exist
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS manufacturer VARCHAR(100);
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS model VARCHAR(100);
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45);
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS port INTEGER;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS mqtt_broker VARCHAR(255);
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS mqtt_topic VARCHAR(255);
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS mqtt_username VARCHAR(100);
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS mqtt_password VARCHAR(255);
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS http_endpoint VARCHAR(500);
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS http_method VARCHAR(10) DEFAULT 'GET';
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS http_headers TEXT;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS coap_host VARCHAR(255);
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS coap_port INTEGER;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS coap_path VARCHAR(255);
 
 -- Add new columns to rules table if they don't exist
 ALTER TABLE rules ADD COLUMN IF NOT EXISTS metric VARCHAR(100);
@@ -48,6 +79,136 @@ ALTER TABLE rules ADD COLUMN IF NOT EXISTS metric_value VARCHAR(100);
 ALTER TABLE rules ADD COLUMN IF NOT EXISTS threshold VARCHAR(200);
 ALTER TABLE rules ADD COLUMN IF NOT EXISTS consequence TEXT;
 ALTER TABLE rules ADD COLUMN IF NOT EXISTS device_id VARCHAR(255);
+
+-- Add missing columns to rule_conditions table if they don't exist
+ALTER TABLE rule_conditions ADD COLUMN IF NOT EXISTS type VARCHAR(50);
+ALTER TABLE rule_conditions ADD COLUMN IF NOT EXISTS device_id VARCHAR(255);
+ALTER TABLE rule_conditions ADD COLUMN IF NOT EXISTS metric VARCHAR(100);
+ALTER TABLE rule_conditions ADD COLUMN IF NOT EXISTS operator VARCHAR(50);
+ALTER TABLE rule_conditions ADD COLUMN IF NOT EXISTS condition_value VARCHAR(255);
+ALTER TABLE rule_conditions ADD COLUMN IF NOT EXISTS logic_operator VARCHAR(20) DEFAULT 'AND';
+
+-- Add missing columns to rule_actions table if they don't exist
+ALTER TABLE rule_actions ADD COLUMN IF NOT EXISTS type VARCHAR(50);
+ALTER TABLE rule_actions ADD COLUMN IF NOT EXISTS action_data JSON;
+
+-- Add missing columns to device_maintenance table if they don't exist
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS component_name VARCHAR(255) DEFAULT 'General';
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS maintenance_type VARCHAR(50);
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS frequency VARCHAR(100);
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS last_maintenance DATE;
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS next_maintenance DATE;
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS priority VARCHAR(50) DEFAULT 'MEDIUM';
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE';
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS estimated_cost DECIMAL(10,2);
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS estimated_duration VARCHAR(100);
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS required_tools TEXT;
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS safety_notes TEXT;
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS category VARCHAR(100);
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS assigned_to VARCHAR(255);
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS assigned_by VARCHAR(255);
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS assigned_at TIMESTAMP;
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS completed_by VARCHAR(255);
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS organization_id VARCHAR(255);
+
+-- Add missing columns to device_safety_precautions table if they don't exist
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS precaution_type VARCHAR(100);
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS title VARCHAR(255);
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS risk_level VARCHAR(50) DEFAULT 'MEDIUM';
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS mitigation_steps TEXT;
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS required_ppe TEXT;
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS emergency_procedures TEXT;
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS organization_id VARCHAR(255);
+
+-- Add missing columns to device_documentation table if they don't exist
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS document_type VARCHAR(50);
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS filename VARCHAR(255);
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS original_filename VARCHAR(255);
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS file_size BIGINT;
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS file_path VARCHAR(500);
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS processing_status VARCHAR(50) DEFAULT 'PENDING';
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS processing_summary TEXT;
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS total_pages INTEGER;
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS processed_chunks INTEGER;
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS processing_time VARCHAR(100);
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS collection_name VARCHAR(255);
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS pdf_name VARCHAR(255);
+ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+-- Add missing columns to knowledge_documents table if they don't exist
+ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS type VARCHAR(50);
+ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS file_path VARCHAR(500);
+ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS size BIGINT;
+ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'processing';
+ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS vectorized BOOLEAN DEFAULT false;
+ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS device_id VARCHAR(255);
+ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS device_name VARCHAR(255);
+ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS processed_at TIMESTAMP;
+ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+-- Add missing columns to conversation_configs table if they don't exist
+ALTER TABLE conversation_configs ADD COLUMN IF NOT EXISTS platform_name VARCHAR(100);
+ALTER TABLE conversation_configs ADD COLUMN IF NOT EXISTS platform_type VARCHAR(50);
+ALTER TABLE conversation_configs ADD COLUMN IF NOT EXISTS credentials JSONB;
+ALTER TABLE conversation_configs ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE conversation_configs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+-- Add missing columns to pdf_documents table if they don't exist
+ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS original_filename VARCHAR(255);
+ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS file_size BIGINT;
+ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS chunks_processed INTEGER;
+ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS processing_time VARCHAR(100);
+ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS collection_name VARCHAR(255);
+ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS pdf_name VARCHAR(255);
+ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'UPLOADING';
+ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS processed_at TIMESTAMP;
+ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT FALSE;
+ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+
+-- Add missing columns to pdf_queries table if they don't exist
+ALTER TABLE pdf_queries ADD COLUMN IF NOT EXISTS user_query TEXT;
+ALTER TABLE pdf_queries ADD COLUMN IF NOT EXISTS ai_response TEXT;
+ALTER TABLE pdf_queries ADD COLUMN IF NOT EXISTS chunks_used TEXT;
+ALTER TABLE pdf_queries ADD COLUMN IF NOT EXISTS processing_time VARCHAR(100);
+ALTER TABLE pdf_queries ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'PENDING';
+ALTER TABLE pdf_queries ADD COLUMN IF NOT EXISTS error_message TEXT;
+ALTER TABLE pdf_queries ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT FALSE;
+ALTER TABLE pdf_queries ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+
+-- Add missing columns to user_preferences table if they don't exist
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS email_notifications BOOLEAN DEFAULT true;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS push_notifications BOOLEAN DEFAULT true;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS device_alerts BOOLEAN DEFAULT true;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS system_updates BOOLEAN DEFAULT false;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS weekly_reports BOOLEAN DEFAULT true;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS critical_alerts BOOLEAN DEFAULT true;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS performance_alerts BOOLEAN DEFAULT true;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS security_alerts BOOLEAN DEFAULT true;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS maintenance_alerts BOOLEAN DEFAULT false;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS data_backup_alerts BOOLEAN DEFAULT true;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS user_activity_alerts BOOLEAN DEFAULT false;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS rule_trigger_alerts BOOLEAN DEFAULT true;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS dashboard_show_real_time_charts BOOLEAN DEFAULT true;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS dashboard_auto_refresh BOOLEAN DEFAULT true;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS dashboard_refresh_interval INTEGER DEFAULT 30;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS dashboard_show_device_status BOOLEAN DEFAULT true;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS dashboard_show_alerts BOOLEAN DEFAULT true;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS dashboard_show_performance_metrics BOOLEAN DEFAULT true;
+ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+-- Add missing columns to notification_templates table if they don't exist
+ALTER TABLE notification_templates ADD COLUMN IF NOT EXISTS type VARCHAR(50);
+ALTER TABLE notification_templates ADD COLUMN IF NOT EXISTS title_template VARCHAR(200);
+ALTER TABLE notification_templates ADD COLUMN IF NOT EXISTS message_template TEXT;
+ALTER TABLE notification_templates ADD COLUMN IF NOT EXISTS notification_type VARCHAR(50) DEFAULT 'INFO';
+ALTER TABLE notification_templates ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE notification_templates ADD COLUMN IF NOT EXISTS created_by VARCHAR(255);
+ALTER TABLE notification_templates ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE notification_templates ADD COLUMN IF NOT EXISTS description VARCHAR(500);
 
 -- User Permissions table
 CREATE TABLE IF NOT EXISTS user_permissions (
@@ -266,6 +427,80 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE SET NULL,
     FOREIGN KEY (rule_id) REFERENCES rules(id) ON DELETE SET NULL
 );
+
+-- Add missing columns to existing notifications table if they don't exist
+-- This ensures the table structure matches the Java entity model
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category VARCHAR(50);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS device_name VARCHAR(255);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS device_type VARCHAR(100);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS device_location VARCHAR(255);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS device_status VARCHAR(50);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS maintenance_rules_count INTEGER DEFAULT 0;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS safety_rules_count INTEGER DEFAULT 0;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS total_rules_count INTEGER DEFAULT 0;
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS device_manufacturer VARCHAR(255);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS device_model VARCHAR(255);
+
+-- Set default category for existing notifications if category is NULL
+UPDATE notifications SET category = 'DEVICE_ASSIGNMENT' WHERE category IS NULL;
+
+-- Make category column NOT NULL after setting defaults
+ALTER TABLE notifications ALTER COLUMN category SET NOT NULL;
+
+-- Migrate existing notification types to categories if type column exists
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'notifications' AND column_name = 'type') THEN
+        UPDATE notifications 
+        SET category = CASE 
+            WHEN type = 'INFO' THEN 'DEVICE_ASSIGNMENT'
+            WHEN type = 'WARNING' THEN 'PERFORMANCE_ALERT'
+            WHEN type = 'ERROR' THEN 'SECURITY_ALERT'
+            WHEN type = 'SUCCESS' THEN 'DEVICE_CREATION'
+            ELSE 'CUSTOM'
+        END
+        WHERE category IS NULL;
+    END IF;
+END $$;
+
+-- Update existing notifications with device information where possible
+UPDATE notifications n
+SET 
+    device_name = d.name,
+    device_type = d.type::text,
+    device_location = d.location,
+    device_status = d.status::text,
+    device_manufacturer = d.manufacturer,
+    device_model = d.model
+FROM devices d
+WHERE n.device_id = d.id 
+  AND n.device_name IS NULL;
+
+-- Update device rules counts for existing notifications
+UPDATE notifications n
+SET 
+    total_rules_count = COALESCE(rule_counts.total_rules, 0),
+    maintenance_rules_count = COALESCE(maintenance_counts.maintenance_count, 0),
+    safety_rules_count = COALESCE(safety_counts.safety_count, 0)
+FROM (
+    SELECT device_id, COUNT(*) as total_rules
+    FROM rules
+    GROUP BY device_id
+) rule_counts
+LEFT JOIN (
+    SELECT device_id, COUNT(*) as maintenance_count
+    FROM device_maintenance
+    WHERE status = 'ACTIVE'
+    GROUP BY device_id
+) maintenance_counts ON rule_counts.device_id = maintenance_counts.device_id
+LEFT JOIN (
+    SELECT device_id, COUNT(*) as safety_count
+    FROM device_safety_precautions
+    WHERE is_active = true
+    GROUP BY device_id
+) safety_counts ON rule_counts.device_id = safety_counts.device_id
+WHERE n.device_id = rule_counts.device_id
+  AND n.total_rules_count IS NULL;
 
 -- Notification Metadata table - ADDED for storing additional notification data
 CREATE TABLE IF NOT EXISTS notification_metadata (
