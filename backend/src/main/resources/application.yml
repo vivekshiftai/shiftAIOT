@@ -170,24 +170,27 @@ push:
 # Logging
 logging:
   level:
-    com.iotplatform: DEBUG
-    com.iotplatform.security: DEBUG
-    com.iotplatform.controller.AuthController: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.security.web.FilterChainProxy: DEBUG
-    # Disable all Hibernate SQL logging
-    org.hibernate.SQL: WARN
-    org.hibernate.type.descriptor.sql.BasicBinder: WARN
-    org.hibernate.type.descriptor.sql: WARN
-    org.hibernate.stat: WARN
-    org.hibernate.engine.transaction.internal: WARN
-    org.hibernate.engine.jdbc.spi: WARN
-    org.hibernate.engine.jdbc.env.internal: WARN
-    org.hibernate.engine.jdbc.connections.internal: WARN
-    org.springframework.web: DEBUG
-    org.springframework.data.jpa: DEBUG
-    org.springframework.web.multipart: DEBUG
-    org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping: DEBUG
+    root: ERROR
+    
+    com.iotplatform: ERROR
+    
+    # Hibernate logging - set to ERROR to see only errors
+    org.hibernate: ERROR
+    org.hibernate.SQL: ERROR
+    org.hibernate.type.descriptor.sql.BasicBinder: ERROR
+    org.hibernate.type.descriptor.sql: ERROR
+    org.hibernate.stat: ERROR
+    org.hibernate.engine.transaction.internal: ERROR
+    org.hibernate.engine.jdbc.spi: ERROR
+    org.hibernate.engine.jdbc.env.internal: ERROR
+    org.hibernate.engine.jdbc.connections.internal: ERROR
+    
+    # Spring framework logging - set to ERROR to see only errors
+    org.springframework: ERROR
+    org.springframework.web: ERROR
+    org.springframework.data.jpa: ERROR
+    org.springframework.web.multipart: ERROR
+    org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping: ERROR
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%-5level] %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

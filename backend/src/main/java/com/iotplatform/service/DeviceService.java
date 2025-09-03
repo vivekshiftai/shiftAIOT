@@ -627,8 +627,168 @@ public class DeviceService {
             
             // 5. Delete device rules and rule conditions
             try {
+                logger.info("🔍 Querying for rules with device ID: '{}'", trimmedId);
+                logger.info("🔍 Device ID details - Length: {}, Is Empty: {}, Is Null: {}", 
+                           trimmedId.length(), trimmedId.isEmpty(), trimmedId == null);
+                logger.info("🔍 Device object details - ID: {}, Name: {}, Organization: {}", 
+                           device != null ? device.getId() : "NULL", 
+                           device != null ? device.getName() : "NULL", 
+                           device != null ? device.getOrganizationId() : "NULL");
+                
+                // First, let's check if there are any rules at all in the system
+                List<Rule> allRules = new ArrayList<>();
+                try {
+                    allRules = ruleRepository.findAll();
+                    logger.info("🔍 Total rules in system: {}", allRules.size());
+                    
+                    // Also check if the rules table exists and has data
+                    try {
+                        long totalRuleCount = ruleRepository.count();
+                        logger.info("🔍 Total rule count from repository: {}", totalRuleCount);
+                        
+                        if (totalRuleCount == 0) {
+                            logger.info("ℹ️ Rules table is empty - no rules exist in the system");
+                        } else if (totalRuleCount != allRules.size()) {
+                            logger.warn("⚠️ Mismatch between findAll() size ({}) and count() ({})", allRules.size(), totalRuleCount);
+                        }
+                    } catch (Exception e) {
+                        logger.error("❌ Error getting rule count: {}", e.getMessage(), e);
+                    }
+                    
+                    if (allRules.isEmpty()) {
+                        logger.info("ℹ️ No rules exist in the system at all");
+                    } else {
+                        // Log some sample rules for debugging
+                        allRules.stream().limit(5).forEach(rule -> 
+                            logger.info("🔍 Sample rule - ID: {}, Name: {}, DeviceId: '{}', OrganizationId: {}", 
+                                       rule.getId(), rule.getName(), rule.getDeviceId(), rule.getOrganizationId()));
+                        
+                        // Check if any rules have the exact device ID we're looking for
+                        long exactMatches = allRules.stream()
+                            .filter(rule -> trimmedId.equals(rule.getDeviceId()))
+                            .count();
+                        logger.info("🔍 Rules with exact device ID match '{}': {}", trimmedId, exactMatches);
+                        
+                        // Check if any rules have similar device IDs (for debugging)
+                        List<Rule> similarDeviceIdRules = allRules.stream()
+                            .filter(rule -> rule.getDeviceId() != null && 
+                                          (rule.getDeviceId().contains(trimmedId.substring(0, Math.min(8, trimmedId.length()))) ||
+                                           trimmedId.contains(rule.getDeviceId().substring(0, Math.min(8, rule.getDeviceId().length())))))
+                            .collect(Collectors.toList());
+                        logger.info("🔍 Rules with similar device ID patterns: {}", similarDeviceIdRules.size());
+                        if (!similarDeviceIdRules.isEmpty()) {
+                            similarDeviceIdRules.forEach(rule -> 
+                                logger.info("🔍 Similar device ID rule - Name: {}, DeviceId: '{}'", rule.getName(), rule.getDeviceId()));
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.error("❌ Error querying all rules: {}", e.getMessage(), e);
+                    logger.info("ℹ️ Using empty rules list for debugging");
+                }
+                
+                // Check if any rules have the device ID we're looking for
+                List<Rule> rulesWithDeviceId = allRules.stream()
+                    .filter(rule -> trimmedId.equals(rule.getDeviceId()))
+                    .collect(Collectors.toList());
+                logger.info("🔍 Rules with matching device ID '{}': {}", trimmedId, rulesWithDeviceId.size());
+                
+                // Also check for rules with null device ID
+                List<Rule> rulesWithNullDeviceId = allRules.stream()
+                    .filter(rule -> rule.getDeviceId() == null)
+                    .collect(Collectors.toList());
+                logger.info("🔍 Rules with NULL device ID: {}", rulesWithNullDeviceId.size());
+                
+                // Check for rules with empty device ID
+                List<Rule> rulesWithEmptyDeviceId = allRules.stream()
+                    .filter(rule -> rule.getDeviceId() != null && rule.getDeviceId().trim().isEmpty())
+                    .collect(Collectors.toList());
+                logger.info("🔍 Rules with empty device ID: {}", rulesWithEmptyDeviceId.size());
+                
+                // Check for case-insensitive matches
+                List<Rule> rulesWithCaseInsensitiveMatch = allRules.stream()
+                    .filter(rule -> rule.getDeviceId() != null && 
+                                  (trimmedId.equalsIgnoreCase(rule.getDeviceId()) || 
+                                   rule.getDeviceId().equalsIgnoreCase(trimmedId)))
+                    .collect(Collectors.toList());
+                logger.info("🔍 Rules with case-insensitive device ID match: {}", rulesWithCaseInsensitiveMatch.size());
+                
+                // Log the actual device ID values for debugging
+                if (!allRules.isEmpty()) {
+                    logger.debug("🔍 Device ID we're looking for: '{}' (length: {})", trimmedId, trimmedId.length());
+                    allRules.stream().limit(5).forEach(rule -> 
+                        logger.debug("🔍 Rule device ID: '{}' (length: {}, null: {})", 
+                                   rule.getDeviceId(), 
+                                   rule.getDeviceId() != null ? rule.getDeviceId().length() : 0,
+                                   rule.getDeviceId() == null));
+                }
+                
+                // Now use the repository method
                 List<Rule> deviceRules = ruleRepository.findByDeviceId(trimmedId);
-                logger.info("🔍 Found {} rules to delete for device: {}", deviceRules.size(), trimmedId);
+                logger.info("🔍 Repository findByDeviceId('{}') returned {} rules", trimmedId, deviceRules.size());
+                
+                // Also try the organization-specific query
+                List<Rule> deviceRulesWithOrg = new ArrayList<>();
+                if (device != null && device.getOrganizationId() != null) {
+                    try {
+                        deviceRulesWithOrg = ruleRepository.findByDeviceIdAndOrganizationId(trimmedId, device.getOrganizationId());
+                        logger.info("🔍 Repository findByDeviceIdAndOrganizationId('{}', '{}') returned {} rules", 
+                                  trimmedId, device.getOrganizationId(), deviceRulesWithOrg.size());
+                    } catch (Exception e) {
+                        logger.error("❌ Error with findByDeviceIdAndOrganizationId: {}", e.getMessage(), e);
+                    }
+                }
+                
+                // Use the organization-specific results if available, otherwise fall back to device-only
+                if (!deviceRulesWithOrg.isEmpty()) {
+                    deviceRules = deviceRulesWithOrg;
+                    logger.info("🔍 Using organization-specific query results: {} rules", deviceRules.size());
+                }
+                
+                // Try alternative query methods to see if there's a repository issue
+                try {
+                    // Try with organization context
+                    if (device != null && device.getOrganizationId() != null) {
+                        List<Rule> deviceRulesWithOrg = ruleRepository.findByDeviceIdAndOrganizationId(trimmedId, device.getOrganizationId());
+                        logger.info("🔍 findByDeviceIdAndOrganizationId('{}', '{}') returned {} rules", 
+                                  trimmedId, device.getOrganizationId(), deviceRulesWithOrg.size());
+                    }
+                    
+                    // Try to find any rules that might be related
+                    List<Rule> allActiveRules = ruleRepository.findByActiveTrue();
+                    logger.info("🔍 Total active rules in system: {}", allActiveRules.size());
+                    
+                } catch (Exception e) {
+                    logger.error("❌ Error with alternative rule queries: {}", e.getMessage(), e);
+                }
+                
+                // Also try to find rules by organization to see if there are any rules at all
+                if (device != null && device.getOrganizationId() != null) {
+                    List<Rule> orgRules = ruleRepository.findByOrganizationId(device.getOrganizationId());
+                    logger.info("🔍 Total rules in organization '{}': {}", device.getOrganizationId(), orgRules.size());
+                    
+                    // Check if any of these rules might be associated with our device
+                    List<Rule> potentialDeviceRules = orgRules.stream()
+                        .filter(rule -> trimmedId.equals(rule.getDeviceId()))
+                        .collect(Collectors.toList());
+                    logger.info("🔍 Potential device rules from organization query: {}", potentialDeviceRules.size());
+                    
+                    // Check for organization-level rules (no device ID)
+                    List<Rule> orgLevelRules = orgRules.stream()
+                        .filter(rule -> rule.getDeviceId() == null || rule.getDeviceId().trim().isEmpty())
+                        .collect(Collectors.toList());
+                    logger.info("🔍 Organization-level rules (no device ID): {}", orgLevelRules.size());
+                    
+                    // Check for rules with different device ID formats
+                    List<Rule> rulesWithDifferentDeviceIds = orgRules.stream()
+                        .filter(rule -> rule.getDeviceId() != null && !rule.getDeviceId().trim().isEmpty() && !trimmedId.equals(rule.getDeviceId()))
+                        .collect(Collectors.toList());
+                    logger.info("🔍 Rules with different device IDs: {}", rulesWithDifferentDeviceIds.size());
+                    
+                    if (!rulesWithDifferentDeviceIds.isEmpty()) {
+                        rulesWithDifferentDeviceIds.stream().limit(3).forEach(rule -> 
+                            logger.info("🔍 Different device ID rule - Name: {}, DeviceId: '{}'", rule.getName(), rule.getDeviceId()));
+                    }
+                }
                 
                 if (!deviceRules.isEmpty()) {
                     logger.info("🗑️ Starting deletion of {} rules for device: {}", deviceRules.size(), trimmedId);
@@ -721,6 +881,23 @@ public class DeviceService {
                 } else {
                     logger.info("ℹ️ No rules found for device: {}", trimmedId);
                     successfulDeletions.add("rules (0 rules)");
+                    
+                    // Summary of rule investigation
+                    logger.info("📊 Rule investigation summary for device: {}:", trimmedId);
+                    logger.info("   - Total rules in system: {}", allRules.size());
+                    if (device != null && device.getOrganizationId() != null) {
+                        List<Rule> orgRules = ruleRepository.findByOrganizationId(device.getOrganizationId());
+                        logger.info("   - Total rules in organization: {}", orgRules.size());
+                        long deviceSpecificRules = orgRules.stream()
+                            .filter(rule -> rule.getDeviceId() != null && !rule.getDeviceId().trim().isEmpty())
+                            .count();
+                        long orgLevelRules = orgRules.stream()
+                            .filter(rule -> rule.getDeviceId() == null || rule.getDeviceId().trim().isEmpty())
+                            .count();
+                        logger.info("   - Device-specific rules in organization: {}", deviceSpecificRules);
+                        logger.info("   - Organization-level rules: {}", orgLevelRules);
+                    }
+                    logger.info("   - This device had no specific rules assigned");
                 }
                 
             } catch (Exception e) {
