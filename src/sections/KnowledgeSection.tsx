@@ -24,19 +24,24 @@ import '../styles/knowledge.css';
 import { pdfAPI } from '../services/api'; // Added pdfAPI import
 import { knowledgeAPI } from '../services/api'; // Added knowledgeAPI import
 
-// Updated interface to match PDF API response
-interface KnowledgeDocument {
+// Updated interface to match UnifiedPDF API response
+interface UnifiedPDF {
   id: string;
   name: string;
-  type: string;
+  originalFilename: string;
+  documentType: string;
+  fileSize: number;
+  processingStatus: string;
+  vectorized: boolean;
   uploadedAt: string;
   processedAt?: string;
-  size: number;
-  status: string;
-  vectorized: boolean;
-  chunk_count?: number;
   deviceId?: string; // Link to device
   deviceName?: string; // Device name for display
+  organizationId: string;
+  collectionName?: string;
+  totalPages?: number;
+  processedChunks?: number;
+  processingTime?: string;
 }
 
 interface Device {
@@ -58,8 +63,8 @@ interface ChatMessage {
 }
 
 export const KnowledgeSection: React.FC = () => {
-  const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
-  const [selectedDocument, setSelectedDocument] = useState<KnowledgeDocument | null>(null);
+  const [documents, setDocuments] = useState<UnifiedPDF[]>([]);
+  const [selectedDocument, setSelectedDocument] = useState<UnifiedPDF | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDeviceForUpload, setSelectedDeviceForUpload] = useState<string>('');
   const [showDeviceSelector, setShowDeviceSelector] = useState(false);
@@ -114,18 +119,23 @@ export const KnowledgeSection: React.FC = () => {
         throw new Error('Invalid collections response format');
       }
 
-      const convertedDocuments: KnowledgeDocument[] = collections.map((collection: any, index: number) => ({
+      const convertedDocuments: UnifiedPDF[] = collections.map((collection: any, index: number) => ({
         id: collection.collection_name || collection.id || index.toString(),
         name: collection.pdf_name || collection.name || collection.collection_name || `PDF_${index}`,
-        type: 'pdf',
+        originalFilename: collection.pdf_name || collection.name || collection.collection_name || `PDF_${index}`,
+        documentType: 'pdf',
+        fileSize: collection.size || 0,
+        processingStatus: collection.status || 'completed',
+        vectorized: collection.vectorized !== false, // Default to true unless explicitly false
         uploadedAt: collection.created_at || collection.uploadedAt || new Date().toISOString(),
         processedAt: collection.created_at || collection.processedAt || new Date().toISOString(),
-        size: collection.size || 0,
-        status: collection.status || 'completed',
-        vectorized: collection.vectorized !== false, // Default to true unless explicitly false
-        chunk_count: collection.chunk_count || collection.chunkCount || 0,
         deviceId: collection.deviceId || undefined,
-        deviceName: collection.deviceName || undefined
+        deviceName: collection.deviceName || undefined,
+        organizationId: 'public',
+        collectionName: collection.collection_name,
+        totalPages: collection.total_pages || collection.totalPages,
+        processedChunks: collection.chunk_count || collection.chunkCount || 0,
+        processingTime: collection.processing_time || collection.processingTime
       }));
       setDocuments(convertedDocuments);
       logInfo('Knowledge', 'Collections refreshed successfully', { count: convertedDocuments.length });
@@ -163,18 +173,23 @@ export const KnowledgeSection: React.FC = () => {
             throw new Error('Invalid collections response format');
           }
 
-          const convertedDocuments: KnowledgeDocument[] = collections.map((collection: any, index: number) => ({
+          const convertedDocuments: UnifiedPDF[] = collections.map((collection: any, index: number) => ({
             id: collection.collection_name || collection.id || index.toString(),
             name: collection.pdf_name || collection.name || collection.collection_name || `PDF_${index}`,
-            type: 'pdf',
+            originalFilename: collection.pdf_name || collection.name || collection.collection_name || `PDF_${index}`,
+            documentType: 'pdf',
+            fileSize: collection.size || 0,
+            processingStatus: collection.status || 'completed',
+            vectorized: collection.vectorized !== false, // Default to true unless explicitly false
             uploadedAt: collection.created_at || collection.uploadedAt || new Date().toISOString(),
             processedAt: collection.created_at || collection.processedAt || new Date().toISOString(),
-            size: collection.size || 0,
-            status: collection.status || 'completed',
-            vectorized: collection.vectorized !== false, // Default to true unless explicitly false
-            chunk_count: collection.chunk_count || collection.chunkCount || 0,
             deviceId: collection.deviceId || undefined,
-            deviceName: collection.deviceName || undefined
+            deviceName: collection.deviceName || undefined,
+            organizationId: 'public',
+            collectionName: collection.collection_name,
+            totalPages: collection.total_pages || collection.totalPages,
+            processedChunks: collection.chunk_count || collection.chunkCount || 0,
+            processingTime: collection.processing_time || collection.processingTime
           }));
           setDocuments(convertedDocuments);
           logInfo('Knowledge', 'PDF documents loaded from external collections', { count: convertedDocuments.length });
@@ -185,18 +200,23 @@ export const KnowledgeSection: React.FC = () => {
           try {
             const knowledgeResponse = await knowledgeAPI.getDocuments();
             if (knowledgeResponse.data.documents) {
-              const knowledgeDocuments: KnowledgeDocument[] = knowledgeResponse.data.documents.map((doc: any) => ({
+              const knowledgeDocuments: UnifiedPDF[] = knowledgeResponse.data.documents.map((doc: any) => ({
                 id: doc.id.toString(),
                 name: doc.name,
-                type: doc.type || 'pdf',
+                originalFilename: doc.name,
+                documentType: doc.type || 'pdf',
+                fileSize: doc.size || 0,
+                processingStatus: doc.status || 'completed',
+                vectorized: doc.vectorized || true,
                 uploadedAt: doc.uploadedAt,
                 processedAt: doc.processedAt || doc.uploadedAt,
-                size: doc.size || 0,
-                status: doc.status || 'completed',
-                vectorized: doc.vectorized || true,
-                chunk_count: doc.chunkCount || 0,
                 deviceId: doc.deviceId,
-                deviceName: doc.deviceName
+                deviceName: doc.deviceName,
+                organizationId: doc.organizationId || 'public',
+                collectionName: doc.collectionName,
+                totalPages: doc.totalPages,
+                processedChunks: doc.chunkCount || 0,
+                processingTime: doc.processingTime
               }));
               setDocuments(knowledgeDocuments);
               logInfo('Knowledge', 'PDF documents loaded from knowledge API', { count: knowledgeDocuments.length });
@@ -208,18 +228,23 @@ export const KnowledgeSection: React.FC = () => {
             // Fallback to backend PDF API
             try {
               const pdfListResponse = await pdfAPI.listPDFs(0, 50);
-              const convertedDocuments: KnowledgeDocument[] = pdfListResponse.data.pdfs.map((pdf: any, index: number) => ({
+              const convertedDocuments: UnifiedPDF[] = pdfListResponse.data.pdfs.map((pdf: any, index: number) => ({
                 id: pdf.id || index.toString(),
                 name: pdf.name || pdf.filename || `PDF_${index}`,
-                type: 'pdf',
+                originalFilename: pdf.name || pdf.filename || `PDF_${index}`,
+                documentType: 'pdf',
+                fileSize: pdf.file_size || pdf.size_bytes || 0,
+                processingStatus: pdf.status || 'completed',
+                vectorized: pdf.vectorized || true,
                 uploadedAt: pdf.uploaded_at || pdf.created_at || new Date().toISOString(),
                 processedAt: pdf.processed_at || pdf.created_at || new Date().toISOString(),
-                size: pdf.file_size || pdf.size_bytes || 0,
-                status: pdf.status || 'completed',
-                vectorized: pdf.vectorized || true,
-                chunk_count: pdf.chunk_count || 0,
                 deviceId: pdf.device_id || undefined,
-                deviceName: pdf.device_name || undefined
+                deviceName: pdf.device_name || undefined,
+                organizationId: pdf.organization_id || pdf.organizationId || 'public',
+                collectionName: pdf.collection_name || pdf.collectionName,
+                totalPages: pdf.total_pages || pdf.totalPages,
+                processedChunks: pdf.chunk_count || 0,
+                processingTime: pdf.processing_time || pdf.processingTime
               }));
               setDocuments(convertedDocuments);
               logInfo('Knowledge', 'PDF documents loaded from backend fallback', { count: convertedDocuments.length });
@@ -409,20 +434,26 @@ export const KnowledgeSection: React.FC = () => {
       
       if (uploadResponse.data.success) {
         // Create a new document entry from the response
-        const newDocument: KnowledgeDocument = {
+        const newDocument: UnifiedPDF = {
           id: uploadResponse.data.pdfId || Date.now().toString(),
           name: uploadResponse.data.pdf_filename || file.name,
-          type: 'pdf',
-          uploadedAt: new Date().toISOString(),
-          size: file.size,
-          status: uploadResponse.data.processing_status || 'processing',
+          originalFilename: uploadResponse.data.pdf_filename || file.name,
+          documentType: 'pdf',
+          fileSize: file.size,
+          processingStatus: uploadResponse.data.processing_status || 'processing',
           vectorized: false, // Will be updated when processing completes
-          chunk_count: 0, // Will be updated when processing completes
+          uploadedAt: new Date().toISOString(),
+          processedAt: uploadResponse.data.processed_at || new Date().toISOString(),
           deviceId: uploadResponse.data.device_id || deviceId,
-          deviceName: uploadResponse.data.device_name || deviceName
+          deviceName: uploadResponse.data.device_name || deviceName,
+          organizationId: 'public',
+          collectionName: uploadResponse.data.collection_name || undefined,
+          totalPages: uploadResponse.data.total_pages || undefined,
+          processedChunks: uploadResponse.data.chunk_count || undefined,
+          processingTime: uploadResponse.data.processing_time || undefined
         };
 
-        setDocuments((prev: KnowledgeDocument[]) => [newDocument, ...prev]);
+        setDocuments((prev: UnifiedPDF[]) => [newDocument, ...prev]);
         
         // Show immediate success message (no loading screen)
         const successMessage: ChatMessage = {
@@ -451,17 +482,17 @@ export const KnowledgeSection: React.FC = () => {
     if (!confirm('Are you sure you want to delete this document?')) return;
 
     try {
-      const document = documents.find((doc: KnowledgeDocument) => doc.id === documentId);
+      const document = documents.find((doc: UnifiedPDF) => doc.id === documentId);
       if (document) {
         logInfo('Knowledge', `🗑️ Starting deletion process for document: "${document.name}" (ID: ${documentId})`);
         console.log(`📋 [Knowledge] Document details:`, {
           id: document.id,
           name: document.name,
-          type: document.type,
-          size: document.size,
-          status: document.status,
+          type: document.documentType,
+          size: document.fileSize,
+          status: document.processingStatus,
           vectorized: document.vectorized,
-          chunk_count: document.chunk_count,
+          chunk_count: document.processedChunks,
           deviceId: document.deviceId,
           deviceName: document.deviceName
         });
@@ -479,8 +510,8 @@ export const KnowledgeSection: React.FC = () => {
         
         // Remove from local state
         logInfo('Knowledge', `🗂️ Removing "${document.name}" from local state`);
-        setDocuments((prev: KnowledgeDocument[]) => {
-          const updatedDocs = prev.filter((doc: KnowledgeDocument) => doc.id !== documentId);
+        setDocuments((prev: UnifiedPDF[]) => {
+          const updatedDocs = prev.filter((doc: UnifiedPDF) => doc.id !== documentId);
           console.log(`📊 [Knowledge] Documents count: ${prev.length} → ${updatedDocs.length}`);
           return updatedDocs;
         });
@@ -902,15 +933,17 @@ export const KnowledgeSection: React.FC = () => {
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-gray-900 truncate text-sm">{doc.name}</h4>
+                          <h4 className="font-medium text-gray-900 truncate text-sm">
+                            {doc.deviceName ? `${doc.deviceName} - ${doc.name}` : doc.name}
+                          </h4>
                           <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                            <span>{formatFileSize(doc.size)}</span>
+                            {/* <span>{formatFileSize(doc.size)}</span> */}
                             <span>•</span>
                             <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
-                            {doc.chunk_count && (
+                            {doc.processedChunks && (
                               <>
                                 <span>•</span>
-                                <span>{doc.chunk_count} chunks</span>
+                                <span>{doc.processedChunks} chunks</span>
                               </>
                             )}
                           </div>
@@ -925,16 +958,16 @@ export const KnowledgeSection: React.FC = () => {
                       </div>
                       
                       <div className="flex items-center gap-2 ml-2">
-                        {getStatusIcon(doc.status)}
-                        {doc.status === 'processing' && (
+                        {getStatusIcon(doc.processingStatus)}
+                        {doc.processingStatus === 'processing' && (
                           <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
                             Processing...
                           </span>
                         )}
-                        {doc.status === 'completed' && doc.vectorized && (
+                        {doc.processingStatus === 'completed' && doc.vectorized && (
                           <Brain className="w-4 h-4 text-green-500" />
                         )}
-                        {doc.status === 'completed' && (
+                        {doc.processingStatus === 'completed' && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();

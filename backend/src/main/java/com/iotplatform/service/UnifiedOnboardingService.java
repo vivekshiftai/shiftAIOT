@@ -11,6 +11,7 @@ import com.iotplatform.exception.PDFProcessingException;
 import com.iotplatform.model.*;
 import com.iotplatform.model.Device;
 import com.iotplatform.model.Notification;
+import com.iotplatform.model.UnifiedPDF;
 import com.iotplatform.repository.*;
 import java.util.Optional;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -64,7 +65,7 @@ public class UnifiedOnboardingService {
     private final DeviceSafetyPrecautionRepository safetyRepository;
     private final NotificationService notificationService;
     private final ConsolidatedNotificationService consolidatedNotificationService;
-    private final DeviceDocumentationService deviceDocumentationService;
+    private final UnifiedPDFService unifiedPDFService;
     private final ObjectMapper objectMapper;
 
     @Autowired
@@ -316,52 +317,35 @@ public class UnifiedOnboardingService {
             sendProgressUpdate(progressCallback, "upload", 40, "PDF uploaded successfully", 
                               "Document received and queued for processing", null, 2, 5, "PDF Upload");
             
-            // Step 1.5: Store PDF metadata in device documentation table AND knowledge system
+            // Step 1.5: Store PDF metadata in unified PDF system
             try {
                 String documentType = manualFile != null ? "manual" : 
                                     datasheetFile != null ? "datasheet" : 
                                     "certificate";
                 
-                DeviceDocumentation documentation = deviceDocumentationService.createDeviceDocumentation(
+                // Create unified PDF entry for device
+                UnifiedPDF unifiedPDF = unifiedPDFService.createDevicePDF(
                     deviceId,
-                    documentType,
-                    pdfResult.pdfName, // Use the PDF name from external service
+                    deviceRequest.getName(),
                     pdfResult.originalFileName,
+                    "Device " + documentType, // Title
+                    UnifiedPDF.DocumentType.valueOf(documentType.toUpperCase()),
                     pdfResult.fileSize,
-                    "external_service" // File path is not stored locally
+                    organizationId,
+                    currentUserId
                 );
                 
                 // Update with processing response details
-                deviceDocumentationService.updateProcessingResponse(
-                    documentation.getId(),
+                unifiedPDFService.updateProcessingResponse(
+                    unifiedPDF.getId(),
                     pdfResult.pdfName,
                     uploadResponse.getChunksProcessed(),
                     uploadResponse.getProcessingTime(),
                     uploadResponse.getCollectionName()
                 );
                 
-                log.info("✅ Stored PDF metadata in device documentation: {} for device: {}", 
-                       documentation.getId(), deviceId);
-                
-                // Step 1.6: ALSO store PDF reference in knowledge system for chat queries
-                try {
-                    deviceDocumentationService.storePDFInKnowledgeSystem(
-                        deviceId,
-                        deviceRequest.getName(), // Device name
-                        pdfResult.originalFileName, // Use the actual uploaded filename
-                        pdfResult.fileSize,
-                        documentType,
-                        organizationId
-                    );
-                    
-                    log.info("✅ PDF reference stored in knowledge system for device: {} PDF: {}", 
-                           deviceId, pdfResult.originalFileName);
-                           
-                } catch (Exception knowledgeError) {
-                    log.error("❌ Failed to store PDF reference in knowledge system for device: {} - {}", 
-                             deviceId, knowledgeError.getMessage(), knowledgeError);
-                    // Continue with processing even if knowledge storage fails
-                }
+                log.info("✅ Stored PDF metadata in unified system: {} for device: {}", 
+                       unifiedPDF.getId(), deviceId);
                 
             } catch (Exception e) {
                 log.error("❌ Failed to store PDF metadata for device: {} - {}", deviceId, e.getMessage(), e);
@@ -456,9 +440,10 @@ public class UnifiedOnboardingService {
             int assignedCount = 0;
             
             for (var maintenanceData : maintenanceItems) {
+                String taskTitle = null;
                 try {
                     // Get task title - prefer 'task' field over 'task_name' field
-                    String taskTitle = maintenanceData.getTask() != null && !maintenanceData.getTask().trim().isEmpty() 
+                    taskTitle = maintenanceData.getTask() != null && !maintenanceData.getTask().trim().isEmpty() 
                         ? maintenanceData.getTask().trim() 
                         : maintenanceData.getTaskName() != null ? maintenanceData.getTaskName().trim() : null;
                     
@@ -538,53 +523,32 @@ public class UnifiedOnboardingService {
                     // Auto-assign to device assignee
                     if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
                         maintenance.setAssignedTo(deviceAssignee);
-                        maintenance.setAssignedBy("System");
-                        maintenance.setAssignedAt(LocalDateTime.now());
                         assignedCount++;
-                    } else {
-                        log.warn("Device assignee is null or empty for device: {}, skipping assignment", deviceId);
                     }
                     
                     // Set dates
-                    maintenance.setLastMaintenance(LocalDate.now());
-                    maintenance.setNextMaintenance(calculateNextMaintenanceDate(LocalDate.now(), maintenance.getFrequency()));
-                    maintenance.setStatus(DeviceMaintenance.Status.ACTIVE);
-                    maintenance.setCreatedAt(LocalDateTime.now());
-                    maintenance.setUpdatedAt(LocalDateTime.now());
+                    formatAndCalculateMaintenanceDates(maintenance, maintenanceData);
                     
+                    // Save to database
+                    maintenanceRepository.save(maintenance);
                     maintenanceToSave.add(maintenance);
                     processedCount++;
                     
-                    log.info("AUTO-ASSIGNMENT STRICT VALIDATION: Auto-assigned maintenance task: '{}' to device assignee: {} with frequency: {}, priority: {}", 
-                        maintenance.getTaskName(), deviceAssignee, maintenance.getFrequency(), maintenance.getPriority());
+                    log.debug("✅ Created maintenance task: {} for device: {}", taskTitle, deviceId);
                     
                 } catch (Exception e) {
-                    log.error("Failed to process maintenance task in auto-assignment storage: {}", 
-                        maintenanceData.getTaskName() != null ? maintenanceData.getTaskName() : "Unknown", e);
+                    log.error("❌ Failed to create maintenance task: {} for device: {} - {}", 
+                             taskTitle, deviceId, e.getMessage(), e);
                     skippedCount++;
-                    // Continue with next task instead of failing completely
                 }
             }
             
-            if (!maintenanceToSave.isEmpty()) {
-                // Final validation: ensure all maintenance records have valid component names
-                for (DeviceMaintenance maintenance : maintenanceToSave) {
-                    if (maintenance.getComponentName() == null || maintenance.getComponentName().trim().isEmpty()) {
-                        log.warn("Fixing null/empty componentName for task: '{}', setting to 'General'", maintenance.getTaskName());
-                        maintenance.setComponentName("General");
-                    }
-                }
-                
-                maintenanceRepository.saveAll(maintenanceToSave);
-                log.info("Successfully stored {} maintenance items for device: {} (skipped: {}, auto-assigned: {})", 
-                    processedCount, deviceId, skippedCount, assignedCount);
-            } else {
-                log.warn("No valid maintenance items to store for device: {} (all {} items were skipped due to missing required fields)", 
-                    deviceId, maintenanceItems.size());
-            }
+            log.info("✅ Maintenance tasks processing completed for device: {} - Processed: {}, Skipped: {}, Assigned: {}", 
+                     deviceId, processedCount, skippedCount, assignedCount);
             
         } catch (Exception e) {
-            log.error("Error storing maintenance with auto-assignment for device: {}", deviceId, e);
+            log.error("❌ Failed to store maintenance tasks for device: {} - {}", deviceId, e.getMessage(), e);
+            throw new RuntimeException("Failed to store maintenance tasks: " + e.getMessage(), e);
         }
     }
 

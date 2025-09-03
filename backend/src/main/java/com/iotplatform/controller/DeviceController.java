@@ -40,11 +40,8 @@ import com.iotplatform.dto.TelemetryDataRequest;
 import com.iotplatform.dto.DeviceUpdateRequest;
 import com.iotplatform.model.Device;
 import com.iotplatform.model.Device.Protocol;
-import com.iotplatform.model.DeviceDocumentation;
-import com.iotplatform.model.KnowledgeDocument;
 import com.iotplatform.model.User;
 import com.iotplatform.service.DeviceService;
-import com.iotplatform.service.DeviceDocumentationService;
 import com.iotplatform.service.DeviceSafetyPrecautionService;
 import com.iotplatform.service.DeviceWebSocketService;
 import com.iotplatform.service.FileStorageService;
@@ -66,7 +63,8 @@ import com.iotplatform.repository.UserRepository;
 import com.iotplatform.model.Notification;
 import com.iotplatform.service.NotificationService;
 import com.iotplatform.service.DeviceNotificationEnhancerService;
-import com.iotplatform.repository.KnowledgeDocumentRepository;
+import com.iotplatform.service.UnifiedPDFService;
+import com.iotplatform.model.UnifiedPDF;
 
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
@@ -74,6 +72,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.iotplatform.dto.UnifiedOnboardingProgress;
 import java.util.function.Consumer;
+import io.swagger.v3.oas.annotations.Operation;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -92,7 +91,6 @@ public class DeviceController {
     private final PDFProcessingService pdfProcessingService;
     private final UnifiedOnboardingService unifiedOnboardingService;
     private final DeviceSafetyPrecautionService deviceSafetyPrecautionService;
-    private final DeviceDocumentationService deviceDocumentationService;
     private final RuleRepository ruleRepository;
     private final RuleConditionRepository ruleConditionRepository;
     private final DeviceMaintenanceRepository deviceMaintenanceRepository;
@@ -103,12 +101,11 @@ public class DeviceController {
     private final DeviceWebSocketService deviceWebSocketService;
     private final MaintenanceScheduleService maintenanceScheduleService;
     private final DeviceNotificationEnhancerService deviceNotificationEnhancerService;
-    private final KnowledgeDocumentRepository knowledgeDocumentRepository;
+    private final UnifiedPDFService unifiedPDFService;
 
-    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, DeviceDocumentationService deviceDocumentationService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService, MaintenanceScheduleService maintenanceScheduleService, DeviceNotificationEnhancerService deviceNotificationEnhancerService, KnowledgeDocumentRepository knowledgeDocumentRepository) {
+    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService, MaintenanceScheduleService maintenanceScheduleService, DeviceNotificationEnhancerService deviceNotificationEnhancerService, UnifiedPDFService unifiedPDFService) {
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
-        this.deviceDocumentationService = deviceDocumentationService;
         this.fileStorageService = fileStorageService;
         this.pdfProcessingService = pdfProcessingService;
         this.unifiedOnboardingService = unifiedOnboardingService;
@@ -123,7 +120,7 @@ public class DeviceController {
         this.deviceWebSocketService = deviceWebSocketService;
         this.maintenanceScheduleService = maintenanceScheduleService;
         this.deviceNotificationEnhancerService = deviceNotificationEnhancerService;
-        this.knowledgeDocumentRepository = knowledgeDocumentRepository;
+        this.unifiedPDFService = unifiedPDFService;
     }
 
     @GetMapping
@@ -858,8 +855,8 @@ public class DeviceController {
                 return ResponseEntity.notFound().build();
             }
             
-            // Get PDF references from knowledge system
-            List<KnowledgeDocument> pdfReferences = deviceDocumentationService.getDevicePDFReferences(id, organizationId);
+            // Get PDF references from unified system
+            List<UnifiedPDF> pdfReferences = unifiedPDFService.getPDFsByDeviceAndOrganization(id, organizationId);
             
             Map<String, Object> response = new HashMap<>();
             response.put("deviceId", id);
@@ -868,9 +865,10 @@ public class DeviceController {
                 Map<String, Object> docMap = new HashMap<>();
                 docMap.put("id", doc.getId());
                 docMap.put("name", doc.getName());
-                docMap.put("type", doc.getType());
-                docMap.put("size", doc.getSize());
-                docMap.put("status", doc.getStatus());
+                docMap.put("originalFilename", doc.getOriginalFilename());
+                docMap.put("documentType", doc.getDocumentType());
+                docMap.put("fileSize", doc.getFileSize());
+                docMap.put("processingStatus", doc.getProcessingStatus());
                 docMap.put("vectorized", doc.getVectorized());
                 docMap.put("uploadedAt", doc.getUploadedAt());
                 docMap.put("processedAt", doc.getProcessedAt());
@@ -914,13 +912,13 @@ public class DeviceController {
             
             logger.info("🧪 Testing PDF storage for device: {} with file: {}", id, fileName);
             
-            // Test the storage method
-            deviceDocumentationService.storePDFInKnowledgeSystem(
-                id, deviceName, fileName, fileSize, documentType, organizationId
+            // Test the storage method using unified system
+            UnifiedPDF testPDF = unifiedPDFService.createDevicePDF(
+                id, deviceName, fileName, "Test Document", UnifiedPDF.DocumentType.valueOf(documentType.toUpperCase()), fileSize, organizationId, "test_user"
             );
             
             // Try to retrieve it
-            List<KnowledgeDocument> pdfReferences = deviceDocumentationService.getDevicePDFReferences(id, organizationId);
+            List<UnifiedPDF> pdfReferences = unifiedPDFService.getPDFsByDeviceAndOrganization(id, organizationId);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -930,9 +928,10 @@ public class DeviceController {
                 Map<String, Object> docMap = new HashMap<>();
                 docMap.put("id", doc.getId());
                 docMap.put("name", doc.getName());
-                docMap.put("type", doc.getType());
-                docMap.put("size", doc.getSize());
-                docMap.put("status", doc.getStatus());
+                docMap.put("originalFilename", doc.getOriginalFilename());
+                docMap.put("documentType", doc.getDocumentType());
+                docMap.put("fileSize", doc.getFileSize());
+                docMap.put("processingStatus", doc.getProcessingStatus());
                 docMap.put("vectorized", doc.getVectorized());
                 docMap.put("uploadedAt", doc.getUploadedAt());
                 docMap.put("processedAt", doc.getProcessedAt());
@@ -970,21 +969,22 @@ public class DeviceController {
         try {
             Map<String, Object> response = new HashMap<>();
             
-            // Test 1: Check if we can access the knowledge_documents table
+            // Test 1: Check if we can access the unified_pdfs table
             try {
-                long totalDocs = knowledgeDocumentRepository.count();
-                response.put("knowledgeTableAccessible", true);
+                List<UnifiedPDF> allPDFs = unifiedPDFService.getPDFsByOrganization(organizationId);
+                long totalDocs = allPDFs.size();
+                response.put("unifiedPdfTableAccessible", true);
                 response.put("totalDocumentsInSystem", totalDocs);
-                logger.info("✅ Knowledge documents table is accessible. Total documents: {}", totalDocs);
+                logger.info("✅ Unified PDFs table is accessible. Total documents: {}", totalDocs);
             } catch (Exception e) {
-                response.put("knowledgeTableAccessible", false);
-                response.put("knowledgeTableError", e.getMessage());
-                logger.error("❌ Cannot access knowledge_documents table: {}", e.getMessage());
+                response.put("unifiedPdfTableAccessible", false);
+                response.put("unifiedPdfTableError", e.getMessage());
+                logger.error("❌ Cannot access unified_pdfs table: {}", e.getMessage());
             }
             
             // Test 2: Check if we can find any documents for this organization
             try {
-                List<KnowledgeDocument> orgDocs = knowledgeDocumentRepository.findByOrganizationIdOrderByUploadedAtDesc(organizationId);
+                List<UnifiedPDF> orgDocs = unifiedPDFService.getPDFsByOrganization(organizationId);
                 response.put("organizationDocsAccessible", true);
                 response.put("organizationDocumentsCount", orgDocs.size());
                 logger.info("✅ Organization documents accessible. Count: {}", orgDocs.size());
@@ -996,9 +996,9 @@ public class DeviceController {
             
             // Test 3: Check if we can find any documents for this device
             try {
-                List<KnowledgeDocument> deviceDocs = knowledgeDocumentRepository.findByOrganizationIdAndDeviceIdOrderByUploadedAtDesc(organizationId, id);
+                List<UnifiedPDF> deviceDocs = unifiedPDFService.getPDFsByDeviceAndOrganization(id, organizationId);
                 response.put("deviceDocsAccessible", true);
-                response.put("deviceDocumentsCount", deviceDocs.size());
+                response.put("deviceDocsCount", deviceDocs.size());
                 logger.info("✅ Device documents accessible. Count: {}", deviceDocs.size());
             } catch (Exception e) {
                 response.put("deviceDocsAccessible", false);
@@ -1460,6 +1460,104 @@ public class DeviceController {
         }
     }
 
+    /**
+     * Get device documentation for chat queries
+     */
+    @GetMapping("/{deviceId}/documentation/chat")
+    @Operation(summary = "Get device documentation for chat queries", 
+               description = "Retrieve device documentation that can be used for chat queries")
+    public ResponseEntity<?> getDeviceDocumentationForChat(
+            @PathVariable String deviceId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            logger.info("📚 Fetching device documentation for chat - Device: {}, User: {}", deviceId, userDetails.getUsername());
+            
+            List<UnifiedPDF> documentation = unifiedPDFService.getPDFsByDeviceAndOrganization(deviceId, userDetails.getUser().getOrganizationId());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("deviceId", deviceId);
+            response.put("totalDocuments", documentation.size());
+            response.put("documentation", documentation);
+            
+            logger.info("✅ Successfully fetched {} documentation entries for device: {}", documentation.size(), deviceId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("❌ Failed to fetch device documentation for chat - Device: {}", deviceId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to fetch device documentation for chat"));
+        }
+    }
+    
+    /**
+     * Get device documentation summary for chat interface
+     */
+    @GetMapping("/{deviceId}/documentation/chat/summary")
+    @Operation(summary = "Get device documentation summary for chat", 
+               description = "Retrieve a summary of device documentation for the chat interface")
+    public ResponseEntity<?> getDeviceDocumentationSummaryForChat(
+            @PathVariable String deviceId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            logger.info("📊 Fetching device documentation summary for chat - Device: {}, User: {}", deviceId, userDetails.getUsername());
+            
+            List<UnifiedPDF> documentation = unifiedPDFService.getPDFsByDeviceAndOrganization(deviceId, userDetails.getUser().getOrganizationId());
+            
+            Map<String, Object> summary = new HashMap<>();
+            summary.put("deviceId", deviceId);
+            summary.put("totalDocuments", documentation.size());
+            summary.put("documentTypes", documentation.stream()
+                .map(UnifiedPDF::getDocumentType)
+                .distinct()
+                .collect(Collectors.toList()));
+            summary.put("processingStatus", documentation.stream()
+                .map(UnifiedPDF::getProcessingStatus)
+                .distinct()
+                .collect(Collectors.toList()));
+            
+            logger.info("✅ Successfully generated device documentation summary for chat - Device: {}", deviceId);
+            return ResponseEntity.ok(summary);
+        } catch (Exception e) {
+            logger.error("❌ Failed to generate device documentation summary for chat - Device: {}", deviceId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to generate device documentation summary for chat"));
+        }
+    }
+    
+    /**
+     * Get device documentation by type for chat queries
+     */
+    @GetMapping("/{deviceId}/documentation/chat/type/{documentType}")
+    @Operation(summary = "Get device documentation by type for chat", 
+               description = "Retrieve device documentation of a specific type for chat queries")
+    public ResponseEntity<?> getDeviceDocumentationByTypeForChat(
+            @PathVariable String deviceId,
+            @PathVariable String documentType,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        try {
+            logger.info("📋 Fetching device documentation by type for chat - Device: {}, Type: {}, User: {}", 
+                    deviceId, documentType, userDetails.getUsername());
+            
+            List<UnifiedPDF> allDocs = unifiedPDFService.getPDFsByType(userDetails.getUser().getOrganizationId(), UnifiedPDF.DocumentType.valueOf(documentType.toUpperCase()));
+            List<UnifiedPDF> documentation = allDocs.stream()
+                .filter(doc -> deviceId.equals(doc.getDeviceId()))
+                .collect(Collectors.toList());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("deviceId", deviceId);
+            response.put("documentType", documentType);
+            response.put("totalDocuments", documentation.size());
+            response.put("documentation", documentation);
+            
+            logger.info("✅ Successfully fetched {} {} documentation entries for device: {}", 
+                    documentation.size(), documentType, deviceId);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("❌ Failed to fetch device documentation by type for chat - Device: {}, Type: {}", 
+                    deviceId, documentType, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to fetch device documentation by type for chat"));
+        }
+    }
 
 
     private String convertEmptyToNull(String value) {

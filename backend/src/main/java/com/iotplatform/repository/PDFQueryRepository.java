@@ -20,18 +20,18 @@ import java.util.List;
  * @version 1.0
  */
 @Repository
-public interface PDFQueryRepository extends JpaRepository<PDFQuery, Long> {
+public interface PDFQueryRepository extends JpaRepository<PDFQuery, String> {
 
     /**
      * Find queries by PDF document ID (active only)
      */
-    List<PDFQuery> findByPdfDocumentIdAndDeletedFalseOrderByCreatedAtDesc(Long pdfDocumentId);
+    List<PDFQuery> findByPdfDocumentIdAndDeletedFalseOrderByCreatedAtDesc(String pdfDocumentId);
 
     /**
      * Find queries by PDF document ID with pagination (active only)
      */
     Page<PDFQuery> findByPdfDocumentIdAndDeletedFalseOrderByCreatedAtDesc(
-        Long pdfDocumentId, Pageable pageable);
+        String pdfDocumentId, Pageable pageable);
 
     /**
      * Find queries by user ID (active only)
@@ -58,12 +58,12 @@ public interface PDFQueryRepository extends JpaRepository<PDFQuery, Long> {
      * Find queries by status and PDF document ID (active only)
      */
     List<PDFQuery> findByStatusAndPdfDocumentIdAndDeletedFalseOrderByCreatedAtDesc(
-        PDFQuery.QueryStatus status, Long pdfDocumentId);
+        PDFQuery.QueryStatus status, String pdfDocumentId);
 
     /**
      * Count queries by PDF document ID (active only)
      */
-    long countByPdfDocumentIdAndDeletedFalse(Long pdfDocumentId);
+    long countByPdfDocumentIdAndDeletedFalse(String pdfDocumentId);
 
     /**
      * Count queries by user ID (active only)

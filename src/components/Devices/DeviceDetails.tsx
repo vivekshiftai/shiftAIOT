@@ -14,7 +14,7 @@ import {
   ArrowDown,
   ArrowUp
 } from 'lucide-react';
-import { unifiedDeviceService, DeviceDocumentation, DeviceRules, DeviceMaintenance, DeviceSafetyPrecaution } from '../../services/unifiedDeviceService';
+import { unifiedDeviceService, DeviceRules, DeviceMaintenance, DeviceSafetyPrecaution } from '../../services/unifiedDeviceService';
 import { logError, logInfo } from '../../utils/logger';
 import { DeviceStatusTest } from './DeviceStatusTest';
 

@@ -20,7 +20,8 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
-  Wrench
+  Wrench,
+  Brain
 } from 'lucide-react';
 import { useIoT } from '../contexts/IoTContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -67,18 +68,23 @@ interface ChatMessage {
   processing_time?: string;
 }
 
-interface KnowledgeDocument {
+interface UnifiedPDF {
   id: string;
   name: string;
-  type: string;
+  originalFilename: string;
+  documentType: string;
+  fileSize: number;
+  processingStatus: string;
+  vectorized: boolean;
   uploadedAt: string;
   processedAt?: string;
-  size: number;
-  status: string;
-  vectorized: boolean;
-  chunk_count?: number;
   deviceId?: string;
   deviceName?: string;
+  organizationId: string;
+  collectionName?: string;
+  totalPages?: number;
+  processedChunks?: number;
+  processingTime?: string;
 }
 
 interface MaintenanceTask {
@@ -236,7 +242,7 @@ export const DeviceDetailsSection: React.FC = () => {
   const [documentationInfo, setDocumentationInfo] = useState<DocumentationInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
-  const [devicePDFs, setDevicePDFs] = useState<KnowledgeDocument[]>([]);
+  const [devicePDFs, setDevicePDFs] = useState<UnifiedPDF[]>([]);
   // selectedPDF state removed - we automatically use the first available PDF
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -365,49 +371,95 @@ export const DeviceDetailsSection: React.FC = () => {
     }
     
     try {
-      // Get device PDF results which includes PDF documents
-      const pdfResultsResponse = await deviceAPI.getDevicePDFResults(device.id);
-      
-      if (pdfResultsResponse.data.pdfReferences && pdfResultsResponse.data.pdfReferences.length > 0) {
-        const pdfDocuments = pdfResultsResponse.data.pdfReferences;
+      // Get device PDFs from unified PDF system
+      try {
+        const pdfResponse = await pdfAPI.listPDFs(1, 100, device.id);
         
-        const filteredPDFs: KnowledgeDocument[] = pdfDocuments.map((doc: any) => ({
-          id: doc.id,
-          name: doc.name,
-          type: 'pdf',
-          uploadedAt: doc.uploadedAt || new Date().toISOString(),
-          processedAt: doc.processedAt || new Date().toISOString(),
-          size: doc.size || 0,
-          status: doc.status || 'completed',
-          vectorized: doc.vectorized || true,
-          chunk_count: doc.chunk_count || 0,
-          deviceId: device.id,
-          deviceName: device.name,
-          documentType: doc.documentType || 'manual'
-        }));
-        
-        setDevicePDFs(filteredPDFs);
-        
-        // No need to auto-select PDF since we'll use the first one automatically
-        
-        // Update initial chat message if PDFs are found
-        if (filteredPDFs.length > 0) {
-          setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!`);
+        if (pdfResponse.data.pdfs && pdfResponse.data.pdfs.length > 0) {
+          const pdfDocuments = pdfResponse.data.pdfs;
+          
+          const filteredPDFs: UnifiedPDF[] = pdfDocuments.map((doc: any) => ({
+            id: doc.id,
+            name: doc.filename || doc.name,
+            originalFilename: doc.filename || doc.name,
+            documentType: 'pdf',
+            fileSize: doc.size_bytes || doc.size || 0,
+            processingStatus: doc.status || 'completed',
+            vectorized: doc.vectorized || true,
+            uploadedAt: doc.uploaded_at || new Date().toISOString(),
+            processedAt: doc.processed_at || new Date().toISOString(),
+            deviceId: device.id,
+            deviceName: doc.device_name || device.name,
+            organizationId: device.organizationId || 'public',
+            collectionName: doc.collection_name || doc.collectionName,
+            totalPages: doc.total_pages || doc.totalPages,
+            processedChunks: doc.chunk_count || 0,
+            processingTime: doc.processing_time || doc.processingTime
+          }));
+          
+          setDevicePDFs(filteredPDFs);
+          
+          // Update initial chat message if PDFs are found
+          if (filteredPDFs.length > 0) {
+            setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!`);
+          }
+          
+          logInfo('DeviceDetails', 'Device PDFs loaded successfully from unified system', { 
+            deviceId: device.id, 
+            totalPDFs: pdfDocuments.length,
+            filteredPDFs: filteredPDFs.length 
+          });
+        } else {
+          setDevicePDFs([]);
+          setInitialChatMessage(`I don't have any PDF documents specifically associated with ${device.name} yet. To enable AI-powered assistance, upload device manuals, datasheets, or other documentation in the Knowledge Base section.`);
+          
+          logInfo('DeviceDetails', 'No PDFs found for device in unified system', { deviceId: device.id });
         }
+      } catch (pdfError) {
+        logError('DeviceDetails', 'Failed to load PDFs from unified system, trying fallback', pdfError instanceof Error ? pdfError : new Error('Unknown error'));
         
-        logInfo('DeviceDetails', 'Device PDFs loaded successfully', { 
-          deviceId: device.id, 
-          totalPDFs: pdfDocuments.length,
-          filteredPDFs: filteredPDFs.length 
-        });
-      } else {
-        // Fallback to knowledge API method if no PDF documents found
+        // Fallback to device API method
+        const pdfResultsResponse = await deviceAPI.getDevicePDFResults(device.id);
         
-                // No fallback needed - we're using the primary endpoint that should work
-        setDevicePDFs([]);
-        setInitialChatMessage(`I don't have any PDF documents specifically associated with ${device.name} yet. To enable AI-powered assistance, upload device manuals, datasheets, or other documentation in the Knowledge Base section.`);
-        
-        logInfo('DeviceDetails', 'No PDFs found for device', { deviceId: device.id });
+        if (pdfResultsResponse.data.pdfReferences && pdfResultsResponse.data.pdfReferences.length > 0) {
+          const pdfDocuments = pdfResultsResponse.data.pdfReferences;
+          
+          const filteredPDFs: UnifiedPDF[] = pdfDocuments.map((doc: any) => ({
+            id: doc.id,
+            name: doc.name,
+            originalFilename: doc.name,
+            documentType: 'pdf',
+            fileSize: doc.size || 0,
+            processingStatus: doc.status || 'completed',
+            vectorized: doc.vectorized || true,
+            uploadedAt: doc.uploadedAt || new Date().toISOString(),
+            processedAt: doc.processedAt || new Date().toISOString(),
+            deviceId: device.id,
+            deviceName: device.name,
+            organizationId: device.organizationId || 'public',
+            collectionName: doc.collectionName,
+            totalPages: doc.totalPages,
+            processedChunks: doc.chunk_count || 0,
+            processingTime: doc.processingTime
+          }));
+          
+          setDevicePDFs(filteredPDFs);
+          
+          if (filteredPDFs.length > 0) {
+            setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!`);
+          }
+          
+          logInfo('DeviceDetails', 'Device PDFs loaded successfully from fallback API', { 
+            deviceId: device.id, 
+            totalPDFs: pdfDocuments.length,
+            filteredPDFs: filteredPDFs.length 
+          });
+        } else {
+          setDevicePDFs([]);
+          setInitialChatMessage(`I don't have any PDF documents specifically associated with ${device.name} yet. To enable AI-powered assistance, upload device manuals, datasheets, or other documentation in the Knowledge Base section.`);
+          
+          logInfo('DeviceDetails', 'No PDFs found for device', { deviceId: device.id });
+        }
       }
       
     } catch (error) {
@@ -1368,6 +1420,49 @@ export const DeviceDetailsSection: React.FC = () => {
                     Safety Procedures
                   </button>
                 )}
+              </div>
+            )}
+
+            {/* PDF Documents Section */}
+            {devicePDFs.length > 0 && (
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  <h4 className="font-medium text-blue-900">Device Documentation</h4>
+                  <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">
+                    {devicePDFs.length} PDF{devicePDFs.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {devicePDFs.map((pdf, index) => (
+                    <div key={pdf.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-100">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <FileText className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900 text-sm">
+                            📱 {device?.name} - {pdf.originalFilename || pdf.name}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {pdf.documentType} • {pdf.processingStatus} • {pdf.processedChunks || 0} chunks
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {pdf.processingStatus === 'COMPLETED' && pdf.vectorized && (
+                          <Brain className="w-4 h-4 text-green-500" />
+                        )}
+                        {pdf.processingStatus === 'PROCESSING' && (
+                          <Clock className="w-4 h-4 text-blue-500" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-blue-700 mt-3">
+                  💡 These documents are automatically used for AI-powered assistance when you ask questions about this device.
+                </p>
               </div>
             )}
           </div>

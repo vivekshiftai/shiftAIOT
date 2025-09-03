@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.List;
 import java.util.Map;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,8 +37,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.web.client.RestTemplate;
 import com.iotplatform.config.PDFProcessingConfig;
 import com.iotplatform.dto.PDFProcessingResponse;
-import com.iotplatform.model.DeviceDocumentation;
-import com.iotplatform.service.DeviceDocumentationService;
+import com.iotplatform.model.UnifiedPDF;
+import com.iotplatform.service.UnifiedPDFService;
 
 import java.util.UUID;
 import java.time.LocalDateTime;
@@ -70,7 +71,7 @@ public class PDFProcessingController {
     private final PDFProcessingService pdfProcessingService;
     private final PDFProcessingConfig config;
     private final RestTemplate restTemplate;
-    private final DeviceDocumentationService deviceDocumentationService;
+    private final UnifiedPDFService unifiedPDFService;
 
     /**
      * Upload a PDF file for processing and storage (Authenticated endpoint).
@@ -802,28 +803,28 @@ public class PDFProcessingController {
             
             // Find device documentation by PDF name
             // Note: You might need to implement a more sophisticated lookup mechanism
-            // depending on how you associate the PDF with the device documentation
-            Optional<DeviceDocumentation> documentationOpt = findDeviceDocumentationByPdfName(pdfName);
+            // Find PDF by name in the unified system
+            Optional<UnifiedPDF> pdfOpt = unifiedPDFService.getPDFByName(pdfName, "public");
             
-            if (documentationOpt.isPresent()) {
-                DeviceDocumentation documentation = documentationOpt.get();
+            if (pdfOpt.isPresent()) {
+                UnifiedPDF pdf = pdfOpt.get();
                 
-                // Update the device documentation with processing results
-                DeviceDocumentation updated = deviceDocumentationService.updateProcessingResponse(
-                    documentation.getId(),
+                // Update the PDF with processing results
+                UnifiedPDF updated = unifiedPDFService.updateProcessingResponse(
+                    pdf.getId(),
                     response.getPdfName(),
                     response.getChunksProcessed(),
                     response.getProcessingTime(),
                     response.getCollectionName()
                 );
                 
-                log.info("✅ Successfully updated device documentation: {} for device: {}", 
+                log.info("✅ Successfully updated PDF: {} for device: {}", 
                            updated.getId(), updated.getDeviceId());
                 
                 Map<String, Object> successResponse = new HashMap<>();
                 successResponse.put("success", true);
-                successResponse.put("message", "Device documentation updated successfully");
-                successResponse.put("documentationId", updated.getId());
+                successResponse.put("message", "PDF updated successfully");
+                successResponse.put("pdfId", updated.getId());
                 successResponse.put("deviceId", updated.getDeviceId());
                 
                 return ResponseEntity.ok(successResponse);
@@ -864,16 +865,16 @@ public class PDFProcessingController {
                 return ResponseEntity.badRequest().body(createErrorResponse("Missing documentationId", "Documentation ID is required"));
             }
             
-            Optional<DeviceDocumentation> documentationOpt = deviceDocumentationService.getById(documentationId);
-            if (documentationOpt.isPresent()) {
-                DeviceDocumentation updated = deviceDocumentationService.updateProcessingResponse(
+            Optional<UnifiedPDF> pdfOpt = unifiedPDFService.getPDFById(documentationId);
+            if (pdfOpt.isPresent()) {
+                UnifiedPDF updated = unifiedPDFService.updateProcessingResponse(
                     documentationId, pdfName, chunksProcessed, processingTime, collectionName
                 );
                 
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", true);
                 response.put("message", "Processing status updated successfully");
-                response.put("documentation", updated);
+                response.put("pdf", updated);
                 
                 return ResponseEntity.ok(response);
             } else {
@@ -887,22 +888,22 @@ public class PDFProcessingController {
     }
     
     /**
-     * Helper method to find device documentation by PDF name
+     * Helper method to find PDF by name in the unified system
      * This is a simple implementation - you might need to enhance this based on your requirements
      */
-    private Optional<DeviceDocumentation> findDeviceDocumentationByPdfName(String pdfName) {
-        // First try to find by PDF name (if it was already set)
-        var docsByPdfName = deviceDocumentationService.getByPdfName(pdfName);
-        if (!docsByPdfName.isEmpty()) {
-            return Optional.of(docsByPdfName.get(0));
+    private Optional<UnifiedPDF> findPDFByName(String pdfName) {
+        // Try to find by PDF name
+        Optional<UnifiedPDF> pdfOpt = unifiedPDFService.getPDFByName(pdfName, "public");
+        if (pdfOpt.isPresent()) {
+            return pdfOpt;
         }
         
-        // If not found by PDF name, try to find by filename or original filename
+        // If not found by name, try to find by original filename
         // This is a fallback mechanism - you might need to implement a more sophisticated lookup
-        var allDocs = deviceDocumentationService.getByProcessingStatus("PENDING");
-        for (DeviceDocumentation doc : allDocs) {
-            if (pdfName.equals(doc.getFilename()) || pdfName.equals(doc.getOriginalFilename())) {
-                return Optional.of(doc);
+        List<UnifiedPDF> allPdfs = unifiedPDFService.getPDFsByStatus("public", UnifiedPDF.ProcessingStatus.PENDING);
+        for (UnifiedPDF pdf : allPdfs) {
+            if (pdfName.equals(pdf.getName()) || pdfName.equals(pdf.getOriginalFilename())) {
+                return Optional.of(pdf);
             }
         }
         

@@ -30,8 +30,8 @@ import com.iotplatform.repository.RuleConditionRepository;
 import com.iotplatform.model.RuleAction;
 import com.iotplatform.repository.RuleActionRepository;
 import com.iotplatform.service.DeviceConnectionService;
-import com.iotplatform.model.DeviceDocumentation;
-import com.iotplatform.repository.DeviceDocumentationRepository;
+import com.iotplatform.model.UnifiedPDF;
+import com.iotplatform.service.UnifiedPDFService;
 import com.iotplatform.model.PDFQuery;
 import com.iotplatform.repository.PDFQueryRepository;
 import com.iotplatform.model.Notification;
@@ -94,7 +94,7 @@ public class DeviceService {
     private RuleActionRepository ruleActionRepository;
 
     @Autowired
-    private DeviceDocumentationRepository deviceDocumentationRepository;
+    private UnifiedPDFService unifiedPDFService;
 
     @Autowired
     private PDFQueryRepository pdfQueryRepository;
@@ -664,13 +664,13 @@ public class DeviceService {
                 // Continue with other deletions
             }
             
-            // 5. Delete device documentation
+            // 5. Delete device PDFs
             try {
-                deviceDocumentationRepository.deleteByDeviceId(trimmedId);
-                logger.info("✅ Deleted device documentation for device: {}", trimmedId);
-                successfulDeletions.add("device documentation");
+                unifiedPDFService.softDeletePDFsByDevice(trimmedId);
+                logger.info("✅ Deleted device PDFs for device: {}", trimmedId);
+                successfulDeletions.add("device PDFs");
             } catch (Exception e) {
-                String errorMsg = "Failed to delete device documentation: " + e.getMessage();
+                String errorMsg = "Failed to delete device PDFs: " + e.getMessage();
                 logger.error("❌ {}", errorMsg, e);
                 deletionErrors.add(errorMsg);
                 // Continue with other deletions

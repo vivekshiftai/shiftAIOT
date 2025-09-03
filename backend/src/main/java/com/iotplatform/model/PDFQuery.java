@@ -34,15 +34,15 @@ import java.time.LocalDateTime;
 public class PDFQuery {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
 
     /**
-     * Reference to the PDF document that was queried
+     * Reference to the unified PDF document that was queried
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "pdf_document_id", nullable = false)
-    private PDFDocument pdfDocument;
+    private UnifiedPDF pdfDocument;
 
     /**
      * ID of the user who made the query

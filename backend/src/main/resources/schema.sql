@@ -123,31 +123,8 @@ ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS emergency_procedu
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS organization_id VARCHAR(255);
 
--- Add missing columns to device_documentation table if they don't exist
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS document_type VARCHAR(50);
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS filename VARCHAR(255);
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS original_filename VARCHAR(255);
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS file_size BIGINT;
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS file_path VARCHAR(500);
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS processing_status VARCHAR(50) DEFAULT 'PENDING';
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS processing_summary TEXT;
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS total_pages INTEGER;
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS processed_chunks INTEGER;
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS processing_time VARCHAR(100);
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS collection_name VARCHAR(255);
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS pdf_name VARCHAR(255);
-ALTER TABLE device_documentation ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-
--- Add missing columns to knowledge_documents table if they don't exist
-ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS type VARCHAR(50);
-ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS file_path VARCHAR(500);
-ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS size BIGINT;
-ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'processing';
-ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS vectorized BOOLEAN DEFAULT false;
-ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS device_id VARCHAR(255);
-ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS device_name VARCHAR(255);
-ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS processed_at TIMESTAMP;
-ALTER TABLE knowledge_documents ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+-- Old ALTER TABLE statements removed - tables no longer exist
+-- All PDF storage now uses the unified_pdfs table
 
 -- Add missing columns to conversation_configs table if they don't exist
 ALTER TABLE conversation_configs ADD COLUMN IF NOT EXISTS platform_name VARCHAR(100);
@@ -156,18 +133,7 @@ ALTER TABLE conversation_configs ADD COLUMN IF NOT EXISTS credentials JSONB;
 ALTER TABLE conversation_configs ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
 ALTER TABLE conversation_configs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
--- Add missing columns to pdf_documents table if they don't exist
-ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS original_filename VARCHAR(255);
-ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS file_size BIGINT;
-ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS chunks_processed INTEGER;
-ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS processing_time VARCHAR(100);
-ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS collection_name VARCHAR(255);
-ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS pdf_name VARCHAR(255);
-ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'UPLOADING';
-ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS processed_at TIMESTAMP;
-ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT FALSE;
-ALTER TABLE pdf_documents ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;
+-- Old pdf_documents table columns removed - now using unified_pdfs table
 
 -- Add missing columns to pdf_queries table if they don't exist
 ALTER TABLE pdf_queries ADD COLUMN IF NOT EXISTS user_query TEXT;
@@ -284,26 +250,9 @@ CREATE TABLE IF NOT EXISTS devices (
     FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Device Documentation table for onboarding flow
-CREATE TABLE IF NOT EXISTS device_documentation (
-    id VARCHAR(255) PRIMARY KEY,
-    device_id VARCHAR(255) NOT NULL,
-    document_type VARCHAR(50) NOT NULL, -- 'manual', 'datasheet', 'certificate'
-    filename VARCHAR(255) NOT NULL,
-    original_filename VARCHAR(255) NOT NULL,
-    file_size BIGINT NOT NULL,
-    file_path VARCHAR(500) NOT NULL,
-    processing_status VARCHAR(50) DEFAULT 'PENDING', -- 'PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'
-    processing_summary TEXT,
-    total_pages INTEGER,
-    processed_chunks INTEGER,
-    processing_time VARCHAR(100), -- Changed to VARCHAR to store time as string (e.g., "12.45s")
-    collection_name VARCHAR(255), -- Added to store collection name from external service
-    pdf_name VARCHAR(255), -- Added to store PDF name from external service
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
-);
+-- Device Documentation table removed - now using unified_pdfs table
+-- Old table structure preserved for reference:
+-- Old device_documentation table removed - now using unified_pdfs table
 
 -- Device Maintenance table for onboarding flow - Updated to match new model
 CREATE TABLE IF NOT EXISTS device_maintenance (
@@ -536,24 +485,7 @@ CREATE TABLE IF NOT EXISTS notification_template_variables (
     FOREIGN KEY (template_id) REFERENCES notification_templates(id) ON DELETE CASCADE
 );
 
--- Knowledge Documents table - Fixed schema
-CREATE TABLE IF NOT EXISTS knowledge_documents (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL,
-    file_path VARCHAR(500) NOT NULL,
-    size BIGINT NOT NULL,
-    status VARCHAR(50) DEFAULT 'processing',
-    vectorized BOOLEAN DEFAULT false,
-    organization_id VARCHAR(255) NOT NULL,
-    device_id VARCHAR(255),
-    device_name VARCHAR(255),
-    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    processed_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE SET NULL
-);
+-- Knowledge Documents table removed - now using unified_pdfs table
 
 -- User Preferences table
 CREATE TABLE IF NOT EXISTS user_preferences (
@@ -601,36 +533,64 @@ CREATE TABLE IF NOT EXISTS conversation_configs (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- PDF Documents Table
-CREATE TABLE IF NOT EXISTS pdf_documents (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    original_filename VARCHAR(255) NOT NULL,
+-- Old PDF-related tables have been removed and replaced with unified_pdfs table
+
+-- Unified PDF Documents Table - Single source of truth for all PDFs
+CREATE TABLE IF NOT EXISTS unified_pdfs (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL, -- PDF name from external service
+    original_filename VARCHAR(255) NOT NULL, -- Original uploaded filename
+    title VARCHAR(255), -- Document title/description
+    document_type VARCHAR(50) NOT NULL, -- 'manual', 'datasheet', 'certificate', 'general'
     file_size BIGINT NOT NULL,
-    chunks_processed INTEGER,
-    processing_time VARCHAR(100),
-    collection_name VARCHAR(255),
-    pdf_name VARCHAR(255), -- Added to store PDF name from external service
-    status VARCHAR(50) NOT NULL DEFAULT 'UPLOADING',
+    file_path VARCHAR(500) NOT NULL, -- Path to stored file or 'external_service'
+    
+    -- Processing and AI Integration
+    processing_status VARCHAR(50) DEFAULT 'PENDING', -- 'PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'
+    processing_summary TEXT,
+    total_pages INTEGER,
+    processed_chunks INTEGER,
+    processing_time VARCHAR(100), -- Processing time as string (e.g., "12.45s")
+    collection_name VARCHAR(255), -- Vector database collection name
+    vectorized BOOLEAN DEFAULT false,
+    
+    -- Device Association (nullable for general documents)
+    device_id VARCHAR(255),
+    device_name VARCHAR(255), -- Stored device name for display
+    
+    -- Organization and User Context
     organization_id VARCHAR(255) NOT NULL,
-    uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    uploaded_by VARCHAR(255), -- User who uploaded the PDF
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     processed_at TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Soft delete
+    deleted BOOLEAN DEFAULT false,
     deleted_at TIMESTAMP,
     
-    INDEX idx_pdf_org_id (organization_id),
-    INDEX idx_pdf_name_org (name, organization_id),
-    INDEX idx_pdf_uploaded_at (uploaded_at),
-    INDEX idx_pdf_status (status),
-    INDEX idx_pdf_deleted (deleted)
+    -- Foreign Keys
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE SET NULL,
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE SET NULL,
+    
+    -- Indexes for performance
+    INDEX idx_unified_pdfs_org_id (organization_id),
+    INDEX idx_unified_pdfs_device_id (device_id),
+    INDEX idx_unified_pdfs_name_org (name, organization_id),
+    INDEX idx_unified_pdfs_uploaded_at (uploaded_at),
+    INDEX idx_unified_pdfs_status (processing_status),
+    INDEX idx_unified_pdfs_deleted (deleted),
+    INDEX idx_unified_pdfs_type (document_type)
 );
 
--- PDF Queries Table
+-- Update PDF Queries Table to reference unified_pdfs
 CREATE TABLE IF NOT EXISTS pdf_queries (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    pdf_document_id BIGINT NOT NULL,
-    user_id BIGINT NOT NULL,
+    pdf_document_id VARCHAR(255) NOT NULL, -- Reference to unified_pdfs.id
+    user_id VARCHAR(255) NOT NULL,
+    device_id VARCHAR(255), -- Device context for the query
+    organization_id VARCHAR(255) NOT NULL,
     user_query TEXT NOT NULL,
     ai_response TEXT NOT NULL,
     chunks_used TEXT,
@@ -641,13 +601,32 @@ CREATE TABLE IF NOT EXISTS pdf_queries (
     deleted BOOLEAN NOT NULL DEFAULT FALSE,
     deleted_at TIMESTAMP,
     
-    FOREIGN KEY (pdf_document_id) REFERENCES pdf_documents(id),
+    FOREIGN KEY (pdf_document_id) REFERENCES unified_pdfs(id) ON DELETE CASCADE,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE SET NULL,
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    
     INDEX idx_pdf_query_doc_id (pdf_document_id),
     INDEX idx_pdf_query_user_id (user_id),
+    INDEX idx_pdf_query_device_id (device_id),
+    INDEX idx_pdf_query_org_id (organization_id),
     INDEX idx_pdf_query_created_at (created_at),
     INDEX idx_pdf_query_status (status),
     INDEX idx_pdf_query_deleted (deleted)
 );
+
+-- Migration: Add device_id and device_name columns to existing pdf_queries if they don't exist
+ALTER TABLE pdf_queries ADD COLUMN IF NOT EXISTS device_id VARCHAR(255);
+ALTER TABLE pdf_queries ADD COLUMN IF NOT EXISTS organization_id VARCHAR(255) NOT NULL DEFAULT 'default';
+
+-- Add foreign key constraints if they don't exist
+ALTER TABLE pdf_queries ADD CONSTRAINT IF NOT EXISTS fk_pdf_queries_device 
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE SET NULL;
+ALTER TABLE pdf_queries ADD CONSTRAINT IF NOT EXISTS fk_pdf_queries_org 
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+
+-- Add indexes if they don't exist
+CREATE INDEX IF NOT EXISTS idx_pdf_query_device_id ON pdf_queries(device_id);
+CREATE INDEX IF NOT EXISTS idx_pdf_query_org_id ON pdf_queries(organization_id);
 
 -- Create all indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -670,8 +649,7 @@ CREATE INDEX IF NOT EXISTS idx_notification_templates_organization ON notificati
 CREATE INDEX IF NOT EXISTS idx_notification_templates_type ON notification_templates(type);
 CREATE INDEX IF NOT EXISTS idx_notification_templates_active ON notification_templates(is_active);
 CREATE INDEX IF NOT EXISTS idx_notification_templates_name_org ON notification_templates(name, organization_id);
-CREATE INDEX IF NOT EXISTS idx_knowledge_organization ON knowledge_documents(organization_id);
-CREATE INDEX IF NOT EXISTS idx_device_documentation_device ON device_documentation(device_id);
+-- Old table indexes removed - now using unified_pdfs table indexes
 CREATE INDEX IF NOT EXISTS idx_device_maintenance_device ON device_maintenance(device_id);
 CREATE INDEX IF NOT EXISTS idx_device_maintenance_organization ON device_maintenance(organization_id);
 CREATE INDEX IF NOT EXISTS idx_device_maintenance_assigned_to ON device_maintenance(assigned_to);

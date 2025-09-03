@@ -2,13 +2,13 @@ package com.iotplatform.service;
 
 import com.iotplatform.dto.*;
 import com.iotplatform.exception.PDFProcessingException;
-import com.iotplatform.model.PDFDocument;
+import com.iotplatform.model.UnifiedPDF;
 import com.iotplatform.model.PDFQuery;
 import com.iotplatform.model.Rule;
 import com.iotplatform.model.DeviceMaintenance;
 import com.iotplatform.model.DeviceSafetyPrecaution;
 import com.iotplatform.model.Device;
-import com.iotplatform.repository.PDFDocumentRepository;
+import com.iotplatform.repository.UnifiedPDFRepository;
 import com.iotplatform.repository.PDFQueryRepository;
 import com.iotplatform.repository.RuleRepository;
 import com.iotplatform.repository.DeviceMaintenanceRepository;
@@ -65,7 +65,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
     private static final Logger log = LoggerFactory.getLogger(PDFProcessingServiceImpl.class);
     private final RestTemplate restTemplate;
     private final PDFProcessingConfig config;
-    private final PDFDocumentRepository pdfDocumentRepository;
+    private final UnifiedPDFRepository unifiedPDFRepository;
     private final PDFQueryRepository pdfQueryRepository;
     private final RuleRepository ruleRepository;
     private final DeviceMaintenanceRepository deviceMaintenanceRepository;
@@ -1013,21 +1013,21 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
         return headers;
     }
 
-    private PDFDocumentInfo mapToPDFDocumentInfo(PDFDocument document) {
+    private PDFDocumentInfo mapToPDFDocumentInfo(UnifiedPDF document) {
         return PDFDocumentInfo.builder()
             .collectionName(document.getCollectionName())
             .pdfName(document.getName())
             .createdAt(document.getUploadedAt().toString())
-            .chunkCount(document.getChunksProcessed())
+            .chunkCount(document.getProcessedChunks())
             .build();
     }
 
-    private PDFListResponse.PDFDocument mapToPDFListResponseDocument(PDFDocument document) {
+    private PDFListResponse.PDFDocument mapToPDFListResponseDocument(UnifiedPDF document) {
         return PDFListResponse.PDFDocument.builder()
             .name(document.getName())
             .uploadedAt(document.getUploadedAt().toString())
             .fileSize(document.getFileSize())
-            .status(document.getStatus().toString())
+            .status(document.getProcessingStatus().toString())
             .build();
     }
 
