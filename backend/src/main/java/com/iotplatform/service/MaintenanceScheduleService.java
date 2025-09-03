@@ -358,9 +358,11 @@ public class MaintenanceScheduleService {
                 // Set validated fields with actual values (no defaults)
                 maintenance.setTaskName(taskTitle);
                 maintenance.setComponentName(taskTitle != null && !taskTitle.trim().isEmpty() ? taskTitle.trim() : "General");
+                maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
                 maintenance.setDescription(maintenanceData.getDescription().trim());
                 
                 log.debug("Set componentName to: '{}' for task: '{}'", maintenance.getComponentName(), taskTitle);
+                log.debug("Set maintenanceType to: '{}' for task: '{}'", maintenance.getMaintenanceType(), taskTitle);
                 maintenance.setFrequency(maintenanceData.getFrequency().trim());
                 maintenance.setPriority(convertPriority(maintenanceData.getPriority().trim()));
                 maintenance.setEstimatedDuration(maintenanceData.getEstimatedDuration().trim());
@@ -380,6 +382,20 @@ public class MaintenanceScheduleService {
                 
                 maintenance.setCreatedAt(LocalDateTime.now());
                 maintenance.setUpdatedAt(LocalDateTime.now());
+                
+                // Final validation - ensure maintenance type is set
+                if (maintenance.getMaintenanceType() == null) {
+                    log.warn("Maintenance type is null for task: {}, setting to GENERAL", taskTitle);
+                    maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
+                }
+                
+                // Double-check maintenance type before saving
+                if (maintenance.getMaintenanceType() == null) {
+                    log.error("CRITICAL: Maintenance type is still null for task: {} after setting to GENERAL", taskTitle);
+                    maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
+                }
+                
+                log.info("Final maintenance type before save: {} for task: {}", maintenance.getMaintenanceType(), taskTitle);
                 
                 deviceMaintenanceRepository.save(maintenance);
                 processedCount++;

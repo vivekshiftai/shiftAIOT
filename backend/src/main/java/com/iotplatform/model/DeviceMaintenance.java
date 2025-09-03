@@ -138,6 +138,13 @@ public class DeviceMaintenance {
         if (componentName == null || componentName.trim().isEmpty()) {
             componentName = "General";
         }
+        
+        // Ensure maintenanceType is never null
+        if (maintenanceType == null) {
+            maintenanceType = MaintenanceType.GENERAL;
+        }
+        
+
     }
 
     @PreUpdate

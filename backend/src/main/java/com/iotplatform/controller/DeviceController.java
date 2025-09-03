@@ -754,31 +754,38 @@ public class DeviceController {
         }
         
         try {
-            // Get device to verify ownership and get file path
+            // Get device to verify ownership
             Optional<Device> device = deviceService.getDevice(id.trim(), organizationId);
             if (device.isEmpty()) {
                 logger.warn("Device {} not found for user {}", id, userEmail);
                 return ResponseEntity.notFound().build();
             }
             
-            String filePath = getDocumentationFilePath(device.get(), type.trim().toLowerCase());
-            if (filePath == null) {
+            // Get PDF from unified system
+            List<UnifiedPDF> pdfs = unifiedPDFService.getPDFsByDeviceAndOrganization(id.trim(), organizationId);
+            UnifiedPDF targetPDF = pdfs.stream()
+                .filter(pdf -> pdf.getDocumentType().toString().toLowerCase().equals(type.trim().toLowerCase()))
+                .findFirst()
+                .orElse(null);
+            
+            if (targetPDF == null) {
                 logger.warn("Documentation file not found for device {}: type={}", id, type);
                 return ResponseEntity.notFound().build();
             }
             
-            // Load file from storage
-            byte[] fileContent = fileStorageService.loadFile(filePath);
-            String filename = getDocumentationFilename(type.trim().toLowerCase());
-            String contentType = fileStorageService.getFileType(filename);
+            // For now, return a placeholder since we don't have actual file storage
+            // In a real implementation, you would download from the external PDF service
+            String filename = targetPDF.getOriginalFilename();
+            String contentType = "application/pdf";
             
-            logger.info("Documentation file downloaded successfully: device={}, type={}, size={} bytes", 
-                       id, type, fileContent.length);
+            logger.info("Documentation file found in unified system: device={}, type={}, filename={}", 
+                       id, type, filename);
             
+            // Return placeholder response - in production, download actual file from external service
             return ResponseEntity.ok()
                     .header("Content-Type", contentType)
                     .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
-                    .body(fileContent);
+                    .body("PDF file download not yet implemented - file exists in unified system".getBytes());
                     
         } catch (Exception e) {
             logger.error("Failed to download device documentation: device={}, type={}, error={}", 
@@ -814,7 +821,10 @@ public class DeviceController {
                 return ResponseEntity.notFound().build();
             }
             
-            Map<String, Object> documentationInfo = buildDocumentationInfo(device.get(), id);
+            // Get documentation info from unified PDF system
+            List<UnifiedPDF> pdfs = unifiedPDFService.getPDFsByDeviceAndOrganization(id.trim(), organizationId);
+            
+            Map<String, Object> documentationInfo = buildDocumentationInfoFromUnifiedSystem(device.get(), id, pdfs);
             
             logger.debug("Documentation info retrieved for device {}: {}", id, documentationInfo);
             return ResponseEntity.ok(documentationInfo);
@@ -1231,7 +1241,7 @@ public class DeviceController {
     
     private String getDocumentationFilePath(Device device, String type) {
         // Note: Documentation fields removed from simplified schema
-        // Documentation is now handled through the device documentation system
+        // Documentation is now handled through the unified PDF system
         return null;
     }
     
@@ -1257,6 +1267,46 @@ public class DeviceController {
         files.put("manual", Map.of("available", false));
         files.put("datasheet", Map.of("available", false));
         files.put("certificate", Map.of("available", false));
+        
+        documentationInfo.put("files", files);
+        return documentationInfo;
+    }
+    
+    private Map<String, Object> buildDocumentationInfoFromUnifiedSystem(Device device, String deviceId, List<UnifiedPDF> pdfs) {
+        Map<String, Object> documentationInfo = new HashMap<>();
+        documentationInfo.put("deviceId", deviceId);
+        documentationInfo.put("deviceName", device.getName());
+        
+        // Check which documentation files are available from unified PDF system
+        Map<String, Object> files = new HashMap<>();
+        
+        // Check for manual
+        boolean hasManual = pdfs.stream()
+            .anyMatch(pdf -> pdf.getDocumentType() == UnifiedPDF.DocumentType.MANUAL);
+        files.put("manual", Map.of("available", hasManual));
+        
+        // Check for datasheet
+        boolean hasDatasheet = pdfs.stream()
+            .anyMatch(pdf -> pdf.getDocumentType() == UnifiedPDF.DocumentType.DATASHEET);
+        files.put("datasheet", Map.of("available", hasDatasheet));
+        
+        // Check for certificate
+        boolean hasCertificate = pdfs.stream()
+            .anyMatch(pdf -> pdf.getDocumentType() == UnifiedPDF.DocumentType.CERTIFICATE);
+        files.put("certificate", Map.of("available", hasCertificate));
+        
+        // Add PDF count information
+        documentationInfo.put("totalPDFs", pdfs.size());
+        documentationInfo.put("pdfs", pdfs.stream()
+            .map(pdf -> Map.of(
+                "id", pdf.getId(),
+                "name", pdf.getName(),
+                "originalFilename", pdf.getOriginalFilename(),
+                "documentType", pdf.getDocumentType(),
+                "processingStatus", pdf.getProcessingStatus(),
+                "uploadedAt", pdf.getUploadedAt()
+            ))
+            .collect(Collectors.toList()));
         
         documentationInfo.put("files", files);
         return documentationInfo;

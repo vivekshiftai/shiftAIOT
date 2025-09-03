@@ -38,10 +38,10 @@ public class DatabaseInitializer implements CommandLineRunner {
         
         // Verify required tables
         List<String> requiredTables = List.of(
-            "users", "user_permissions", "devices", "device_documentation",
+            "users", "user_permissions", "devices", "unified_pdfs",
             "device_maintenance", "device_safety_precautions", "device_tags",
             "device_config", "rules", "rule_conditions", "rule_actions",
-            "notifications", "knowledge_documents", "conversation_configs"
+            "notifications", "conversation_configs"
         );
         
         List<String> missingTables = new ArrayList<>();

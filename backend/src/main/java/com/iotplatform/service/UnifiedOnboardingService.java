@@ -501,6 +501,7 @@ public class UnifiedOnboardingService {
                     maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
                     
                     log.debug("Set componentName to: '{}' for task: '{}'", maintenance.getComponentName(), taskTitle);
+                    log.debug("Set maintenanceType to: '{}' for task: '{}'", maintenance.getMaintenanceType(), taskTitle);
                     
                     // Set device information (required for foreign key constraint)
                     setDeviceInformation(maintenance, deviceId);
@@ -528,6 +529,20 @@ public class UnifiedOnboardingService {
                     
                     // Set dates
                     formatAndCalculateMaintenanceDates(maintenance, maintenanceData);
+                    
+                    // Final validation - ensure maintenance type is set
+                    if (maintenance.getMaintenanceType() == null) {
+                        log.warn("Maintenance type is null for task: {}, setting to GENERAL", taskTitle);
+                        maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
+                    }
+                    
+                    // Double-check maintenance type before saving
+                    if (maintenance.getMaintenanceType() == null) {
+                        log.error("CRITICAL: Maintenance type is still null for task: {} after setting to GENERAL", taskTitle);
+                        maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
+                    }
+                    
+                    log.info("Final maintenance type before save: {} for task: {}", maintenance.getMaintenanceType(), taskTitle);
                     
                     // Save to database
                     maintenanceRepository.save(maintenance);

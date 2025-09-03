@@ -94,7 +94,13 @@ ALTER TABLE rule_actions ADD COLUMN IF NOT EXISTS action_data JSON;
 
 -- Add missing columns to device_maintenance table if they don't exist
 ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS component_name VARCHAR(255) DEFAULT 'General';
-ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS maintenance_type VARCHAR(50);
+ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS maintenance_type VARCHAR(50) DEFAULT 'GENERAL' NOT NULL;
+-- Update any existing null maintenance_type values to 'GENERAL'
+UPDATE device_maintenance SET maintenance_type = 'GENERAL' WHERE maintenance_type IS NULL;
+-- Ensure maintenance_type cannot be null
+ALTER TABLE device_maintenance ALTER COLUMN maintenance_type SET NOT NULL;
+-- Add constraint to prevent future null values
+ALTER TABLE device_maintenance ADD CONSTRAINT chk_maintenance_type_not_null CHECK (maintenance_type IS NOT NULL);
 ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS frequency VARCHAR(100);
 ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS last_maintenance DATE;
 ALTER TABLE device_maintenance ADD COLUMN IF NOT EXISTS next_maintenance DATE;
@@ -250,10 +256,6 @@ CREATE TABLE IF NOT EXISTS devices (
     FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Device Documentation table removed - now using unified_pdfs table
--- Old table structure preserved for reference:
--- Old device_documentation table removed - now using unified_pdfs table
-
 -- Device Maintenance table for onboarding flow - Updated to match new model
 CREATE TABLE IF NOT EXISTS device_maintenance (
     id VARCHAR(255) PRIMARY KEY,
@@ -261,7 +263,7 @@ CREATE TABLE IF NOT EXISTS device_maintenance (
     task_name VARCHAR(255) NOT NULL,
     description TEXT,
     component_name VARCHAR(255) DEFAULT 'General',
-    maintenance_type VARCHAR(50), -- 'PREVENTIVE', 'CORRECTIVE', 'PREDICTIVE', 'GENERAL'
+    maintenance_type VARCHAR(50) DEFAULT 'GENERAL' NOT NULL, -- 'PREVENTIVE', 'CORRECTIVE', 'PREDICTIVE', 'GENERAL'
     frequency VARCHAR(100) NOT NULL,
     last_maintenance DATE,
     next_maintenance DATE NOT NULL,
@@ -286,6 +288,11 @@ CREATE TABLE IF NOT EXISTS device_maintenance (
     FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
+
+-- Remove old deprecated tables completely
+DROP TABLE IF EXISTS device_documentation CASCADE;
+DROP TABLE IF EXISTS knowledge_documents CASCADE;
+DROP TABLE IF EXISTS pdf_documents CASCADE;
 
 -- Device Safety Precautions table for onboarding flow
 CREATE TABLE IF NOT EXISTS device_safety_precautions (
