@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -748,9 +749,9 @@ public class DeviceService {
                 try {
                     // Try with organization context
                     if (device != null && device.getOrganizationId() != null) {
-                        List<Rule> deviceRulesWithOrg = ruleRepository.findByDeviceIdAndOrganizationId(trimmedId, device.getOrganizationId());
+                        List<Rule> alternativeDeviceRules = ruleRepository.findByDeviceIdAndOrganizationId(trimmedId, device.getOrganizationId());
                         logger.info("🔍 findByDeviceIdAndOrganizationId('{}', '{}') returned {} rules", 
-                                  trimmedId, device.getOrganizationId(), deviceRulesWithOrg.size());
+                                  trimmedId, device.getOrganizationId(), alternativeDeviceRules.size());
                     }
                     
                     // Try to find any rules that might be related
