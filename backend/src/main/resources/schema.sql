@@ -79,6 +79,21 @@ ALTER TABLE rules ADD COLUMN IF NOT EXISTS metric_value VARCHAR(100);
 ALTER TABLE rules ADD COLUMN IF NOT EXISTS threshold VARCHAR(200);
 ALTER TABLE rules ADD COLUMN IF NOT EXISTS consequence TEXT;
 ALTER TABLE rules ADD COLUMN IF NOT EXISTS device_id VARCHAR(255);
+ALTER TABLE rules ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true;
+ALTER TABLE rules ADD COLUMN IF NOT EXISTS last_triggered TIMESTAMP;
+
+-- Add foreign key constraint for device_id if it doesn't exist
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'fk_rules_device_id' 
+        AND table_name = 'rules'
+    ) THEN
+        ALTER TABLE rules ADD CONSTRAINT fk_rules_device_id 
+        FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE;
+    END IF;
+END $$;
 
 -- Add missing columns to rule_conditions table if they don't exist
 ALTER TABLE rule_conditions ADD COLUMN IF NOT EXISTS type VARCHAR(50);
@@ -318,15 +333,20 @@ CREATE TABLE IF NOT EXISTS rules (
     id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    type VARCHAR(50) NOT NULL, -- 'DEVICE_STATUS', 'TELEMETRY_THRESHOLD', 'TIME_BASED', 'COMPOSITE'
-    status VARCHAR(50) DEFAULT 'ACTIVE', -- 'ACTIVE', 'INACTIVE', 'DRAFT'
-    priority VARCHAR(50) DEFAULT 'MEDIUM', -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
+    metric VARCHAR(100),
+    metric_value VARCHAR(100),
+    threshold VARCHAR(200),
+    consequence TEXT,
+    device_id VARCHAR(255),
+    active BOOLEAN DEFAULT true,
     organization_id VARCHAR(255) NOT NULL,
     created_by VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_triggered TIMESTAMP,
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
 );
 
 -- Rule Conditions table - Updated to match new model
@@ -359,7 +379,8 @@ CREATE TABLE IF NOT EXISTS notifications (
     id VARCHAR(255) PRIMARY KEY,
     title VARCHAR(200) NOT NULL,
     message TEXT NOT NULL,
-    category VARCHAR(50) NOT NULL, -- 'DEVICE_ASSIGNMENT', 'DEVICE_CREATION', 'MAINTENANCE_SCHEDULE', etc.
+    type VARCHAR(50) NOT NULL, -- Legacy column for backward compatibility
+    category VARCHAR(50), -- New column for enhanced categorization
     read BOOLEAN DEFAULT false,
     device_id VARCHAR(255),
     rule_id VARCHAR(255),
@@ -386,7 +407,8 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 -- Add missing columns to existing notifications table if they don't exist
 -- This ensures the table structure matches the Java entity model
-ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category VARCHAR(50);
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(50) NOT NULL DEFAULT 'INFO';
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'DEVICE_ASSIGNMENT';
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS device_name VARCHAR(255);
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS device_type VARCHAR(100);
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS device_location VARCHAR(255);
@@ -397,11 +419,32 @@ ALTER TABLE notifications ADD COLUMN IF NOT EXISTS total_rules_count INTEGER DEF
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS device_manufacturer VARCHAR(255);
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS device_model VARCHAR(255);
 
+-- Ensure type column has proper default values for existing records
+UPDATE notifications SET type = 'INFO' WHERE type IS NULL;
+UPDATE notifications SET category = 'DEVICE_ASSIGNMENT' WHERE category IS NULL;
+
 -- Set default category for existing notifications if category is NULL
 UPDATE notifications SET category = 'DEVICE_ASSIGNMENT' WHERE category IS NULL;
 
--- Make category column NOT NULL after setting defaults
-ALTER TABLE notifications ALTER COLUMN category SET NOT NULL;
+-- Set default type for existing notifications if type is NULL
+UPDATE notifications SET type = 'INFO' WHERE type IS NULL;
+
+-- Final safety check: ensure no notifications have NULL type
+UPDATE notifications SET type = 'INFO' WHERE type IS NULL OR type = '';
+
+-- Verify the fix
+DO $$
+DECLARE
+    null_type_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO null_type_count FROM notifications WHERE type IS NULL OR type = '';
+    IF null_type_count > 0 THEN
+        RAISE WARNING 'Found % notifications with NULL or empty type, updating them to INFO', null_type_count;
+        UPDATE notifications SET type = 'INFO' WHERE type IS NULL OR type = '';
+    ELSE
+        RAISE NOTICE 'All notifications have valid type values';
+    END IF;
+END $$;
 
 -- Migrate existing notification types to categories if type column exists
 DO $$
@@ -417,6 +460,40 @@ BEGIN
         END
         WHERE category IS NULL;
     END IF;
+END $$;
+
+-- Ensure both type and category columns exist and have proper defaults
+-- This handles the case where the database still has the old type column requirement
+DO $$
+BEGIN
+    -- If type column doesn't exist, add it
+    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'notifications' AND column_name = 'type') THEN
+        ALTER TABLE notifications ADD COLUMN type VARCHAR(50) NOT NULL DEFAULT 'INFO';
+    END IF;
+    
+    -- If category column doesn't exist, add it
+    IF NOT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'notifications' AND column_name = 'category') THEN
+        ALTER TABLE notifications ADD COLUMN category VARCHAR(50) DEFAULT 'DEVICE_ASSIGNMENT';
+    END IF;
+    
+    -- Set default values for any NULL columns
+    UPDATE notifications SET type = 'INFO' WHERE type IS NULL;
+    UPDATE notifications SET category = 'DEVICE_ASSIGNMENT' WHERE category IS NULL;
+    
+    -- Ensure type column constraint is properly set
+    ALTER TABLE notifications ALTER COLUMN type SET NOT NULL;
+    ALTER TABLE notifications ALTER COLUMN type SET DEFAULT 'INFO';
+    
+    -- Add constraint to prevent future null values
+    ALTER TABLE notifications ADD CONSTRAINT IF NOT EXISTS chk_notifications_type_not_null CHECK (type IS NOT NULL);
+    
+    -- Additional safety: ensure all existing notifications have valid type values
+    UPDATE notifications SET type = 'INFO' WHERE type IS NULL OR type = '';
+    
+    -- Log the current state for debugging
+    RAISE NOTICE 'Notifications table updated - type column: %, category column: %', 
+        (SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'notifications' AND column_name = 'type'),
+        (SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'notifications' AND column_name = 'category');
 END $$;
 
 -- Update existing notifications with device information where possible

@@ -1641,6 +1641,7 @@ public class DeviceController {
                     updatedByUserName
                 ));
                 notification.setCategory(Notification.NotificationCategory.DEVICE_ASSIGNMENT);
+                notification.setType(Notification.NotificationType.INFO); // Explicitly set type for backward compatibility
                 notification.setUserId(assignedUserId);
                 notification.setDeviceId(device.getId());
                 notification.setOrganizationId(organizationId);

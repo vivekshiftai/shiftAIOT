@@ -52,6 +52,22 @@ public class NotificationService {
             logger.info("🔔 Starting notification creation process for user: {} with title: '{}'", 
                        notification.getUserId(), notification.getTitle());
             
+            // Set default type if not provided (for backward compatibility)
+            if (notification.getType() == null) {
+                notification.setType(determineNotificationType(notification.getCategory()));
+                logger.debug("Set default notification type: {} for category: {}", notification.getType(), notification.getCategory());
+            }
+            
+            // Double-check that type is set before saving
+            if (notification.getType() == null) {
+                logger.warn("⚠️ Notification type is still null after setting default, forcing to INFO");
+                notification.setType(Notification.NotificationType.INFO);
+            }
+            
+            // Log notification details before saving for debugging
+            logger.debug("🔍 Notification before save - Type: {}, Category: {}, Title: {}, UserId: {}", 
+                        notification.getType(), notification.getCategory(), notification.getTitle(), notification.getUserId());
+            
             // Sanitize and validate notification
             logger.debug("Sanitizing notification data...");
             NotificationValidator.sanitizeNotification(notification);
@@ -66,10 +82,10 @@ public class NotificationService {
             logger.info("✅ Notification created successfully with ID: {} for user: {}", savedNotification.getId(), notification.getUserId());
             
             // Log notification details for debugging
-            logger.debug("Notification details - ID: {}, Title: {}, Message: {}, Category: {}, UserId: {}, OrganizationId: {}, DeviceId: {}, Read: {}", 
+            logger.debug("Notification details - ID: {}, Title: {}, Message: {}, Type: {}, Category: {}, UserId: {}, OrganizationId: {}, DeviceId: {}, Read: {}", 
                         savedNotification.getId(), savedNotification.getTitle(), savedNotification.getMessage(), 
-                        savedNotification.getCategory(), savedNotification.getUserId(), savedNotification.getOrganizationId(), 
-                        savedNotification.getDeviceId(), savedNotification.isRead());
+                        savedNotification.getType(), savedNotification.getCategory(), savedNotification.getUserId(), 
+                        savedNotification.getOrganizationId(), savedNotification.getDeviceId(), savedNotification.isRead());
             
             return savedNotification;
         } catch (IllegalArgumentException e) {
@@ -454,5 +470,24 @@ public class NotificationService {
 
         // Default to device update for unknown types
         return Notification.NotificationCategory.DEVICE_UPDATE;
+    }
+    
+    /**
+     * Determine notification type based on category for backward compatibility.
+     */
+    private Notification.NotificationType determineNotificationType(Notification.NotificationCategory category) {
+        if (category == null) {
+            return Notification.NotificationType.INFO;
+        }
+        
+        return switch (category) {
+            case DEVICE_ASSIGNMENT, DEVICE_CREATION, DEVICE_UPDATE, DEVICE_ONLINE, 
+                 MAINTENANCE_SCHEDULE, MAINTENANCE_REMINDER, MAINTENANCE_ASSIGNMENT,
+                 RULE_CREATED, SYSTEM_UPDATE, CUSTOM -> Notification.NotificationType.INFO;
+            case DEVICE_OFFLINE, MAINTENANCE_ALERT, TEMPERATURE_ALERT, BATTERY_LOW,
+                 RULE_TRIGGERED, PERFORMANCE_ALERT -> Notification.NotificationType.WARNING;
+            case SECURITY_ALERT, SAFETY_ALERT -> Notification.NotificationType.ERROR;
+            default -> Notification.NotificationType.INFO;
+        };
     }
 }

@@ -16,8 +16,7 @@ public interface RuleRepository extends JpaRepository<Rule, String> {
     Optional<Rule> findByIdAndOrganizationId(String id, String organizationId);
     List<Rule> findByActiveTrue();
     
-    @Query("SELECT DISTINCT r FROM Rule r JOIN r.conditions c WHERE c.deviceId = :deviceId")
-    List<Rule> findByDeviceId(@Param("deviceId") String deviceId);
+    List<Rule> findByDeviceId(String deviceId);
     
     List<Rule> findByDeviceIdAndOrganizationId(String deviceId, String organizationId);
     

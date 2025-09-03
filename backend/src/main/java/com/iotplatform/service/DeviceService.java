@@ -599,14 +599,42 @@ public class DeviceService {
                 // Continue with other deletions
             }
             
-            // 4. Delete device rules and rule conditions
+            // 4. Delete notifications related to this device (BEFORE deleting rules)
+            try {
+                // Check if notifications table has the required columns before attempting deletion
+                try {
+                    notificationRepository.deleteByDeviceId(trimmedId);
+                    logger.info("✅ Deleted notifications for device: {}", trimmedId);
+                    successfulDeletions.add("notifications");
+                } catch (Exception e) {
+                    // Check if this is a schema mismatch error
+                    if (e.getMessage() != null && e.getMessage().contains("column") && e.getMessage().contains("does not exist")) {
+                        logger.warn("⚠️ Notifications table schema mismatch detected for device: {}. Skipping notification deletion.", trimmedId);
+                        logger.warn("⚠️ Schema error: {}", e.getMessage());
+                        successfulDeletions.add("notifications (skipped due to schema mismatch)");
+                        deletionErrors.add("Notifications deletion skipped due to schema mismatch: " + e.getMessage());
+                    } else {
+                        // Re-throw if it's not a schema issue
+                        throw e;
+                    }
+                }
+            } catch (Exception e) {
+                String errorMsg = "Failed to delete notifications: " + e.getMessage();
+                logger.error("❌ {}", errorMsg, e);
+                deletionErrors.add(errorMsg);
+                // Continue with other deletions
+            }
+            
+            // 5. Delete device rules and rule conditions
             try {
                 List<Rule> deviceRules = ruleRepository.findByDeviceId(trimmedId);
                 logger.info("🔍 Found {} rules to delete for device: {}", deviceRules.size(), trimmedId);
                 
                 if (!deviceRules.isEmpty()) {
+                    logger.info("🗑️ Starting deletion of {} rules for device: {}", deviceRules.size(), trimmedId);
+                    
                     for (Rule rule : deviceRules) {
-                        logger.info("🗑️ Deleting rule: {} (ID: {}) for device: {}", rule.getName(), rule.getId(), trimmedId);
+                        logger.info("🗑️ Processing rule: {} (ID: {}) for device: {}", rule.getName(), rule.getId(), trimmedId);
                         
                         // Delete rule conditions first
                         try {
@@ -629,13 +657,43 @@ public class DeviceService {
                             deletionErrors.add(errorMsg);
                             // Continue with other deletions
                         }
+                        
+                        // Log rule details for debugging
+                        logger.debug("Rule details - Name: {}, Device: {}, Organization: {}, Active: {}", 
+                                   rule.getName(), rule.getDeviceId(), rule.getOrganizationId(), rule.isActive());
                     }
                     
                     // Delete the rules
                     try {
-                        ruleRepository.deleteByDeviceId(trimmedId);
-                        logger.info("✅ Deleted {} rules for device: {}", deviceRules.size(), trimmedId);
-                        successfulDeletions.add("rules (" + deviceRules.size() + " rules)");
+                        logger.info("🗑️ Attempting to delete {} rules for device: {}", deviceRules.size(), trimmedId);
+                        
+                        // First, let's try to delete each rule individually to identify any problematic ones
+                        int successfullyDeletedRules = 0;
+                        for (Rule rule : deviceRules) {
+                            try {
+                                logger.debug("🗑️ Attempting to delete rule: {} (ID: {})", rule.getName(), rule.getId());
+                                
+                                // Double-check that rule conditions and actions are deleted
+                                List<RuleCondition> remainingConditions = ruleConditionRepository.findByRuleId(rule.getId());
+                                List<RuleAction> remainingActions = ruleActionRepository.findByRuleId(rule.getId());
+                                
+                                if (!remainingConditions.isEmpty() || !remainingActions.isEmpty()) {
+                                    logger.warn("⚠️ Rule {} still has {} conditions and {} actions before deletion", 
+                                              rule.getId(), remainingConditions.size(), remainingActions.size());
+                                }
+                                
+                                ruleRepository.delete(rule);
+                                successfullyDeletedRules++;
+                                logger.debug("✅ Successfully deleted individual rule: {} (ID: {})", rule.getName(), rule.getId());
+                            } catch (Exception e) {
+                                logger.error("❌ Failed to delete individual rule: {} (ID: {}) - {}", rule.getName(), rule.getId(), e.getMessage());
+                                logger.error("❌ Exception details: {}", e.getClass().getSimpleName());
+                                deletionErrors.add("Failed to delete rule " + rule.getName() + ": " + e.getMessage());
+                            }
+                        }
+                        
+                        logger.info("✅ Deleted {} out of {} rules for device: {}", successfullyDeletedRules, deviceRules.size(), trimmedId);
+                        successfulDeletions.add("rules (" + successfullyDeletedRules + "/" + deviceRules.size() + " rules)");
                         
                         // Verify deletion
                         List<Rule> remainingRules = ruleRepository.findByDeviceId(trimmedId);
@@ -644,8 +702,16 @@ public class DeviceService {
                             logger.error("❌ {}", errorMsg);
                             for (Rule remainingRule : remainingRules) {
                                 logger.error("Remaining rule: {} (ID: {})", remainingRule.getName(), remainingRule.getId());
+                                
+                                // Check what's preventing deletion
+                                List<RuleCondition> remainingConditions = ruleConditionRepository.findByRuleId(remainingRule.getId());
+                                List<RuleAction> remainingActions = ruleActionRepository.findByRuleId(remainingRule.getId());
+                                logger.error("Remaining rule {} has {} conditions and {} actions", 
+                                          remainingRule.getId(), remainingConditions.size(), remainingActions.size());
                             }
                             deletionErrors.add(errorMsg);
+                        } else {
+                            logger.info("✅ Verification successful: All rules deleted for device: {}", trimmedId);
                         }
                     } catch (Exception e) {
                         String errorMsg = "Failed to delete rules: " + e.getMessage();
@@ -664,7 +730,7 @@ public class DeviceService {
                 // Continue with other deletions
             }
             
-            // 5. Delete device PDFs
+            // 6. Delete device PDFs
             try {
                 unifiedPDFService.softDeletePDFsByDevice(trimmedId);
                 logger.info("✅ Deleted device PDFs for device: {}", trimmedId);
@@ -676,39 +742,13 @@ public class DeviceService {
                 // Continue with other deletions
             }
             
-            // 6. Delete PDF queries related to this device
+            // 7. Delete PDF queries related to this device
             try {
                 int deletedQueries = pdfQueryRepository.deleteByDeviceId(trimmedId, LocalDateTime.now());
                 logger.info("✅ Deleted {} PDF queries for device: {}", deletedQueries, trimmedId);
                 successfulDeletions.add("PDF queries (" + deletedQueries + " queries)");
             } catch (Exception e) {
                 String errorMsg = "Failed to delete PDF queries: " + e.getMessage();
-                logger.error("❌ {}", errorMsg, e);
-                deletionErrors.add(errorMsg);
-                // Continue with other deletions
-            }
-            
-            // 7. Delete notifications related to this device
-            try {
-                // Check if notifications table has the required columns before attempting deletion
-                try {
-                    notificationRepository.deleteByDeviceId(trimmedId);
-                    logger.info("✅ Deleted notifications for device: {}", trimmedId);
-                    successfulDeletions.add("notifications");
-                } catch (Exception e) {
-                    // Check if this is a schema mismatch error
-                    if (e.getMessage() != null && e.getMessage().contains("column") && e.getMessage().contains("does not exist")) {
-                        logger.warn("⚠️ Notifications table schema mismatch detected for device: {}. Skipping notification deletion.", trimmedId);
-                        logger.warn("⚠️ Schema error: {}", e.getMessage());
-                        successfulDeletions.add("notifications (skipped due to schema mismatch)");
-                        deletionErrors.add("Notifications deletion skipped due to schema mismatch: " + e.getMessage());
-                    } else {
-                        // Re-throw if it's not a schema issue
-                        throw e;
-                    }
-                }
-            } catch (Exception e) {
-                String errorMsg = "Failed to delete notifications: " + e.getMessage();
                 logger.error("❌ {}", errorMsg, e);
                 deletionErrors.add(errorMsg);
                 // Continue with other deletions

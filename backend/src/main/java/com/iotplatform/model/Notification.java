@@ -23,7 +23,11 @@ public class Notification {
     private String message;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "category", nullable = false)
+    @Column(name = "type", nullable = false)
+    private NotificationType type = NotificationType.INFO;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category")
     private NotificationCategory category = NotificationCategory.DEVICE_ASSIGNMENT;
 
     @Column(nullable = false)
@@ -80,6 +84,13 @@ public class Notification {
     @Column(name = "device_model")
     private String deviceModel;
 
+    public enum NotificationType {
+        INFO,
+        WARNING,
+        ERROR,
+        SUCCESS
+    }
+    
     public enum NotificationCategory {
         DEVICE_ASSIGNMENT,
         DEVICE_CREATION,
@@ -104,6 +115,55 @@ public class Notification {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+        
+        // Ensure type is always set for backward compatibility
+        if (type == null) {
+            type = NotificationType.INFO;
+        }
+        
+        // Ensure category is always set
+        if (category == null) {
+            category = NotificationCategory.DEVICE_ASSIGNMENT;
+        }
+        
+        // Ensure read status is set
+        if (read == false) {
+            read = false; // This is redundant but explicit
+        }
+    }
+    
+    /**
+     * Static factory method to create notifications with proper defaults
+     */
+    public static Notification createNotification(String title, String message, NotificationCategory category, String userId, String organizationId) {
+        Notification notification = new Notification();
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setCategory(category);
+        notification.setType(determineTypeFromCategory(category));
+        notification.setUserId(userId);
+        notification.setOrganizationId(organizationId);
+        notification.setRead(false);
+        return notification;
+    }
+    
+    /**
+     * Determine notification type from category for backward compatibility
+     */
+    private static NotificationType determineTypeFromCategory(NotificationCategory category) {
+        if (category == null) {
+            return NotificationType.INFO;
+        }
+        
+        return switch (category) {
+            case DEVICE_ASSIGNMENT, DEVICE_CREATION, DEVICE_UPDATE, DEVICE_ONLINE, 
+                 MAINTENANCE_SCHEDULE, MAINTENANCE_REMINDER, MAINTENANCE_ASSIGNMENT,
+                 RULE_CREATED, SYSTEM_UPDATE, CUSTOM -> NotificationType.INFO;
+            case DEVICE_OFFLINE, MAINTENANCE_ALERT, TEMPERATURE_ALERT, BATTERY_LOW,
+                 RULE_TRIGGERED, PERFORMANCE_ALERT -> NotificationType.WARNING;
+            case SECURITY_ALERT, SAFETY_ALERT -> NotificationType.ERROR;
+            default -> NotificationType.INFO;
+        };
     }
 
     // Getters and Setters
@@ -116,6 +176,9 @@ public class Notification {
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
 
+    public NotificationType getType() { return type; }
+    public void setType(NotificationType type) { this.type = type; }
+    
     public NotificationCategory getCategory() { return category; }
     public void setCategory(NotificationCategory category) { this.category = category; }
 
