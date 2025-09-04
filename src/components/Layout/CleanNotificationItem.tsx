@@ -177,23 +177,23 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
         };
 
         // Process rules data
-        const rulesData = rulesResponse.status === 'fulfilled' ? rulesResponse.value.data : [];
-        const totalRules = rulesData.length || notification.totalRulesCount || 0;
-        const keyRules = rulesData.slice(0, 3).map((rule: any) => ({
+        const rulesData = rulesResponse.status === 'fulfilled' ? (rulesResponse.value.data || []) : [];
+        const totalRules = Array.isArray(rulesData) ? rulesData.length : (notification.totalRulesCount || 0);
+        const keyRules = Array.isArray(rulesData) ? rulesData.slice(0, 3).map((rule: any) => ({
           name: rule.name || rule.rule_name || 'Unnamed Rule',
           parameter: rule.metric || rule.parameter || 'unknown'
-        }));
+        })) : [];
 
         // Process maintenance data
         const maintenanceData = maintenanceResponse.status === 'fulfilled' 
           ? (maintenanceResponse.value.data?.maintenanceTasks || maintenanceResponse.value.data || [])
           : [];
-        const totalMaintenanceTasks = maintenanceData.length || notification.maintenanceRulesCount || 0;
+        const totalMaintenanceTasks = Array.isArray(maintenanceData) ? maintenanceData.length : (notification.maintenanceRulesCount || 0);
         
         // Get upcoming maintenance tasks (next 3)
-        const upcomingMaintenance = maintenanceData
+        const upcomingMaintenance = Array.isArray(maintenanceData) ? maintenanceData
           .filter((task: any) => {
-            if (!task.dueDate) return false;
+            if (!task || !task.dueDate) return false;
             const dueDate = new Date(task.dueDate);
             const today = new Date();
             return dueDate >= today;
@@ -203,7 +203,7 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
           .map((task: any) => ({
             task: task.taskName || task.name || task.description || 'Maintenance Task',
             dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : 'No date'
-          }));
+          })) : [];
 
         const details = {
           device,
@@ -247,34 +247,41 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
   const style = getNotificationStyle(notification);
 
   return (
-    <div className={`transition-all duration-200 ${style.container}`}>
-      {/* Simple Card Header - Just Device Name and Status */}
+    <div className={`transition-all duration-300 ${style.container} rounded-xl overflow-hidden`}>
+      {/* Enhanced Card Header */}
       <div 
-        className="p-4 cursor-pointer hover:shadow-sm"
+        className="p-4 cursor-pointer hover:shadow-md transition-all duration-200 group"
         onClick={handleCardClick}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <div className="flex-shrink-0 relative">
-              {getNotificationIcon(notification.category)}
+              <div className="p-2 bg-white rounded-xl shadow-sm group-hover:shadow-md transition-all duration-200">
+                {getNotificationIcon(notification.category)}
+              </div>
               {!notification.read && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white"></div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full border-2 border-white shadow-lg animate-pulse"></div>
               )}
             </div>
             
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-slate-900 truncate">
+              <h3 className="text-lg font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
                 {notification.deviceName || notification.title}
               </h3>
-              <p className="text-sm text-slate-500 flex items-center gap-1">
+              <p className="text-sm text-slate-500 flex items-center gap-2 mt-1">
                 <Clock className="w-3 h-3" />
                 {formatRelativeTime(notification.createdAt)}
+                {!notification.read && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    New
+                  </span>
+                )}
               </p>
             </div>
           </div>
           
           <button
-            className={`p-2 rounded-lg transition-colors ${style.expandButton} text-lg font-bold min-w-[36px] h-9 flex items-center justify-center`}
+            className={`p-3 rounded-xl transition-all duration-200 ${style.expandButton} text-lg font-bold min-w-[40px] h-10 flex items-center justify-center group-hover:scale-110 shadow-sm hover:shadow-md`}
           >
             {isExpanded ? "−" : "+"}
           </button>
@@ -283,61 +290,64 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
 
       {/* Expanded Details Dropdown */}
       {isExpanded && (
-        <div className="border-t border-slate-200 bg-slate-50">
+        <div className="border-t border-slate-200/50 bg-gradient-to-br from-slate-50 to-white">
           {loadingDetails ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              <span className="ml-3 text-sm text-slate-500">Loading device details...</span>
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+              <span className="ml-3 text-sm text-slate-600 font-medium">Loading device details...</span>
             </div>
           ) : details ? (
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 animate-fadeIn">
               {/* Device Overview */}
-              <div className="bg-white rounded-xl p-6 border border-slate-200">
-                <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-blue-500" />
+              <div className="bg-white rounded-2xl p-6 border border-slate-200/50 shadow-sm hover:shadow-md transition-all duration-200">
+                <h4 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
+                  <div className="p-2 bg-blue-100 rounded-xl">
+                    <Settings className="w-5 h-5 text-blue-600" />
+                  </div>
                   Device Overview
                 </h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-500">Device:</span>
-                    <span className="font-medium">{details.device.name} ({details.device.type})</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-slate-50 rounded-xl">
+                    <p className="text-sm text-slate-500 font-medium mb-1">Device</p>
+                    <p className="font-bold text-slate-900">{details.device.name} ({details.device.type})</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-500">Location:</span>
-                    <span className="font-medium flex items-center gap-1">
-                      📍
-                      {details.device.location}
-                    </span>
+                  <div className="p-4 bg-slate-50 rounded-xl">
+                    <p className="text-sm text-slate-500 font-medium mb-1">Location</p>
+                    <p className="font-bold text-slate-900 flex items-center gap-2">
+                      📍 {details.device.location}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-500">Protocol:</span>
-                    <span className="font-medium">{details.device.protocol}</span>
+                  <div className="p-4 bg-slate-50 rounded-xl">
+                    <p className="text-sm text-slate-500 font-medium mb-1">Protocol</p>
+                    <p className="font-bold text-slate-900">{details.device.protocol}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-500">Status:</span>
-                    <span className="font-medium text-green-600">{details.device.status}</span>
+                  <div className="p-4 bg-slate-50 rounded-xl">
+                    <p className="text-sm text-slate-500 font-medium mb-1">Status</p>
+                    <p className="font-bold text-green-600">{details.device.status}</p>
                   </div>
                 </div>
               </div>
 
               {/* Summary Statistics */}
-              <div className="bg-white rounded-xl p-6 border border-slate-200">
-                <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-green-500" />
-                  Summary
+              <div className="bg-white rounded-2xl p-6 border border-slate-200/50 shadow-sm hover:shadow-md transition-all duration-200">
+                <h4 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-xl">
+                    <Bell className="w-5 h-5 text-green-600" />
+                  </div>
+                  Summary Statistics
                 </h4>
-                <div className="grid grid-cols-3 gap-6">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-600">{details.summary.totalRules}</div>
-                    <div className="text-sm text-slate-500 mt-1">monitoring rules</div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-xl">
+                    <div className="text-3xl font-bold text-blue-600 mb-1">{details.summary?.totalRules || 0}</div>
+                    <div className="text-sm text-slate-600 font-medium">monitoring rules</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600">{details.summary.totalMaintenanceTasks}</div>
-                    <div className="text-sm text-slate-500 mt-1">maintenance tasks</div>
+                  <div className="text-center p-4 bg-green-50 rounded-xl">
+                    <div className="text-3xl font-bold text-green-600 mb-1">{details.summary?.totalMaintenanceTasks || 0}</div>
+                    <div className="text-sm text-slate-600 font-medium">maintenance tasks</div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-orange-600">{details.summary.totalSafetyPrecautions}</div>
-                    <div className="text-sm text-slate-500 mt-1">safety precautions</div>
+                  <div className="text-center p-4 bg-orange-50 rounded-xl">
+                    <div className="text-3xl font-bold text-orange-600 mb-1">{details.summary?.totalSafetyPrecautions || 0}</div>
+                    <div className="text-sm text-slate-600 font-medium">safety precautions</div>
                   </div>
                 </div>
               </div>
@@ -348,7 +358,7 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
                   <Zap className="w-5 h-5 text-purple-500" />
                   Key Monitoring Rules
                 </h4>
-                {details.keyRules.length > 0 ? (
+                {details.keyRules && details.keyRules.length > 0 ? (
                   <div className="space-y-3">
                     {details.keyRules.map((rule: any, index: number) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
@@ -356,7 +366,7 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
                         <span className="text-sm text-slate-500 font-mono">({rule.parameter})</span>
                       </div>
                     ))}
-                    {details.summary.totalRules > 3 && (
+                    {details.summary && details.summary.totalRules > 3 && (
                       <p className="text-sm text-slate-500 text-center pt-2">
                         ... and {details.summary.totalRules - 3} more rules
                       </p>
@@ -375,7 +385,7 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
                   <Wrench className="w-5 h-5 text-yellow-500" />
                   Upcoming Maintenance
                 </h4>
-                {details.upcomingMaintenance.length > 0 ? (
+                {details.upcomingMaintenance && details.upcomingMaintenance.length > 0 ? (
                   <div className="space-y-3">
                     {details.upcomingMaintenance.map((task: any, index: number) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
@@ -383,7 +393,7 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
                         <span className="text-sm text-slate-500">Due: {task.dueDate}</span>
                       </div>
                     ))}
-                    {details.summary.totalMaintenanceTasks > 3 && (
+                    {details.summary && details.summary.totalMaintenanceTasks > 3 && (
                       <p className="text-sm text-slate-500 text-center pt-2">
                         ... and {details.summary.totalMaintenanceTasks - 3} more tasks
                       </p>
