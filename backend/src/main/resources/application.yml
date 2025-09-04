@@ -170,27 +170,27 @@ push:
 # Logging
 logging:
   level:
-    root: ERROR
+    root: INFO
     
-    com.iotplatform: ERROR
+    com.iotplatform: INFO
     
-    # Hibernate logging - set to ERROR to see only errors
-    org.hibernate: ERROR
-    org.hibernate.SQL: ERROR
-    org.hibernate.type.descriptor.sql.BasicBinder: ERROR
-    org.hibernate.type.descriptor.sql: ERROR
-    org.hibernate.stat: ERROR
-    org.hibernate.engine.transaction.internal: ERROR
-    org.hibernate.engine.jdbc.spi: ERROR
-    org.hibernate.engine.jdbc.env.internal: ERROR
-    org.hibernate.engine.jdbc.connections.internal: ERROR
+    # Hibernate logging - set to INFO for balanced logging
+    org.hibernate: INFO
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: INFO
+    org.hibernate.type.descriptor.sql: INFO
+    org.hibernate.stat: INFO
+    org.hibernate.engine.transaction.internal: INFO
+    org.hibernate.engine.jdbc.spi: INFO
+    org.hibernate.engine.jdbc.env.internal: INFO
+    org.hibernate.engine.jdbc.connections.internal: INFO
     
-    # Spring framework logging - set to ERROR to see only errors
-    org.springframework: ERROR
-    org.springframework.web: ERROR
-    org.springframework.data.jpa: ERROR
-    org.springframework.web.multipart: ERROR
-    org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping: ERROR
+    # Spring framework logging - set to INFO for balanced logging
+    org.springframework: INFO
+    org.springframework.web: INFO
+    org.springframework.data.jpa: INFO
+    org.springframework.web.multipart: INFO
+    org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%-5level] %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

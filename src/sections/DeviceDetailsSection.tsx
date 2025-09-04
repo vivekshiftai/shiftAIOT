@@ -27,6 +27,7 @@ import { useIoT } from '../contexts/IoTContext';
 import { useAuth } from '../contexts/AuthContext';
 import { DeviceCard } from '../components/Devices/DeviceCard';
 import { DeviceDetails } from '../components/Devices/DeviceDetails';
+import { useUserDisplayName } from '../hooks/useUserDisplayName';
 import DeviceAnalyticsDisplay from '../components/Devices/DeviceAnalyticsDisplay';
 import DeviceLogsDisplay from '../components/Devices/DeviceLogsDisplay';
 import DeviceMaintenanceDisplay from '../components/Devices/DeviceMaintenanceDisplay';
@@ -273,6 +274,9 @@ export const DeviceDetailsSection: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const device = devices.find(d => d.id === deviceId);
+  
+  // Get user display name for assigned user
+  const { displayName: assignedUserName, loading: userNameLoading } = useUserDisplayName(device?.assignedUserId);
   
   // Device state monitoring
   useEffect(() => {
@@ -1057,7 +1061,20 @@ export const DeviceDetailsSection: React.FC = () => {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-600">Assigned User</label>
-                  <p className="text-slate-800">{device.assignedUserId ? `User ID: ${device.assignedUserId}` : 'Not assigned'}</p>
+                  <p className="text-slate-800">
+                    {device.assignedUserId ? (
+                      userNameLoading ? (
+                        <span className="text-slate-500">Loading user...</span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-slate-500" />
+                          {assignedUserName}
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-slate-500">Not assigned</span>
+                    )}
+                  </p>
                 </div>
               </div>
             </div>
@@ -1178,16 +1195,13 @@ export const DeviceDetailsSection: React.FC = () => {
               </div>
             )}
             
-            {/* PDF Info - Hidden from user, only shown if no PDFs available */}
+            {/* AI Chat Ready Banner - Simple and Clean */}
             {devicePDFs.length > 0 && (
-              <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
+              <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-green-600" />
                   <span className="text-sm font-medium text-green-800">AI Chat Ready</span>
                 </div>
-                <p className="text-sm text-green-700 mt-2">
-                  I have access to {devicePDFs.length} PDF document(s) related to this device. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!
-                </p>
               </div>
             )}
             
@@ -1423,48 +1437,6 @@ export const DeviceDetailsSection: React.FC = () => {
               </div>
             )}
 
-            {/* PDF Documents Section */}
-            {devicePDFs.length > 0 && (
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center gap-2 mb-3">
-                  <FileText className="w-5 h-5 text-blue-600" />
-                  <h4 className="font-medium text-blue-900">Device Documentation</h4>
-                  <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded-full">
-                    {devicePDFs.length} PDF{devicePDFs.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  {devicePDFs.map((pdf, index) => (
-                    <div key={pdf.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-100">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <FileText className="w-4 h-4 text-blue-600" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900 text-sm">
-                            📱 {device?.name} - {pdf.originalFilename || pdf.name}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {pdf.documentType} • {pdf.processingStatus} • {pdf.processedChunks || 0} chunks
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {pdf.processingStatus === 'COMPLETED' && pdf.vectorized && (
-                          <Brain className="w-4 h-4 text-green-500" />
-                        )}
-                        {pdf.processingStatus === 'PROCESSING' && (
-                          <Clock className="w-4 h-4 text-blue-500" />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-blue-700 mt-3">
-                  💡 These documents are automatically used for AI-powered assistance when you ask questions about this device.
-                </p>
-              </div>
-            )}
           </div>
         );
 

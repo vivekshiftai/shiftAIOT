@@ -45,7 +45,7 @@ public class Device {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
-    private DeviceType type = DeviceType.SENSOR;
+    private DeviceType type = DeviceType.MACHINE;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
@@ -151,7 +151,7 @@ public class Device {
     private Map<String, String> config;
 
     public enum DeviceType {
-        SENSOR, ACTUATOR, GATEWAY, CONTROLLER
+        SENSOR, ACTUATOR, GATEWAY, CONTROLLER, MACHINE
     }
 
     public enum DeviceStatus {

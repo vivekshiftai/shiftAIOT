@@ -15,7 +15,7 @@ public class DeviceCreateRequest {
     private String name;
     
     @NotNull(message = "Device type is required")
-    private DeviceType type = DeviceType.SENSOR;
+    private DeviceType type = DeviceType.MACHINE;
     
     @NotBlank(message = "Device location is required")
     @Size(max = 200, message = "Location must be less than 200 characters")

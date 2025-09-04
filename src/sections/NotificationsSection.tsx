@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bell, Filter, Search, Check, X, AlertTriangle, Info, CheckCircle, Trash2, Archive } from 'lucide-react';
+import { Bell, Filter, Search, CheckCircle, AlertTriangle, Info, Trash2, Archive } from 'lucide-react';
 import { useIoT } from '../contexts/IoTContext';
 import { Notification } from '../types';
-import { LoadingSpinner } from '../components/Loading/LoadingComponents';
+import { NotificationDetailModal } from '../components/Notifications/NotificationDetailModal';
+import { formatRelativeTime } from '../utils/dateUtils';
 
 export const NotificationsSection: React.FC = () => {
   const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useIoT();
@@ -11,20 +12,20 @@ export const NotificationsSection: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   useEffect(() => {
     const filter = params.get('filter');
-    const range = params.get('range');
     if (filter === 'maintenance') {
       setSearchTerm('maintenance');
     }
-    // "range" param is informational here; the dashboard card shows current week.
   }, []);
 
   const filteredNotifications = useMemo(() => notifications.filter(notification => {
     const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          notification.message.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === 'all' || notification.type === typeFilter;
+    const matchesType = typeFilter === 'all' || notification.category === typeFilter;
     const matchesStatus = statusFilter === 'all' || 
                          (statusFilter === 'read' && notification.read) ||
                          (statusFilter === 'unread' && !notification.read);
@@ -51,11 +52,22 @@ export const NotificationsSection: React.FC = () => {
     );
   };
 
-  const handleSelectAll = () => {
-    if (selectedNotifications.length === filteredNotifications.length) {
-      setSelectedNotifications([]);
-    } else {
-      setSelectedNotifications(filteredNotifications.map(n => n.id));
+
+  const handleNotificationClick = (notification: Notification) => {
+    setSelectedNotification(notification);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedNotification(null);
+  };
+
+  const handleMarkAsReadFromModal = async (notificationId: string) => {
+    await markNotificationAsRead(notificationId);
+    // Update the selected notification to reflect the read status
+    if (selectedNotification && selectedNotification.id === notificationId) {
+      setSelectedNotification({ ...selectedNotification, read: true });
     }
   };
 
@@ -101,16 +113,6 @@ export const NotificationsSection: React.FC = () => {
     }
   };
 
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    return date.toLocaleDateString();
-  };
 
   return (
     <div className="space-y-6">
@@ -136,7 +138,7 @@ export const NotificationsSection: React.FC = () => {
               onClick={handleMarkAllAsRead}
               className="flex items-center gap-2 px-4 py-2 btn-secondary"
             >
-              <Check className="w-4 h-4" />
+              <CheckCircle className="w-4 h-4" />
               Mark all as read
             </button>
           )}
@@ -210,7 +212,7 @@ export const NotificationsSection: React.FC = () => {
                   </span>
                   <div className="flex items-center gap-2">
                     <button className="flex items-center gap-2 px-3 py-1 text-sm btn-secondary">
-                      <Check className="w-3 h-3" />
+                      <CheckCircle className="w-3 h-3" />
                       Mark as read
                     </button>
                     <button className="flex items-center gap-2 px-3 py-1 text-sm bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-all">
@@ -231,16 +233,20 @@ export const NotificationsSection: React.FC = () => {
               {filteredNotifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`p-6 hover:bg-slate-50 transition-colors ${
+                  className={`p-6 hover:bg-slate-50 transition-colors cursor-pointer ${
                     !notification.read ? 'bg-blue-50' : ''
                   }`}
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex items-start gap-4">
                     {/* Checkbox */}
                     <input
                       type="checkbox"
                       checked={selectedNotifications.includes(notification.id)}
-                      onChange={() => handleSelectNotification(notification.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleSelectNotification(notification.id);
+                      }}
                       className="mt-1 w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
                     />
                     
@@ -270,7 +276,7 @@ export const NotificationsSection: React.FC = () => {
                             {notification.message}
                           </p>
                           <div className="flex items-center gap-4 text-sm text-slate-500">
-                            <span>{formatTimestamp(notification.timestamp)}</span>
+                            <span>{formatRelativeTime(notification.createdAt)}</span>
                             {notification.deviceId && (
                               <>
                                 <span>•</span>
@@ -284,20 +290,25 @@ export const NotificationsSection: React.FC = () => {
                         <div className="flex items-center gap-2 ml-4">
                           {!notification.read && (
                             <button
-                              onClick={() => handleMarkAsRead(notification.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMarkAsRead(notification.id);
+                              }}
                               className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                               title="Mark as read"
                             >
-                              <Check className="w-4 h-4" />
+                              <CheckCircle className="w-4 h-4" />
                             </button>
                           )}
                           <button
+                            onClick={(e) => e.stopPropagation()}
                             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                             title="Archive"
                           >
                             <Archive className="w-4 h-4" />
                           </button>
                           <button
+                            onClick={(e) => e.stopPropagation()}
                             className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Delete"
                           >
@@ -324,6 +335,14 @@ export const NotificationsSection: React.FC = () => {
           <span>Read: {totalCount - unreadCount}</span>
         </div>
       </div>
+
+      {/* Notification Detail Modal */}
+      <NotificationDetailModal
+        notification={selectedNotification}
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseDetailModal}
+        onMarkAsRead={handleMarkAsReadFromModal}
+      />
     </div>
   );
 };

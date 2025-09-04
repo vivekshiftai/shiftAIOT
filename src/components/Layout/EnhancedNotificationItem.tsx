@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, AlertTriangle, Info, CheckCircle, Bell, Clock, MapPin, Settings, Shield, Wrench, Zap } from 'lucide-react';
 import { Notification } from '../../types';
+import { formatRelativeTime } from '../../utils/dateUtils';
 
 interface EnhancedNotificationItemProps {
   notification: Notification;
@@ -67,16 +68,6 @@ export const EnhancedNotificationItem: React.FC<EnhancedNotificationItemProps> =
     };
   };
 
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    return date.toLocaleDateString();
-  };
 
   const loadNotificationDetails = async () => {
     if (details || loadingDetails) return;
@@ -128,7 +119,7 @@ export const EnhancedNotificationItem: React.FC<EnhancedNotificationItemProps> =
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
               )}
               <span className="text-xs text-slate-400">
-                {formatTimestamp(notification.createdAt)}
+                {formatRelativeTime(notification.createdAt)}
               </span>
               <button
                 onClick={handleExpandClick}

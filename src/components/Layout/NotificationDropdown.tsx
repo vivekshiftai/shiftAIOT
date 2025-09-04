@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Settings, AlertTriangle, Info, CheckCircle, Bell, Wrench, Zap } from 'lucide-react';
+import { AlertTriangle, Info, CheckCircle, Bell, Wrench, Zap } from 'lucide-react';
 import { useIoT } from '../../contexts/IoTContext';
 import { Notification } from '../../types';
 import { EnhancedNotificationItem } from './EnhancedNotificationItem';
+import { NotificationDetailModal } from '../Notifications/NotificationDetailModal';
 
 interface NotificationDropdownProps {
   isOpen: boolean;
@@ -13,8 +14,10 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   isOpen, 
   onToggle 
 }) => {
-  const { notifications } = useIoT();
+  const { notifications, markNotificationAsRead } = useIoT();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
 
 
@@ -38,10 +41,25 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const handleNotificationClick = async (notification: Notification) => {
-    // Handle notification click - you can add navigation logic here
-    console.log('Notification clicked:', notification);
+    setSelectedNotification(notification);
+    setIsDetailModalOpen(true);
+    onToggle(); // Close the dropdown when opening detail modal
   };
 
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedNotification(null);
+  };
+
+  const handleMarkAsReadFromModal = async (notificationId: string) => {
+    await markNotificationAsRead(notificationId);
+    // Update the selected notification to reflect the read status
+    if (selectedNotification && selectedNotification.id === notificationId) {
+      setSelectedNotification({ ...selectedNotification, read: true });
+    }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getNotificationIcon = (category: Notification['category']) => {
     switch (category) {
       case 'SECURITY_ALERT':
@@ -51,7 +69,6 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
       case 'MAINTENANCE_SCHEDULE':
       case 'MAINTENANCE_REMINDER':
       case 'MAINTENANCE_ASSIGNMENT':
-      case 'MAINTENANCE_ALERT':
         return <Wrench className="w-4 h-4 text-orange-500" />;
       case 'DEVICE_ASSIGNMENT':
       case 'DEVICE_CREATION':
@@ -74,6 +91,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getNotificationStyle = (notification: Notification) => {
     // Special styling for device assignment notifications
     if (notification.title?.includes('Device Assignment') || notification.title?.includes('New Device')) {
@@ -92,6 +110,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     };
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
@@ -163,6 +182,14 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
           )}
         </div>
       )}
+
+      {/* Notification Detail Modal */}
+      <NotificationDetailModal
+        notification={selectedNotification}
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseDetailModal}
+        onMarkAsRead={handleMarkAsReadFromModal}
+      />
     </div>
   );
 };

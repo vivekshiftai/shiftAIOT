@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { deviceAPI, ruleAPI, notificationAPI } from '../services/api';
-import { unifiedOnboardingService } from '../services/unifiedOnboardingService';
+// import { unifiedOnboardingService } from '../services/unifiedOnboardingService'; // Not used in this context
 import { getApiConfig } from '../config/api';
 import { logInfo, logError, logWarn } from '../utils/logger';
 import { Device, Rule, Notification, TelemetryData, Status } from '../types';
@@ -239,13 +239,13 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         setRules([]);
       }
 
-      // Load notifications (optional) - skip if endpoint doesn't exist
+      // Load notifications using the notification service with caching and validation
       try {
-        const notificationsRes = await notificationAPI.getAll();
-        logInfo('IoT', 'Raw notifications response', notificationsRes);
-        
-        if (notificationsRes.data) {
-          setNotifications(notificationsRes.data);
+        if (user?.organizationId && user?.id) {
+          // Use the notification service which handles caching and validation
+          const notificationService = NotificationService.getInstance();
+          await notificationService.loadFromDatabase(user.organizationId, user.id);
+          setNotifications(notificationService.getAll());
         } else {
           setNotifications([]);
         }
@@ -377,7 +377,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   const updateRule = async (id: string, ruleUpdates: Partial<Rule>) => {
     try {
       logInfo('IoT', 'Updating rule', { ruleId: id, updates: ruleUpdates });
-      const response = await ruleAPI.update(id, ruleUpdates);
+      await ruleAPI.update(id, ruleUpdates);
       logInfo('IoT', 'Rule updated successfully', { ruleId: id });
       await refreshRules();
     } catch (error) {
@@ -401,7 +401,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   const toggleRule = async (id: string) => {
     try {
       logInfo('IoT', 'Toggling rule', { ruleId: id });
-      const response = await ruleAPI.toggle(id);
+      await ruleAPI.toggle(id);
       logInfo('IoT', 'Rule toggled successfully', { ruleId: id });
       await refreshRules();
     } catch (error) {
@@ -552,16 +552,23 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   const markNotificationAsRead = async (notificationId: string) => {
     try {
       logInfo('IoT', 'Marking notification as read', { notificationId });
-      await notificationAPI.markAsRead(notificationId);
       
-      // Update local state
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.id === notificationId 
-            ? { ...notification, read: true }
-            : notification
-        )
-      );
+      if (user?.organizationId && user?.id) {
+        // Use the notification service which handles caching
+        const notificationService = NotificationService.getInstance();
+        await notificationService.markAsRead(notificationId, user.organizationId, user.id);
+        setNotifications(notificationService.getAll());
+      } else {
+        // Fallback to direct API call
+        await notificationAPI.markAsRead(notificationId);
+        setNotifications(prev => 
+          prev.map(notification => 
+            notification.id === notificationId 
+              ? { ...notification, read: true }
+              : notification
+          )
+        );
+      }
       
       logInfo('IoT', 'Notification marked as read successfully', { notificationId });
     } catch (error) {

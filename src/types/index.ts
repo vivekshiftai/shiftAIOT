@@ -19,7 +19,7 @@ export interface User {
 export interface Device {
   id: string;
   name: string;
-  type: 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER';
+  type: 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER' | 'MACHINE';
   status: 'ONLINE' | 'OFFLINE' | 'WARNING' | 'ERROR';
   location: string;
   protocol: 'MQTT' | 'HTTP' | 'COAP';

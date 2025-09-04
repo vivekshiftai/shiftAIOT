@@ -1,5 +1,7 @@
 import { notificationAPI } from './api';
 import { Notification, NotificationEvent } from '../types';
+import { validateNotifications, sanitizeNotificationForDisplay } from '../utils/notificationValidation';
+import { notificationCacheService } from './notificationCacheService';
 
 class NotificationService {
   private static instance: NotificationService;
@@ -173,6 +175,7 @@ class NotificationService {
     return localStorage.getItem('token') || '';
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private getNotificationIcon(notification: Notification): string {
     switch (notification.category) {
       case 'DEVICE_ASSIGNMENT':
@@ -204,6 +207,7 @@ class NotificationService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private getNotificationColor(notification: Notification): string {
     switch (notification.category) {
       case 'DEVICE_ASSIGNMENT':
@@ -241,31 +245,44 @@ class NotificationService {
     return this.notifications;
   }
 
-  // Load notifications from database
-  async loadFromDatabase(): Promise<void> {
+  // Load notifications from database with caching and validation
+  async loadFromDatabase(organizationId?: string, userId?: string): Promise<void> {
     try {
+      // Check cache first if we have user context
+      if (organizationId && userId) {
+        const cachedNotifications = notificationCacheService.getCachedNotifications(organizationId, userId);
+        if (cachedNotifications) {
+          console.log('📦 Using cached notifications');
+          this.notifications = cachedNotifications;
+          this.notifyListeners();
+          return;
+        }
+      }
+
+      console.log('🌐 Fetching notifications from API...');
       const response = await notificationAPI.getAll();
       
-      // Validate response data
+      // Validate and sanitize response data
       if (response?.data && Array.isArray(response.data)) {
-        // Filter out invalid notifications and ensure required fields
-        this.notifications = response.data.filter((notification: any) => {
-          return notification && 
-                 notification.id && 
-                 notification.title && 
-                 notification.message && 
-                 notification.category &&
-                 notification.userId &&
-                 notification.organizationId;
-        }).map((notification: any) => ({
-          ...notification,
-          read: Boolean(notification.read),
-          deviceId: notification.deviceId || null,
-          ruleId: notification.ruleId || null,
-          metadata: notification.metadata || null
-        }));
+        const validationResult = validateNotifications(response.data);
+        
+        if (validationResult.invalid.length > 0) {
+          console.warn('⚠️ Found invalid notifications:', validationResult.invalid);
+        }
+        
+        // Use only valid notifications and sanitize them
+        this.notifications = validationResult.valid.map(notification => 
+          sanitizeNotificationForDisplay(notification)
+        );
+        
+        // Cache the valid notifications if we have user context
+        if (organizationId && userId) {
+          notificationCacheService.setCachedNotifications(organizationId, userId, this.notifications);
+        }
+        
+        console.log(`✅ Loaded ${this.notifications.length} valid notifications`);
       } else {
-        console.warn('Invalid notification data received from server');
+        console.warn('❌ Invalid notification data received from server');
         this.notifications = [];
       }
       
@@ -273,7 +290,7 @@ class NotificationService {
     } catch (error: any) {
       // Don't log 401 errors as they're expected when token is invalid
       if (error.response?.status !== 401) {
-        console.error('Failed to load notifications from database:', error);
+        console.error('❌ Failed to load notifications from database:', error);
       }
       this.notifications = [];
       this.notifyListeners();
@@ -286,7 +303,7 @@ class NotificationService {
   }
 
   // Mark notification as read
-  async markAsRead(notificationId: string): Promise<void> {
+  async markAsRead(notificationId: string, organizationId?: string, userId?: string): Promise<void> {
     try {
       await notificationAPI.markAsRead(notificationId);
       
@@ -294,10 +311,16 @@ class NotificationService {
       const notification = this.notifications.find(n => n.id === notificationId);
       if (notification) {
         notification.read = true;
-    this.notifyListeners();
-  }
+        
+        // Update cache if we have user context
+        if (organizationId && userId) {
+          notificationCacheService.updateCachedNotification(organizationId, userId, notification);
+        }
+      }
+      
+      this.notifyListeners();
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      console.error('❌ Failed to mark notification as read:', error);
       throw error;
     }
   }
