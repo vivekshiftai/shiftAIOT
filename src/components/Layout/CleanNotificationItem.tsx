@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, AlertTriangle, Info, CheckCircle, Bell, Settings, Wrench, Zap, MapPin } from 'lucide-react';
+import { AlertTriangle, Info, CheckCircle, Bell, Settings, Wrench, Zap, Clock } from 'lucide-react';
 import { Notification } from '../../types';
 import { formatRelativeTime } from '../../utils/dateUtils';
+import { deviceAPI, ruleAPI, maintenanceAPI } from '../../services/api';
 
 interface CleanNotificationItemProps {
   notification: Notification;
@@ -16,33 +17,6 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
   const [details, setDetails] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
-  const getCategoryColor = (category: Notification['category']) => {
-    switch (category) {
-      case 'SECURITY_ALERT':
-      case 'SAFETY_ALERT':
-        return 'red';
-      case 'PERFORMANCE_ALERT':
-      case 'DEVICE_OFFLINE':
-        return 'orange';
-      case 'MAINTENANCE_SCHEDULE':
-      case 'MAINTENANCE_REMINDER':
-      case 'MAINTENANCE_ASSIGNMENT':
-        return 'yellow';
-      case 'DEVICE_ASSIGNMENT':
-      case 'DEVICE_CREATION':
-      case 'DEVICE_UPDATE':
-      case 'DEVICE_ONLINE':
-        return 'green';
-      case 'RULE_TRIGGERED':
-      case 'RULE_CREATED':
-        return 'purple';
-      case 'TEMPERATURE_ALERT':
-      case 'BATTERY_LOW':
-        return 'amber';
-      default:
-        return 'blue';
-    }
-  };
 
   const getNotificationIcon = (category: Notification['category']) => {
     switch (category) {
@@ -174,36 +148,96 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
     }
   };
 
-  const handleExpandClick = async (e: React.MouseEvent) => {
+  const handleCardClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     
     if (!isExpanded && !details) {
       setLoadingDetails(true);
       try {
-        // Simulate API call to get notification details
-        // In real implementation, this would call your API
-        const mockDetails = {
-          device: {
-            name: "Sample Device",
-            type: "SENSOR",
-            status: "ONLINE",
-            protocol: "MQTT",
-            location: "Building A, Floor 2"
-          },
+        const deviceId = notification.deviceId;
+        if (!deviceId) {
+          throw new Error('No device ID available');
+        }
+
+        // Fetch all device data in parallel
+        const [deviceResponse, rulesResponse, maintenanceResponse] = await Promise.allSettled([
+          deviceAPI.getById(deviceId),
+          ruleAPI.getByDevice(deviceId),
+          maintenanceAPI.getByDevice(deviceId)
+        ]);
+
+        // Process device information
+        const deviceData = deviceResponse.status === 'fulfilled' ? deviceResponse.value.data : null;
+        const device = {
+          name: deviceData?.name || notification.deviceName || "Unknown Device",
+          type: deviceData?.type || notification.deviceType || "UNKNOWN",
+          status: deviceData?.status || notification.deviceStatus || "UNKNOWN",
+          protocol: deviceData?.protocol || "MQTT",
+          location: deviceData?.location || notification.deviceLocation || "Unknown Location"
+        };
+
+        // Process rules data
+        const rulesData = rulesResponse.status === 'fulfilled' ? rulesResponse.value.data : [];
+        const totalRules = rulesData.length || notification.totalRulesCount || 0;
+        const keyRules = rulesData.slice(0, 3).map((rule: any) => ({
+          name: rule.name || rule.rule_name || 'Unnamed Rule',
+          parameter: rule.metric || rule.parameter || 'unknown'
+        }));
+
+        // Process maintenance data
+        const maintenanceData = maintenanceResponse.status === 'fulfilled' 
+          ? (maintenanceResponse.value.data?.maintenanceTasks || maintenanceResponse.value.data || [])
+          : [];
+        const totalMaintenanceTasks = maintenanceData.length || notification.maintenanceRulesCount || 0;
+        
+        // Get upcoming maintenance tasks (next 3)
+        const upcomingMaintenance = maintenanceData
+          .filter((task: any) => {
+            if (!task.dueDate) return false;
+            const dueDate = new Date(task.dueDate);
+            const today = new Date();
+            return dueDate >= today;
+          })
+          .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+          .slice(0, 3)
+          .map((task: any) => ({
+            task: task.taskName || task.name || task.description || 'Maintenance Task',
+            dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : 'No date'
+          }));
+
+        const details = {
+          device,
           summary: {
-            totalRules: 14,
-            totalMaintenanceTasks: 22,
-            totalSafetyPrecautions: 22
-          }
+            totalRules,
+            totalMaintenanceTasks,
+            totalSafetyPrecautions: notification.safetyRulesCount || 0
+          },
+          upcomingMaintenance,
+          keyRules
         };
         
-        setTimeout(() => {
-          setDetails(mockDetails);
-          setLoadingDetails(false);
-        }, 1000);
+        setDetails(details);
+        setLoadingDetails(false);
       } catch (error) {
         console.error('Failed to load notification details:', error);
         setLoadingDetails(false);
+        // Set fallback data if API calls fail
+        setDetails({
+          device: {
+            name: notification.deviceName || "Unknown Device",
+            type: notification.deviceType || "UNKNOWN",
+            status: notification.deviceStatus || "UNKNOWN",
+            protocol: "MQTT",
+            location: notification.deviceLocation || "Unknown Location"
+          },
+          summary: {
+            totalRules: notification.totalRulesCount || 0,
+            totalMaintenanceTasks: notification.maintenanceRulesCount || 0,
+            totalSafetyPrecautions: notification.safetyRulesCount || 0
+          },
+          upcomingMaintenance: [],
+          keyRules: []
+        });
       }
     }
     
@@ -213,133 +247,165 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
   const style = getNotificationStyle(notification);
 
   return (
-    <div className={`p-4 transition-all duration-200 cursor-pointer ${style.container}`}>
-      <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 mt-0.5 relative">
-          {getNotificationIcon(notification.category)}
-          {/* Colored dot indicator */}
-          <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white bg-${getCategoryColor(notification.category)}-500`}></div>
-        </div>
-        
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between">
-            <p className={`text-sm font-medium ${style.title}`}>
-              {notification.title}
-            </p>
-            <div className="flex items-center gap-2">
+    <div className={`transition-all duration-200 ${style.container}`}>
+      {/* Simple Card Header - Just Device Name and Status */}
+      <div 
+        className="p-4 cursor-pointer hover:shadow-sm"
+        onClick={handleCardClick}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0 relative">
+              {getNotificationIcon(notification.category)}
               {!notification.read && (
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white"></div>
               )}
-              <span className="text-xs text-slate-400">
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-slate-900 truncate">
+                {notification.deviceName || notification.title}
+              </h3>
+              <p className="text-sm text-slate-500 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
                 {formatRelativeTime(notification.createdAt)}
-              </span>
-              <button
-                onClick={handleExpandClick}
-                className={`p-1 rounded-md transition-colors ${style.expandButton}`}
-              >
-                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </button>
+              </p>
             </div>
           </div>
           
-          <p className={`text-sm mt-1 ${style.message}`}>
-            {notification.message}
-          </p>
-          
-          <div className="mt-2 flex items-center gap-2">
-            {/* Category Badge */}
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${style.badge}`}>
-              {notification.category.replace(/_/g, ' ')}
-            </span>
-            
-            {/* Device Badge */}
-            {notification.deviceId && (
-              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                Device: {notification.deviceId}
-              </span>
-            )}
-          </div>
+          <button
+            className={`p-2 rounded-lg transition-colors ${style.expandButton} text-lg font-bold min-w-[36px] h-9 flex items-center justify-center`}
+          >
+            {isExpanded ? "−" : "+"}
+          </button>
         </div>
       </div>
 
-      {/* Clean Expanded Content - 70% width with just numbers */}
+      {/* Expanded Details Dropdown */}
       {isExpanded && (
-        <div className="mt-4 pt-4 border-t border-slate-200">
+        <div className="border-t border-slate-200 bg-slate-50">
           {loadingDetails ? (
-            <div className="flex items-center justify-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-              <span className="ml-2 text-sm text-slate-500">Loading details...</span>
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <span className="ml-3 text-sm text-slate-500">Loading device details...</span>
             </div>
           ) : details ? (
-            <div className="w-[70%] mx-auto">
-              {/* Device Information */}
-              {details.device && (
-                <div className="bg-white rounded-lg p-4 border border-slate-200 mb-4">
-                  <h4 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                    <Settings className="w-4 h-4" />
-                    Device Information
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span className="text-slate-500">Name:</span>
-                      <span className="ml-2 font-medium">{details.device.name}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500">Type:</span>
-                      <span className="ml-2 font-medium">{details.device.type}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500">Status:</span>
-                      <span className="ml-2 font-medium">{details.device.status}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500">Protocol:</span>
-                      <span className="ml-2 font-medium">{details.device.protocol}</span>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-slate-500">Location:</span>
-                      <span className="ml-2 font-medium flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {details.device.location}
-                      </span>
-                    </div>
+            <div className="p-6 space-y-6">
+              {/* Device Overview */}
+              <div className="bg-white rounded-xl p-6 border border-slate-200">
+                <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-blue-500" />
+                  Device Overview
+                </h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500">Device:</span>
+                    <span className="font-medium">{details.device.name} ({details.device.type})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500">Location:</span>
+                    <span className="font-medium flex items-center gap-1">
+                      📍
+                      {details.device.location}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500">Protocol:</span>
+                    <span className="font-medium">{details.device.protocol}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-500">Status:</span>
+                    <span className="font-medium text-green-600">{details.device.status}</span>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* Clean Summary Statistics - Just Numbers */}
-              {details.summary && (
-                <div className="bg-white rounded-lg p-6 border border-slate-200">
-                  <h4 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                    <Bell className="w-4 h-4" />
-                    Summary
-                  </h4>
-                  <div className="grid grid-cols-3 gap-6">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-blue-600">{details.summary.totalRules}</div>
-                      <div className="text-sm text-slate-500 mt-1">monitoring rules</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-green-600">{details.summary.totalMaintenanceTasks}</div>
-                      <div className="text-sm text-slate-500 mt-1">maintenance tasks</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-orange-600">{details.summary.totalSafetyPrecautions}</div>
-                      <div className="text-sm text-slate-500 mt-1">safety precautions</div>
-                    </div>
+              {/* Summary Statistics */}
+              <div className="bg-white rounded-xl p-6 border border-slate-200">
+                <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-green-500" />
+                  Summary
+                </h4>
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-blue-600">{details.summary.totalRules}</div>
+                    <div className="text-sm text-slate-500 mt-1">monitoring rules</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-green-600">{details.summary.totalMaintenanceTasks}</div>
+                    <div className="text-sm text-slate-500 mt-1">maintenance tasks</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-orange-600">{details.summary.totalSafetyPrecautions}</div>
+                    <div className="text-sm text-slate-500 mt-1">safety precautions</div>
                   </div>
                 </div>
-              )}
+              </div>
+
+              {/* Key Monitoring Rules */}
+              <div className="bg-white rounded-xl p-6 border border-slate-200">
+                <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-purple-500" />
+                  Key Monitoring Rules
+                </h4>
+                {details.keyRules.length > 0 ? (
+                  <div className="space-y-3">
+                    {details.keyRules.map((rule: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <span className="font-medium text-slate-900">{rule.name}</span>
+                        <span className="text-sm text-slate-500 font-mono">({rule.parameter})</span>
+                      </div>
+                    ))}
+                    {details.summary.totalRules > 3 && (
+                      <p className="text-sm text-slate-500 text-center pt-2">
+                        ... and {details.summary.totalRules - 3} more rules
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500 text-center py-4">
+                    No monitoring rules configured for this device
+                  </p>
+                )}
+              </div>
+
+              {/* Upcoming Maintenance */}
+              <div className="bg-white rounded-xl p-6 border border-slate-200">
+                <h4 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                  <Wrench className="w-5 h-5 text-yellow-500" />
+                  Upcoming Maintenance
+                </h4>
+                {details.upcomingMaintenance.length > 0 ? (
+                  <div className="space-y-3">
+                    {details.upcomingMaintenance.map((task: any, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <span className="font-medium text-slate-900">{task.task}</span>
+                        <span className="text-sm text-slate-500">Due: {task.dueDate}</span>
+                      </div>
+                    ))}
+                    {details.summary.totalMaintenanceTasks > 3 && (
+                      <p className="text-sm text-slate-500 text-center pt-2">
+                        ... and {details.summary.totalMaintenanceTasks - 3} more tasks
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500 text-center py-4">
+                    No upcoming maintenance tasks scheduled
+                  </p>
+                )}
+              </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2 pt-4">
+              <div className="flex gap-3 pt-4">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onClick(notification);
                   }}
-                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                 >
+                  <Settings className="w-4 h-4" />
                   View Device Details
                 </button>
                 <button
@@ -347,15 +413,16 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
                     e.stopPropagation();
                     // Mark as read functionality
                   }}
-                  className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
+                  className="px-6 py-3 border border-slate-300 rounded-lg font-medium hover:bg-slate-50 transition-colors"
                 >
                   Mark as Read
                 </button>
               </div>
             </div>
           ) : (
-            <div className="text-center py-4 text-slate-500">
-              No detailed information available
+            <div className="text-center py-8 text-slate-500">
+              <Info className="w-8 h-8 mx-auto mb-2 text-slate-400" />
+              <p>No detailed information available</p>
             </div>
           )}
         </div>
