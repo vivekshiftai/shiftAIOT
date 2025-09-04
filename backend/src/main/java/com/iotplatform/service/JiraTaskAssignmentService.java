@@ -35,7 +35,11 @@ public class JiraTaskAssignmentService {
     @Value("${jira.project-key:}")
     private String jiraProjectKey;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+    
+    public JiraTaskAssignmentService() {
+        this.restTemplate = new RestTemplate();
+    }
 
     /**
      * Assigns a maintenance task to a user in Jira
@@ -420,7 +424,7 @@ public class JiraTaskAssignmentService {
     /**
      * Checks if Jira is properly configured
      */
-    private boolean isJiraConfigured() {
+    public boolean isJiraConfigured() {
         return jiraBaseUrl != null && !jiraBaseUrl.trim().isEmpty() &&
                jiraUsername != null && !jiraUsername.trim().isEmpty() &&
                jiraApiToken != null && !jiraApiToken.trim().isEmpty() &&

@@ -168,6 +168,11 @@ push:
     "subject": "mailto: <s.tadikonda@theshiftai.in>"
 
 # Jira Configuration
+jira:
+  base-url: ${JIRA_BASE_URL:}
+  username: ${JIRA_USERNAME:}
+  api-token: ${JIRA_API_TOKEN:}
+  project-key: ${JIRA_PROJECT_KEY:}
 
 # Logging
 logging:

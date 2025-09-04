@@ -18,7 +18,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import { userAPI } from '../../services/api';
-import { logInfo, logError, logWarn } from '../../utils/logger';
+import { logInfo, logError } from '../../utils/logger';
 
 interface ComprehensiveProfile {
   basicInfo: {
@@ -106,7 +106,7 @@ export const ComprehensiveProfileEditor: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
-             logInfo('Loading comprehensive user profile...');
+             logInfo('Profile', 'Loading comprehensive user profile...');
        const response = await userAPI.getComprehensiveProfile();
        const profileData = response.data;
        
@@ -125,10 +125,13 @@ export const ComprehensiveProfileEditor: React.FC = () => {
          teamId: profileData.integrationInfo.teamId || ''
        });
        
-       logInfo(`Comprehensive profile loaded successfully for user: ${profileData.basicInfo.id} with ${profileData.integrationStatus.totalConnected} integrations`);
+       logInfo('Profile', 'Comprehensive profile loaded successfully', { 
+         userId: profileData.basicInfo.id, 
+         integrations: profileData.integrationStatus.totalConnected 
+       });
       
     } catch (err: any) {
-      logError('Failed to load comprehensive profile', err);
+      logError('Profile', 'Failed to load comprehensive profile', err);
       setError(err?.response?.data?.message || 'Failed to load profile information');
     } finally {
       setIsLoading(false);
@@ -138,12 +141,19 @@ export const ComprehensiveProfileEditor: React.FC = () => {
   const handleSaveProfile = async () => {
     if (!profile?.basicInfo.id) return;
     
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    
     try {
       setIsSaving(true);
       setError(null);
       setSuccess(null);
       
-             logInfo(`Saving comprehensive profile changes for user: ${profile.basicInfo.id}`);
+             logInfo('Profile', 'Saving comprehensive profile changes', { userId: profile.basicInfo.id });
       
              // Update basic user information with proper null handling
        const updatePayload = {
@@ -158,7 +168,7 @@ export const ComprehensiveProfileEditor: React.FC = () => {
          teamId: formData.teamId || null
        };
       
-      const response = await userAPI.update(profile.basicInfo.id, updatePayload);
+      await userAPI.update(profile.basicInfo.id, updatePayload);
       
       // Reload profile to get updated data
       await loadComprehensiveProfile();
@@ -166,13 +176,16 @@ export const ComprehensiveProfileEditor: React.FC = () => {
       setIsEditing(false);
       setSuccess('Profile updated successfully!');
       
-             logInfo(`Profile updated successfully for user: ${profile.basicInfo.id} with fields: ${Object.keys(updatePayload).join(', ')}`);
+             logInfo('Profile', 'Profile updated successfully', { 
+               userId: profile.basicInfo.id, 
+               updatedFields: Object.keys(updatePayload).join(', ') 
+             });
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000);
       
     } catch (err: any) {
-      logError('Failed to save profile', err);
+      logError('Profile', 'Failed to save profile', err);
       setError(err?.response?.data?.message || 'Failed to save profile changes');
     } finally {
       setIsSaving(false);
@@ -194,7 +207,7 @@ export const ComprehensiveProfileEditor: React.FC = () => {
       setIsSaving(true);
       setError(null);
       
-      logInfo('Changing user password...');
+      logInfo('Profile', 'Changing user password...');
       
       await userAPI.changePassword({
         currentPassword: passwordData.currentPassword,
@@ -204,12 +217,12 @@ export const ComprehensiveProfileEditor: React.FC = () => {
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setSuccess('Password changed successfully!');
       
-      logInfo('Password changed successfully');
+      logInfo('Profile', 'Password changed successfully');
       
       setTimeout(() => setSuccess(null), 3000);
       
     } catch (err: any) {
-      logError('Failed to change password', err);
+      logError('Profile', 'Failed to change password', err);
       setError(err?.response?.data?.message || 'Failed to change password');
     } finally {
       setIsSaving(false);
@@ -313,15 +326,17 @@ export const ComprehensiveProfileEditor: React.FC = () => {
                <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
                  <Mail className="w-4 h-4" />
                  Email Address
+                 <span className="text-xs text-slate-500">(Required)</span>
                </label>
                <input
                  type="email"
                  value={formData.email}
-                 disabled
-                 className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-100 text-slate-600"
-                 title="Email cannot be edited"
+                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                 disabled={!isEditing}
+                 placeholder="Enter your email address"
+                 className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 border-slate-300"
                />
-               <p className="text-xs text-slate-500 mt-1">Email address cannot be modified</p>
+               <p className="text-xs text-slate-500 mt-1">Your email address for login and notifications</p>
              </div>
             
                          <div>

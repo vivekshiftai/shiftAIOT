@@ -120,6 +120,51 @@ public class JiraBulkController {
     }
 
     /**
+     * Test endpoint to verify Jira configuration
+     * 
+     * @return Response with Jira configuration status
+     */
+    @GetMapping("/test")
+    public ResponseEntity<Map<String, Object>> testJiraConfiguration() {
+        try {
+            logger.info("🔍 Testing Jira configuration...");
+            
+            Map<String, Object> response = new HashMap<>();
+            
+            // Test if Jira is configured
+            boolean isConfigured = jiraTaskAssignmentService.isJiraConfigured();
+            response.put("configured", isConfigured);
+            response.put("message", isConfigured ? "Jira is properly configured" : "Jira configuration is missing");
+            
+            if (isConfigured) {
+                response.put("status", "ready");
+                logger.info("✅ Jira configuration test passed");
+            } else {
+                response.put("status", "not_configured");
+                response.put("required_variables", List.of(
+                    "JIRA_BASE_URL",
+                    "JIRA_USERNAME", 
+                    "JIRA_API_TOKEN",
+                    "JIRA_PROJECT_KEY"
+                ));
+                logger.warn("⚠️ Jira configuration test failed - missing environment variables");
+            }
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error testing Jira configuration: {}", e.getMessage(), e);
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("configured", false);
+            errorResponse.put("status", "error");
+            errorResponse.put("message", "Error testing Jira configuration: " + e.getMessage());
+            
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+
+    /**
      * Creates simple bulk tasks with basic information
      * 
      * @param request Simple bulk task request
