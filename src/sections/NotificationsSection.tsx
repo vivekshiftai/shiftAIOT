@@ -1,19 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bell, Filter, Search, CheckCircle, AlertTriangle, Info, Trash2, Archive } from 'lucide-react';
+import { Bell, Filter, Search, CheckCircle } from 'lucide-react';
 import { useIoT } from '../contexts/IoTContext';
 import { Notification } from '../types';
-import { NotificationDetailModal } from '../components/Notifications/NotificationDetailModal';
-import { formatRelativeTime } from '../utils/dateUtils';
+import { CleanNotificationItem } from '../components/Layout/CleanNotificationItem';
 
 export const NotificationsSection: React.FC = () => {
-  const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useIoT();
+  const { notifications, markAllNotificationsAsRead } = useIoT();
   const params = new URLSearchParams(window.location.search);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   useEffect(() => {
     const filter = params.get('filter');
@@ -36,82 +32,16 @@ export const NotificationsSection: React.FC = () => {
   const unreadCount = notifications.filter(n => !n.read).length;
   const totalCount = notifications.length;
 
-  const handleMarkAsRead = async (notificationId: string) => {
-    await markNotificationAsRead(notificationId);
-  };
-
   const handleMarkAllAsRead = async () => {
     await markAllNotificationsAsRead();
   };
 
-  const handleSelectNotification = (notificationId: string) => {
-    setSelectedNotifications(prev => 
-      prev.includes(notificationId) 
-        ? prev.filter(id => id !== notificationId)
-        : [...prev, notificationId]
-    );
-  };
-
 
   const handleNotificationClick = (notification: Notification) => {
-    setSelectedNotification(notification);
-    setIsDetailModalOpen(true);
+    // Handle notification click - could navigate to device details
+    console.log('Notification clicked:', notification);
   };
 
-  const handleCloseDetailModal = () => {
-    setIsDetailModalOpen(false);
-    setSelectedNotification(null);
-  };
-
-  const handleMarkAsReadFromModal = async (notificationId: string) => {
-    await markNotificationAsRead(notificationId);
-    // Update the selected notification to reflect the read status
-    if (selectedNotification && selectedNotification.id === notificationId) {
-      setSelectedNotification({ ...selectedNotification, read: true });
-    }
-  };
-
-  const getNotificationIcon = (category: Notification['category']) => {
-    switch (category) {
-      case 'DEVICE_OFFLINE':
-      case 'TEMPERATURE_ALERT':
-      case 'BATTERY_LOW':
-      case 'SECURITY_ALERT':
-      case 'SAFETY_ALERT':
-        return <AlertTriangle className="w-5 h-5 text-red-500" />;
-      case 'DEVICE_ONLINE':
-      case 'DEVICE_CREATION':
-      case 'RULE_CREATED':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'MAINTENANCE_SCHEDULE':
-      case 'MAINTENANCE_REMINDER':
-      case 'MAINTENANCE_ASSIGNMENT':
-        return <Info className="w-5 h-5 text-blue-500" />;
-      default:
-        return <Bell className="w-5 h-5 text-gray-500" />;
-    }
-  };
-
-  const getNotificationBadge = (category: Notification['category']) => {
-    switch (category) {
-      case 'DEVICE_OFFLINE':
-      case 'TEMPERATURE_ALERT':
-      case 'BATTERY_LOW':
-      case 'SECURITY_ALERT':
-      case 'SAFETY_ALERT':
-        return 'bg-red-100 text-red-800';
-      case 'DEVICE_ONLINE':
-      case 'DEVICE_CREATION':
-      case 'RULE_CREATED':
-        return 'bg-green-100 text-green-800';
-      case 'MAINTENANCE_SCHEDULE':
-      case 'MAINTENANCE_REMINDER':
-      case 'MAINTENANCE_ASSIGNMENT':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
 
   return (
@@ -203,122 +133,15 @@ export const NotificationsSection: React.FC = () => {
           </div>
         ) : (
           <>
-            {/* Bulk Actions */}
-            {selectedNotifications.length > 0 && (
-              <div className="p-4 bg-secondary-500/10 border-b border-light">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-secondary-300">
-                    {selectedNotifications.length} notification{selectedNotifications.length !== 1 ? 's' : ''} selected
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button className="flex items-center gap-2 px-3 py-1 text-sm btn-secondary">
-                      <CheckCircle className="w-3 h-3" />
-                      Mark as read
-                    </button>
-                    <button className="flex items-center gap-2 px-3 py-1 text-sm bg-slate-500 text-white rounded-lg hover:bg-slate-600 transition-all">
-                      <Archive className="w-3 h-3" />
-                      Archive
-                    </button>
-                    <button className="flex items-center gap-2 px-3 py-1 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all">
-                      <Trash2 className="w-3 h-3" />
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {/* Notifications */}
+            {/* Clean Notifications */}
             <div className="divide-y divide-slate-200">
               {filteredNotifications.map((notification) => (
-                <div
+                <CleanNotificationItem
                   key={notification.id}
-                  className={`p-6 hover:bg-slate-50 transition-colors cursor-pointer ${
-                    !notification.read ? 'bg-blue-50' : ''
-                  }`}
-                  onClick={() => handleNotificationClick(notification)}
-                >
-                  <div className="flex items-start gap-4">
-                    {/* Checkbox */}
-                    <input
-                      type="checkbox"
-                      checked={selectedNotifications.includes(notification.id)}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        handleSelectNotification(notification.id);
-                      }}
-                      className="mt-1 w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
-                    />
-                    
-                    {/* Icon */}
-                    <div className="flex-shrink-0 mt-1">
-                      {getNotificationIcon(notification.category)}
-                    </div>
-                    
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className={`text-lg font-semibold ${
-                              !notification.read ? 'text-slate-900' : 'text-slate-700'
-                            }`}>
-                              {notification.title}
-                            </h3>
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getNotificationBadge(notification.category)}`}>
-                              {notification.category}
-                            </span>
-                            {!notification.read && (
-                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                            )}
-                          </div>
-                          <p className="text-slate-600 mb-3 line-clamp-2">
-                            {notification.message}
-                          </p>
-                          <div className="flex items-center gap-4 text-sm text-slate-500">
-                            <span>{formatRelativeTime(notification.createdAt)}</span>
-                            {notification.deviceId && (
-                              <>
-                                <span>•</span>
-                                <span>Device: {notification.deviceId}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Actions */}
-                        <div className="flex items-center gap-2 ml-4">
-                          {!notification.read && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleMarkAsRead(notification.id);
-                              }}
-                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Mark as read"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </button>
-                          )}
-                          <button
-                            onClick={(e) => e.stopPropagation()}
-                            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                            title="Archive"
-                          >
-                            <Archive className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={(e) => e.stopPropagation()}
-                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  notification={notification}
+                  onClick={handleNotificationClick}
+                />
               ))}
             </div>
           </>
@@ -336,13 +159,6 @@ export const NotificationsSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Notification Detail Modal */}
-      <NotificationDetailModal
-        notification={selectedNotification}
-        isOpen={isDetailModalOpen}
-        onClose={handleCloseDetailModal}
-        onMarkAsRead={handleMarkAsReadFromModal}
-      />
     </div>
   );
 };

@@ -34,6 +34,7 @@ import java.util.regex.Pattern;
 import java.util.function.Consumer;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.iotplatform.service.DeviceNotificationEnhancerService;
+import com.iotplatform.service.JiraTaskAssignmentService;
 
 /**
  * Unified service for handling sequential device onboarding workflow.
@@ -63,6 +64,7 @@ public class UnifiedOnboardingService {
     private final RuleRepository ruleRepository;
     private final DeviceMaintenanceRepository maintenanceRepository;
     private final DeviceSafetyPrecautionRepository safetyRepository;
+    private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final ConsolidatedNotificationService consolidatedNotificationService;
     private final UnifiedPDFService unifiedPDFService;
@@ -70,6 +72,9 @@ public class UnifiedOnboardingService {
 
     @Autowired
     private DeviceNotificationEnhancerService deviceNotificationEnhancerService;
+
+    @Autowired
+    private JiraTaskAssignmentService jiraTaskAssignmentService;
 
     /**
      * Complete unified onboarding workflow with real-time progress tracking
@@ -548,6 +553,34 @@ public class UnifiedOnboardingService {
                     maintenanceRepository.save(maintenance);
                     maintenanceToSave.add(maintenance);
                     processedCount++;
+                    
+                    // Assign task to Jira if user is assigned
+                    if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
+                        try {
+                            // Get user email for Jira assignment
+                            Optional<User> user = userRepository.findById(deviceAssignee);
+                            if (user.isPresent() && user.get().getEmail() != null) {
+                                // Get device name for context
+                                Optional<Device> device = deviceRepository.findById(deviceId);
+                                String deviceName = device.isPresent() ? device.get().getName() : "Unknown Device";
+                                
+                                // Assign task to Jira
+                                jiraTaskAssignmentService.assignMaintenanceTask(
+                                    taskTitle,
+                                    maintenance.getDescription(),
+                                    user.get().getEmail(),
+                                    deviceName
+                                );
+                                
+                                log.info("🎯 Jira task assigned for maintenance: {} to user: {}", taskTitle, user.get().getEmail());
+                            } else {
+                                log.warn("⚠️ Cannot assign Jira task - user not found or email missing for user ID: {}", deviceAssignee);
+                            }
+                        } catch (Exception e) {
+                            log.error("❌ Failed to assign Jira task for maintenance: {} - {}", taskTitle, e.getMessage());
+                            // Don't fail the entire process if Jira assignment fails
+                        }
+                    }
                     
                     log.debug("✅ Created maintenance task: {} for device: {}", taskTitle, deviceId);
                     

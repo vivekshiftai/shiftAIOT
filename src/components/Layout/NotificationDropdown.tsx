@@ -1,9 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { AlertTriangle, Info, CheckCircle, Bell, Wrench, Zap } from 'lucide-react';
+import React, { useRef, useEffect } from 'react';
+import { Bell } from 'lucide-react';
 import { useIoT } from '../../contexts/IoTContext';
 import { Notification } from '../../types';
-import { EnhancedNotificationItem } from './EnhancedNotificationItem';
-import { NotificationDetailModal } from '../Notifications/NotificationDetailModal';
+import { CleanNotificationItem } from './CleanNotificationItem';
 
 interface NotificationDropdownProps {
   isOpen: boolean;
@@ -16,10 +15,6 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
 }) => {
   const { notifications, markNotificationAsRead } = useIoT();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-
-
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -39,99 +34,52 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   }, [isOpen, onToggle]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  
+  // Get the most critical notification color for the bell icon
+  const getBellColor = () => {
+    const unreadNotifications = notifications.filter(n => !n.read);
+    if (unreadNotifications.length === 0) return 'text-slate-600';
+    
+    // Priority order: Critical > Performance > Maintenance > Device > Rules > Sensor > System
+    const hasCritical = unreadNotifications.some(n => n.category === 'SECURITY_ALERT' || n.category === 'SAFETY_ALERT');
+    const hasPerformance = unreadNotifications.some(n => n.category === 'PERFORMANCE_ALERT' || n.category === 'DEVICE_OFFLINE');
+    const hasMaintenance = unreadNotifications.some(n => n.category.includes('MAINTENANCE'));
+    const hasDevice = unreadNotifications.some(n => n.category.includes('DEVICE'));
+    const hasRules = unreadNotifications.some(n => n.category.includes('RULE'));
+    const hasSensor = unreadNotifications.some(n => n.category === 'TEMPERATURE_ALERT' || n.category === 'BATTERY_LOW');
+    
+    if (hasCritical) return 'text-red-600';
+    if (hasPerformance) return 'text-orange-600';
+    if (hasMaintenance) return 'text-yellow-600';
+    if (hasDevice) return 'text-green-600';
+    if (hasRules) return 'text-purple-600';
+    if (hasSensor) return 'text-amber-600';
+    return 'text-blue-600';
+  };
 
   const handleNotificationClick = async (notification: Notification) => {
-    setSelectedNotification(notification);
-    setIsDetailModalOpen(true);
-    onToggle(); // Close the dropdown when opening detail modal
-  };
-
-  const handleCloseDetailModal = () => {
-    setIsDetailModalOpen(false);
-    setSelectedNotification(null);
-  };
-
-  const handleMarkAsReadFromModal = async (notificationId: string) => {
-    await markNotificationAsRead(notificationId);
-    // Update the selected notification to reflect the read status
-    if (selectedNotification && selectedNotification.id === notificationId) {
-      setSelectedNotification({ ...selectedNotification, read: true });
-    }
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const getNotificationIcon = (category: Notification['category']) => {
-    switch (category) {
-      case 'SECURITY_ALERT':
-      case 'SAFETY_ALERT':
-      case 'PERFORMANCE_ALERT':
-        return <AlertTriangle className="w-4 h-4 text-red-500" />;
-      case 'MAINTENANCE_SCHEDULE':
-      case 'MAINTENANCE_REMINDER':
-      case 'MAINTENANCE_ASSIGNMENT':
-        return <Wrench className="w-4 h-4 text-orange-500" />;
-      case 'DEVICE_ASSIGNMENT':
-      case 'DEVICE_CREATION':
-      case 'DEVICE_UPDATE':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'RULE_TRIGGERED':
-      case 'RULE_CREATED':
-        return <Zap className="w-4 h-4 text-purple-500" />;
-      case 'DEVICE_OFFLINE':
-        return <AlertTriangle className="w-4 h-4 text-red-500" />;
-      case 'DEVICE_ONLINE':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'TEMPERATURE_ALERT':
-      case 'BATTERY_LOW':
-        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
-      case 'SYSTEM_UPDATE':
-        return <Info className="w-4 h-4 text-blue-500" />;
-      default:
-        return <Info className="w-4 h-4 text-blue-500" />;
-    }
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const getNotificationStyle = (notification: Notification) => {
-    // Special styling for device assignment notifications
-    if (notification.title?.includes('Device Assignment') || notification.title?.includes('New Device')) {
-      return {
-        container: 'bg-blue-50 border-l-4 border-l-blue-500',
-        title: 'text-blue-900 font-semibold',
-        message: 'text-blue-700'
-      };
-    }
-    
-    // Default styling
-    return {
-      container: !notification.read ? 'bg-slate-50' : '',
-      title: !notification.read ? 'text-slate-900' : 'text-slate-600',
-      message: 'text-slate-600'
-    };
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    return date.toLocaleDateString();
+    // Handle notification click - could navigate to device details or mark as read
+    await markNotificationAsRead(notification.id);
+    onToggle(); // Close the dropdown
   };
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button 
+      <button
         onClick={onToggle}
-        className="p-2 hover:bg-slate-100 rounded-lg transition-colors relative"
-        aria-label="Notifications"
+        className="relative p-2 hover:bg-slate-100 rounded-lg transition-colors"
       >
-        <Bell className="w-5 h-5 text-slate-600" />
+        <Bell className={`w-5 h-5 ${getBellColor()}`} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+          <span className={`absolute -top-1 -right-1 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center ${
+            getBellColor().includes('red') ? 'bg-red-500' :
+            getBellColor().includes('orange') ? 'bg-orange-500' :
+            getBellColor().includes('yellow') ? 'bg-yellow-500' :
+            getBellColor().includes('green') ? 'bg-green-500' :
+            getBellColor().includes('purple') ? 'bg-purple-500' :
+            getBellColor().includes('amber') ? 'bg-amber-500' :
+            'bg-blue-500'
+          }`}>
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -163,7 +111,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
             ) : (
               <div className="divide-y divide-slate-100">
                 {notifications.map((notification) => (
-                  <EnhancedNotificationItem
+                  <CleanNotificationItem
                     key={notification.id}
                     notification={notification}
                     onClick={handleNotificationClick}
@@ -182,14 +130,6 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
           )}
         </div>
       )}
-
-      {/* Notification Detail Modal */}
-      <NotificationDetailModal
-        notification={selectedNotification}
-        isOpen={isDetailModalOpen}
-        onClose={handleCloseDetailModal}
-        onMarkAsRead={handleMarkAsReadFromModal}
-      />
     </div>
   );
 };

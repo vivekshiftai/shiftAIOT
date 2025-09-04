@@ -237,7 +237,7 @@ public class ConsolidatedNotificationService {
     }
 
     /**
-     * Build comprehensive notification message
+     * Build clean, simple notification message with just essential numbers
      */
     private String buildConsolidatedMessage(Map<String, Object> data) {
         StringBuilder message = new StringBuilder();
@@ -246,62 +246,20 @@ public class ConsolidatedNotificationService {
         Map<String, Object> device = (Map<String, Object>) data.get("device");
         @SuppressWarnings("unchecked")
         Map<String, Object> summary = (Map<String, Object>) data.get("summary");
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> rules = (List<Map<String, Object>>) data.get("rules");
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> maintenance = (List<Map<String, Object>>) data.get("maintenance");
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> safety = (List<Map<String, Object>>) data.get("safety");
 
+        // Clean device header
         message.append("📱 Device: ").append(device.get("name")).append(" (").append(device.get("type")).append(")\n");
         message.append("📍 Location: ").append(device.get("location")).append("\n");
         message.append("🌐 Protocol: ").append(device.get("protocol")).append("\n");
         message.append("📊 Status: ").append(device.get("status")).append("\n\n");
 
-        // Summary
+        // Simple summary with just numbers
         message.append("📋 Summary:\n");
         message.append("• ").append(summary.get("totalRules")).append(" monitoring rules\n");
         message.append("• ").append(summary.get("totalMaintenanceTasks")).append(" maintenance tasks\n");
         message.append("• ").append(summary.get("totalSafetyPrecautions")).append(" safety precautions\n\n");
 
-        // Key rules (first 3)
-        if (!rules.isEmpty()) {
-            message.append("🔍 Key Monitoring Rules:\n");
-            rules.stream().limit(3).forEach(rule -> {
-                message.append("• ").append(rule.get("name"));
-                if (rule.get("metric") != null) {
-                    message.append(" (").append(rule.get("metric")).append(")");
-                }
-                message.append("\n");
-            });
-            if (rules.size() > 3) {
-                message.append("• ... and ").append(rules.size() - 3).append(" more rules\n");
-            }
-            message.append("\n");
-        }
-
-        // Key maintenance tasks (first 3)
-        if (!maintenance.isEmpty()) {
-            message.append("🔧 Upcoming Maintenance:\n");
-            maintenance.stream().limit(3).forEach(task -> {
-                message.append("• ").append(task.get("taskName"));
-                if (task.get("nextMaintenance") != null) {
-                    message.append(" (Due: ").append(task.get("nextMaintenance")).append(")");
-                }
-                message.append("\n");
-            });
-            if (maintenance.size() > 3) {
-                message.append("• ... and ").append(maintenance.size() - 3).append(" more tasks\n");
-            }
-            message.append("\n");
-        }
-
-        // Critical safety precautions
-        long criticalCount = safety.stream().filter(s -> "CRITICAL".equals(s.get("severity"))).count();
-        if (criticalCount > 0) {
-            message.append("⚠️ Critical Safety Precautions: ").append(criticalCount).append(" items require immediate attention\n\n");
-        }
-
+        // Simple call to action
         message.append("Click to view complete details and manage your device.");
 
         return message.toString();
