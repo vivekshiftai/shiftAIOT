@@ -13,6 +13,7 @@ public class RuleAction {
     private String id;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private ActionType type;
 
     @ElementCollection

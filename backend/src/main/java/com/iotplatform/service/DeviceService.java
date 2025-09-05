@@ -338,6 +338,8 @@ public class DeviceService {
         try {
             savedDevice = deviceRepository.save(device);
             logger.info("Device created successfully with ID: {} and status: {}", savedDevice.getId(), savedDevice.getStatus());
+            logger.info("🔍 Device assignment verification - Saved device assignedUserId: '{}', assignedBy: '{}'", 
+                       savedDevice.getAssignedUserId(), savedDevice.getAssignedBy());
         } catch (Exception e) {
             logger.error("Failed to create device: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to create device: " + e.getMessage(), e);

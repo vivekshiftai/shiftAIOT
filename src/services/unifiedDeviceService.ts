@@ -59,6 +59,7 @@ export interface DeviceSafetyPrecaution {
   title: string;
   description: string;
   category: string;
+  precautionType: 'electrical' | 'mechanical' | 'chemical' | 'environmental' | 'general';
   severity: string;
   deviceId: string;
   deviceName: string;

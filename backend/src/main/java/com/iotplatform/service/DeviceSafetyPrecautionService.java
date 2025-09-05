@@ -57,6 +57,11 @@ public class DeviceSafetyPrecautionService {
         safetyPrecaution.setCreatedAt(LocalDateTime.now());
         safetyPrecaution.setUpdatedAt(LocalDateTime.now());
         
+        // Ensure precaution type is set if not provided
+        if (safetyPrecaution.getPrecautionType() == null || safetyPrecaution.getPrecautionType().trim().isEmpty()) {
+            safetyPrecaution.setPrecautionType(determinePrecautionType(safetyPrecaution.getTitle(), safetyPrecaution.getCategory()));
+        }
+        
         // Log the safety precaution details for debugging
         logger.debug("Creating safety precaution: ID={}, Title={}, Type={}, Category={}, DeviceId={}", 
             safetyPrecaution.getId(), safetyPrecaution.getTitle(), safetyPrecaution.getType(), 
@@ -80,6 +85,11 @@ public class DeviceSafetyPrecautionService {
             // Ensure timestamps are set
             precaution.setCreatedAt(LocalDateTime.now());
             precaution.setUpdatedAt(LocalDateTime.now());
+            
+            // Ensure precaution type is set if not provided
+            if (precaution.getPrecautionType() == null || precaution.getPrecautionType().trim().isEmpty()) {
+                precaution.setPrecautionType(determinePrecautionType(precaution.getTitle(), precaution.getCategory()));
+            }
             
             // Log the safety precaution details for debugging
             logger.debug("Preparing safety precaution: ID={}, Title={}, Type={}, Category={}, DeviceId={}", 
@@ -189,6 +199,7 @@ public class DeviceSafetyPrecautionService {
                     safety.setCategory(safetyData.getCategory());
                     safety.setSeverity(safetyData.getSeverity());
                     safety.setType("PDF_GENERATED");
+                    safety.setPrecautionType(determinePrecautionType(safetyData.getTitle(), safetyData.getCategory()));
                     safety.setIsActive(true);
                     safety.setCreatedAt(LocalDateTime.now());
                     safety.setUpdatedAt(LocalDateTime.now());
@@ -250,5 +261,48 @@ public class DeviceSafetyPrecautionService {
         }
         
         logger.debug("DeviceSafetyPrecaution validation passed for device: {}", safetyPrecaution.getDeviceId());
+    }
+    
+    /**
+     * Determines the precaution type based on title and category
+     * @param title The safety precaution title
+     * @param category The safety precaution category
+     * @return The appropriate precaution type
+     */
+    private String determinePrecautionType(String title, String category) {
+        if (title == null && category == null) {
+            return "general";
+        }
+        
+        String titleLower = title != null ? title.toLowerCase() : "";
+        String categoryLower = category != null ? category.toLowerCase() : "";
+        
+        // Check for electrical hazards
+        if (titleLower.contains("electrical") || titleLower.contains("shock") || 
+            categoryLower.contains("electrical")) {
+            return "electrical";
+        }
+        
+        // Check for mechanical hazards
+        if (titleLower.contains("mechanical") || titleLower.contains("crushing") || 
+            titleLower.contains("pinch") || titleLower.contains("entanglement") ||
+            titleLower.contains("tipping") || categoryLower.contains("mechanical")) {
+            return "mechanical";
+        }
+        
+        // Check for chemical hazards
+        if (titleLower.contains("chemical") || titleLower.contains("dust") || 
+            titleLower.contains("explosion") || categoryLower.contains("chemical")) {
+            return "chemical";
+        }
+        
+        // Check for environmental hazards
+        if (titleLower.contains("environmental") || titleLower.contains("temperature") ||
+            titleLower.contains("weather") || categoryLower.contains("environmental")) {
+            return "environmental";
+        }
+        
+        // Default to general if no specific type can be determined
+        return "general";
     }
 }

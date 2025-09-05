@@ -48,7 +48,7 @@ public class DeviceMaintenance {
     private String componentName;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "maintenance_type")
+    @Column(name = "maintenance_type", nullable = false)
     private MaintenanceType maintenanceType;
 
     @NotBlank

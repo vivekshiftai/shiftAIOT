@@ -29,6 +29,9 @@ public class DeviceSafetyPrecaution {
     @Column(nullable = false)
     private String category; // 'thermal_hazard', 'electrical_hazard', 'mechanical_hazard', 'emergency_procedures', 'ppe_requirements'
     
+    @Column(name = "precaution_type", nullable = false)
+    private String precautionType; // 'electrical', 'mechanical', 'chemical', 'environmental'
+    
     @Column
     private String severity = "MEDIUM"; // 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
     
@@ -66,7 +69,7 @@ public class DeviceSafetyPrecaution {
     }
     
     public DeviceSafetyPrecaution(String id, String deviceId, String title, String description, 
-                                 String type, String category, String organizationId) {
+                                 String type, String category, String precautionType, String organizationId) {
         this();
         this.id = id;
         this.deviceId = deviceId;
@@ -74,6 +77,7 @@ public class DeviceSafetyPrecaution {
         this.description = description;
         this.type = type;
         this.category = category;
+        this.precautionType = precautionType;
         this.organizationId = organizationId;
     }
     
@@ -124,6 +128,14 @@ public class DeviceSafetyPrecaution {
     
     public void setCategory(String category) {
         this.category = category;
+    }
+    
+    public String getPrecautionType() {
+        return precautionType;
+    }
+    
+    public void setPrecautionType(String precautionType) {
+        this.precautionType = precautionType;
     }
     
     public String getSeverity() {
@@ -221,6 +233,7 @@ public class DeviceSafetyPrecaution {
                title != null && !title.trim().isEmpty() &&
                type != null && !type.trim().isEmpty() &&
                category != null && !category.trim().isEmpty() &&
+               precautionType != null && !precautionType.trim().isEmpty() &&
                organizationId != null && !organizationId.trim().isEmpty();
     }
     
@@ -245,6 +258,9 @@ public class DeviceSafetyPrecaution {
         }
         if (category == null || category.trim().isEmpty()) {
             errors.add("Category is required");
+        }
+        if (precautionType == null || precautionType.trim().isEmpty()) {
+            errors.add("Precaution type is required");
         }
         if (organizationId == null || organizationId.trim().isEmpty()) {
             errors.add("Organization ID is required");

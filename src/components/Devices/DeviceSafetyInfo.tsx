@@ -13,6 +13,7 @@ interface DeviceSafetyPrecaution {
   description: string;
   type: 'warning' | 'procedure' | 'caution' | 'note';
   category: string;
+  precautionType: 'electrical' | 'mechanical' | 'chemical' | 'environmental' | 'general';
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   recommendedAction?: string;
   aboutReaction?: string;

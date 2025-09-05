@@ -45,6 +45,7 @@ interface DeviceSafetyPrecaution {
   description: string;
   severity: string;
   category: string;
+  precautionType: 'electrical' | 'mechanical' | 'chemical' | 'environmental' | 'general';
   recommendedAction: string;
   isActive: boolean;
 }

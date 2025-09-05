@@ -317,6 +317,7 @@ public class MaintenanceScheduleService {
             log.error("❌ CRITICAL: Device has no assigned user! Device ID: {}, Device Name: '{}'", 
                      deviceId, device.get().getName());
             log.error("❌ This means the device was created without proper user assignment!");
+            log.error("❌ Maintenance tasks will be created without assignment");
         }
         
         int processedCount = 0;
@@ -377,7 +378,22 @@ public class MaintenanceScheduleService {
                 Optional<DeviceMaintenance> existingMaintenance = deviceMaintenanceRepository
                     .findByDeviceIdAndTaskNameAndOrganizationId(deviceId, taskTitle, organizationId);
                 if (existingMaintenance.isPresent()) {
-                    log.info("⚠️ Maintenance task '{}' already exists for device: {}, skipping", taskTitle, deviceId);
+                    DeviceMaintenance existingTask = existingMaintenance.get();
+                    
+                    // If task exists but is not assigned, assign it to the device assignee
+                    if (existingTask.getAssignedTo() == null || existingTask.getAssignedTo().trim().isEmpty()) {
+                        if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
+                            existingTask.setAssignedTo(deviceAssignee);
+                            deviceMaintenanceRepository.save(existingTask);
+                            assignedCount++;
+                            log.info("✅ Existing maintenance task '{}' assigned to user: {}", taskTitle, deviceAssignee);
+                        } else {
+                            log.warn("⚠️ Existing maintenance task '{}' not assigned - no device assignee found", taskTitle);
+                        }
+                    } else {
+                        log.info("ℹ️ Maintenance task '{}' already exists and is assigned to: {}", taskTitle, existingTask.getAssignedTo());
+                    }
+                    
                     skippedCount++;
                     continue;
                 }

@@ -176,15 +176,15 @@ public class UnifiedOnboardingService {
             // Don't fail the entire onboarding if PDF processing fails
         }
         
-        // Step 3: Create notification for device assignment (regardless of PDF processing success)
-        log.info("Step 3: Creating notification for device assignment...");
+        // Step 4: Create notification for device assignment AFTER all processing is complete
+        log.info("Step 4: Creating notification for device assignment after processing completion...");
         try {
             if (deviceRequest.getAssignedUserId() != null && !deviceRequest.getAssignedUserId().trim().isEmpty()) {
                 
-                log.info("📝 Creating device assignment notification for user: {} for device: {}", 
+                log.info("📝 Creating device assignment notification for user: {} for device: {} after onboarding completion", 
                        deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
                 
-                // Create consolidated notification if PDF processing succeeded, otherwise create basic notification
+                // Create consolidated notification with all processed data
                 try {
                     consolidatedNotificationService.createConsolidatedDeviceNotification(
                         deviceResponse.getId(),
@@ -193,7 +193,7 @@ public class UnifiedOnboardingService {
                         currentUserId
                     );
                     
-                    log.info("✅ Consolidated notification sent to user: {} for device: {}", 
+                    log.info("✅ Consolidated notification sent to user: {} for device: {} with all processed data", 
                            deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
                 } catch (Exception consolidatedError) {
                     log.warn("⚠️ Consolidated notification failed, creating basic notification instead: {}", consolidatedError.getMessage());
@@ -219,7 +219,7 @@ public class UnifiedOnboardingService {
                     notificationService.createNotificationWithPreferenceCheck(
                         deviceRequest.getAssignedUserId().trim(), enhancedNotification);
                     
-                    log.info("✅ Enhanced notification sent to user: {} for device: {}", 
+                    log.info("✅ Enhanced notification sent to user: {} for device: {} after onboarding completion", 
                            deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
                 }
             } else {
@@ -232,7 +232,7 @@ public class UnifiedOnboardingService {
         
         // Send final completion progress
         sendProgressUpdate(progressCallback, "complete", 100, "Onboarding completed", 
-                          "Device successfully onboarded with all configurations", null, 6, 6, "Completion");
+                          "Device successfully onboarded with all configurations", null, 5, 5, "Completion");
         
         log.info("Unified onboarding workflow completed successfully for device: {}", deviceResponse.getId());
         
@@ -416,7 +416,7 @@ public class UnifiedOnboardingService {
                     pdfResult.maintenanceItems);
             
             // Store maintenance schedule in database with auto-assignment to device assignee
-            // Get device to find the assigned user
+            // Get device to find the assigned user - refresh from database to ensure we have latest data
             Optional<Device> device = deviceRepository.findById(deviceId);
             String deviceAssignee = device.map(Device::getAssignedUserId).orElse(null);
             
@@ -425,6 +425,14 @@ public class UnifiedOnboardingService {
                     device.isPresent(), 
                     device.map(Device::getName).orElse("N/A"), 
                     device.map(Device::getAssignedUserId).orElse("N/A"));
+            
+            // Additional debugging - check if device assignment is properly set
+            if (device.isPresent()) {
+                Device deviceEntity = device.get();
+                log.info("🔍 Full device entity details - ID: '{}', Name: '{}', AssignedUserId: '{}', AssignedBy: '{}', OrganizationId: '{}'", 
+                        deviceEntity.getId(), deviceEntity.getName(), deviceEntity.getAssignedUserId(), 
+                        deviceEntity.getAssignedBy(), deviceEntity.getOrganizationId());
+            }
             
             // Additional validation - ensure device exists and has assigned user
             if (!device.isPresent()) {
@@ -436,6 +444,8 @@ public class UnifiedOnboardingService {
                 log.error("❌ CRITICAL: Device has no assigned user! Device ID: {}, Device Name: '{}'", 
                          deviceId, device.get().getName());
                 log.error("❌ This means the device was created without proper user assignment!");
+                log.error("❌ Falling back to assigning maintenance tasks to the current user: {}", currentUserId);
+                deviceAssignee = currentUserId; // Fallback to current user
             }
             
             if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
@@ -558,7 +568,22 @@ public class UnifiedOnboardingService {
                     Optional<DeviceMaintenance> existingMaintenance = maintenanceRepository
                         .findByDeviceIdAndTaskNameAndOrganizationId(deviceId, taskTitle, organizationId);
                     if (existingMaintenance.isPresent()) {
-                        log.info("⚠️ Maintenance task '{}' already exists for device: {}, skipping", taskTitle, deviceId);
+                        DeviceMaintenance existingTask = existingMaintenance.get();
+                        
+                        // If task exists but is not assigned, assign it to the device assignee
+                        if (existingTask.getAssignedTo() == null || existingTask.getAssignedTo().trim().isEmpty()) {
+                            if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
+                                existingTask.setAssignedTo(deviceAssignee);
+                                maintenanceRepository.save(existingTask);
+                                assignedCount++;
+                                log.info("✅ Existing maintenance task '{}' assigned to user: {}", taskTitle, deviceAssignee);
+                            } else {
+                                log.warn("⚠️ Existing maintenance task '{}' not assigned - no device assignee found", taskTitle);
+                            }
+                        } else {
+                            log.info("ℹ️ Maintenance task '{}' already exists and is assigned to: {}", taskTitle, existingTask.getAssignedTo());
+                        }
+                        
                         skippedCount++;
                         continue;
                     }
@@ -598,9 +623,11 @@ public class UnifiedOnboardingService {
                     if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
                         maintenance.setAssignedTo(deviceAssignee);
                         assignedCount++;
-                        log.info("✅ Maintenance task '{}' assigned to user: {}", taskTitle, deviceAssignee);
+                        log.info("✅ Maintenance task '{}' assigned to user: {} (assignedTo field set to: '{}')", 
+                                taskTitle, deviceAssignee, maintenance.getAssignedTo());
                     } else {
-                        log.warn("⚠️ Maintenance task '{}' not assigned - no device assignee found", taskTitle);
+                        log.warn("⚠️ Maintenance task '{}' not assigned - no device assignee found (deviceAssignee: '{}')", 
+                                taskTitle, deviceAssignee);
                     }
                     
                     // Set dates
@@ -621,9 +648,13 @@ public class UnifiedOnboardingService {
                     log.info("Final maintenance type before save: {} for task: {}", maintenance.getMaintenanceType(), taskTitle);
                     
                     // Save to database
-                    maintenanceRepository.save(maintenance);
-                    maintenanceToSave.add(maintenance);
+                    DeviceMaintenance savedMaintenance = maintenanceRepository.save(maintenance);
+                    maintenanceToSave.add(savedMaintenance);
                     processedCount++;
+                    
+                    // Verify assignment was saved
+                    log.info("🔍 Maintenance task saved - ID: '{}', TaskName: '{}', AssignedTo: '{}'", 
+                            savedMaintenance.getId(), savedMaintenance.getTaskName(), savedMaintenance.getAssignedTo());
                     
                     // Assign task to Jira if user is assigned
                     if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
@@ -664,6 +695,17 @@ public class UnifiedOnboardingService {
             
             log.info("✅ Maintenance tasks processing completed for device: {} - Processed: {}, Skipped: {}, Assigned: {}", 
                      deviceId, processedCount, skippedCount, assignedCount);
+            log.info("🔍 Final maintenance assignment summary - Device ID: '{}', Device Assignee: '{}', Tasks Assigned: {}", 
+                     deviceId, deviceAssignee, assignedCount);
+            
+            // Additional step: Assign any remaining unassigned maintenance tasks for this device
+            if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
+                int additionalAssigned = assignRemainingUnassignedTasks(deviceId, organizationId, deviceAssignee);
+                if (additionalAssigned > 0) {
+                    log.info("✅ Additionally assigned {} unassigned maintenance tasks to user: {}", additionalAssigned, deviceAssignee);
+                    assignedCount += additionalAssigned;
+                }
+            }
             
             // Send notification to assigned user about new maintenance tasks
             if (assignedCount > 0 && deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
@@ -1067,6 +1109,38 @@ public class UnifiedOnboardingService {
         } catch (Exception e) {
             log.warn("Failed to get device name for ID: {}, using device ID as name", deviceId, e);
             maintenance.setDeviceName("Device-" + deviceId);
+        }
+    }
+    
+    /**
+     * Assign any remaining unassigned maintenance tasks for a device to the specified user
+     */
+    private int assignRemainingUnassignedTasks(String deviceId, String organizationId, String deviceAssignee) {
+        try {
+            // Find all unassigned maintenance tasks for this device
+            List<DeviceMaintenance> unassignedTasks = maintenanceRepository
+                .findByDeviceIdAndOrganizationIdAndAssignedToIsNull(deviceId, organizationId);
+            
+            if (unassignedTasks.isEmpty()) {
+                log.info("ℹ️ No unassigned maintenance tasks found for device: {}", deviceId);
+                return 0;
+            }
+            
+            log.info("🔍 Found {} unassigned maintenance tasks for device: {}, assigning to user: {}", 
+                    unassignedTasks.size(), deviceId, deviceAssignee);
+            
+            int assignedCount = 0;
+            for (DeviceMaintenance task : unassignedTasks) {
+                task.setAssignedTo(deviceAssignee);
+                maintenanceRepository.save(task);
+                assignedCount++;
+                log.info("✅ Assigned unassigned maintenance task '{}' to user: {}", task.getTaskName(), deviceAssignee);
+            }
+            
+            return assignedCount;
+        } catch (Exception e) {
+            log.error("Error assigning remaining unassigned tasks for device: {} - Error: {}", deviceId, e.getMessage(), e);
+            return 0;
         }
     }
 }

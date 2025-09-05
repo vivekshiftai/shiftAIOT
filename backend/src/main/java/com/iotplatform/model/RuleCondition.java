@@ -11,6 +11,7 @@ public class RuleCondition {
     private String id;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private ConditionType type;
 
     @Column(name = "device_id")
