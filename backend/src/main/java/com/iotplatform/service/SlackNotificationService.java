@@ -30,6 +30,7 @@ public class SlackNotificationService {
     
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final LLMPromptService llmPromptService;
 
     @Value("${slack.mcp.endpoint:http://20.57.36.66:5000/chat}")
     private String slackMcpEndpoint;
@@ -42,13 +43,20 @@ public class SlackNotificationService {
      */
     public void sendNotificationToSlack(Notification notification) {
         try {
-            // Build the Slack message content
-            String slackMessage = buildSlackMessage(notification);
+            // Build the initial Slack message content
+            String initialMessage = buildSlackMessage(notification);
+            
+            // Polish the message using Azure OpenAI LLM service
+            String category = notification.getCategory() != null ? notification.getCategory().name() : "DEFAULT";
+            String polishedMessage = llmPromptService.polishMessageForSlack(initialMessage, category);
+            
+            log.info("🤖 Message polished by Azure OpenAI - Category: {}, Original Length: {}, Polished Length: {}", 
+                category, initialMessage.length(), polishedMessage.length());
             
             // Send to Slack asynchronously to avoid blocking the main flow
             CompletableFuture.runAsync(() -> {
                 try {
-                    sendSlackMessage(slackMessage);
+                    sendSlackMessage(polishedMessage);
                 } catch (Exception e) {
                     log.error("❌ Failed to send notification to Slack: {}", e.getMessage(), e);
                 }
@@ -179,8 +187,14 @@ public class SlackNotificationService {
      */
     public void sendCustomMessageToSlack(String customMessage) {
         try {
-            sendSlackMessage(customMessage);
-            log.info("✅ Custom message sent to Slack: {}", customMessage);
+            // Polish the custom message using Azure OpenAI LLM service
+            String polishedMessage = llmPromptService.polishMessageForSlack(customMessage, "CUSTOM");
+            
+            log.info("🤖 Custom message polished by Azure OpenAI - Original Length: {}, Polished Length: {}", 
+                customMessage.length(), polishedMessage.length());
+            
+            sendSlackMessage(polishedMessage);
+            log.info("✅ Custom message sent to Slack: {}", polishedMessage);
         } catch (Exception e) {
             log.error("❌ Failed to send custom message to Slack: {}", e.getMessage(), e);
         }

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Upload, 
   Search, 
   FileText, 
   Brain, 
@@ -8,21 +7,20 @@ import {
   CheckCircle, 
   Clock,
   Send,
-  Download,
   Trash2,
-  MessageSquare,
   Bot,
   User,
   Plus,
   Settings
 } from 'lucide-react';
 import { deviceAPI } from '../services/api';
-import { pdfProcessingService, PDFListResponse, PDFImage } from '../services/pdfprocess';
+import { pdfProcessingService, PDFImage } from '../services/pdfprocess';
 import { logError, logInfo } from '../utils/logger';
 import { getDisplayImageName } from '../utils/imageUtils';
 import '../styles/knowledge.css';
 import { pdfAPI } from '../services/api'; // Added pdfAPI import
 import { knowledgeAPI } from '../services/api'; // Added knowledgeAPI import
+import { UnifiedQueryService, UnifiedQueryRequest } from '../services/unifiedQueryService';
 
 // Updated interface to match UnifiedPDF API response
 interface UnifiedPDF {
@@ -60,6 +58,11 @@ interface ChatMessage {
   tables?: string[];
   chunks_used?: string[];
   processing_time?: string;
+  // New fields for unified queries
+  queryType?: 'DATABASE' | 'PDF' | 'MIXED' | 'LLM_ANSWER' | 'UNKNOWN';
+  databaseResults?: Array<Record<string, any>>;
+  rowCount?: number;
+  sqlQuery?: string;
 }
 
 export const KnowledgeSection: React.FC = () => {
@@ -72,7 +75,7 @@ export const KnowledgeSection: React.FC = () => {
     {
       id: '1',
       type: 'assistant',
-      content: 'Hello! I\'m your AI assistant for the IoT knowledge base. I can help you find information from your uploaded PDF documents, answer questions about your devices, and assist with troubleshooting. What would you like to know?',
+      content: 'Hello! I\'m your AI assistant for the IoT knowledge base. I can help you with:\n\n📊 **Database Queries**: Ask about devices, users, maintenance tasks, notifications, and more\n📄 **Document Queries**: Search through PDF documents, manuals, and guides\n🤖 **General Questions**: Ask about IoT concepts, device management, and platform usage\n🔄 **Mixed Queries**: Get both database information and document references\n\nTry asking: "Show me all offline devices", "How to setup this device?", or "What is IoT device management?"',
       timestamp: new Date()
     }
   ]);
@@ -84,6 +87,8 @@ export const KnowledgeSection: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [showDeviceSummary, setShowDeviceSummary] = useState(false);
+  const [querySuggestions, setQuerySuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Refs for scrolling
   const chatMessagesRef = useRef<HTMLDivElement>(null);
@@ -95,6 +100,18 @@ export const KnowledgeSection: React.FC = () => {
       chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
     }
   }, [chatMessages]);
+
+  // Function to load query suggestions
+  const loadQuerySuggestions = async () => {
+    try {
+      const suggestions = await UnifiedQueryService.getQuerySuggestions();
+      if (suggestions.success) {
+        setQuerySuggestions(suggestions.suggestions);
+      }
+    } catch (error) {
+      console.error('Failed to load query suggestions:', error);
+    }
+  };
 
   // Function to refresh collections data
   const refreshCollections = async () => {
@@ -277,6 +294,7 @@ export const KnowledgeSection: React.FC = () => {
     };
 
     loadData();
+    loadQuerySuggestions();
   }, []);
 
   const formatFileSize = (bytes: number) => {
@@ -314,7 +332,7 @@ export const KnowledgeSection: React.FC = () => {
     setIsTyping(true);
 
     try {
-      // If a document is selected, query it specifically
+      // If a document is selected, query it specifically (PDF mode)
       if (selectedDocument) {
         try {
           const queryRequest = {
@@ -333,7 +351,8 @@ export const KnowledgeSection: React.FC = () => {
             images: queryResponse.images || [],
             tables: queryResponse.tables || [],
             chunks_used: queryResponse.chunks_used || [],
-            processing_time: queryResponse.processing_time
+            processing_time: queryResponse.processing_time,
+            queryType: 'PDF'
           };
           setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
         } catch (queryError) {
@@ -342,20 +361,45 @@ export const KnowledgeSection: React.FC = () => {
             id: (Date.now() + 1).toString(),
             type: 'assistant',
             content: `I encountered an error while searching "${selectedDocument.name}". Please try again or ask a different question.`,
-            timestamp: new Date()
+            timestamp: new Date(),
+            queryType: 'PDF'
           };
           setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
         }
       } else {
-        // Generate a general response
-        const aiResponse = generateAIResponse(userMessage.content);
-        const assistantMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          type: 'assistant',
-          content: aiResponse,
-          timestamp: new Date()
-        };
-        setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
+        // Use unified query service for general queries
+        try {
+          const unifiedRequest: UnifiedQueryRequest = {
+            query: userMessage.content
+          };
+          
+          const unifiedResponse = await UnifiedQueryService.sendUnifiedQuery(unifiedRequest);
+          
+          const assistantMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            type: 'assistant',
+            content: unifiedResponse.response || 'I processed your query but didn\'t find specific results. Please try rephrasing your question.',
+            timestamp: new Date(),
+            queryType: unifiedResponse.queryType,
+            databaseResults: unifiedResponse.databaseResults,
+            rowCount: unifiedResponse.rowCount,
+            sqlQuery: unifiedResponse.sqlQuery
+          };
+          setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
+        } catch (unifiedError) {
+          logError('Knowledge', 'Failed to process unified query', unifiedError instanceof Error ? unifiedError : new Error('Unknown error'));
+          
+          // Fallback to general AI response
+          const aiResponse = generateAIResponse(userMessage.content);
+          const assistantMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            type: 'assistant',
+            content: aiResponse,
+            timestamp: new Date(),
+            queryType: 'UNKNOWN'
+          };
+          setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
+        }
       }
     } catch (error) {
       logError('Knowledge', 'Failed to send message', error instanceof Error ? error : new Error('Unknown error'));
@@ -363,7 +407,8 @@ export const KnowledgeSection: React.FC = () => {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
         content: 'I apologize, but I encountered an error while processing your request. Please try again or select a specific document to query.',
-        timestamp: new Date()
+        timestamp: new Date(),
+        queryType: 'UNKNOWN'
       };
       setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
     } finally {
@@ -388,6 +433,22 @@ export const KnowledgeSection: React.FC = () => {
     formatted = formatted.replace(/`(.*?)`/g, '<code>$1</code>');
     
     return formatted;
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setNewMessage(suggestion);
+    setShowSuggestions(false);
+  };
+
+  const handleInputFocus = () => {
+    if (querySuggestions.length > 0) {
+      setShowSuggestions(true);
+    }
+  };
+
+  const handleInputBlur = () => {
+    // Delay hiding suggestions to allow for clicks
+    setTimeout(() => setShowSuggestions(false), 200);
   };
 
   const generateAIResponse = (userMessage: string): string => {
@@ -627,10 +688,80 @@ export const KnowledgeSection: React.FC = () => {
                         : 'bg-gray-50 text-gray-900 border border-gray-200'
                     }`}
                   >
+                    {/* Query Type Indicator */}
+                    {message.type === 'assistant' && message.queryType && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          message.queryType === 'DATABASE' ? 'bg-blue-100 text-blue-700' :
+                          message.queryType === 'PDF' ? 'bg-green-100 text-green-700' :
+                          message.queryType === 'MIXED' ? 'bg-purple-100 text-purple-700' :
+                          message.queryType === 'LLM_ANSWER' ? 'bg-orange-100 text-orange-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {UnifiedQueryService.getQueryTypeIcon(message.queryType)} {message.queryType}
+                        </span>
+                        {message.rowCount && (
+                          <span className="text-xs text-gray-500">
+                            {message.rowCount} result{message.rowCount === 1 ? '' : 's'}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    
                     <div 
                       className="text-sm leading-relaxed"
                       dangerouslySetInnerHTML={{ __html: formatResponseText(message.content) }}
                     />
+                    
+                    {/* Database Results Table */}
+                    {message.type === 'assistant' && message.databaseResults && message.databaseResults.length > 0 && (
+                      <div className="mt-3">
+                        <div className="text-xs font-medium text-gray-500 mb-2">📊 Database Results:</div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs border border-gray-200 rounded-lg">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                {Object.keys(message.databaseResults[0]).slice(0, 5).map((key, index) => (
+                                  <th key={index} className="px-2 py-1 text-left font-medium text-gray-700 border-b border-gray-200">
+                                    {key}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {message.databaseResults.slice(0, 5).map((row, rowIndex) => (
+                                <tr key={rowIndex} className="border-b border-gray-100">
+                                  {Object.values(row).slice(0, 5).map((value, colIndex) => (
+                                    <td key={colIndex} className="px-2 py-1 text-gray-600">
+                                      {value ? String(value).substring(0, 50) + (String(value).length > 50 ? '...' : '') : '-'}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          {message.databaseResults.length > 5 && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              ... and {message.databaseResults.length - 5} more results
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* SQL Query Display */}
+                    {message.type === 'assistant' && message.sqlQuery && (
+                      <div className="mt-3">
+                        <details className="text-xs">
+                          <summary className="font-medium text-gray-500 cursor-pointer hover:text-gray-700">
+                            🔍 View SQL Query
+                          </summary>
+                          <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-x-auto">
+                            <code>{message.sqlQuery}</code>
+                          </pre>
+                        </details>
+                      </div>
+                    )}
                     
                     {/* Display Images */}
                     {message.images && message.images.length > 0 && (
@@ -763,15 +894,37 @@ export const KnowledgeSection: React.FC = () => {
               </div>
               
               {/* Message Input */}
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder={selectedDocument ? `Ask about "${selectedDocument.name}"...` : "Ask about your devices, documents, or troubleshooting..."}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 shadow-sm"
-                />
+              <div className="relative flex gap-3">
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                    onFocus={handleInputFocus}
+                    onBlur={handleInputBlur}
+                    placeholder={selectedDocument ? `Ask about "${selectedDocument.name}"...` : "Ask about your devices, documents, or troubleshooting..."}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 shadow-sm"
+                  />
+                  
+                  {/* Query Suggestions */}
+                  {showSuggestions && querySuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto">
+                      <div className="p-2 text-xs text-gray-500 border-b border-gray-100">
+                        💡 Try these queries:
+                      </div>
+                      {querySuggestions.slice(0, 8).map((suggestion, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={sendMessage}
                   disabled={!newMessage.trim() || isTyping}

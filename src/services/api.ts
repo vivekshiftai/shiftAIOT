@@ -18,7 +18,7 @@ class AuthenticationError extends Error {
 const API_BASE_URL = getApiConfig().BACKEND_BASE_URL;
 
 // Create axios instance with default config
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_BASE_URL,
   // Removed timeout for better user experience
 });

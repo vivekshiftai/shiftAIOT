@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.iotplatform.model.UnifiedPDF;
 import com.iotplatform.service.PDFProcessingService;
 import com.iotplatform.service.UnifiedPDFService;
+import com.iotplatform.service.UnifiedQueryService;
 import com.iotplatform.dto.PDFQueryRequest;
 import com.iotplatform.dto.PDFQueryResponse;
 
@@ -39,6 +40,9 @@ public class KnowledgeController {
     
     @Autowired
     private UnifiedPDFService unifiedPDFService;
+    
+    @Autowired
+    private UnifiedQueryService unifiedQueryService;
 
     @PostMapping("/upload")
     public ResponseEntity<?> uploadDocument(
@@ -175,6 +179,87 @@ public class KnowledgeController {
             response.put("processing_time", pdfResponse.getProcessingTime());
             
             System.out.println("✅ Knowledge Query Response - Success: " + (pdfResponse.getResponse() != null));
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Unified query endpoint - handles both PDF and database queries
+     */
+    @PostMapping("/unified-query")
+    public ResponseEntity<?> unifiedQuery(@RequestBody Map<String, Object> request) {
+        try {
+            String organizationId = "public"; // Default organization for all users
+            String userId = "public-user"; // Default user for public queries
+            String query = (String) request.get("query");
+            
+            System.out.println("🔍 Unified Query Request - Query: " + query);
+            
+            if (query == null || query.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Query is required"
+                ));
+            }
+            
+            // Process unified query
+            UnifiedQueryService.UnifiedQueryResult result = unifiedQueryService.processQuery(
+                query, organizationId, userId
+            );
+            
+            // Build response
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", result.isSuccess());
+            response.put("query", query);
+            response.put("queryType", result.getQueryType() != null ? result.getQueryType().name() : "UNKNOWN");
+            response.put("response", result.getResponse());
+            response.put("processingTime", result.getProcessingTime());
+            
+            if (result.isSuccess()) {
+                if (result.getDatabaseResults() != null) {
+                    response.put("databaseResults", result.getDatabaseResults());
+                    response.put("rowCount", result.getRowCount());
+                }
+                if (result.getSqlQuery() != null) {
+                    response.put("sqlQuery", result.getSqlQuery());
+                }
+            } else {
+                response.put("error", result.getError());
+            }
+            
+            System.out.println("✅ Unified Query Response - Success: " + result.isSuccess() + 
+                             ", Type: " + result.getQueryType());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.out.println("❌ Unified Query Error: " + e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "error", e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Get query suggestions
+     */
+    @GetMapping("/suggestions")
+    public ResponseEntity<?> getQuerySuggestions(@RequestParam(value = "context", required = false) String context) {
+        try {
+            List<String> suggestions = unifiedQueryService.getQuerySuggestions(context);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("suggestions", suggestions);
+            response.put("context", context);
             
             return ResponseEntity.ok(response);
             

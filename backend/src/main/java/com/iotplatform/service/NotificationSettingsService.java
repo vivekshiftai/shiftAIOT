@@ -38,16 +38,16 @@ public class NotificationSettingsService {
                 log.info("Initializing default preferences for new user: {}", userId);
                 UserPreferences defaultPreferences = new UserPreferences();
                 defaultPreferences.setUserId(userId);
-                // Set all notification types to true by default
+                // Set all notification types to true by default to prevent blocking
                 defaultPreferences.setDeviceAlerts(true);
-                defaultPreferences.setSystemUpdates(false);
+                defaultPreferences.setSystemUpdates(true);
                 defaultPreferences.setWeeklyReports(true);
                 defaultPreferences.setCriticalAlerts(true);
                 defaultPreferences.setPerformanceAlerts(true);
                 defaultPreferences.setSecurityAlerts(true);
                 defaultPreferences.setMaintenanceAlerts(true);
                 defaultPreferences.setDataBackupAlerts(true);
-                defaultPreferences.setUserActivityAlerts(false);
+                defaultPreferences.setUserActivityAlerts(true);
                 defaultPreferences.setRuleTriggerAlerts(true);
                 defaultPreferences.setEmailNotifications(true);
                 defaultPreferences.setPushNotifications(true);
@@ -143,15 +143,11 @@ public class NotificationSettingsService {
 
     /**
      * Get default notification setting for a type when user preferences are not available.
+     * All notifications are enabled by default to prevent blocking.
      */
     private boolean getDefaultSetting(NotificationType type) {
-        return switch (type) {
-            case DEVICE_ALERT, CRITICAL_ALERT, SECURITY_ALERT -> true; // Critical notifications enabled by default
-            case SYSTEM_UPDATE, USER_ACTIVITY_ALERT -> false; // Non-critical notifications disabled by default
-            case WEEKLY_REPORT, PERFORMANCE_ALERT, MAINTENANCE_ALERT, 
-                 DATA_BACKUP_ALERT, RULE_TRIGGER_ALERT, 
-                 EMAIL_NOTIFICATION, PUSH_NOTIFICATION -> true; // Most notifications enabled by default
-        };
+        // All notifications enabled by default to prevent blocking
+        return true;
     }
 
     /**
@@ -166,6 +162,83 @@ public class NotificationSettingsService {
      */
     public boolean isPushEnabled(String userId) {
         return shouldSendNotification(userId, NotificationType.PUSH_NOTIFICATION);
+    }
+
+    /**
+     * Update all existing users to have all notification preferences enabled.
+     * This method can be called to ensure no notifications are blocked.
+     */
+    public void enableAllNotificationsForAllUsers() {
+        try {
+            log.info("🔧 Updating all user preferences to enable all notifications...");
+            
+            // Get all user preferences
+            java.util.List<UserPreferences> allPreferences = userPreferencesRepository.findAll();
+            
+            int updatedCount = 0;
+            for (UserPreferences preferences : allPreferences) {
+                // Set all notification types to true
+                preferences.setDeviceAlerts(true);
+                preferences.setSystemUpdates(true);
+                preferences.setWeeklyReports(true);
+                preferences.setCriticalAlerts(true);
+                preferences.setPerformanceAlerts(true);
+                preferences.setSecurityAlerts(true);
+                preferences.setMaintenanceAlerts(true);
+                preferences.setDataBackupAlerts(true);
+                preferences.setUserActivityAlerts(true);
+                preferences.setRuleTriggerAlerts(true);
+                preferences.setEmailNotifications(true);
+                preferences.setPushNotifications(true);
+                
+                userPreferencesRepository.save(preferences);
+                updatedCount++;
+            }
+            
+            log.info("✅ Updated {} user preferences to enable all notifications", updatedCount);
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to update user preferences: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Update a specific user's preferences to enable all notifications.
+     */
+    public void enableAllNotificationsForUser(String userId) {
+        try {
+            log.info("🔧 Updating user preferences for user: {} to enable all notifications", userId);
+            
+            Optional<UserPreferences> preferencesOpt = userPreferencesRepository.findByUserId(userId);
+            
+            if (preferencesOpt.isPresent()) {
+                UserPreferences preferences = preferencesOpt.get();
+                
+                // Set all notification types to true
+                preferences.setDeviceAlerts(true);
+                preferences.setSystemUpdates(true);
+                preferences.setWeeklyReports(true);
+                preferences.setCriticalAlerts(true);
+                preferences.setPerformanceAlerts(true);
+                preferences.setSecurityAlerts(true);
+                preferences.setMaintenanceAlerts(true);
+                preferences.setDataBackupAlerts(true);
+                preferences.setUserActivityAlerts(true);
+                preferences.setRuleTriggerAlerts(true);
+                preferences.setEmailNotifications(true);
+                preferences.setPushNotifications(true);
+                
+                userPreferencesRepository.save(preferences);
+                log.info("✅ Updated user preferences for user: {} to enable all notifications", userId);
+            } else {
+                // If no preferences exist, initialize them with all enabled
+                ensureUserPreferencesInitialized(userId);
+                log.info("✅ Initialized user preferences for user: {} with all notifications enabled", userId);
+            }
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to update user preferences for user: {}: {}", userId, e.getMessage(), e);
+        }
     }
 
     /**
