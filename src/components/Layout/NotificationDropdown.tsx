@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Bell, X, Filter } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useIoT } from '../../contexts/IoTContext';
 import { Notification } from '../../types';
 import { CleanNotificationItem } from './CleanNotificationItem';
@@ -14,6 +15,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   onToggle 
 }) => {
   const { notifications, markNotificationAsRead } = useIoT();
+  const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -61,6 +63,11 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     // Handle notification click - could navigate to device details or mark as read
     await markNotificationAsRead(notification.id);
     onToggle(); // Close the dropdown
+  };
+
+  const handleViewAllNotifications = () => {
+    onToggle(); // Close the dropdown
+    navigate('/notifications'); // Navigate to notifications section
   };
 
   return (
@@ -150,7 +157,10 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
           {/* Footer */}
           {notifications.length > 0 && (
             <div className="bg-gradient-to-r from-slate-50 to-slate-100 p-4 border-t border-slate-200/50">
-              <button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-xl">
+              <button 
+                onClick={handleViewAllNotifications}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-xl"
+              >
                 View all notifications
               </button>
             </div>

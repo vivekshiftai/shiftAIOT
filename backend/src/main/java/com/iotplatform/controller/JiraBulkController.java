@@ -165,6 +165,65 @@ public class JiraBulkController {
     }
 
     /**
+     * Detailed diagnostic endpoint for Jira integration
+     * 
+     * @return Response with detailed Jira configuration and test results
+     */
+    @GetMapping("/diagnostic")
+    public ResponseEntity<Map<String, Object>> diagnosticJiraIntegration() {
+        try {
+            logger.info("🔍 Running detailed Jira diagnostic...");
+            
+            Map<String, Object> response = new HashMap<>();
+            Map<String, Object> config = new HashMap<>();
+            Map<String, Object> tests = new HashMap<>();
+            
+            // Check configuration values (without exposing sensitive data)
+            config.put("baseUrl_configured", jiraTaskAssignmentService.getJiraBaseUrl() != null && !jiraTaskAssignmentService.getJiraBaseUrl().trim().isEmpty());
+            config.put("username_configured", jiraTaskAssignmentService.getJiraUsername() != null && !jiraTaskAssignmentService.getJiraUsername().trim().isEmpty());
+            config.put("apiToken_configured", jiraTaskAssignmentService.getJiraApiToken() != null && !jiraTaskAssignmentService.getJiraApiToken().trim().isEmpty());
+            config.put("projectKey_configured", jiraTaskAssignmentService.getJiraProjectKey() != null && !jiraTaskAssignmentService.getJiraProjectKey().trim().isEmpty());
+            
+            // Test basic configuration
+            boolean isConfigured = jiraTaskAssignmentService.isJiraConfigured();
+            tests.put("configuration_valid", isConfigured);
+            
+            if (isConfigured) {
+                // Test API connectivity (without creating actual issues)
+                try {
+                    tests.put("api_connectivity", "ready_to_test");
+                    tests.put("message", "Jira is configured and ready for testing");
+                } catch (Exception e) {
+                    tests.put("api_connectivity", "error");
+                    tests.put("connectivity_error", e.getMessage());
+                }
+            } else {
+                tests.put("api_connectivity", "not_configured");
+                tests.put("message", "Jira configuration is incomplete");
+            }
+            
+            response.put("configuration", config);
+            response.put("tests", tests);
+            response.put("overall_status", isConfigured ? "ready" : "not_configured");
+            response.put("timestamp", java.time.LocalDateTime.now().toString());
+            
+            logger.info("✅ Jira diagnostic completed - Status: {}", isConfigured ? "ready" : "not_configured");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error running Jira diagnostic: {}", e.getMessage(), e);
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", true);
+            errorResponse.put("message", "Error running diagnostic: " + e.getMessage());
+            errorResponse.put("timestamp", java.time.LocalDateTime.now().toString());
+            
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+
+    /**
      * Creates simple bulk tasks with basic information
      * 
      * @param request Simple bulk task request

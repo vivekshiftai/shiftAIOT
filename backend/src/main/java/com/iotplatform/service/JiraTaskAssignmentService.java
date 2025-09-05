@@ -432,6 +432,25 @@ public class JiraTaskAssignmentService {
     }
 
     /**
+     * Getter methods for diagnostic purposes
+     */
+    public String getJiraBaseUrl() {
+        return jiraBaseUrl;
+    }
+
+    public String getJiraUsername() {
+        return jiraUsername;
+    }
+
+    public String getJiraApiToken() {
+        return jiraApiToken;
+    }
+
+    public String getJiraProjectKey() {
+        return jiraProjectKey;
+    }
+
+    /**
      * Simple method to assign task during onboarding
      * Can be called from maintenance data storage in onboarding flow
      */

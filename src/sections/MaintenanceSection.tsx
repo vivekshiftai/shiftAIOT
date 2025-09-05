@@ -28,7 +28,9 @@ import {
   CheckSquare,
   Square,
   UserCheck,
-  UserX
+  UserX,
+  Bell,
+  Send
 } from 'lucide-react';
 
 interface MaintenanceTask {
@@ -81,6 +83,7 @@ export const MaintenanceSection: React.FC = () => {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['today']));
   const [filterPriority, setFilterPriority] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [triggeringNotifications, setTriggeringNotifications] = useState(false);
 
   useEffect(() => {
     fetchMaintenanceData();
@@ -218,6 +221,31 @@ export const MaintenanceSection: React.FC = () => {
       fetchMaintenanceData(); // Refresh data
     } catch (err: any) {
       logError('MaintenanceSection', 'Failed to assign task', err);
+    }
+  };
+
+  const handleTriggerNotifications = async () => {
+    try {
+      setTriggeringNotifications(true);
+      logInfo('MaintenanceSection', 'Triggering maintenance notifications...');
+      
+      const response = await maintenanceAPI.triggerNotifications();
+      const { notificationsSent, message } = response.data;
+      
+      logInfo('MaintenanceSection', 'Maintenance notifications triggered successfully', {
+        notificationsSent,
+        message
+      });
+      
+      // Show success message (you could add a toast notification here)
+      alert(`✅ ${message}\n📧 Notifications sent: ${notificationsSent}`);
+      
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to trigger notifications';
+      logError('MaintenanceSection', 'Failed to trigger maintenance notifications', err);
+      alert(`❌ Error: ${errorMessage}`);
+    } finally {
+      setTriggeringNotifications(false);
     }
   };
 
@@ -422,6 +450,17 @@ export const MaintenanceSection: React.FC = () => {
             className="btn-secondary"
           >
             Refresh
+          </Button>
+
+          <Button
+            variant="outline"
+            size="md"
+            leftIcon={triggeringNotifications ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+            onClick={handleTriggerNotifications}
+            disabled={triggeringNotifications}
+            className="btn-secondary"
+          >
+            {triggeringNotifications ? 'Sending...' : 'Send Today\'s Notifications'}
           </Button>
 
           <Button

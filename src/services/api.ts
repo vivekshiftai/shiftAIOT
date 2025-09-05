@@ -253,6 +253,7 @@ export const maintenanceAPI = {
   getToday: () => api.get('/api/maintenance/today'),
   completeTask: (id: string) => api.patch(`/api/maintenance/${id}/complete`),
   assignTask: (id: string, assigneeId: string) => api.patch(`/api/maintenance/${id}/assign`, { assigneeId }),
+  triggerNotifications: () => api.post('/api/maintenance/trigger-notifications'),
 };
 
 // Maintenance Scheduler API

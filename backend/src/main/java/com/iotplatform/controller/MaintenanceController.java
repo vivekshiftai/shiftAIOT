@@ -4,6 +4,7 @@ import com.iotplatform.model.DeviceMaintenance;
 import com.iotplatform.model.Notification;
 import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.service.MaintenanceScheduleService;
+import com.iotplatform.service.MaintenanceNotificationScheduler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -31,12 +32,13 @@ import com.iotplatform.service.NotificationService;
 @RestController
 @RequestMapping("/api/maintenance")
 @RequiredArgsConstructor
-@Tag(name = "Maintenance", description = "Maintenance task and schedule management")
+@Tag(name = "Maintenance Management", description = "APIs for managing device maintenance tasks, schedules, and notifications")
 public class MaintenanceController {
     
     private static final Logger log = LoggerFactory.getLogger(MaintenanceController.class);
     private final MaintenanceScheduleService maintenanceScheduleService;
     private final NotificationService notificationService;
+    private final MaintenanceNotificationScheduler maintenanceNotificationScheduler;
 
     /**
      * Get today's maintenance tasks for the organization.
@@ -642,6 +644,59 @@ public class MaintenanceController {
         } catch (Exception e) {
             log.error("Error assigning maintenance task: {}", id, e);
             return ResponseEntity.status(500).body(Map.of("error", "Failed to assign maintenance task"));
+        }
+    }
+
+    /**
+     * Manually trigger maintenance notifications for testing.
+     */
+    @Operation(
+        summary = "Trigger Maintenance Notifications",
+        description = "Manually trigger the daily maintenance notification process for testing purposes"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Maintenance notifications triggered successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Forbidden - Admin access required")
+    })
+    @PostMapping("/trigger-notifications")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> triggerMaintenanceNotifications(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            log.warn("Unauthorized access attempt to trigger maintenance notifications");
+            return ResponseEntity.status(401).build();
+        }
+        
+        try {
+            log.info("Manual trigger of maintenance notifications requested by user: {}", 
+                    userDetails.getUser().getUsername());
+            
+            // Trigger the maintenance notification scheduler
+            int notificationsSent = maintenanceNotificationScheduler.triggerMaintenanceNotifications();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Maintenance notifications triggered successfully");
+            response.put("notificationsSent", notificationsSent);
+            response.put("triggeredBy", userDetails.getUser().getUsername());
+            response.put("timestamp", java.time.LocalDateTime.now());
+            
+            log.info("✅ Manual maintenance notification trigger completed successfully by user: {}", 
+                    userDetails.getUser().getUsername());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error triggering maintenance notifications manually: {}", e.getMessage(), e);
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", "Failed to trigger maintenance notifications");
+            errorResponse.put("message", e.getMessage());
+            
+            return ResponseEntity.status(500).body(errorResponse);
         }
     }
 }

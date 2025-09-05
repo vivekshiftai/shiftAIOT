@@ -248,31 +248,31 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
 
   return (
     <div className={`transition-all duration-300 ${style.container} rounded-xl overflow-hidden`}>
-      {/* Enhanced Card Header */}
+      {/* Compact Card Header - Only Title */}
       <div 
         className="p-4 cursor-pointer hover:shadow-md transition-all duration-200 group"
         onClick={handleCardClick}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="flex-shrink-0 relative">
               <div className="p-2 bg-white rounded-xl shadow-sm group-hover:shadow-md transition-all duration-200">
                 {getNotificationIcon(notification.category)}
               </div>
               {!notification.read && (
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full border-2 border-white shadow-lg animate-pulse"></div>
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full border-2 border-white shadow-lg animate-pulse"></div>
               )}
             </div>
             
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
-                {notification.deviceName || notification.title}
+              <h3 className="text-base font-semibold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
+                {notification.title}
               </h3>
-              <p className="text-sm text-slate-500 flex items-center gap-2 mt-1">
+              <p className="text-xs text-slate-500 flex items-center gap-2 mt-1">
                 <Clock className="w-3 h-3" />
                 {formatRelativeTime(notification.createdAt)}
                 {!notification.read && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                     New
                   </span>
                 )}
@@ -281,7 +281,7 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
           </div>
           
           <button
-            className={`p-3 rounded-xl transition-all duration-200 ${style.expandButton} text-lg font-bold min-w-[40px] h-10 flex items-center justify-center group-hover:scale-110 shadow-sm hover:shadow-md`}
+            className={`p-2 rounded-lg transition-all duration-200 ${style.expandButton} text-sm font-bold min-w-[32px] h-8 flex items-center justify-center group-hover:scale-110 shadow-sm hover:shadow-md`}
           >
             {isExpanded ? "−" : "+"}
           </button>

@@ -63,7 +63,7 @@ public class MaintenanceNotificationController {
             log.info("Manual maintenance notification trigger requested by user: {} for organization: {}", 
                     userDetails.getUsername(), targetOrganizationId);
 
-            int notificationsSent = maintenanceNotificationScheduler.triggerMaintenanceNotifications(targetOrganizationId);
+            int notificationsSent = maintenanceNotificationScheduler.triggerMaintenanceNotifications();
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);

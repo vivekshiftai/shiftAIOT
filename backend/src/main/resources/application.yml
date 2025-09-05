@@ -145,8 +145,8 @@ pdf:
 maintenance:
   scheduler:
     enabled: true
-    cron: "0 0 6 * * ?"  # Every day at 6:00 AM
-    organization-id: "default-org"  # Default organization ID for notifications
+    cron: "0 55 5 * * ?"  # Every day at 5:55 AM (5 minutes before schedule update)
+    organization-id: "shiftAIOT-org-2024"  # Default organization ID for notifications
   
   # Maintenance Status Update Scheduler Configuration
   status-updater:
@@ -173,6 +173,16 @@ jira:
   username: ${JIRA_USERNAME:}
   api-token: ${JIRA_API_TOKEN:}
   project-key: ${JIRA_PROJECT_KEY:}
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+  show-actuator: true
+  packages-to-scan: com.iotplatform.controller
 
 # Logging
 logging:

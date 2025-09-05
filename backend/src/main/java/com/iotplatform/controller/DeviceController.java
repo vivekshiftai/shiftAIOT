@@ -82,7 +82,7 @@ public class DeviceController {
     private static final Logger logger = LoggerFactory.getLogger(DeviceController.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final String ANONYMOUS_USER = "anonymous";
-    private static final String DEFAULT_ORGANIZATION = "default";
+    private static final String DEFAULT_ORGANIZATION = "shiftAIOT-org-2024";
     private static final int MAX_FILE_SIZE = 524288000; // 500MB in bytes
 
     private final DeviceService deviceService;
