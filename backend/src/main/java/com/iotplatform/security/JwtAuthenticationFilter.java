@@ -64,7 +64,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             
             for (String endpoint : publicEndpoints) {
                 if (requestURI.startsWith(endpoint)) {
-                    logger.debug("Skipping JWT authentication for public endpoint: {}", requestURI);
+                    logger.info("✅ Skipping JWT authentication for public endpoint: {}", requestURI);
                     filterChain.doFilter(request, response);
                     return;
                 }

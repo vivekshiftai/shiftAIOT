@@ -1,13 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Upload, FileText, Settings, Bot, CheckCircle, AlertTriangle, MessageSquare, Clock, ArrowRight, ArrowLeft } from 'lucide-react';
 import { unifiedOnboardingService, UnifiedOnboardingProgress } from '../../services/unifiedOnboardingService';
-import { deviceAPI, ruleAPI, knowledgeAPI, userAPI } from '../../services/api';
+import { userAPI } from '../../services/api';
 import DeviceOnboardingLoader from '../Loading/DeviceOnboardingLoader';
 import { DeviceChatInterface } from './DeviceChatInterface';
-import { OnboardingSuccess } from './OnboardingSuccess';
-import { getApiConfig } from '../../config/api';
 import { logInfo, logError, logWarn } from '../../utils/logger';
 import { useAuth } from '../../contexts/AuthContext';
+import { mapBackendStageToStep } from '../../utils/onboardingSteps.tsx';
 
 interface DeviceFormData {
   deviceName: string;
@@ -47,7 +46,6 @@ interface EnhancedDeviceOnboardingFormProps {
 type Step = 1 | 2 | 3;
 
 export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingFormProps> = ({ 
-  onSubmit, 
   onCancel 
 }) => {
   const { user: currentUser } = useAuth();
@@ -81,10 +79,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   });
 
   const [uploadedFile, setUploadedFile] = useState<FileUpload | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showOnboardingLoader, setShowOnboardingLoader] = useState(false);
-  const [showChatInterface, setShowChatInterface] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [onboardingResult, setOnboardingResult] = useState<any>(null);
 
@@ -92,9 +89,11 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
-  // Progress tracking states for 5-step onboarding
-  const [currentOnboardingStep, setCurrentOnboardingStep] = useState<string>('pdf_upload');
+  // Progress tracking states for 6-step onboarding
+  const [currentOnboardingStep, setCurrentOnboardingStep] = useState<string>('device_creation');
   const [onboardingStartTime, setOnboardingStartTime] = useState<number>(0);
+  const [onboardingProgress, setOnboardingProgress] = useState<number>(0);
+  const [onboardingMessage, setOnboardingMessage] = useState<string>('');
 
   // Debug progress state changes
   useEffect(() => {
@@ -316,7 +315,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
     setShowOnboardingLoader(true);
     setOnboardingStartTime(Date.now());
-    setCurrentOnboardingStep('pdf_upload');
+    setCurrentOnboardingStep('device_creation');
 
     try {
       logInfo('EnhancedDeviceOnboardingForm', 'Starting unified onboarding process', {
@@ -325,70 +324,38 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         fileSize: uploadedFile.file.size
       });
 
-      // Define the 5-step onboarding process
-      const onboardingSteps = [
-        { step: 'pdf_upload', duration: 3000 },
-        { step: 'rules_generation', duration: 4000 },
-        { step: 'maintenance_schedule', duration: 3000 },
-        { step: 'safety_procedures', duration: 3000 },
-        { step: 'device_storage', duration: 2000 }
-      ];
-
-      let currentStepIndex = 0;
-
-      const updateOnboardingStep = () => {
-        if (currentStepIndex < onboardingSteps.length) {
-          const step = onboardingSteps[currentStepIndex];
-          setCurrentOnboardingStep(step.step);
-          
-          logInfo('Onboarding', `Step Update: ${step.step}`, {
-            step: step.step,
-            stepIndex: currentStepIndex + 1,
-            totalSteps: onboardingSteps.length
-          });
-
-          currentStepIndex++;
-          
-          if (currentStepIndex < onboardingSteps.length) {
-            setTimeout(updateOnboardingStep, step.duration);
-          }
-        }
-      };
-
-      // Start step updates
-      setTimeout(updateOnboardingStep, 1000);
+      // Progress updates are now handled by real-time SSE streaming from backend
+      // No need for manual step timing - backend sends real progress updates
 
       // Use the new unified onboarding service with enhanced error handling and progress tracking
       const result = await unifiedOnboardingService.completeUnifiedOnboarding(
         formData,
         uploadedFile.file,
         (progress: UnifiedOnboardingProgress) => {
-          // Map backend progress stages to our 5-step process
-          switch (progress.stage) {
-            case 'upload':
-            case 'device':
-              setCurrentOnboardingStep('pdf_upload');
-              break;
-            case 'rules':
-              setCurrentOnboardingStep('rules_generation');
-              break;
-            case 'maintenance':
-              setCurrentOnboardingStep('maintenance_schedule');
-              break;
-            case 'safety':
-              setCurrentOnboardingStep('safety_procedures');
-              break;
-            case 'complete':
-              setCurrentOnboardingStep('device_storage');
-              break;
-          }
+          // Update progress percentage and message
+          setOnboardingProgress(progress.progress);
+          setOnboardingMessage(progress.message);
+          
+          // Map backend progress stages to our 5-step process using shared utility
+          const stepId = mapBackendStageToStep(progress.stage);
+          setCurrentOnboardingStep(stepId);
           
           // Log progress information
           logInfo('Onboarding', `Progress Update: ${progress.stage}`, {
             stage: progress.stage,
+            progress: progress.progress,
             message: progress.message,
             subMessage: progress.subMessage,
-            error: progress.error
+            error: progress.error,
+            stepDetails: progress.stepDetails
+          });
+          
+          // Log to console for debugging
+          console.log('📊 Frontend Progress Update:', {
+            stage: progress.stage,
+            progress: progress.progress,
+            message: progress.message,
+            stepDetails: progress.stepDetails
           });
           
           // Handle error states
@@ -477,17 +444,16 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   }, [currentStep, uploadedFile, validateStep, startOnboardingProcess, nextStep]);
 
   // Handle success continue - close onboarding (chat is now integrated)
-  const handleSuccessContinue = useCallback(() => {
-    setShowSuccessMessage(false);
-    onCancel(); // Close the entire onboarding form
-  }, [onCancel]);
+  // const handleSuccessContinue = useCallback(() => {
+  //   setShowSuccessMessage(false);
+  //   onCancel(); // Close the entire onboarding form
+  // }, [onCancel]);
 
   // Chat is now integrated into success screen, no separate handler needed
 
   // Handle success close - close everything and return to devices list
   const handleSuccessClose = useCallback(() => {
     setShowSuccessMessage(false);
-    setShowChatInterface(false);
     onCancel(); // Close the entire onboarding form
   }, [onCancel]);
 
@@ -946,11 +912,6 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   // Simple form step indicator for the header
   const renderFormStepIndicator = useCallback(() => {
     const stepLabels = ['Basic Info', 'Connection', 'Upload PDF'];
-    const stepDescriptions = [
-      'Provide essential device details like name, location, and manufacturer to identify and categorize your device in the system.',
-      'Configure how your device connects to the platform. Choose between MQTT, HTTP, or COAP protocols based on your device capabilities.',
-      'Upload device documentation (manual, datasheet, or specifications) to automatically generate AI rules, maintenance schedules, and safety information.'
-    ];
     
     return (
       <div className="flex flex-col items-center justify-center space-y-6">
@@ -994,9 +955,11 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       currentStep={currentOnboardingStep}
       deviceName={formData.deviceName}
       pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
+      progress={onboardingProgress}
+      message={onboardingMessage}
       onComplete={() => {}}
     />
-  ), [currentOnboardingStep, formData.deviceName, uploadedFile?.file.name]);
+  ), [currentOnboardingStep, formData.deviceName, uploadedFile?.file.name, onboardingProgress, onboardingMessage]);
 
   // Render success message with integrated chat
   const renderSuccessContent = useCallback(() => (

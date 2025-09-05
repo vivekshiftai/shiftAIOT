@@ -3,11 +3,8 @@ import {
   Plus, 
   Search, 
   Filter, 
-  Grid3X3, 
-  List,
   Eye,
-  Trash2,
-  RefreshCw
+  Trash2
 } from 'lucide-react';
 import { Device } from '../../types';
 import { DeviceCard } from './DeviceCard';
@@ -15,7 +12,6 @@ import { EnhancedDeviceOnboardingForm } from './EnhancedDeviceOnboardingForm';
 import { DeviceDetails } from './DeviceDetails';
 import { pdfProcessingService } from '../../services/pdfprocess';
 import { websocketService } from '../../services/websocketService';
-import { useState, useEffect } from 'react';
 
 interface DeviceListProps {
   devices: Device[];
@@ -50,7 +46,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<FilterType>('all');
-  const [typeFilter, setTypeFilter] = useState<DeviceType>('all');
   const [showFilters, setShowFilters] = useState(false);
   
   // Onboarding state management
@@ -67,9 +62,8 @@ export const DeviceList: React.FC<DeviceListProps> = ({
                          device.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())) || false;
     
     const matchesStatus = statusFilter === 'all' || device.status === statusFilter;
-    const matchesType = typeFilter === 'all' || device.type === typeFilter;
     
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesStatus;
   });
 
   const handleOnboardingDevice = async (deviceData: any, file: any) => {
@@ -168,9 +162,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({
     return devices.filter(device => status === 'all' || device.status === status).length;
   };
 
-  const getTypeCount = (type: DeviceType) => {
-    return devices.filter(device => type === 'all' || device.type === type).length;
-  };
 
   // Monitor WebSocket connection status
   useEffect(() => {
@@ -306,20 +297,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({
               </select>
             </div>
             
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Type</label>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value as DeviceType)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">All ({getTypeCount('all')})</option>
-                <option value="SENSOR">Sensors ({getTypeCount('SENSOR')})</option>
-                <option value="ACTUATOR">Actuators ({getTypeCount('ACTUATOR')})</option>
-                <option value="GATEWAY">Gateways ({getTypeCount('GATEWAY')})</option>
-                <option value="CONTROLLER">Controllers ({getTypeCount('CONTROLLER')})</option>
-              </select>
-            </div>
           </div>
         )}
       </div>
@@ -337,7 +314,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
           </div>
           <h3 className="text-lg font-semibold text-slate-800 mb-2">No devices found</h3>
           <p className="text-slate-600 mb-6">
-            {searchTerm || statusFilter !== 'all' || typeFilter !== 'all'
+            {searchTerm || statusFilter !== 'all'
               ? 'Try adjusting your search or filters'
               : 'Get started by adding your first IoT device'
             }

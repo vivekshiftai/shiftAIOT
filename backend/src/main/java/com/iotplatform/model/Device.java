@@ -44,8 +44,8 @@ public class Device {
     private String name;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false)
-    private DeviceType type = DeviceType.MACHINE;
+    @Column(name = "type")
+    private DeviceType type;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")

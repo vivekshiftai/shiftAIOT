@@ -29,16 +29,16 @@ public class MaintenanceSchedulerService {
     public void updateMaintenanceSchedulesOnStartup() {
         log.info("🚀 Application started - updating maintenance schedules...");
         log.info("📅 Maintenance Scheduler Service initialized");
-        log.info("⏰ Scheduled to run daily at 6:00 AM");
+        log.info("⏰ Scheduled to run daily at 5:50 AM");
         updateMaintenanceSchedules();
     }
     
     /**
-     * Update maintenance schedules daily at 6:00 AM
+     * Update maintenance schedules daily at 5:50 AM (before notifications at 5:55 AM)
      */
-    @Scheduled(cron = "0 0 6 * * ?") // Every day at 6:00 AM
+    @Scheduled(cron = "0 50 5 * * ?") // Every day at 5:50 AM
     public void updateMaintenanceSchedulesDaily() {
-        log.info("⏰ Daily maintenance schedule update triggered at 6:00 AM");
+        log.info("⏰ Daily maintenance schedule update triggered at 5:50 AM");
         log.info("📋 Processing all active maintenance tasks...");
         updateMaintenanceSchedules();
     }
@@ -69,6 +69,9 @@ public class MaintenanceSchedulerService {
                         // Calculate the next maintenance date based on frequency
                         LocalDate nextMaintenance = calculateNextMaintenanceDateFromLast(maintenance.getLastMaintenance(), maintenance.getFrequency());
                         
+                        // Save maintenance history before updating
+                        maintenanceScheduleService.saveMaintenanceHistory(maintenance, maintenance.getNextMaintenance(), "Overdue task rescheduled");
+                        
                         // Update the maintenance task
                         maintenance.setNextMaintenance(nextMaintenance);
                         maintenance.setUpdatedAt(LocalDateTime.now());
@@ -92,6 +95,9 @@ public class MaintenanceSchedulerService {
                         
                         // Calculate next maintenance date from today
                         LocalDate nextMaintenance = calculateNextMaintenanceDateFromLast(today, maintenance.getFrequency());
+                        
+                        // Save maintenance history before updating
+                        maintenanceScheduleService.saveMaintenanceHistory(maintenance, today, "Task due today - rescheduled");
                         
                         // Update the maintenance task
                         maintenance.setNextMaintenance(nextMaintenance);

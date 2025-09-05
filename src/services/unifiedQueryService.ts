@@ -37,11 +37,51 @@ export class UnifiedQueryService {
       const response = await api.post('/knowledge/unified-query', request);
       
       console.log('✅ Unified query response:', response.data);
+      
+      // Validate response structure
+      if (!response.data) {
+        throw new Error('Empty response from backend');
+      }
+      
+      if (response.data.success === false) {
+        throw new Error(response.data.error || 'Backend returned error');
+      }
+      
       return response.data as UnifiedQueryResponse;
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Unified query failed:', error);
-      throw error;
+      
+      // Provide more detailed error information
+      if (error.response) {
+        console.error('Backend response status:', error.response.status);
+        console.error('Backend response data:', error.response.data);
+        throw new Error(`Backend error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        throw new Error('No response from backend - check if backend is running');
+      } else {
+        console.error('Request setup error:', error.message);
+        throw new Error(`Request failed: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Test backend connectivity
+   */
+  static async testBackend(): Promise<{ success: boolean; message: string; timestamp: number }> {
+    try {
+      console.log('🔍 Testing backend connectivity...');
+      
+      const response = await api.get('/knowledge/test');
+      
+      console.log('✅ Backend test response:', response.data);
+      return response.data;
+      
+    } catch (error: any) {
+      console.error('❌ Backend test failed:', error);
+      throw new Error(`Backend test failed: ${error.message}`);
     }
   }
 

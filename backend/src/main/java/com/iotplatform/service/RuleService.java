@@ -361,7 +361,7 @@ public class RuleService {
         return ruleRepository.findByDeviceId(deviceId);
     }
     
-    public void createRulesFromPDF(List<RulesGenerationResponse.Rule> rules, String deviceId, String organizationId) {
+    public void createRulesFromPDF(List<RulesGenerationResponse.Rule> rules, String deviceId, String organizationId, String currentUserId) {
         System.out.println("Creating rules from PDF for device: " + deviceId);
         
         int processedCount = 0;
@@ -390,6 +390,7 @@ public class RuleService {
                 rule.setActive(true);
                 rule.setDeviceId(deviceId);
                 rule.setOrganizationId(organizationId);
+                rule.setCreatedBy(currentUserId);
                 rule.setCreatedAt(LocalDateTime.now());
                 rule.setUpdatedAt(LocalDateTime.now());
                 

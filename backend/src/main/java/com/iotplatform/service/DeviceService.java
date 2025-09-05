@@ -1145,9 +1145,9 @@ public class DeviceService {
             if (assignedUserOpt.isPresent()) {
                 User assignedUser = assignedUserOpt.get();
                 
-                // Create enhanced notification with comprehensive device information
+                // Create enhanced notification with device information
                 Notification notification = new Notification();
-                notification.setTitle("New Device Assignment");
+                notification.setTitle("🎯 New Device Assignment");
                 notification.setMessage("You have been assigned a new device. The device is ready for monitoring and management.");
                 notification.setCategory(Notification.NotificationCategory.DEVICE_ASSIGNMENT);
                 notification.setUserId(assignedUserId);
@@ -1155,10 +1155,10 @@ public class DeviceService {
                 notification.setOrganizationId(organizationId);
                 notification.setRead(false);
                 
-                // Enhance notification with comprehensive device information
+                // Enhance notification with device information and counts
                 deviceNotificationEnhancerService.enhanceNotificationWithDeviceInfo(notification, device.getId(), organizationId);
                 
-                // Build enhanced message
+                // Build enhanced message with counts
                 String enhancedMessage = deviceNotificationEnhancerService.buildEnhancedNotificationMessage(notification);
                 notification.setMessage(enhancedMessage);
                 
@@ -1237,9 +1237,9 @@ public class DeviceService {
             if (creatorUserOpt.isPresent()) {
                 User creatorUser = creatorUserOpt.get();
                 
-                // Create enhanced notification with comprehensive device information
+                // Create enhanced notification with device information
                 Notification notification = new Notification();
-                notification.setTitle("New Device Created");
+                notification.setTitle("🎯 New Device Created");
                 notification.setMessage(String.format(
                     "A new device has been created. Device: %s (%s) at location: %s is assigned to you.",
                     device.getName(),
@@ -1252,10 +1252,10 @@ public class DeviceService {
                 notification.setOrganizationId(organizationId);
                 notification.setRead(false);
                 
-                // Enhance notification with comprehensive device information
+                // Enhance notification with device information and counts
                 deviceNotificationEnhancerService.enhanceNotificationWithDeviceInfo(notification, device.getId(), organizationId);
                 
-                // Build enhanced message
+                // Build enhanced message with counts
                 String enhancedMessage = deviceNotificationEnhancerService.buildEnhancedNotificationMessage(notification);
                 notification.setMessage(enhancedMessage);
                 

@@ -43,6 +43,21 @@ public interface UnifiedPDFRepository extends JpaRepository<UnifiedPDF, String> 
     List<UnifiedPDF> findByDeviceIdAndOrganizationIdAndDeletedFalseOrderByUploadedAtDesc(String deviceId, String organizationId);
 
     /**
+     * Find PDFs by device name and organization ID (active only) - exact match
+     */
+    List<UnifiedPDF> findByDeviceNameAndOrganizationIdAndDeletedFalseOrderByUploadedAtDesc(String deviceName, String organizationId);
+
+    /**
+     * Find PDFs by device name and organization ID (active only) - case insensitive
+     */
+    List<UnifiedPDF> findByDeviceNameIgnoreCaseAndOrganizationIdAndDeletedFalseOrderByUploadedAtDesc(String deviceName, String organizationId);
+
+    /**
+     * Find PDFs by device name and organization ID (active only) - partial match
+     */
+    List<UnifiedPDF> findByDeviceNameContainingIgnoreCaseAndOrganizationIdAndDeletedFalseOrderByUploadedAtDesc(String deviceName, String organizationId);
+
+    /**
      * Find PDFs by organization ID and document type (active only)
      */
     List<UnifiedPDF> findByOrganizationIdAndDocumentTypeAndDeletedFalseOrderByUploadedAtDesc(String organizationId, UnifiedPDF.DocumentType documentType);

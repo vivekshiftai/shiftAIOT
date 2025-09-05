@@ -50,6 +50,25 @@ public class NotificationService {
         return notifications;
     }
 
+    public Optional<Notification> getNotificationById(String id, String organizationId, String userId) {
+        logger.debug("Getting notification by ID: {} for user: {} in organization: {}", id, userId, organizationId);
+        Optional<Notification> notification = notificationRepository.findById(id);
+        
+        if (notification.isPresent()) {
+            Notification notif = notification.get();
+            // Check if the notification belongs to the user's organization and is accessible to the user
+            if (notif.getOrganizationId().equals(organizationId) && 
+                (notif.getUserId() == null || notif.getUserId().equals(userId))) {
+                return notification;
+            } else {
+                logger.warn("Notification {} not accessible to user {} in organization {}", id, userId, organizationId);
+                return Optional.empty();
+            }
+        }
+        
+        return Optional.empty();
+    }
+
     public Notification createNotification(Notification notification) {
         try {
             logger.info("🔔 Starting notification creation process for user: {} with title: '{}'", 

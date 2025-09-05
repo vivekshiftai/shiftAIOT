@@ -66,7 +66,6 @@ public class UnifiedOnboardingService {
     private final DeviceSafetyPrecautionRepository safetyRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
-    private final ConsolidatedNotificationService consolidatedNotificationService;
     private final UnifiedPDFService unifiedPDFService;
     private final ObjectMapper objectMapper;
 
@@ -184,43 +183,34 @@ public class UnifiedOnboardingService {
                 log.info("📝 Creating device assignment notification for user: {} for device: {} after onboarding completion", 
                        deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
                 
-                // Create consolidated notification with all processed data
-                try {
-                    consolidatedNotificationService.createConsolidatedDeviceNotification(
-                        deviceResponse.getId(),
-                        deviceRequest.getAssignedUserId().trim(),
-                        organizationId,
-                        currentUserId
-                    );
-                    
-                    log.info("✅ Consolidated notification sent to user: {} for device: {} with all processed data", 
+                // Create enhanced device assignment notification
+                Notification notification = new Notification();
+                notification.setTitle("🎯 New Device Assignment");
+                notification.setMessage("Device has been successfully onboarded and assigned to you. The device is now ready for monitoring and management.");
+                notification.setCategory(Notification.NotificationCategory.DEVICE_ASSIGNMENT);
+                notification.setUserId(deviceRequest.getAssignedUserId().trim());
+                notification.setDeviceId(deviceResponse.getId());
+                notification.setOrganizationId(organizationId);
+                notification.setRead(false);
+                
+                // Enhance notification with device information and counts
+                deviceNotificationEnhancerService.enhanceNotificationWithDeviceInfo(
+                    notification, deviceResponse.getId(), organizationId);
+                
+                // Build enhanced message with counts
+                String enhancedMessage = deviceNotificationEnhancerService.buildEnhancedNotificationMessage(notification);
+                notification.setMessage(enhancedMessage);
+                
+                // Create notification with preference check
+                Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(
+                    deviceRequest.getAssignedUserId().trim(), notification);
+                
+                if (createdNotification.isPresent()) {
+                    log.info("✅ Device assignment notification sent to user: {} for device: {} after onboarding completion", 
                            deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
-                } catch (Exception consolidatedError) {
-                    log.warn("⚠️ Consolidated notification failed, creating basic notification instead: {}", consolidatedError.getMessage());
-                    
-                    // Fallback to enhanced device assignment notification
-                    Notification enhancedNotification = new Notification();
-                    enhancedNotification.setTitle("New Device Assignment");
-                    enhancedNotification.setMessage("Device has been successfully onboarded and assigned to you. The device is now ready for monitoring and management.");
-                    enhancedNotification.setCategory(Notification.NotificationCategory.DEVICE_ASSIGNMENT);
-                    enhancedNotification.setUserId(deviceRequest.getAssignedUserId().trim());
-                    enhancedNotification.setDeviceId(deviceResponse.getId());
-                    enhancedNotification.setOrganizationId(organizationId);
-                    enhancedNotification.setRead(false);
-                    
-                    // Enhance notification with comprehensive device information
-                    deviceNotificationEnhancerService.enhanceNotificationWithDeviceInfo(
-                        enhancedNotification, deviceResponse.getId(), organizationId);
-                    
-                    // Build enhanced message
-                    String enhancedMessage = deviceNotificationEnhancerService.buildEnhancedNotificationMessage(enhancedNotification);
-                    enhancedNotification.setMessage(enhancedMessage);
-                    
-                    notificationService.createNotificationWithPreferenceCheck(
-                        deviceRequest.getAssignedUserId().trim(), enhancedNotification);
-                    
-                    log.info("✅ Enhanced notification sent to user: {} for device: {} after onboarding completion", 
-                           deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
+                } else {
+                    log.info("⚠️ Device assignment notification blocked by user preferences for user: {}", 
+                           deviceRequest.getAssignedUserId().trim());
                 }
             } else {
                 log.info("📝 No notification needed - no assignment specified");
@@ -398,7 +388,7 @@ public class UnifiedOnboardingService {
             log.info("Rules generated successfully: {} rules created", pdfResult.rulesGenerated);
             
             // Store rules in database
-            ruleService.createRulesFromPDF(rulesResponse.getRules(), deviceId, organizationId);
+            ruleService.createRulesFromPDF(rulesResponse.getRules(), deviceId, organizationId, currentUserId);
             log.info("✅ Stored {} rules in database for device: {}", pdfResult.rulesGenerated, deviceId);
             
             // Send progress update for rules completion
@@ -448,13 +438,9 @@ public class UnifiedOnboardingService {
                 deviceAssignee = currentUserId; // Fallback to current user
             }
             
-            if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
-                log.info("🔧 Auto-assigning {} maintenance tasks to device assignee: {}", maintenanceResponse.getMaintenanceTasks().size(), deviceAssignee);
-                storeMaintenanceWithAutoAssignment(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId, deviceAssignee);
-            } else {
-                log.warn("⚠️ No device assignee found for device: {}, storing {} maintenance tasks without assignment", deviceId, maintenanceResponse.getMaintenanceTasks().size());
-                maintenanceService.createMaintenanceFromPDF(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId);
-            }
+            // Use MaintenanceScheduleService for all maintenance creation (it handles assignment logic internally)
+            log.info("🔧 Creating {} maintenance tasks using MaintenanceScheduleService", maintenanceResponse.getMaintenanceTasks().size());
+            maintenanceService.createMaintenanceFromPDF(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId, currentUserId);
             log.info("✅ Stored {} maintenance items in database for device: {}", pdfResult.maintenanceItems, deviceId);
             
             // Send progress update for maintenance completion
@@ -472,7 +458,7 @@ public class UnifiedOnboardingService {
                     pdfResult.safetyPrecautions);
             
             // Store safety precautions in database
-            safetyService.createSafetyFromPDF(safetyResponse.getSafetyPrecautions(), deviceId, organizationId);
+            safetyService.createSafetyFromPDF(safetyResponse.getSafetyPrecautions(), deviceId, organizationId, currentUserId);
             log.info("✅ Stored {} safety precautions in database for device: {}", pdfResult.safetyPrecautions, deviceId);
             
             // Send progress update for safety completion
@@ -500,251 +486,6 @@ public class UnifiedOnboardingService {
 
 
 
-    /**
-     * Store maintenance items in database with auto-assignment to device assignee.
-     * Skips tasks with empty required fields (task, frequency, description, priority, estimated_duration, required_tools, safety_notes).
-     * Safety notes are part of maintenance tasks and are stored with them.
-     */
-    private void storeMaintenanceWithAutoAssignment(List<MaintenanceGenerationResponse.MaintenanceTask> maintenanceItems, 
-                                                   String deviceId, String organizationId, String deviceAssignee) {
-        try {
-            List<DeviceMaintenance> maintenanceToSave = new ArrayList<>();
-            int processedCount = 0;
-            int skippedCount = 0;
-            int assignedCount = 0;
-            
-            for (var maintenanceData : maintenanceItems) {
-                String taskTitle = null;
-                try {
-                    // Get task title - prefer 'task' field over 'task_name' field
-                    taskTitle = maintenanceData.getTask() != null && !maintenanceData.getTask().trim().isEmpty() 
-                        ? maintenanceData.getTask().trim() 
-                        : maintenanceData.getTaskName() != null ? maintenanceData.getTaskName().trim() : null;
-                    
-                    // STRICT VALIDATION: Check all required fields - skip if any are missing or empty
-                    if (taskTitle == null || taskTitle.isEmpty()) {
-                        log.warn("Skipping maintenance task - task title is missing or empty");
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    if (maintenanceData.getFrequency() == null || maintenanceData.getFrequency().trim().isEmpty()) {
-                        log.warn("Skipping maintenance task '{}' - frequency is missing or empty", taskTitle);
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    if (maintenanceData.getDescription() == null || maintenanceData.getDescription().trim().isEmpty()) {
-                        log.warn("Skipping maintenance task '{}' - description is missing or empty", taskTitle);
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    if (maintenanceData.getPriority() == null || maintenanceData.getPriority().trim().isEmpty()) {
-                        log.warn("Skipping maintenance task '{}' - priority is missing or empty", taskTitle);
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    if (maintenanceData.getEstimatedDuration() == null || maintenanceData.getEstimatedDuration().trim().isEmpty()) {
-                        log.warn("Skipping maintenance task '{}' - estimated_duration is missing or empty", taskTitle);
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    if (maintenanceData.getRequiredTools() == null || maintenanceData.getRequiredTools().trim().isEmpty()) {
-                        log.warn("Skipping maintenance task '{}' - required_tools is missing or empty", taskTitle);
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    if (maintenanceData.getSafetyNotes() == null || maintenanceData.getSafetyNotes().trim().isEmpty()) {
-                        log.warn("Skipping maintenance task '{}' - safety_notes is missing or empty", taskTitle);
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    // Check if maintenance task already exists for this device (deviceId + taskName)
-                    Optional<DeviceMaintenance> existingMaintenance = maintenanceRepository
-                        .findByDeviceIdAndTaskNameAndOrganizationId(deviceId, taskTitle, organizationId);
-                    if (existingMaintenance.isPresent()) {
-                        DeviceMaintenance existingTask = existingMaintenance.get();
-                        
-                        // If task exists but is not assigned, assign it to the device assignee
-                        if (existingTask.getAssignedTo() == null || existingTask.getAssignedTo().trim().isEmpty()) {
-                            if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
-                                existingTask.setAssignedTo(deviceAssignee);
-                                maintenanceRepository.save(existingTask);
-                                assignedCount++;
-                                log.info("✅ Existing maintenance task '{}' assigned to user: {}", taskTitle, deviceAssignee);
-                            } else {
-                                log.warn("⚠️ Existing maintenance task '{}' not assigned - no device assignee found", taskTitle);
-                            }
-                        } else {
-                            log.info("ℹ️ Maintenance task '{}' already exists and is assigned to: {}", taskTitle, existingTask.getAssignedTo());
-                        }
-                        
-                        skippedCount++;
-                        continue;
-                    }
-                    
-                    // All required fields are present, create maintenance task
-                    DeviceMaintenance maintenance = new DeviceMaintenance();
-                    maintenance.setId(UUID.randomUUID().toString());
-                    maintenance.setOrganizationId(organizationId);
-                    
-                    // Set required fields with actual values (no defaults)
-                    maintenance.setTaskName(taskTitle);
-                    maintenance.setComponentName(taskTitle != null && !taskTitle.trim().isEmpty() ? taskTitle.trim() : "General");
-                    maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
-                    
-                    log.debug("Set componentName to: '{}' for task: '{}'", maintenance.getComponentName(), taskTitle);
-                    log.debug("Set maintenanceType to: '{}' for task: '{}'", maintenance.getMaintenanceType(), taskTitle);
-                    
-                    // Set device information (required for foreign key constraint)
-                    setDeviceInformation(maintenance, deviceId);
-                    
-                    // Set validated fields with actual values
-                    maintenance.setFrequency(maintenanceData.getFrequency().trim());
-                    maintenance.setDescription(maintenanceData.getDescription().trim());
-                    maintenance.setPriority(processPriorityStrict(maintenanceData.getPriority().trim()));
-                    maintenance.setEstimatedDuration(maintenanceData.getEstimatedDuration().trim());
-                    maintenance.setRequiredTools(maintenanceData.getRequiredTools().trim());
-                    
-                    // Store safety notes as part of maintenance task
-                    maintenance.setSafetyNotes(maintenanceData.getSafetyNotes().trim());
-                    
-                    // Set category if available
-                    if (maintenanceData.getCategory() != null && !maintenanceData.getCategory().trim().isEmpty()) {
-                        maintenance.setCategory(maintenanceData.getCategory().trim());
-                    }
-                    
-                    // Auto-assign to device assignee
-                    if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
-                        maintenance.setAssignedTo(deviceAssignee);
-                        assignedCount++;
-                        log.info("✅ Maintenance task '{}' assigned to user: {} (assignedTo field set to: '{}')", 
-                                taskTitle, deviceAssignee, maintenance.getAssignedTo());
-                    } else {
-                        log.warn("⚠️ Maintenance task '{}' not assigned - no device assignee found (deviceAssignee: '{}')", 
-                                taskTitle, deviceAssignee);
-                    }
-                    
-                    // Set dates
-                    formatAndCalculateMaintenanceDates(maintenance, maintenanceData);
-                    
-                    // Final validation - ensure maintenance type is set
-                    if (maintenance.getMaintenanceType() == null) {
-                        log.warn("Maintenance type is null for task: {}, setting to GENERAL", taskTitle);
-                        maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
-                    }
-                    
-                    // Double-check maintenance type before saving
-                    if (maintenance.getMaintenanceType() == null) {
-                        log.error("CRITICAL: Maintenance type is still null for task: {} after setting to GENERAL", taskTitle);
-                        maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.GENERAL);
-                    }
-                    
-                    log.info("Final maintenance type before save: {} for task: {}", maintenance.getMaintenanceType(), taskTitle);
-                    
-                    // Save to database
-                    DeviceMaintenance savedMaintenance = maintenanceRepository.save(maintenance);
-                    maintenanceToSave.add(savedMaintenance);
-                    processedCount++;
-                    
-                    // Verify assignment was saved
-                    log.info("🔍 Maintenance task saved - ID: '{}', TaskName: '{}', AssignedTo: '{}'", 
-                            savedMaintenance.getId(), savedMaintenance.getTaskName(), savedMaintenance.getAssignedTo());
-                    
-                    // Assign task to Jira if user is assigned
-                    if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
-                        try {
-                            // Get user email for Jira assignment
-                            Optional<User> user = userRepository.findById(deviceAssignee);
-                            if (user.isPresent() && user.get().getEmail() != null) {
-                                // Get device name for context
-                                Optional<Device> device = deviceRepository.findById(deviceId);
-                                String deviceName = device.isPresent() ? device.get().getName() : "Unknown Device";
-                                
-                                // Assign task to Jira
-                                jiraTaskAssignmentService.assignMaintenanceTask(
-                                    taskTitle,
-                                    maintenance.getDescription(),
-                                    user.get().getEmail(),
-                                    deviceName
-                                );
-                                
-                                log.info("🎯 Jira task assigned for maintenance: {} to user: {}", taskTitle, user.get().getEmail());
-                            } else {
-                                log.warn("⚠️ Cannot assign Jira task - user not found or email missing for user ID: {}", deviceAssignee);
-                            }
-                        } catch (Exception e) {
-                            log.error("❌ Failed to assign Jira task for maintenance: {} - {}", taskTitle, e.getMessage());
-                            // Don't fail the entire process if Jira assignment fails
-                        }
-                    }
-                    
-                    log.debug("✅ Created maintenance task: {} for device: {}", taskTitle, deviceId);
-                    
-                } catch (Exception e) {
-                    log.error("❌ Failed to create maintenance task: {} for device: {} - {}", 
-                             taskTitle, deviceId, e.getMessage(), e);
-                    skippedCount++;
-                }
-            }
-            
-            log.info("✅ Maintenance tasks processing completed for device: {} - Processed: {}, Skipped: {}, Assigned: {}", 
-                     deviceId, processedCount, skippedCount, assignedCount);
-            log.info("🔍 Final maintenance assignment summary - Device ID: '{}', Device Assignee: '{}', Tasks Assigned: {}", 
-                     deviceId, deviceAssignee, assignedCount);
-            
-            // Additional step: Assign any remaining unassigned maintenance tasks for this device
-            if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
-                int additionalAssigned = assignRemainingUnassignedTasks(deviceId, organizationId, deviceAssignee);
-                if (additionalAssigned > 0) {
-                    log.info("✅ Additionally assigned {} unassigned maintenance tasks to user: {}", additionalAssigned, deviceAssignee);
-                    assignedCount += additionalAssigned;
-                }
-            }
-            
-            // Send notification to assigned user about new maintenance tasks
-            if (assignedCount > 0 && deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
-                try {
-                    Optional<Device> device = deviceRepository.findById(deviceId);
-                    String deviceName = device.map(Device::getName).orElse("Unknown Device");
-                    
-                    Notification notification = new Notification();
-                    notification.setUserId(deviceAssignee);
-                    notification.setTitle("New Maintenance Tasks Assigned");
-                    notification.setMessage(String.format(
-                        "You have been assigned %d new maintenance task%s for device '%s' during onboarding. " +
-                        "Please review and schedule these tasks accordingly.",
-                        assignedCount, assignedCount > 1 ? "s" : "", deviceName
-                    ));
-                    notification.setCategory(Notification.NotificationCategory.MAINTENANCE_ASSIGNMENT);
-                    notification.setOrganizationId(organizationId);
-                    notification.setDeviceId(deviceId);
-                    notification.setRead(false);
-                    
-                    Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(deviceAssignee, notification);
-                    if (createdNotification.isPresent()) {
-                        log.info("✅ Created maintenance assignment notification for user: {} for {} tasks on device: {}", 
-                               deviceAssignee, assignedCount, deviceName);
-                    } else {
-                        log.info("⚠️ Maintenance assignment notification blocked by user preferences for user: {}", deviceAssignee);
-                    }
-                } catch (Exception e) {
-                    log.error("❌ Failed to create maintenance assignment notification for user: {} device: {}", 
-                             deviceAssignee, deviceId, e);
-                    // Don't fail the entire process if notification fails
-                }
-            }
-            
-        } catch (Exception e) {
-            log.error("❌ Failed to store maintenance tasks for device: {} - {}", deviceId, e.getMessage(), e);
-            throw new RuntimeException("Failed to store maintenance tasks: " + e.getMessage(), e);
-        }
-    }
 
 
 
@@ -1112,35 +853,4 @@ public class UnifiedOnboardingService {
         }
     }
     
-    /**
-     * Assign any remaining unassigned maintenance tasks for a device to the specified user
-     */
-    private int assignRemainingUnassignedTasks(String deviceId, String organizationId, String deviceAssignee) {
-        try {
-            // Find all unassigned maintenance tasks for this device
-            List<DeviceMaintenance> unassignedTasks = maintenanceRepository
-                .findByDeviceIdAndOrganizationIdAndAssignedToIsNull(deviceId, organizationId);
-            
-            if (unassignedTasks.isEmpty()) {
-                log.info("ℹ️ No unassigned maintenance tasks found for device: {}", deviceId);
-                return 0;
-            }
-            
-            log.info("🔍 Found {} unassigned maintenance tasks for device: {}, assigning to user: {}", 
-                    unassignedTasks.size(), deviceId, deviceAssignee);
-            
-            int assignedCount = 0;
-            for (DeviceMaintenance task : unassignedTasks) {
-                task.setAssignedTo(deviceAssignee);
-                maintenanceRepository.save(task);
-                assignedCount++;
-                log.info("✅ Assigned unassigned maintenance task '{}' to user: {}", task.getTaskName(), deviceAssignee);
-            }
-            
-            return assignedCount;
-        } catch (Exception e) {
-            log.error("Error assigning remaining unassigned tasks for device: {} - Error: {}", deviceId, e.getMessage(), e);
-            return 0;
-        }
-    }
 }

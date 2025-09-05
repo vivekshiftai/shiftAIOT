@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getApiConfig } from '../config/api';
 import { tokenService } from './tokenService';
-import { logWarn, logError, logApiError } from '../utils/logger';
+import { logWarn } from '../utils/logger';
 import { NotificationTemplateRequest } from '../types';
 
 // Custom error class for authentication errors
@@ -33,7 +33,12 @@ api.interceptors.request.use(
     const isPublicEndpoint = config.url?.includes('/auth/') ||
                            config.url?.includes('/api/auth/') ||
                            config.url?.includes('/health') ||
-                           config.url?.includes('/api/health/');
+                           config.url?.includes('/api/health/') ||
+                           config.url?.includes('/api/knowledge/') ||
+                           config.url?.includes('/knowledge/') ||
+                           config.url?.includes('/upload-pdf') ||
+                           config.url?.includes('/query') ||
+                           config.url?.includes('/pdfs/');
     
     if (!isPublicEndpoint) {
       const token = tokenService.getToken();
@@ -47,6 +52,7 @@ api.interceptors.request.use(
       }
     } else {
       console.log(`🌐 Public endpoint (no auth): ${config.url}`);
+      console.log(`🌐 Public endpoint check passed for: ${config.url}`);
     }
 
     // Set Content-Type for JSON requests only

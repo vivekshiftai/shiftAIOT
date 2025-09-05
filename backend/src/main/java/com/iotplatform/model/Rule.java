@@ -82,6 +82,9 @@ public class Rule {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "created_by")
+    private String createdBy;
+
     @Column(name = "last_triggered")
     private LocalDateTime lastTriggered;
 
@@ -145,6 +148,9 @@ public class Rule {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getCreatedBy() { return createdBy; }
+    public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
 
     public LocalDateTime getLastTriggered() { return lastTriggered; }
     public void setLastTriggered(LocalDateTime lastTriggered) { 

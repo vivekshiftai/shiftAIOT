@@ -297,12 +297,6 @@ export const KnowledgeSection: React.FC = () => {
     loadQuerySuggestions();
   }, []);
 
-  const formatFileSize = (bytes: number) => {
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    if (bytes === 0) return '0 Bytes';
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -369,11 +363,15 @@ export const KnowledgeSection: React.FC = () => {
       } else {
         // Use unified query service for general queries
         try {
+          console.log('🔍 Sending unified query to backend:', userMessage.content);
+          
           const unifiedRequest: UnifiedQueryRequest = {
             query: userMessage.content
           };
           
           const unifiedResponse = await UnifiedQueryService.sendUnifiedQuery(unifiedRequest);
+          
+          console.log('✅ Received unified response:', unifiedResponse);
           
           const assistantMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
@@ -389,16 +387,15 @@ export const KnowledgeSection: React.FC = () => {
         } catch (unifiedError) {
           logError('Knowledge', 'Failed to process unified query', unifiedError instanceof Error ? unifiedError : new Error('Unknown error'));
           
-          // Fallback to general AI response
-          const aiResponse = generateAIResponse(userMessage.content);
-          const assistantMessage: ChatMessage = {
+          // Show proper error message instead of fallback
+          const errorMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
             type: 'assistant',
-            content: aiResponse,
+            content: `I encountered an error while processing your query: "${userMessage.content}". Please check the backend connection and try again.`,
             timestamp: new Date(),
             queryType: 'UNKNOWN'
           };
-          setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
+          setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
         }
       }
     } catch (error) {
@@ -451,15 +448,34 @@ export const KnowledgeSection: React.FC = () => {
     setTimeout(() => setShowSuggestions(false), 200);
   };
 
-  const generateAIResponse = (userMessage: string): string => {
-    const responses = [
-      `Based on the available documentation, I can help you with "${userMessage}". Let me search through the knowledge base for relevant information.`,
-      `I understand you're asking about "${userMessage}". This is a common question that I can address using the uploaded documents.`,
-      `Regarding "${userMessage}", I found some relevant information in the knowledge base. Would you like me to elaborate on any specific aspect?`,
-      `I can help you with "${userMessage}". The documentation contains several relevant sections that might be useful.`
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
+  const testBackendConnection = async () => {
+    try {
+      console.log('🔍 Testing backend connection...');
+      const result = await UnifiedQueryService.testBackend();
+      console.log('✅ Backend test successful:', result);
+      
+      const testMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content: `✅ Backend connection test successful! Message: ${result.message}`,
+        timestamp: new Date(),
+        queryType: 'UNKNOWN'
+      };
+      setChatMessages((prev: ChatMessage[]) => [...prev, testMessage]);
+    } catch (error) {
+      console.error('❌ Backend test failed:', error);
+      
+      const errorMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content: `❌ Backend connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        timestamp: new Date(),
+        queryType: 'UNKNOWN'
+      };
+      setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
+    }
   };
+
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -925,6 +941,14 @@ export const KnowledgeSection: React.FC = () => {
                     </div>
                   )}
                 </div>
+                <button
+                  onClick={testBackendConnection}
+                  className="px-4 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all flex items-center gap-2 shadow-sm"
+                  title="Test Backend Connection"
+                >
+                  <span className="text-sm">🔍</span>
+                  Test
+                </button>
                 <button
                   onClick={sendMessage}
                   disabled={!newMessage.trim() || isTyping}

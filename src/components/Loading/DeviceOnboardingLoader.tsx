@@ -1,31 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Upload, 
-  Zap, 
-  Wrench, 
-  Shield, 
-  CheckCircle, 
-  Clock,
-  FileText,
-  Cpu,
-  Database
-} from 'lucide-react';
-
-interface OnboardingStep {
-  id: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  color: string;
-  bgColor: string;
-  details: string[];
-}
+import { CheckCircle, Clock, FileText, Cpu } from 'lucide-react';
+import { ONBOARDING_STEPS, getStepStatus, getStepCardStyle, OnboardingStep } from '../../utils/onboardingSteps.tsx';
 
 interface DeviceOnboardingLoaderProps {
   isProcessing: boolean;
   currentStep: string;
   deviceName: string;
   pdfFileName: string;
+  progress?: number;
+  message?: string;
   onComplete?: () => void;
 }
 
@@ -34,81 +17,15 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
   currentStep,
   deviceName,
   pdfFileName,
+  progress = 0,
+  message = '',
   onComplete
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
 
-  const onboardingSteps: OnboardingStep[] = [
-    {
-      id: 'pdf_upload',
-      title: 'PDF Upload',
-      description: 'Uploading device documentation to AI processing service',
-      icon: <Upload className="w-6 h-6" />,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      details: [
-        'Securely uploading PDF file',
-        'Validating document format',
-        'Preparing for AI analysis'
-      ]
-    },
-    {
-      id: 'rules_generation',
-      title: 'Rules Generation',
-      description: 'Creating intelligent IoT monitoring rules',
-      icon: <Zap className="w-6 h-6" />,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      details: [
-        'Analyzing device specifications',
-        'Generating monitoring rules',
-        'Setting alert thresholds'
-      ]
-    },
-    {
-      id: 'maintenance_schedule',
-      title: 'Maintenance Schedule',
-      description: 'Generating preventive maintenance plans',
-      icon: <Wrench className="w-6 h-6" />,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
-      details: [
-        'Extracting maintenance requirements',
-        'Creating service schedules',
-        'Setting up reminders'
-      ]
-    },
-    {
-      id: 'safety_procedures',
-      title: 'Safety Procedures',
-      description: 'Extracting safety guidelines and procedures',
-      icon: <Shield className="w-6 h-6" />,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-      details: [
-        'Identifying safety requirements',
-        'Creating safety protocols',
-        'Setting up safety alerts'
-      ]
-    },
-    {
-      id: 'device_storage',
-      title: 'Device Storage',
-      description: 'Saving device configuration to database',
-      icon: <Database className="w-6 h-6" />,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      details: [
-        'Storing device information',
-        'Saving AI-generated content',
-        'Finalizing configuration'
-      ]
-    }
-  ];
-
   useEffect(() => {
-    const stepIndex = onboardingSteps.findIndex(step => step.id === currentStep);
+    const stepIndex = ONBOARDING_STEPS.findIndex(step => step.id === currentStep);
     if (stepIndex !== -1) {
       setCurrentStepIndex(stepIndex);
     }
@@ -116,21 +33,11 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
 
   useEffect(() => {
     // Mark previous steps as completed
-    const completed = onboardingSteps
+    const completed = ONBOARDING_STEPS
       .slice(0, currentStepIndex)
       .map(step => step.id);
     setCompletedSteps(completed);
   }, [currentStepIndex]);
-
-  const getStepStatus = (stepId: string) => {
-    if (completedSteps.includes(stepId)) {
-      return 'completed';
-    } else if (stepId === currentStep) {
-      return 'current';
-    } else {
-      return 'pending';
-    }
-  };
 
   const getStepIcon = (step: OnboardingStep, status: string) => {
     if (status === 'completed') {
@@ -149,15 +56,7 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
     }
   };
 
-  const getStepCardStyle = (step: OnboardingStep, status: string) => {
-    if (status === 'completed') {
-      return 'bg-green-50 border-green-200 shadow-sm';
-    } else if (status === 'current') {
-      return `${step.bgColor} border-2 border-blue-300 shadow-md`;
-    } else {
-      return 'bg-gray-50 border-gray-200 opacity-60';
-    }
-  };
+  // getStepCardStyle is now imported from shared utility
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -177,9 +76,9 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
 
         {/* Progress Steps */}
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            {onboardingSteps.map((step, index) => {
-              const status = getStepStatus(step.id);
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+            {ONBOARDING_STEPS.map((step, index) => {
+              const status = getStepStatus(step.id, currentStep, completedSteps);
               const isCurrent = status === 'current';
               
               return (
@@ -240,20 +139,20 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
             <div className="bg-gray-50 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">
-                  Current Step: {onboardingSteps[currentStepIndex]?.title}
+                  Current Step: {ONBOARDING_STEPS[currentStepIndex]?.title}
                 </span>
                 <span className="text-sm text-gray-500">
-                  Step {currentStepIndex + 1} of {onboardingSteps.length}
+                  {progress}% Complete
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-500 ease-out animate-pulse"
-                  style={{ width: '60%' }}
+                  className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${progress}%` }}
                 />
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                Processing {pdfFileName} for {deviceName}...
+                {message || `Processing ${pdfFileName} for ${deviceName}...`}
               </p>
             </div>
           )}

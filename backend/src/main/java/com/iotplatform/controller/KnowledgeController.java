@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,6 +28,7 @@ import com.iotplatform.model.UnifiedPDF;
 import com.iotplatform.service.PDFProcessingService;
 import com.iotplatform.service.UnifiedPDFService;
 import com.iotplatform.service.UnifiedQueryService;
+import com.iotplatform.service.IntelligentQueryService;
 import com.iotplatform.dto.PDFQueryRequest;
 import com.iotplatform.dto.PDFQueryResponse;
 
@@ -43,6 +45,9 @@ public class KnowledgeController {
     
     @Autowired
     private UnifiedQueryService unifiedQueryService;
+    
+    @Autowired
+    private IntelligentQueryService intelligentQueryService;
 
     @PostMapping("/upload")
     public ResponseEntity<?> uploadDocument(
@@ -191,6 +196,28 @@ public class KnowledgeController {
     }
 
     /**
+     * Test endpoint to verify backend connectivity
+     */
+    @GetMapping("/test")
+    public ResponseEntity<?> testEndpoint() {
+        System.out.println("🔍 Test endpoint called");
+        return ResponseEntity.ok(Map.of(
+            "success", true,
+            "message", "Knowledge base backend is working",
+            "timestamp", System.currentTimeMillis()
+        ));
+    }
+
+    /**
+     * Handle OPTIONS requests for CORS
+     */
+    @RequestMapping(value = "/**", method = RequestMethod.OPTIONS)
+    public ResponseEntity<?> handleOptions() {
+        System.out.println("🔍 OPTIONS request received");
+        return ResponseEntity.ok().build();
+    }
+
+    /**
      * Unified query endpoint - handles both PDF and database queries
      */
     @PostMapping("/unified-query")
@@ -201,6 +228,9 @@ public class KnowledgeController {
             String query = (String) request.get("query");
             
             System.out.println("🔍 Unified Query Request - Query: " + query);
+            System.out.println("🔍 Request body: " + request);
+            System.out.println("🔍 Organization ID: " + organizationId);
+            System.out.println("🔍 User ID: " + userId);
             
             if (query == null || query.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of(
@@ -241,9 +271,10 @@ public class KnowledgeController {
             
         } catch (Exception e) {
             System.out.println("❌ Unified Query Error: " + e.getMessage());
+            e.printStackTrace(); // Add stack trace for debugging
             return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
-                "error", e.getMessage()
+                "error", "Failed to process query: " + e.getMessage()
             ));
         }
     }
@@ -516,6 +547,52 @@ public class KnowledgeController {
             errorResponse.put("success", false);
             errorResponse.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+
+    /**
+     * Intelligent Query Endpoint - Extracts device name from query and queries the associated PDF
+     * 
+     * @param request The query request containing the natural language query
+     * @return Intelligent query response with device name extraction and PDF query results
+     */
+    @PostMapping("/intelligent-query")
+    public ResponseEntity<?> intelligentQuery(@RequestBody Map<String, Object> request) {
+        try {
+            String query = (String) request.get("query");
+            String organizationId = (String) request.getOrDefault("organization_id", "public");
+            String userId = (String) request.getOrDefault("user_id", "public-user");
+            
+            System.out.println("🧠 Intelligent Query Request - Query: " + query + ", Org: " + organizationId);
+            
+            if (query == null || query.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", "Query is required"
+                ));
+            }
+            
+            // Process the intelligent query
+            Map<String, Object> response = intelligentQueryService.processIntelligentQuery(query, organizationId, userId);
+            
+            System.out.println("✅ Intelligent Query Response - Success: " + response.get("success") + 
+                             ", Device: " + response.get("extractedDeviceName"));
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Intelligent Query Error: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("error", "Intelligent query processing failed: " + e.getMessage());
+            errorResponse.put("query", request.get("query"));
+            errorResponse.put("extractedDeviceName", null);
+            errorResponse.put("queriedPDF", null);
+            errorResponse.put("response", null);
+            
+            return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
 

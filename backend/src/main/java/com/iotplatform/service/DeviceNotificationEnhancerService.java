@@ -66,18 +66,14 @@ public class DeviceNotificationEnhancerService {
     }
     
     /**
-     * Build a comprehensive notification message with device details
+     * Build a simple notification message with device details and counts only
      */
     public String buildEnhancedNotificationMessage(Notification notification) {
         StringBuilder message = new StringBuilder();
         
         // Basic device information
         if (notification.getDeviceName() != null) {
-            message.append("Device: ").append(notification.getDeviceName());
-        }
-        
-        if (notification.getDeviceType() != null) {
-            message.append(" (").append(notification.getDeviceType()).append(")");
+            message.append("📱 Device: ").append(notification.getDeviceName());
         }
         
         if (notification.getDeviceLocation() != null) {
@@ -90,38 +86,25 @@ public class DeviceNotificationEnhancerService {
         
         message.append("\n\n");
         
-        // Device specifications
-        if (notification.getDeviceManufacturer() != null || notification.getDeviceModel() != null) {
-            message.append("Specifications: ");
-            if (notification.getDeviceManufacturer() != null) {
-                message.append(notification.getDeviceManufacturer());
-            }
-            if (notification.getDeviceModel() != null) {
-                if (notification.getDeviceManufacturer() != null) {
-                    message.append(" ");
-                }
-                message.append(notification.getDeviceModel());
-            }
-            message.append("\n\n");
-        }
+        // Simple counts summary - only show counts, no detailed data
+        message.append("📊 Configuration Summary:\n");
         
-        // Rules and maintenance summary
-        message.append("Configuration Summary:\n");
+        // Rules count
         if (notification.getTotalRulesCount() != null && notification.getTotalRulesCount() > 0) {
-            message.append("• Total Rules: ").append(notification.getTotalRulesCount());
-            if (notification.getMaintenanceRulesCount() != null && notification.getMaintenanceRulesCount() > 0) {
-                message.append(" (including ").append(notification.getMaintenanceRulesCount()).append(" maintenance tasks)");
-            }
-            message.append("\n");
+            message.append("• ").append(notification.getTotalRulesCount()).append(" monitoring rules\n");
         }
         
-        if (notification.getSafetyRulesCount() != null && notification.getSafetyRulesCount() > 0) {
-            message.append("• Safety Precautions: ").append(notification.getSafetyRulesCount()).append("\n");
-        }
-        
+        // Maintenance tasks count
         if (notification.getMaintenanceRulesCount() != null && notification.getMaintenanceRulesCount() > 0) {
-            message.append("• Active Maintenance Tasks: ").append(notification.getMaintenanceRulesCount()).append("\n");
+            message.append("• ").append(notification.getMaintenanceRulesCount()).append(" maintenance tasks\n");
         }
+        
+        // Safety precautions count
+        if (notification.getSafetyRulesCount() != null && notification.getSafetyRulesCount() > 0) {
+            message.append("• ").append(notification.getSafetyRulesCount()).append(" safety precautions\n");
+        }
+        
+        message.append("\n✅ Device is ready for monitoring and management.");
         
         return message.toString().trim();
     }

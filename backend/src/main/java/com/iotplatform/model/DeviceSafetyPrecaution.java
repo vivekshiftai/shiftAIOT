@@ -62,6 +62,9 @@ public class DeviceSafetyPrecaution {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
+    @Column(name = "created_by")
+    private String createdBy;
+    
     // Constructors
     public DeviceSafetyPrecaution() {
         this.createdAt = LocalDateTime.now();
@@ -216,6 +219,14 @@ public class DeviceSafetyPrecaution {
     
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+    
+    public String getCreatedBy() {
+        return createdBy;
+    }
+    
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
     }
     
     @PreUpdate

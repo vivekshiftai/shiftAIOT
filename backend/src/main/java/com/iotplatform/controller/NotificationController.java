@@ -14,7 +14,6 @@ import com.iotplatform.model.Notification;
 import com.iotplatform.model.User;
 import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.service.NotificationService;
-import com.iotplatform.service.ConsolidatedNotificationService;
 
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -28,11 +27,9 @@ public class NotificationController {
     private static final Logger log = LoggerFactory.getLogger(NotificationController.class);
 
     private final NotificationService notificationService;
-    private final ConsolidatedNotificationService consolidatedNotificationService;
 
-    public NotificationController(NotificationService notificationService, ConsolidatedNotificationService consolidatedNotificationService) {
+    public NotificationController(NotificationService notificationService) {
         this.notificationService = notificationService;
-        this.consolidatedNotificationService = consolidatedNotificationService;
     }
 
     @GetMapping
@@ -171,9 +168,23 @@ public class NotificationController {
         User user = userDetails.getUser();
         
         try {
-            java.util.Map<String, Object> details = consolidatedNotificationService.getNotificationDetails(id);
-            return ResponseEntity.ok(details);
+            // Get notification details using the existing NotificationService
+            Optional<Notification> notification = notificationService.getNotificationById(id, user.getOrganizationId(), user.getId());
+            if (notification.isPresent()) {
+                java.util.Map<String, Object> details = new HashMap<>();
+                details.put("id", notification.get().getId());
+                details.put("title", notification.get().getTitle());
+                details.put("message", notification.get().getMessage());
+                details.put("type", notification.get().getType());
+                details.put("isRead", notification.get().isRead());
+                details.put("createdAt", notification.get().getCreatedAt());
+                details.put("updatedAt", notification.get().getUpdatedAt());
+                return ResponseEntity.ok(details);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
         } catch (Exception e) {
+            log.error("Error getting notification details for ID: {}", id, e);
             return ResponseEntity.internalServerError().body(java.util.Map.of("error", "Failed to load notification details"));
         }
     }

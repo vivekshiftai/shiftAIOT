@@ -23,7 +23,7 @@ import { pdfAPI } from '../../services/api';
 
 interface DeviceFormData {
   name: string;
-  type: 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER' | 'MACHINE';
+  type?: 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER' | 'MACHINE';
   status: 'ONLINE' | 'OFFLINE' | 'WARNING' | 'ERROR';
   location: string;
   protocol: 'MQTT' | 'HTTP' | 'COAP';
@@ -94,7 +94,6 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
   const [successMessage, setSuccessMessage] = useState('');
   const [formData, setFormData] = useState<DeviceFormData>({
     name: '',
-    type: 'MACHINE',
     status: 'ONLINE',
     location: '',
     protocol: 'MQTT',
@@ -582,22 +581,6 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                 {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Device Type *
-                </label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => handleInputChange('type', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="MACHINE">Machine</option>
-                  <option value="SENSOR">Sensor</option>
-                  <option value="ACTUATOR">Actuator</option>
-                  <option value="GATEWAY">Gateway</option>
-                  <option value="CONTROLLER">Controller</option>
-                </select>
-              </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">

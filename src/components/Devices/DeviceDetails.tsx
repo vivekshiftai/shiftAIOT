@@ -184,7 +184,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
             <h2 className="text-2xl font-bold text-gray-800">{device.name}</h2>
-            <p className="text-gray-600">{device.type} • {device.location}</p>
+            <p className="text-gray-600">{device.location}</p>
           </div>
           <button
             onClick={onClose}
@@ -237,18 +237,6 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
                       <div className="text-2xl font-bold text-gray-800">{device.status}</div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-lg border border-gray-200">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
-                          <Settings className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-800">Type</h3>
-                          <p className="text-sm text-gray-600">Device category</p>
-                        </div>
-                      </div>
-                      <div className="text-2xl font-bold text-gray-800">{device.type}</div>
-                    </div>
 
                     <div className="bg-white p-6 rounded-lg border border-gray-200">
                       <div className="flex items-center gap-3 mb-4">

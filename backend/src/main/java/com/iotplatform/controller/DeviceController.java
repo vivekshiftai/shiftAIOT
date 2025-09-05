@@ -8,10 +8,12 @@ import java.util.Optional;
 import java.util.Date;
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 
@@ -1508,6 +1511,125 @@ public class DeviceController {
             logger.error("❌ Failed to onboard device: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    /**
+     * Device onboarding with real-time progress streaming using Server-Sent Events
+     */
+    @PostMapping(value = "/unified-onboarding-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter unifiedOnboardingWithProgress(
+            @RequestParam("deviceData") String deviceData,
+            @RequestParam(value = "manualFile", required = false) MultipartFile manualFile,
+            @RequestParam(value = "datasheetFile", required = false) MultipartFile datasheetFile,
+            @RequestParam(value = "certificateFile", required = false) MultipartFile certificateFile,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        SseEmitter emitter = new SseEmitter(300000L); // 5 minute timeout
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            logger.error("❌ Authentication failed: userDetails is null or user is null");
+            try {
+                emitter.send(SseEmitter.event()
+                    .name("error")
+                    .data("Authentication failed"));
+                emitter.complete();
+            } catch (Exception e) {
+                logger.error("❌ Failed to send error event", e);
+            }
+            return emitter;
+        }
+        
+        // Run onboarding in a separate thread to avoid blocking
+        new Thread(() -> {
+            try {
+                logger.info("✅ User {} starting device onboarding with progress streaming", userDetails.getUser().getEmail());
+                
+                // Send initial progress
+                emitter.send(SseEmitter.event()
+                    .name("progress")
+                    .data("{\"stage\":\"upload\",\"progress\":5,\"message\":\"Initializing onboarding process...\",\"stepDetails\":{\"currentStep\":1,\"totalSteps\":6,\"stepName\":\"Initialization\"}}"));
+                
+                // Parse device data
+                ObjectMapper objectMapper = new ObjectMapper();
+                DeviceCreateWithFileRequest deviceRequest = objectMapper.readValue(deviceData, DeviceCreateWithFileRequest.class);
+                
+                // Log file information
+                if (manualFile != null) {
+                    logger.info("📁 Manual file received: name={}, size={} bytes, content-type={}", 
+                               manualFile.getOriginalFilename(), manualFile.getSize(), manualFile.getContentType());
+                }
+                if (datasheetFile != null) {
+                    logger.info("📁 Datasheet file received: name={}, size={} bytes, content-type={}", 
+                               datasheetFile.getOriginalFilename(), datasheetFile.getSize(), datasheetFile.getContentType());
+                }
+                if (certificateFile != null) {
+                    logger.info("📁 Certificate file received: name={}, size={} bytes, content-type={}", 
+                               certificateFile.getOriginalFilename(), certificateFile.getSize(), certificateFile.getContentType());
+                }
+                
+                // Get organization ID from authenticated user
+                String organizationId = userDetails.getUser().getOrganizationId();
+                String currentUserId = userDetails.getUser().getId();
+                logger.info("🏢 Using organization ID: {}", organizationId);
+                
+                // Create progress callback that sends SSE events
+                Consumer<UnifiedOnboardingProgress> progressCallback = (progress) -> {
+                    try {
+                        String progressJson = objectMapper.writeValueAsString(progress);
+                        emitter.send(SseEmitter.event()
+                            .name("progress")
+                            .data(progressJson));
+                        logger.info("📊 Progress sent via SSE - Stage: {}, Progress: {}%, Message: {}", 
+                                   progress.getStage(), progress.getProgress(), progress.getMessage());
+                    } catch (Exception e) {
+                        logger.error("❌ Failed to send progress event", e);
+                    }
+                };
+                
+                // Call unified onboarding service with progress callback
+                DeviceCreateResponse response = unifiedOnboardingService.completeUnifiedOnboarding(
+                    deviceRequest, manualFile, datasheetFile, certificateFile, organizationId, currentUserId, progressCallback);
+                
+                // Send final success event
+                Map<String, Object> finalResult = new HashMap<>();
+                finalResult.put("success", true);
+                finalResult.put("deviceId", response.getId());
+                finalResult.put("deviceName", response.getName());
+                finalResult.put("rulesGenerated", response.getPdfData() != null ? response.getPdfData().getRulesGenerated() : 0);
+                finalResult.put("maintenanceItems", response.getPdfData() != null ? response.getPdfData().getMaintenanceItems() : 0);
+                finalResult.put("safetyPrecautions", response.getPdfData() != null ? response.getPdfData().getSafetyPrecautions() : 0);
+                
+                emitter.send(SseEmitter.event()
+                    .name("complete")
+                    .data(objectMapper.writeValueAsString(finalResult)));
+                
+                logger.info("✅ Device onboarding completed successfully for user: {}", userDetails.getUser().getEmail());
+                emitter.complete();
+                
+            } catch (JsonProcessingException e) {
+                logger.error("❌ Failed to parse device data JSON", e);
+                try {
+                    emitter.send(SseEmitter.event()
+                        .name("error")
+                        .data("{\"error\":\"Failed to parse device data JSON\",\"message\":\"" + e.getMessage() + "\"}"));
+                    emitter.complete();
+                } catch (Exception ex) {
+                    logger.error("❌ Failed to send error event", ex);
+                }
+            } catch (Exception e) {
+                logger.error("❌ Failed to onboard device: {}", e.getMessage(), e);
+                try {
+                    emitter.send(SseEmitter.event()
+                        .name("error")
+                        .data("{\"error\":\"Failed to onboard device\",\"message\":\"" + e.getMessage() + "\"}"));
+                    emitter.complete();
+                } catch (Exception ex) {
+                    logger.error("❌ Failed to send error event", ex);
+                }
+            }
+        }).start();
+        
+        return emitter;
     }
 
 

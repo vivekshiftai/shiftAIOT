@@ -213,6 +213,37 @@ public class UnifiedPDFService {
     }
 
     /**
+     * Get PDFs by device name and organization (for intelligent querying)
+     */
+    public List<UnifiedPDF> getPDFsByDeviceNameAndOrganization(String deviceName, String organizationId) {
+        log.info("🔍 Searching for PDFs by device name: '{}' in organization: {}", deviceName, organizationId);
+        
+        // First try exact match
+        List<UnifiedPDF> exactMatch = unifiedPDFRepository.findByDeviceNameAndOrganizationIdAndDeletedFalseOrderByUploadedAtDesc(deviceName, organizationId);
+        if (!exactMatch.isEmpty()) {
+            log.info("✅ Found {} PDFs with exact device name match", exactMatch.size());
+            return exactMatch;
+        }
+        
+        // Try case-insensitive match
+        List<UnifiedPDF> caseInsensitiveMatch = unifiedPDFRepository.findByDeviceNameIgnoreCaseAndOrganizationIdAndDeletedFalseOrderByUploadedAtDesc(deviceName, organizationId);
+        if (!caseInsensitiveMatch.isEmpty()) {
+            log.info("✅ Found {} PDFs with case-insensitive device name match", caseInsensitiveMatch.size());
+            return caseInsensitiveMatch;
+        }
+        
+        // Try partial match (contains)
+        List<UnifiedPDF> partialMatch = unifiedPDFRepository.findByDeviceNameContainingIgnoreCaseAndOrganizationIdAndDeletedFalseOrderByUploadedAtDesc(deviceName, organizationId);
+        if (!partialMatch.isEmpty()) {
+            log.info("✅ Found {} PDFs with partial device name match", partialMatch.size());
+            return partialMatch;
+        }
+        
+        log.warn("⚠️ No PDFs found for device name: '{}' in organization: {}", deviceName, organizationId);
+        return List.of();
+    }
+
+    /**
      * Get device-specific PDFs by organization
      */
     public List<UnifiedPDF> getDevicePDFsByOrganization(String organizationId) {

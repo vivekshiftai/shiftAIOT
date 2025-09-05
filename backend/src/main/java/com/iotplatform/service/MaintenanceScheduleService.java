@@ -3,9 +3,11 @@ package com.iotplatform.service;
 import com.iotplatform.model.MaintenanceSchedule;
 import com.iotplatform.model.DeviceMaintenance;
 import com.iotplatform.model.Device;
+import com.iotplatform.model.MaintenanceHistory;
 import com.iotplatform.repository.MaintenanceScheduleRepository;
 import com.iotplatform.repository.DeviceMaintenanceRepository;
 import com.iotplatform.repository.DeviceRepository;
+import com.iotplatform.repository.MaintenanceHistoryRepository;
 import com.iotplatform.dto.MaintenanceGenerationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +38,7 @@ public class MaintenanceScheduleService {
     private final MaintenanceScheduleRepository maintenanceScheduleRepository;
     private final DeviceMaintenanceRepository deviceMaintenanceRepository;
     private final DeviceRepository deviceRepository;
+    private final MaintenanceHistoryRepository maintenanceHistoryRepository;
     
     // Simple frequency mapping for basic string formats
     private static final Map<String, java.time.temporal.ChronoUnit> FREQUENCY_MAP = Map.of(
@@ -298,7 +301,7 @@ public class MaintenanceScheduleService {
      * Skips tasks with empty required fields (task, frequency, description, priority, estimated_duration, required_tools, safety_notes).
      * Safety notes are part of maintenance tasks and are stored with them.
      */
-    public void createMaintenanceFromPDF(List<MaintenanceGenerationResponse.MaintenanceTask> maintenanceTasks, String deviceId, String organizationId) {
+    public void createMaintenanceFromPDF(List<MaintenanceGenerationResponse.MaintenanceTask> maintenanceTasks, String deviceId, String organizationId, String currentUserId) {
         log.info("Creating maintenance tasks from PDF for device: {} in organization: {}", deviceId, organizationId);
         
         // Get device assignee for auto-assignment
@@ -384,9 +387,11 @@ public class MaintenanceScheduleService {
                     if (existingTask.getAssignedTo() == null || existingTask.getAssignedTo().trim().isEmpty()) {
                         if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
                             existingTask.setAssignedTo(deviceAssignee);
+                            existingTask.setAssignedBy(currentUserId);
+                            existingTask.setAssignedAt(LocalDateTime.now());
                             deviceMaintenanceRepository.save(existingTask);
                             assignedCount++;
-                            log.info("✅ Existing maintenance task '{}' assigned to user: {}", taskTitle, deviceAssignee);
+                            log.info("✅ Existing maintenance task '{}' assigned to user: {} by: {}", taskTitle, deviceAssignee, currentUserId);
                         } else {
                             log.warn("⚠️ Existing maintenance task '{}' not assigned - no device assignee found", taskTitle);
                         }
@@ -435,8 +440,10 @@ public class MaintenanceScheduleService {
                 // Auto-assign to device assignee
                 if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
                     maintenance.setAssignedTo(deviceAssignee);
+                    maintenance.setAssignedBy(currentUserId);
+                    maintenance.setAssignedAt(LocalDateTime.now());
                     assignedCount++;
-                    log.info("✅ Maintenance task '{}' assigned to user: {}", taskTitle, deviceAssignee);
+                    log.info("✅ Maintenance task '{}' assigned to user: {} by: {}", taskTitle, deviceAssignee, currentUserId);
                 } else {
                     log.warn("⚠️ Maintenance task '{}' not assigned - no device assignee found", taskTitle);
                 }
@@ -525,7 +532,8 @@ public class MaintenanceScheduleService {
         DeviceMaintenance maintenance = optionalMaintenance.get();
         
         // Set last maintenance to today
-        maintenance.setLastMaintenance(LocalDate.now());
+        LocalDate completionDate = LocalDate.now();
+        maintenance.setLastMaintenance(completionDate);
         
         // Calculate next maintenance date based on frequency
         LocalDate nextMaintenance = calculateNextMaintenanceDate(maintenance.getFrequency());
@@ -534,6 +542,9 @@ public class MaintenanceScheduleService {
         // Update status to completed
         maintenance.setStatus(DeviceMaintenance.Status.COMPLETED);
         maintenance.setUpdatedAt(LocalDateTime.now());
+        
+        // Save maintenance history for completed task
+        saveCompletedMaintenanceHistory(maintenance, completionDate, "System");
         
         DeviceMaintenance savedMaintenance = deviceMaintenanceRepository.save(maintenance);
         
@@ -950,6 +961,81 @@ public class MaintenanceScheduleService {
                     
         } catch (Exception e) {
             log.error("Error updating device names for maintenance tasks", e);
+        }
+    }
+    
+    /**
+     * Save maintenance history record when maintenance date is updated
+     * This creates a permanent record of the maintenance schedule
+     */
+    public void saveMaintenanceHistory(DeviceMaintenance maintenance, LocalDate scheduledDate, String reason) {
+        try {
+            log.info("Saving maintenance history for task: {} scheduled for: {} reason: {}", 
+                    maintenance.getTaskName(), scheduledDate, reason);
+            
+            // Get next cycle number for this device
+            Integer nextCycleNumber = maintenanceHistoryRepository.findNextCycleNumberForDevice(maintenance.getDeviceId());
+            if (nextCycleNumber == null) {
+                nextCycleNumber = 1;
+            }
+            
+            // Create maintenance history record
+            MaintenanceHistory history = MaintenanceHistory.fromDeviceMaintenance(maintenance, scheduledDate, nextCycleNumber);
+            
+            // Set additional history-specific fields
+            history.setId(java.util.UUID.randomUUID().toString());
+            history.setSnapshotType("UPDATE");
+            history.setCreatedAt(LocalDateTime.now());
+            history.setUpdatedAt(LocalDateTime.now());
+            
+            // Save to history table
+            maintenanceHistoryRepository.save(history);
+            
+            log.info("✅ Maintenance history saved for task: {} cycle: {} scheduled: {}", 
+                    maintenance.getTaskName(), nextCycleNumber, scheduledDate);
+                    
+        } catch (Exception e) {
+            log.error("❌ Failed to save maintenance history for task: {} scheduled: {}", 
+                    maintenance.getTaskName(), scheduledDate, e);
+        }
+    }
+    
+    /**
+     * Save maintenance history when maintenance is completed
+     */
+    public void saveCompletedMaintenanceHistory(DeviceMaintenance maintenance, LocalDate completionDate, String completedBy) {
+        try {
+            log.info("Saving completed maintenance history for task: {} completed on: {} by: {}", 
+                    maintenance.getTaskName(), completionDate, completedBy);
+            
+            // Get next cycle number for this device
+            Integer cycleNumber = maintenanceHistoryRepository.findNextCycleNumberForDevice(maintenance.getDeviceId());
+            if (cycleNumber == null) {
+                cycleNumber = 1;
+            }
+            
+            // Create maintenance history record
+            MaintenanceHistory history = MaintenanceHistory.fromDeviceMaintenance(maintenance, maintenance.getLastMaintenance(), cycleNumber);
+            
+            // Set completion details
+            history.setId(java.util.UUID.randomUUID().toString());
+            history.setActualDate(completionDate);
+            history.setCompletedBy(completedBy);
+            history.setCompletedAt(LocalDateTime.now());
+            history.setStatus(MaintenanceHistory.Status.COMPLETED);
+            history.setSnapshotType("COMPLETION");
+            history.setCreatedAt(LocalDateTime.now());
+            history.setUpdatedAt(LocalDateTime.now());
+            
+            // Save to history table
+            maintenanceHistoryRepository.save(history);
+            
+            log.info("✅ Completed maintenance history saved for task: {} cycle: {} completed: {}", 
+                    maintenance.getTaskName(), cycleNumber, completionDate);
+                    
+        } catch (Exception e) {
+            log.error("❌ Failed to save completed maintenance history for task: {} completed: {}", 
+                    maintenance.getTaskName(), completionDate, e);
         }
     }
 }

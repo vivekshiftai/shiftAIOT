@@ -88,13 +88,45 @@ public class UnifiedQueryService {
             
         } catch (Exception e) {
             log.error("❌ Failed to analyze query with LLM", e);
-            // Fallback to database query
+            // Fallback to simple keyword-based analysis
+            return analyzeQueryWithKeywords(query);
+        }
+    }
+    
+    /**
+     * Fallback query analysis using keywords when LLM is not available
+     */
+    private QueryDecision analyzeQueryWithKeywords(String query) {
+        String lowerQuery = query.toLowerCase();
+        
+        // Database-related keywords
+        if (lowerQuery.contains("device") || lowerQuery.contains("user") || lowerQuery.contains("maintenance") || 
+            lowerQuery.contains("status") || lowerQuery.contains("location") || lowerQuery.contains("assigned") ||
+            lowerQuery.contains("count") || lowerQuery.contains("list") || lowerQuery.contains("show") ||
+            lowerQuery.contains("find") || lowerQuery.contains("get") || lowerQuery.contains("how many")) {
             return QueryDecision.builder()
                 .action(QueryAction.DATABASE_QUERY)
-                .confidence(0.5)
-                .reasoning("LLM analysis failed, defaulting to database query")
+                .confidence(0.8)
+                .reasoning("Keyword analysis suggests database query")
                 .build();
         }
+        
+        // PDF-related keywords
+        if (lowerQuery.contains("document") || lowerQuery.contains("pdf") || lowerQuery.contains("manual") ||
+            lowerQuery.contains("guide") || lowerQuery.contains("instruction") || lowerQuery.contains("procedure")) {
+            return QueryDecision.builder()
+                .action(QueryAction.PDF_QUERY)
+                .confidence(0.8)
+                .reasoning("Keyword analysis suggests PDF query")
+                .build();
+        }
+        
+        // Default to database query
+        return QueryDecision.builder()
+            .action(QueryAction.DATABASE_QUERY)
+            .confidence(0.5)
+            .reasoning("Default fallback to database query")
+            .build();
     }
 
     /**

@@ -76,36 +76,14 @@ export class UnifiedOnboardingService {
         fileName: uploadedFile?.name
       });
 
-      // Step 1: Initialize
-      this.updateProgress(onProgress, {
-        stage: 'upload',
-        progress: 5,
-        message: 'Initializing onboarding process...',
-        stepDetails: { currentStep: 1, totalSteps: 6, stepName: 'Initialization' }
-      });
-
-      // Step 2: Prepare device data with proper validation
+      // Prepare device data with proper validation
       const deviceData = this.prepareDeviceData(formData);
       logInfo('UnifiedOnboarding', 'Device data prepared', { deviceName: deviceData.name });
 
-      this.updateProgress(onProgress, {
-        stage: 'upload',
-        progress: 10,
-        message: 'Preparing device configuration...',
-        stepDetails: { currentStep: 2, totalSteps: 6, stepName: 'Device Configuration' }
-      });
-
-      // Step 3: Create FormData for the unified API call
+      // Create FormData for the unified API call
       const formDataToSend = this.prepareFormData(deviceData, uploadedFile);
-      
-      this.updateProgress(onProgress, {
-        stage: 'device',
-        progress: 15,
-        message: 'Creating device and uploading data...',
-        stepDetails: { currentStep: 3, totalSteps: 6, stepName: 'Device Creation' }
-      });
 
-      // Step 4: Call unified backend service with timeout handling
+      // Call unified backend service with real-time progress streaming
       const deviceResponse = await this.callDeviceOnboardAPI(formDataToSend, onProgress);
       
       if (!deviceResponse || !deviceResponse.id) {
@@ -117,26 +95,8 @@ export class UnifiedOnboardingService {
         deviceName: deviceResponse.name 
       });
 
-      this.updateProgress(onProgress, {
-        stage: 'device',
-        progress: 25,
-        message: 'Device created successfully!',
-        subMessage: `Device "${deviceResponse.name}" created with ID: ${deviceResponse.id}`,
-        stepDetails: { currentStep: 4, totalSteps: 6, stepName: 'Success Storage' }
-      });
-
-      // Step 5: Monitor PDF processing with detailed progress tracking
-      const pdfResults = await this.monitorPDFProcessing(deviceResponse.id, onProgress);
-
-      // Step 6: Finalize and return results
-      
-      this.updateProgress(onProgress, {
-        stage: 'complete',
-        progress: 100,
-        message: 'Onboarding completed successfully!',
-        subMessage: this.generateCompletionMessage(pdfResults),
-        stepDetails: { currentStep: 6, totalSteps: 6, stepName: 'Complete' }
-      });
+      // PDF processing and all subsequent steps are now handled by real-time SSE streaming
+      // The backend sends all progress updates directly, no need for frontend progress management
 
       // Log the actual values being returned
       logInfo('UnifiedOnboardingService', 'Returning onboarding result with actual counts', {
@@ -175,15 +135,8 @@ export class UnifiedOnboardingService {
       const errorObj = error instanceof Error ? error : new Error(String(error));
       logError('UnifiedOnboarding', 'Unified onboarding failed', errorObj);
       
-      this.updateProgress(onProgress, {
-        stage: 'complete',
-        progress: 0,
-        message: 'Onboarding failed',
-        subMessage: errorObj.message,
-        error: errorObj.message,
-        retryable: this.isRetryableError(errorObj),
-        stepDetails: { currentStep: 0, totalSteps: 6, stepName: 'Error' }
-      });
+      // Error handling - let the backend handle progress updates for errors
+      // Frontend will receive error progress updates via SSE streaming
 
       throw error;
     }
@@ -195,8 +148,7 @@ export class UnifiedOnboardingService {
   private prepareDeviceData(formData: any): any {
     const deviceData = {
          name: formData.deviceName || 'Unnamed Device',
-         type: formData.type || 'SENSOR',
-         status: formData.status || 'OFFLINE',
+         status: formData.status || 'ONLINE',
          location: formData.location || 'Unknown Location',
       protocol: formData.connectionType || 'HTTP',
          manufacturer: formData.manufacturer || '',
@@ -244,9 +196,128 @@ export class UnifiedOnboardingService {
   }
 
   /**
-   * Call device onboard API with timeout and retry logic
+   * Call device onboard API with real-time progress streaming using fetch
    */
   private async callDeviceOnboardAPI(formData: FormData, onProgress?: (progress: UnifiedOnboardingProgress) => void): Promise<any> {
+    try {
+      logInfo('UnifiedOnboarding', 'Starting device onboard API with progress streaming');
+
+      // Get auth token
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      // Use fetch with streaming
+      const response = await fetch(`${this.baseUrl}/api/devices/unified-onboarding-stream`, {
+        method: 'POST',
+        headers,
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Check if response is streaming (text/event-stream)
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/event-stream')) {
+        return this.handleStreamingResponse(response, onProgress);
+      } else {
+        // Fallback to regular JSON response
+        const result = await response.json();
+        return result;
+      }
+
+    } catch (error) {
+      logError('UnifiedOnboarding', 'Failed to start progress streaming', error instanceof Error ? error : new Error('Unknown error'));
+      // Fallback to original API call
+      return this.callDeviceOnboardAPIFallback(formData);
+    }
+  }
+
+  /**
+   * Handle streaming response from Server-Sent Events
+   */
+  private async handleStreamingResponse(response: Response, onProgress?: (progress: UnifiedOnboardingProgress) => void): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const reader = response.body?.getReader();
+      if (!reader) {
+        reject(new Error('No response body reader available'));
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      const processChunk = async () => {
+        try {
+          const { done, value } = await reader.read();
+          
+          if (done) {
+            resolve({ success: true, message: 'Streaming completed' });
+            return;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+          for (const line of lines) {
+            if (line.trim() === '') continue;
+            
+            if (line.startsWith('data: ')) {
+              const data = line.substring(6); // Remove 'data: ' prefix
+              
+              try {
+                const eventData = JSON.parse(data);
+                
+                if (eventData.stage && eventData.progress !== undefined) {
+                  // This is a progress update
+                  const progress: UnifiedOnboardingProgress = {
+                    stage: eventData.stage,
+                    progress: eventData.progress,
+                    message: eventData.message,
+                    subMessage: eventData.subMessage,
+                    stepDetails: eventData.stepDetails,
+                    error: eventData.error,
+                    retryable: eventData.retryable
+                  };
+                  
+                  if (onProgress) {
+                    onProgress(progress);
+                  }
+                } else if (eventData.success !== undefined) {
+                  // This is the final result
+                  resolve(eventData);
+                  return;
+                } else if (eventData.error) {
+                  // This is an error
+                  reject(new Error(eventData.error));
+                  return;
+                }
+              } catch (parseError) {
+                logError('UnifiedOnboarding', 'Failed to parse SSE data', parseError instanceof Error ? parseError : new Error('Unknown error'));
+              }
+            }
+          }
+
+          // Continue reading
+          processChunk();
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      processChunk();
+    });
+  }
+
+  /**
+   * Fallback method for device onboard API with timeout and retry logic
+   */
+  private async callDeviceOnboardAPIFallback(formData: FormData): Promise<any> {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= this.RETRY_ATTEMPTS; attempt++) {
@@ -285,14 +356,7 @@ export class UnifiedOnboardingService {
           throw lastError;
         }
 
-        // Update progress with retry information
-        this.updateProgress(onProgress, {
-        stage: 'device',
-          progress: 15,
-          message: `Retrying device creation... (attempt ${attempt + 1}/${this.RETRY_ATTEMPTS})`,
-          subMessage: lastError.message,
-          stepDetails: { currentStep: 3, totalSteps: 6, stepName: 'Device Creation' }
-        });
+        // Retry logic - progress updates are handled by backend streaming
 
         // Wait before retrying
         await this.delay(this.RETRY_DELAY * attempt);
@@ -303,69 +367,13 @@ export class UnifiedOnboardingService {
   }
 
   /**
-   * Monitor PDF processing with detailed progress tracking
+   * Monitor PDF processing - REMOVED: Now handled by real-time SSE streaming
+   * The backend streams progress updates directly, no need for polling
    */
-  private async monitorPDFProcessing(deviceId: string, onProgress?: (progress: UnifiedOnboardingProgress) => void): Promise<any> {
-    const maxWaitTime = 3000000; // 5 minutes
-    const checkInterval = 2000; // 2 seconds for more responsive updates
-    const startTime = Date.now();
-    
-    logInfo('UnifiedOnboardingService', 'Starting real-time progress monitoring', { deviceId });
-
-    // Poll for results with real backend progress
-    while (Date.now() - startTime < maxWaitTime) {
-      try {
-        const response = await deviceAPI.getOnboardingProgress(deviceId);
-        
-        if (response.data && response.data.completed) {
-          // Processing completed
-          this.updateProgress(onProgress, {
-            stage: 'complete',
-            progress: 100,
-            message: 'Processing completed successfully',
-            stepDetails: { currentStep: 6, totalSteps: 6, stepName: 'Completion' }
-          });
-          
-          logInfo('UnifiedOnboardingService', 'Processing completed', { deviceId });
-          return response.data;
-        }
-        
-        // Update progress based on backend response
-        if (response.data && response.data.progress) {
-          logInfo('UnifiedOnboardingService', 'Progress update received', { 
-            deviceId, 
-            stage: response.data.progress.stage,
-            progress: response.data.progress.progress,
-            message: response.data.progress.message
-          });
-          this.updateProgress(onProgress, response.data.progress);
-        }
-        
-        // Wait before next check
-        await new Promise(resolve => setTimeout(resolve, checkInterval));
-        
-      } catch (error) {
-        logError('UnifiedOnboardingService', 'Error checking progress', error instanceof Error ? error : new Error(String(error)));
-        await new Promise(resolve => setTimeout(resolve, checkInterval));
-      }
-    }
-    
-    throw new Error('PDF processing timeout - please try again');
-  }
 
   /**
-   * Update progress with error handling
+   * Update progress with error handling - REMOVED: Now handled by backend SSE streaming
    */
-  private updateProgress(
-    onProgress: ((progress: UnifiedOnboardingProgress) => void) | undefined,
-    progress: UnifiedOnboardingProgress
-  ): void {
-    try {
-      onProgress?.(progress);
-    } catch (error) {
-      logError('UnifiedOnboarding', 'Failed to update progress', error instanceof Error ? error : new Error(String(error)));
-    }
-  }
 
   /**
    * Check if error is retryable
@@ -386,12 +394,8 @@ export class UnifiedOnboardingService {
   }
 
   /**
-   * Generate completion message
+   * Generate completion message - REMOVED: Not used in current implementation
    */
-  private generateCompletionMessage(pdfResults: any): string {
-    const { rulesCount, maintenanceCount, safetyCount } = pdfResults;
-    return `Generated ${rulesCount} rules, ${maintenanceCount} maintenance tasks, and ${safetyCount} safety precautions`;
-  }
 
   /**
    * Delay utility function
@@ -418,32 +422,9 @@ export class UnifiedOnboardingService {
   }
 
   /**
-   * Retry failed onboarding steps
+   * Retry failed onboarding steps - REMOVED: Not used in current implementation
+   * Retry logic is now handled by the backend streaming service
    */
-  async retryOnboardingStep(deviceId: string, step: 'rules' | 'maintenance' | 'safety'): Promise<any> {
-    try {
-      logInfo('UnifiedOnboarding', 'Retrying onboarding step', { deviceId, step });
-      
-      const response = await fetch(`${this.baseUrl}/api/devices/${deviceId}/retry-${step}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to retry ${step}: ${response.statusText}`);
-      }
-
-      return await response.json();
-      
-         } catch (error) {
-       const errorObj = error instanceof Error ? error : new Error(String(error));
-       logError('UnifiedOnboarding', 'Failed to retry onboarding step', errorObj);
-      throw error;
-    }
-  }
 }
 // Export singleton instance
 export const unifiedOnboardingService = new UnifiedOnboardingService();

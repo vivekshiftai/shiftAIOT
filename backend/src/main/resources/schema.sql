@@ -271,6 +271,49 @@ CREATE TABLE IF NOT EXISTS devices (
     FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
+-- Device Maintenance History table - Permanent record of all maintenance activities
+-- This table stores historical maintenance data and is NOT deleted when devices are deleted
+CREATE TABLE IF NOT EXISTS maintenance_history (
+    id VARCHAR(255) PRIMARY KEY,
+    original_maintenance_id VARCHAR(255), -- Reference to original maintenance task (can be null if device deleted)
+    device_id VARCHAR(255) NOT NULL, -- Keep device_id even if device is deleted
+    device_name VARCHAR(255), -- Store device name at time of maintenance
+    task_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    component_name VARCHAR(255) DEFAULT 'General',
+    maintenance_type VARCHAR(50) DEFAULT 'GENERAL' NOT NULL, -- 'PREVENTIVE', 'CORRECTIVE', 'PREDICTIVE', 'GENERAL'
+    frequency VARCHAR(100) NOT NULL,
+    scheduled_date DATE NOT NULL, -- When maintenance was scheduled
+    actual_date DATE, -- When maintenance was actually performed (null if not done)
+    priority VARCHAR(50) DEFAULT 'MEDIUM', -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
+    status VARCHAR(50) DEFAULT 'SCHEDULED', -- 'SCHEDULED', 'COMPLETED', 'SKIPPED', 'CANCELLED', 'OVERDUE'
+    estimated_cost DECIMAL(10,2),
+    actual_cost DECIMAL(10,2), -- Actual cost if different from estimated
+    estimated_duration VARCHAR(100), -- e.g., "2 hours", "1 day"
+    actual_duration VARCHAR(100), -- Actual time taken
+    required_tools TEXT,
+    tools_used TEXT, -- Actual tools used
+    safety_notes TEXT,
+    completion_notes TEXT, -- Notes from maintenance completion
+    category VARCHAR(100),
+    assigned_to VARCHAR(255),
+    assigned_by VARCHAR(255),
+    assigned_at TIMESTAMP,
+    completed_by VARCHAR(255),
+    completed_at TIMESTAMP,
+    organization_id VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Historical tracking
+    maintenance_cycle_number INTEGER DEFAULT 1, -- Which cycle this maintenance represents (1st, 2nd, etc.)
+    is_historical_record BOOLEAN DEFAULT true, -- Always true for history table
+    snapshot_type VARCHAR(50) DEFAULT 'DAILY_SNAPSHOT' -- 'DAILY_SNAPSHOT', 'UPDATE', 'COMPLETION', 'MANUAL'
+    -- Foreign key constraints (optional since device might be deleted)
+    FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (completed_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
 -- Device Maintenance table for onboarding flow - Updated to match new model
 CREATE TABLE IF NOT EXISTS device_maintenance (
     id VARCHAR(255) PRIMARY KEY,
@@ -740,6 +783,18 @@ CREATE INDEX IF NOT EXISTS idx_device_maintenance_assigned_to ON device_maintena
 CREATE INDEX IF NOT EXISTS idx_device_maintenance_status ON device_maintenance(status);
 CREATE INDEX IF NOT EXISTS idx_device_maintenance_next_maintenance ON device_maintenance(next_maintenance);
 CREATE INDEX IF NOT EXISTS idx_device_maintenance_priority ON device_maintenance(priority);
+
+-- Maintenance History table indexes
+CREATE INDEX IF NOT EXISTS idx_maintenance_history_device ON maintenance_history(device_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_history_organization ON maintenance_history(organization_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_history_assigned_to ON maintenance_history(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_maintenance_history_status ON maintenance_history(status);
+CREATE INDEX IF NOT EXISTS idx_maintenance_history_scheduled_date ON maintenance_history(scheduled_date);
+CREATE INDEX IF NOT EXISTS idx_maintenance_history_actual_date ON maintenance_history(actual_date);
+CREATE INDEX IF NOT EXISTS idx_maintenance_history_priority ON maintenance_history(priority);
+CREATE INDEX IF NOT EXISTS idx_maintenance_history_original_id ON maintenance_history(original_maintenance_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_history_cycle ON maintenance_history(maintenance_cycle_number);
+CREATE INDEX IF NOT EXISTS idx_maintenance_history_snapshot_type ON maintenance_history(snapshot_type);
 CREATE INDEX IF NOT EXISTS idx_device_safety_device ON device_safety_precautions(device_id);
 CREATE INDEX IF NOT EXISTS idx_device_safety_active ON device_safety_precautions(is_active);
 CREATE INDEX IF NOT EXISTS idx_conversation_configs_user ON conversation_configs(user_id);

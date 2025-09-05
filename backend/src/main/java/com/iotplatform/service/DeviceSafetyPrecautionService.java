@@ -170,7 +170,7 @@ public class DeviceSafetyPrecautionService {
         return deviceSafetyPrecautionRepository.findByDeviceId(deviceId);
     }
     
-    public void createSafetyFromPDF(List<SafetyGenerationResponse.SafetyPrecaution> safetyPrecautions, String deviceId, String organizationId) {
+    public void createSafetyFromPDF(List<SafetyGenerationResponse.SafetyPrecaution> safetyPrecautions, String deviceId, String organizationId, String currentUserId) {
         logger.info("Creating safety precautions from PDF for device: {} in organization: {}", deviceId, organizationId);
         
         int processedCount = 0;
@@ -201,6 +201,7 @@ public class DeviceSafetyPrecautionService {
                     safety.setType("PDF_GENERATED");
                     safety.setPrecautionType(determinePrecautionType(safetyData.getTitle(), safetyData.getCategory()));
                     safety.setIsActive(true);
+                    safety.setCreatedBy(currentUserId);
                     safety.setCreatedAt(LocalDateTime.now());
                     safety.setUpdatedAt(LocalDateTime.now());
                     

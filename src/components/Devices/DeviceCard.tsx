@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  AlertTriangle, FileText, CheckCircle, Clock, Brain, Settings, Trash2, Zap
+  AlertTriangle, FileText, CheckCircle, Clock, Brain, Settings, Trash2
 } from 'lucide-react';
 import { Device } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -43,19 +43,6 @@ const statusConfig = {
   }
 };
 
-const deviceTypeConfig = {
-  SENSOR: { icon: Settings, label: 'Sensor' },
-  ACTUATOR: { icon: Settings, label: 'Actuator' },
-  GATEWAY: { icon: Settings, label: 'Gateway' },
-  CONTROLLER: { icon: Settings, label: 'Controller' }
-};
-
-// Helper function to get device type config with case-insensitive matching
-const getDeviceTypeConfig = (deviceType: string) => {
-  if (!deviceType) return deviceTypeConfig.SENSOR;
-  const upperType = deviceType.toUpperCase();
-  return deviceTypeConfig[upperType as keyof typeof deviceTypeConfig] || deviceTypeConfig.SENSOR;
-};
 
 // Helper function to get status config with case-insensitive matching
 const getStatusConfig = (status: string) => {
@@ -132,9 +119,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   }
   
   const statusInfo = getStatusConfig(device.status || 'OFFLINE');
-  const deviceTypeInfo = getDeviceTypeConfig(device.type || 'SENSOR');
   const StatusIcon = statusInfo.icon;
-  const TypeIcon = deviceTypeInfo.icon;
 
   const formatLastSeen = (timestamp: string) => {
     const diff = Date.now() - new Date(timestamp).getTime();
@@ -347,7 +332,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className={`${statusInfo.bg} p-3 rounded-xl shadow-sm flex-shrink-0`}>
-            <TypeIcon className={`w-6 h-6 ${statusInfo.color}`} />
+            <StatusIcon className={`w-6 h-6 ${statusInfo.color}`} />
           </div>
 
           <div className="flex-1 min-w-0">
@@ -357,7 +342,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 {device.status}
               </span>
             </div>
-            <p className="text-sm text-slate-600 mb-1 truncate">{deviceTypeInfo.label} • {device.location}</p>
+            <p className="text-sm text-slate-600 mb-1 truncate">{device.location}</p>
             <p className="text-xs text-slate-500">Updated: {formatLastSeen(device.updatedAt)}</p>
           </div>
         </div>
