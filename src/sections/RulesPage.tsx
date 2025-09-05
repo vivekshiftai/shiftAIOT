@@ -468,14 +468,14 @@ const RulesPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
-                        <Button
+                        {/* <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => navigate(`/rules/${rule.id}`)}
                           className="text-blue-600 hover:text-blue-900"
                         >
                           View
-                        </Button>
+                        </Button> */}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -671,14 +671,14 @@ const RulesPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
-                        <Button
+                        {/* <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => navigate(`/maintenance/${task.id}`)}
                           className="text-blue-600 hover:text-blue-900"
                         >
                           View
-                        </Button>
+                        </Button> */}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -844,14 +844,14 @@ const RulesPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
-                        <Button
+                        {/* <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => navigate(`/safety/${precaution.id}`)}
                           className="text-blue-600 hover:text-blue-900"
                         >
                           View
-                        </Button>
+                        </Button> */}
                         <Button
                           variant="ghost"
                           size="sm"

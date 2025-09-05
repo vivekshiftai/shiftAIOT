@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useIoT } from '../contexts/IoTContext';
-import { useTheme } from '../contexts/ThemeContext';
 import { StatsCard } from '../components/Dashboard/StatsCard';
 import Skeleton, { SkeletonCard } from '../components/UI/Skeleton';
 import Button from '../components/UI/Button';
@@ -10,14 +9,10 @@ import { maintenanceAPI, ruleAPI } from '../services/api';
 import { logError, logInfo } from '../utils/logger';
 
 import { 
-  CheckCircle, 
-  AlertTriangle,
   Clock,
   Settings,
   Shield,
   ArrowRight,
-  Plus,
-  Eye,
   Cpu,
   Wifi,
   Zap,
@@ -26,21 +21,20 @@ import {
 } from 'lucide-react';
 
 export const DashboardSection: React.FC = () => {
-  const { devices, notifications, rules, loading } = useIoT();
-  const { theme } = useTheme();
+  const { devices, loading } = useIoT();
   const navigate = useNavigate();
   const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
   const [upcomingMaintenance, setUpcomingMaintenance] = useState<any[]>([]);
+  const [todayMaintenance, setTodayMaintenance] = useState<any[]>([]);
   const [maintenanceCount, setMaintenanceCount] = useState(0);
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
   const [rulesCount, setRulesCount] = useState(0);
-  const [rulesLoading, setRulesLoading] = useState(true);
 
   // Fetch real-time data
   useEffect(() => {
     const fetchRealTimeData = async () => {
       try {
-        // Fetch upcoming maintenance tasks
+        // Fetch all maintenance tasks and upcoming maintenance tasks
         setMaintenanceLoading(true);
         logInfo('Dashboard', 'Attempting to fetch maintenance data...');
         
@@ -49,21 +43,45 @@ export const DashboardSection: React.FC = () => {
           setTimeout(() => reject(new Error('Maintenance API timeout')), 10000); // 10 second timeout
         });
         
-        const maintenanceResponse = await Promise.race([
+        // Fetch all maintenance tasks for total count
+        const allMaintenanceResponse = await Promise.race([
+          maintenanceAPI.getAll(),
+          timeoutPromise
+        ]) as any;
+        
+        // Fetch upcoming maintenance tasks for the upcoming section
+        const upcomingMaintenanceResponse = await Promise.race([
           maintenanceAPI.getUpcoming(),
           timeoutPromise
         ]) as any;
         
-        logInfo('Dashboard', 'Maintenance API response received', { 
-          status: maintenanceResponse.status,
-          data: maintenanceResponse.data 
+        // Fetch today's maintenance tasks
+        const todayMaintenanceResponse = await Promise.race([
+          maintenanceAPI.getToday(),
+          timeoutPromise
+        ]) as any;
+        
+        logInfo('Dashboard', 'Maintenance API responses received', { 
+          allMaintenanceStatus: allMaintenanceResponse.status,
+          upcomingMaintenanceStatus: upcomingMaintenanceResponse.status,
+          allMaintenanceData: allMaintenanceResponse.data,
+          upcomingMaintenanceData: upcomingMaintenanceResponse.data
         });
         
-        setUpcomingMaintenance(maintenanceResponse.data?.upcomingMaintenance || []);
-        setMaintenanceCount(maintenanceResponse.data?.totalCount || 0);
+        // Set total count from all maintenance tasks
+        const totalMaintenanceCount = allMaintenanceResponse.data?.length || 0;
+        setMaintenanceCount(totalMaintenanceCount);
+        
+        // Set upcoming maintenance for the upcoming section
+        setUpcomingMaintenance(upcomingMaintenanceResponse.data?.upcomingMaintenance || []);
+        
+        // Set today's maintenance tasks
+        setTodayMaintenance(todayMaintenanceResponse.data || []);
+        
         logInfo('Dashboard', 'Maintenance data fetched successfully', { 
-          upcomingCount: maintenanceResponse.data?.upcomingMaintenance?.length || 0,
-          totalCount: maintenanceResponse.data?.totalCount || 0
+          totalCount: totalMaintenanceCount,
+          upcomingCount: upcomingMaintenanceResponse.data?.upcomingMaintenance?.length || 0,
+          todayCount: todayMaintenanceResponse.data?.length || 0
         });
         
         // Log dashboard icon updates
@@ -97,7 +115,6 @@ export const DashboardSection: React.FC = () => {
 
       try {
         // Fetch rules count
-        setRulesLoading(true);
         const rulesResponse = await ruleAPI.getAll();
         const totalRules = rulesResponse.data?.length || 0;
         setRulesCount(totalRules);
@@ -105,8 +122,6 @@ export const DashboardSection: React.FC = () => {
       } catch (error) {
         logError('Dashboard', 'Failed to fetch rules count', error instanceof Error ? error : new Error('Unknown error'));
         setRulesCount(0);
-      } finally {
-        setRulesLoading(false);
       }
     };
 
@@ -136,9 +151,10 @@ export const DashboardSection: React.FC = () => {
       totalRules: rulesCount, // Use real-time count from API
       totalMaintenance: maintenanceCount, // Use real-time count from API
       pendingMaintenance: upcomingMaintenance.length,
+      todayMaintenance: todayMaintenance.length,
       completedMaintenance: 0 // This would need to be calculated from completed tasks
     };
-  }, [devices, rulesCount, maintenanceCount, upcomingMaintenance]);
+  }, [devices, rulesCount, maintenanceCount, upcomingMaintenance, todayMaintenance]);
 
   // Handle maintenance card click
   const handleMaintenanceClick = () => {
@@ -165,27 +181,9 @@ export const DashboardSection: React.FC = () => {
     }
   };
 
-  // Get priority color
-  const getPriorityColor = (priority: string) => {
-    switch (priority?.toLowerCase()) {
-      case 'high':
-        return 'text-red-600 bg-red-50';
-      case 'medium':
-        return 'text-yellow-600 bg-yellow-50';
-      case 'low':
-        return 'text-green-600 bg-green-50';
-      default:
-        return 'text-gray-600 bg-gray-50';
-    }
-  };
-
   // Navigation handlers
   const handleNavigateDevices = () => navigate('/devices');
   const handleShowActiveDevices = () => navigate('/devices?status=ONLINE');
-  const handleShowMaintenanceWeek = () => navigate('/notifications?filter=maintenance&range=this-week');
-  const handleShowRules = () => navigate('/device-care?tab=rules');
-  const handleShowMaintenance = () => navigate('/device-care?tab=maintenance');
-  const handleAddDevice = () => navigate('/devices?add=true');
 
   if (loading) {
     return (
@@ -271,39 +269,66 @@ export const DashboardSection: React.FC = () => {
                   <StatsCard
             title="Total Maintenance"
             value={maintenanceLoading ? '...' : (metrics.totalMaintenance > 0 ? metrics.totalMaintenance : '0')}
-            subtitle={maintenanceLoading ? 'Loading...' : (metrics.totalMaintenance > 0 ? `${metrics.pendingMaintenance} pending` : 'No maintenance tasks')}
+            subtitle={maintenanceLoading ? 'Loading...' : (metrics.totalMaintenance > 0 ? `${metrics.todayMaintenance} today, ${metrics.pendingMaintenance} upcoming` : 'No maintenance tasks')}
             icon={Wrench}
             color="yellow"
-            // Removed onClick handler - no longer clickable
-            className="animate-fade-in"
+            onClick={handleMaintenanceClick}
+            className="hover-lift animate-fade-in cursor-pointer"
           />
       </div>
 
+      {/* Today's Maintenance Alert */}
+      {todayMaintenance.length > 0 && (
+        <div className="card p-6 border-l-4 border-l-yellow-400 bg-yellow-50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+              <Clock className="w-5 h-5 text-yellow-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-yellow-800">
+                {todayMaintenance.length} Maintenance Task{todayMaintenance.length > 1 ? 's' : ''} Due Today
+              </h3>
+              <p className="text-yellow-700 text-sm">
+                {todayMaintenance.length > 1 ? 'Tasks' : 'Task'} scheduled for completion today
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMaintenanceClick}
+              className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+            >
+              View Tasks
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Real-time Chart */}
-        <div className="lg:col-span-2">
-                     <div className="card p-6 animate-fade-in">
-            <div className="flex items-center justify-between mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Device Activity - Smaller */}
+        <div className="lg:col-span-1">
+          <div className="card p-4 animate-fade-in">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                                 <h3 className="text-xl font-semibold text-primary">
-                   Device Activity
-                 </h3>
-                <p className="text-secondary">
-                  Real-time monitoring of device performance
+                <h3 className="text-lg font-semibold text-primary">
+                  Device Activity
+                </h3>
+                <p className="text-secondary text-sm">
+                  Real-time monitoring
                 </p>
               </div>
               
-              <div className="flex items-center gap-2">
-                {['24h', '7d', '30d'].map((range) => (
+              <div className="flex items-center gap-1">
+                {['24h', '7d'].map((range) => (
                   <button
                     key={range}
                     onClick={() => setSelectedTimeRange(range)}
-                                       className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                     selectedTimeRange === range
-                       ? 'bg-primary-300 text-white border border-primary-300'
-                       : 'text-secondary hover:bg-secondary hover:text-primary'
-                   }`}
+                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      selectedTimeRange === range
+                        ? 'bg-primary-300 text-white'
+                        : 'text-secondary hover:bg-secondary hover:text-primary'
+                    }`}
                   >
                     {range}
                   </button>
@@ -311,32 +336,32 @@ export const DashboardSection: React.FC = () => {
               </div>
             </div>
             
-            <div className="h-80 flex items-center justify-center">
+            <div className="h-32 flex items-center justify-center">
               <div className="text-center">
-                                 <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                   <Activity className="w-8 h-8 text-primary-300" />
-                 </div>
-                <h4 className="text-lg font-semibold text-primary mb-2">
-                  Device Activity Monitor
+                <div className="w-12 h-12 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Activity className="w-6 h-6 text-primary-300" />
+                </div>
+                <h4 className="text-sm font-semibold text-primary mb-1">
+                  Activity Monitor
                 </h4>
-                <p className="text-secondary text-sm">
-                  Real-time device monitoring will be available when telemetry data is configured
+                <p className="text-secondary text-xs">
+                  Telemetry data pending
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Upcoming Maintenance */}
-        <div className="lg:col-span-1">
-                     <div className="card p-6 h-full">
+        {/* Upcoming Maintenance - Wider */}
+        <div className="lg:col-span-3">
+          <div className="card p-6 h-full">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-xl font-semibold text-primary">
                   Upcoming Maintenance
                 </h3>
                 <p className="text-secondary">
-                  Next 3 upcoming tasks
+                  All upcoming maintenance tasks
                 </p>
               </div>
               <div className="text-right">
@@ -347,36 +372,68 @@ export const DashboardSection: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="max-h-96 overflow-y-auto">
               {upcomingMaintenance.length > 0 ? (
-                upcomingMaintenance.map((item) => (
-                  <div
-                    key={item.id}
-                    className="p-4 rounded-xl border border-light hover:bg-secondary transition-colors"
-                    // Removed onClick handler - no longer clickable
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-primary text-sm mb-1">
-                          {item.taskName || item.componentName}
-                        </h4>
-                        <p className="text-secondary text-xs mb-2">
-                          {item.description || 'Maintenance task'}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(item.priority)}`}>
-                            <Clock className="w-4 h-4" />
-                            <span className="ml-1 capitalize">{item.priority || 'medium'}</span>
-                          </span>
-                          <span className="text-xs text-tertiary">
-                            {formatMaintenanceDate(item.nextMaintenance)}
-                          </span>
-                        </div>
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-secondary" />
-                    </div>
-                  </div>
-                ))
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="sticky top-0 bg-white border-b border-light">
+                      <tr>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-secondary uppercase tracking-wider">
+                          Task Title
+                        </th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-secondary uppercase tracking-wider">
+                          Assignee
+                        </th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-secondary uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="text-left py-3 px-4 text-xs font-semibold text-secondary uppercase tracking-wider">
+                          Due Date
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-light">
+                      {upcomingMaintenance.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="hover:bg-secondary transition-colors cursor-pointer"
+                          onClick={handleMaintenanceClick}
+                        >
+                          <td className="py-3 px-4">
+                            <div className="text-sm font-medium text-primary">
+                              {item.taskName || item.componentName}
+                            </div>
+                            <div className="text-xs text-secondary">
+                              {item.deviceName || 'Device maintenance'}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-sm text-secondary">
+                              {item.assignedTo || 'Unassigned'}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              item.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                              item.status === 'ACTIVE' ? 'bg-blue-100 text-blue-700' :
+                              item.status === 'OVERDUE' ? 'bg-red-100 text-red-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {item.status === 'COMPLETED' ? 'Done' : 
+                               item.status === 'ACTIVE' ? 'Pending' :
+                               item.status === 'OVERDUE' ? 'Overdue' : 'Unknown'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-sm text-secondary">
+                              {formatMaintenanceDate(item.nextMaintenance)}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
                 <div className="text-center py-8">
                   <Clock className="w-12 h-12 text-secondary mx-auto mb-4" />
