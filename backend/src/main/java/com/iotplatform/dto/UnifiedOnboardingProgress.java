@@ -1,5 +1,6 @@
 package com.iotplatform.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,7 +20,10 @@ public class UnifiedOnboardingProgress {
     private String subMessage;
     private String error;
     private boolean retryable;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime timestamp;
+    
     private StepDetails stepDetails;
     
     @Data

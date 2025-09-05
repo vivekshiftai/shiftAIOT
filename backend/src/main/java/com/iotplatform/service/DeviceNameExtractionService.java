@@ -55,8 +55,9 @@ public class DeviceNameExtractionService {
                 openAIClient = new OpenAIClientBuilder()
                     .endpoint(endpoint)
                     .credential(new AzureKeyCredential(apiKey))
+                    .serviceVersion(OpenAIServiceVersion.V2024_12_01_PREVIEW)
                     .buildClient();
-                log.info("✅ Azure OpenAI client initialized successfully");
+                log.info("✅ Azure OpenAI client initialized successfully with API version 2024-12-01-preview");
             } catch (Exception e) {
                 log.error("❌ Failed to initialize Azure OpenAI client", e);
                 throw new RuntimeException("Failed to initialize OpenAI client", e);
