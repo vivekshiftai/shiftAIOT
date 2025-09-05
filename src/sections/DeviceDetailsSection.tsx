@@ -694,11 +694,12 @@ export const DeviceDetailsSection: React.FC = () => {
     SENSOR: { icon: Settings, label: 'Sensor' },
     ACTUATOR: { icon: Settings, label: 'Actuator' },
     GATEWAY: { icon: Settings, label: 'Gateway' },
-    CONTROLLER: { icon: Settings, label: 'Controller' }
+    CONTROLLER: { icon: Settings, label: 'Controller' },
+    MACHINE: { icon: Settings, label: 'Machine' }
   };
 
-  const statusInfo = statusConfig[device.status as keyof typeof statusConfig];
-  const deviceTypeInfo = deviceTypeConfig[device.type as keyof typeof deviceTypeConfig];
+  const statusInfo = statusConfig[device.status as keyof typeof statusConfig] || statusConfig.UNKNOWN;
+  const deviceTypeInfo = deviceTypeConfig[device.type as keyof typeof deviceTypeConfig] || { icon: Settings, label: 'Device' };
 
   const formatLastSeen = (timestamp: string) => {
     const diff = Date.now() - new Date(timestamp).getTime();

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, Filter, Search, CheckCircle } from 'lucide-react';
+import { Plus, Filter, Search, CheckCircle, RefreshCw } from 'lucide-react';
 import { DeviceCard } from '../components/Devices/DeviceCard';
 // import { DeviceOnboardingForm } from '../components/Devices/DeviceOnboardingForm';
 import { EnhancedDeviceOnboardingForm } from '../components/Devices/EnhancedDeviceOnboardingForm';
@@ -13,7 +13,7 @@ import { logInfo } from '../utils/logger';
 export const DevicesSection: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { devices, updateDeviceStatus, loading, deleteDevice } = useIoT();
+  const { devices, updateDeviceStatus, loading, deleteDevice, refreshDevices } = useIoT();
   const { isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -21,7 +21,7 @@ export const DevicesSection: React.FC = () => {
   const [sortBy, setSortBy] = useState<'name' | 'status' | 'updatedAt'>('name');
   const [showAddForm, setShowAddForm] = useState(false);
 
-  // const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -32,6 +32,22 @@ export const DevicesSection: React.FC = () => {
   useEffect(() => {
     logInfo('DevicesSection', 'Component mounted - data loaded from IoT context');
   }, []);
+
+  // Handle refresh devices
+  const handleRefreshDevices = useCallback(async () => {
+    try {
+      setIsRefreshing(true);
+      setErrorMessage('');
+      await refreshDevices();
+      setSuccessMessage('Devices refreshed successfully');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      setErrorMessage('Failed to refresh devices');
+      setTimeout(() => setErrorMessage(''), 3000);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [refreshDevices]);
 
   // Initialize filters from query params
   useEffect(() => {
@@ -181,6 +197,23 @@ export const DevicesSection: React.FC = () => {
       )}
 
       {/* Error Message */}
+      {successMessage && (
+        <div className="mb-4 p-4 bg-green-500/20 border border-green-500/30 rounded-lg glass">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+              <span className="text-green-300">{successMessage}</span>
+            </div>
+            <button
+              onClick={() => setSuccessMessage('')}
+              className="text-green-400 hover:text-green-300"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {errorMessage && (
         <div className="mb-4 p-4 bg-danger-500/20 border border-danger-500/30 rounded-lg glass">
           <div className="flex items-center justify-between">
@@ -208,6 +241,15 @@ export const DevicesSection: React.FC = () => {
         </div>
         
         <div className="flex gap-2">
+          <button 
+            onClick={handleRefreshDevices}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2 btn-secondary disabled:opacity-50"
+            title="Refresh devices"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
           <button 
             onClick={handleAddDeviceClick}
             className="flex items-center gap-2 px-4 py-2 btn-secondary"
