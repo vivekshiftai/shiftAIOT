@@ -160,6 +160,11 @@ conversation:
     max-retries: 3
     retry-delay: 1000  # 1 second
 
+# Slack MCP Configuration
+slack:
+  mcp:
+    endpoint: "http://20.57.36.66:5000/chat"
+
 # Push Notification Configuration
 push:
   vapid:

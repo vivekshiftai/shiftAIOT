@@ -34,6 +34,9 @@ public class NotificationService {
     @Autowired
     @Lazy
     private NotificationSettingsService notificationSettingsService;
+    
+    @Autowired
+    private NotificationInterceptorService notificationInterceptorService;
 
     public List<Notification> getAllNotifications(String organizationId) {
         logger.debug("Getting all notifications for organization: {}", organizationId);
@@ -86,6 +89,14 @@ public class NotificationService {
                         savedNotification.getId(), savedNotification.getTitle(), savedNotification.getMessage(), 
                         savedNotification.getType(), savedNotification.getCategory(), savedNotification.getUserId(), 
                         savedNotification.getOrganizationId(), savedNotification.getDeviceId(), savedNotification.isRead());
+            
+            // Send notification to Slack via interceptor
+            try {
+                notificationInterceptorService.onNotificationCreated(savedNotification);
+                logger.debug("✅ Notification sent to Slack via interceptor");
+            } catch (Exception e) {
+                logger.warn("⚠️ Failed to send notification to Slack, but notification was created successfully: {}", e.getMessage());
+            }
             
             return savedNotification;
         } catch (IllegalArgumentException e) {

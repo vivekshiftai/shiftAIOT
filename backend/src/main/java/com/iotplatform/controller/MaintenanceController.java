@@ -573,6 +573,54 @@ public class MaintenanceController {
     }
 
     /**
+     * Remove duplicate maintenance tasks for a device
+     */
+    @PostMapping("/remove-duplicates/{deviceId}")
+    @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
+    @Operation(
+        summary = "Remove Duplicate Maintenance Tasks",
+        description = "Remove duplicate maintenance tasks for a specific device"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Duplicate maintenance tasks removed successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    public ResponseEntity<Map<String, Object>> removeDuplicateMaintenanceTasks(
+            @PathVariable String deviceId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            log.info("Removing duplicate maintenance tasks for device: {} by user: {}", deviceId, userDetails.getUsername());
+
+            String organizationId = userDetails.getUser().getOrganizationId();
+            maintenanceScheduleService.removeDuplicateMaintenanceTasks(deviceId, organizationId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Duplicate maintenance tasks removed successfully");
+            response.put("deviceId", deviceId);
+            response.put("organizationId", organizationId);
+            response.put("requestedBy", userDetails.getUsername());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error removing duplicate maintenance tasks for device: {}", deviceId, e);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to remove duplicate maintenance tasks: " + e.getMessage());
+            
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
      * Get day-wise maintenance tasks grouped by date ranges
      */
     @GetMapping("/daywise")

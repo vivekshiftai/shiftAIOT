@@ -511,6 +511,16 @@ public class UnifiedOnboardingService {
                         continue;
                     }
                     
+                    // Check if maintenance task already exists for this device
+                    Optional<DeviceMaintenance> existingMaintenance = deviceMaintenanceRepository
+                        .findByDeviceIdAndTaskNameAndOrganizationId(deviceId, taskTitle, organizationId);
+                    
+                    if (existingMaintenance.isPresent()) {
+                        log.info("⚠️ Maintenance task '{}' already exists for device: {}, skipping creation", taskTitle, deviceId);
+                        skippedCount++;
+                        continue;
+                    }
+                    
                     // All required fields are present, create maintenance task
                     DeviceMaintenance maintenance = new DeviceMaintenance();
                     maintenance.setId(UUID.randomUUID().toString());

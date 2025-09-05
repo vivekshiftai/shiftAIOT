@@ -14,10 +14,12 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -348,6 +350,16 @@ public class MaintenanceScheduleService {
                 
                 if (maintenanceData.getSafetyNotes() == null || maintenanceData.getSafetyNotes().trim().isEmpty()) {
                     log.warn("Skipping maintenance task '{}' - safety_notes is missing or empty", taskTitle);
+                    skippedCount++;
+                    continue;
+                }
+                
+                // Check if maintenance task already exists for this device
+                Optional<DeviceMaintenance> existingMaintenance = deviceMaintenanceRepository
+                    .findByDeviceIdAndTaskNameAndOrganizationId(deviceId, taskTitle, organizationId);
+                
+                if (existingMaintenance.isPresent()) {
+                    log.info("⚠️ Maintenance task '{}' already exists for device: {}, skipping creation", taskTitle, deviceId);
                     skippedCount++;
                     continue;
                 }
@@ -768,6 +780,52 @@ public class MaintenanceScheduleService {
         return savedMaintenance;
     }
     
+    /**
+     * Remove duplicate maintenance tasks for a device
+     */
+    public void removeDuplicateMaintenanceTasks(String deviceId, String organizationId) {
+        log.info("Removing duplicate maintenance tasks for device: {} in organization: {}", deviceId, organizationId);
+        
+        try {
+            // Get all maintenance tasks for the device
+            List<DeviceMaintenance> allTasks = deviceMaintenanceRepository.findByDeviceIdAndOrganizationId(deviceId, organizationId);
+            
+            // Group tasks by taskName
+            Map<String, List<DeviceMaintenance>> tasksByName = allTasks.stream()
+                .collect(Collectors.groupingBy(DeviceMaintenance::getTaskName));
+            
+            int removedCount = 0;
+            
+            for (Map.Entry<String, List<DeviceMaintenance>> entry : tasksByName.entrySet()) {
+                String taskName = entry.getKey();
+                List<DeviceMaintenance> tasks = entry.getValue();
+                
+                if (tasks.size() > 1) {
+                    log.info("Found {} duplicate tasks for '{}', keeping the first one and removing {} duplicates", 
+                            tasks.size(), taskName, tasks.size() - 1);
+                    
+                    // Keep the first task (oldest by creation date), remove the rest
+                    DeviceMaintenance keepTask = tasks.stream()
+                        .min(Comparator.comparing(DeviceMaintenance::getCreatedAt))
+                        .orElse(tasks.get(0));
+                    
+                    for (DeviceMaintenance task : tasks) {
+                        if (!task.getId().equals(keepTask.getId())) {
+                            deviceMaintenanceRepository.delete(task);
+                            removedCount++;
+                            log.debug("Removed duplicate maintenance task: {} (ID: {})", taskName, task.getId());
+                        }
+                    }
+                }
+            }
+            
+            log.info("Duplicate maintenance task cleanup completed - Removed: {} duplicates for device: {}", removedCount, deviceId);
+                    
+        } catch (Exception e) {
+            log.error("Error removing duplicate maintenance tasks for device: {}", deviceId, e);
+        }
+    }
+
     /**
      * Update device names for maintenance tasks that don't have them
      */
