@@ -20,6 +20,18 @@ export const MaintenanceForm: React.FC<MaintenanceFormProps> = ({
   deviceId,
   onSubmit
 }) => {
+  // Debug logging
+  console.log('MaintenanceForm received data:', {
+    isOpen,
+    maintenance: maintenance ? {
+      id: maintenance.id,
+      taskName: maintenance.taskName,
+      deviceName: maintenance.deviceName,
+      deviceId: maintenance.deviceId,
+      description: maintenance.description
+    } : null,
+    deviceId
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -207,15 +219,15 @@ export const MaintenanceForm: React.FC<MaintenanceFormProps> = ({
               </label>
               <input
                 type="text"
-                value={formData.title}
-                onChange={(e) => handleInputChange('title', e.target.value)}
+                value={formData.taskName}
+                onChange={(e) => handleInputChange('taskName', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  fieldErrors.title ? 'border-red-300' : 'border-gray-300'
+                  fieldErrors.taskName ? 'border-red-300' : 'border-gray-300'
                 }`}
                 placeholder="Enter task title"
               />
-              {fieldErrors.title && (
-                <p className="text-red-600 text-sm mt-1">{fieldErrors.title}</p>
+              {fieldErrors.taskName && (
+                <p className="text-red-600 text-sm mt-1">{fieldErrors.taskName}</p>
               )}
             </div>
 

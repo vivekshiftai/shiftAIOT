@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useIoT } from '../contexts/IoTContext';
 import { ruleAPI, maintenanceAPI, deviceSafetyPrecautionsAPI, maintenanceSchedulerAPI } from '../services/api';
 import { handleAuthError } from '../utils/authUtils';
 import { 
@@ -98,6 +99,14 @@ const RulesPage: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
 
   const { user } = useAuth();
+  const { devices } = useIoT();
+
+  // Helper function to get device name by device ID
+  const getDeviceName = (deviceId: string | undefined): string => {
+    if (!deviceId) return 'N/A';
+    const device = devices.find(d => d.id === deviceId);
+    return device ? device.name : 'Unknown Device';
+  };
 
   // Update URL when tab changes
   const updateTabInURL = (tab: TabType) => {
@@ -147,6 +156,13 @@ const RulesPage: React.FC = () => {
         const maintenanceData = maintenanceResponse.data || [];
         setMaintenanceTasks(maintenanceData);
         console.log('Total maintenance tasks loaded:', maintenanceData.length);
+        console.log('Sample maintenance task data:', maintenanceData[0] ? {
+          id: maintenanceData[0].id,
+          taskName: maintenanceData[0].taskName,
+          deviceName: maintenanceData[0].deviceName,
+          deviceId: maintenanceData[0].deviceId,
+          description: maintenanceData[0].description
+        } : 'No maintenance tasks found');
         
         // Check if any maintenance tasks have missing device names and update them
         const hasMissingDeviceNames = maintenanceData.some((task: MaintenanceTask) => 
@@ -274,6 +290,13 @@ const RulesPage: React.FC = () => {
 
   // Handle maintenance operations
   const handleEditMaintenance = (task: MaintenanceTask) => {
+    console.log('Editing maintenance task:', {
+      id: task.id,
+      taskName: task.taskName,
+      deviceName: task.deviceName,
+      deviceId: task.deviceId,
+      description: task.description
+    });
     setEditingMaintenance(task);
     setShowMaintenanceModal(true);
   };
@@ -688,7 +711,7 @@ const RulesPage: React.FC = () => {
                       {task.frequency}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {task.deviceName || 'N/A'}
+                      {task.deviceName || getDeviceName(task.deviceId)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
