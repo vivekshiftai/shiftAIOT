@@ -42,6 +42,9 @@ public class AuthService {
     @Autowired
     private NotificationSettingsService notificationSettingsService;
 
+    @Autowired
+    private OrganizationService organizationService;
+
     public JwtResponse login(LoginRequest loginRequest) {
         try {
             Authentication authentication = authenticationManager.authenticate(
@@ -121,7 +124,17 @@ public class AuthService {
         }
         
         // Use a consistent organization ID for all users (as requested)
-        user.setOrganizationId("shiftAIOT-org-2024");
+        String organizationId = "shiftAIOT-org-2024";
+        user.setOrganizationId(organizationId);
+        
+        // Ensure the organization exists before creating the user
+        try {
+            organizationService.ensureOrganizationExists(organizationId);
+            logger.info("✅ Organization ensured to exist: {}", organizationId);
+        } catch (Exception e) {
+            logger.error("❌ Failed to ensure organization exists: {}", organizationId, e);
+            throw new RuntimeException("Failed to ensure organization exists: " + e.getMessage(), e);
+        }
         
         logger.info("📝 User object prepared for database save: ID={}, Email={}, Role={}, Organization={}", 
                    user.getId(), user.getEmail(), user.getRole(), user.getOrganizationId());

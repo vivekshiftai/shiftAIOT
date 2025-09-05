@@ -107,6 +107,9 @@ public class DeviceService {
     private DeviceWebSocketService deviceWebSocketService;
 
     @Autowired
+    private OrganizationService organizationService;
+
+    @Autowired
     private MaintenanceScheduleRepository maintenanceScheduleRepository;
 
     @Autowired
@@ -140,6 +143,15 @@ public class DeviceService {
     }
 
     public Device createDevice(Device device, String organizationId) {
+        // Ensure the organization exists before creating the device
+        try {
+            organizationService.ensureOrganizationExists(organizationId);
+            logger.info("✅ Organization ensured to exist: {}", organizationId);
+        } catch (Exception e) {
+            logger.error("❌ Failed to ensure organization exists: {}", organizationId, e);
+            throw new RuntimeException("Failed to ensure organization exists: " + e.getMessage(), e);
+        }
+        
         device.setId(UUID.randomUUID().toString());
         device.setOrganizationId(organizationId);
         // Set assigned user if provided
@@ -158,6 +170,15 @@ public class DeviceService {
     }
 
     public Device createDeviceFromRequest(DeviceCreateRequest request, String organizationId) {
+        // Ensure the organization exists before creating the device
+        try {
+            organizationService.ensureOrganizationExists(organizationId);
+            logger.info("✅ Organization ensured to exist: {}", organizationId);
+        } catch (Exception e) {
+            logger.error("❌ Failed to ensure organization exists: {}", organizationId, e);
+            throw new RuntimeException("Failed to ensure organization exists: " + e.getMessage(), e);
+        }
+        
         Device device = new Device();
         device.setId(UUID.randomUUID().toString());
         device.setOrganizationId(organizationId);
@@ -240,6 +261,15 @@ public class DeviceService {
      */
     public DeviceCreateResponse createDeviceWithoutFiles(DeviceCreateWithFileRequest request, 
                                                        String organizationId, String currentUserId) throws IOException {
+        
+        // Ensure the organization exists before creating the device
+        try {
+            organizationService.ensureOrganizationExists(organizationId);
+            logger.info("✅ Organization ensured to exist: {}", organizationId);
+        } catch (Exception e) {
+            logger.error("❌ Failed to ensure organization exists: {}", organizationId, e);
+            throw new RuntimeException("Failed to ensure organization exists: " + e.getMessage(), e);
+        }
         
         // Create the device
         Device device = new Device();
@@ -352,6 +382,15 @@ public class DeviceService {
                                                    MultipartFile certificateFile, 
                                                    String organizationId,
                                                    String currentUserId) throws IOException {
+        
+        // Ensure the organization exists before creating the device
+        try {
+            organizationService.ensureOrganizationExists(organizationId);
+            logger.info("✅ Organization ensured to exist: {}", organizationId);
+        } catch (Exception e) {
+            logger.error("❌ Failed to ensure organization exists: {}", organizationId, e);
+            throw new RuntimeException("Failed to ensure organization exists: " + e.getMessage(), e);
+        }
         
         // Create the device
         Device device = new Device();

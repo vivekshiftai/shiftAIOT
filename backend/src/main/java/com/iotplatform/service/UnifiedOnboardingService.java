@@ -76,6 +76,9 @@ public class UnifiedOnboardingService {
     @Autowired
     private JiraTaskAssignmentService jiraTaskAssignmentService;
 
+    @Autowired
+    private OrganizationService organizationService;
+
     /**
      * Complete unified onboarding workflow with real-time progress tracking
      * 
@@ -96,6 +99,15 @@ public class UnifiedOnboardingService {
     ) throws IOException, PDFProcessingException {
         
         log.info("Starting unified onboarding workflow for device: {}", deviceRequest.getName());
+        
+        // Ensure the organization exists before starting the onboarding process
+        try {
+            organizationService.ensureOrganizationExists(organizationId);
+            log.info("✅ Organization ensured to exist: {}", organizationId);
+        } catch (Exception e) {
+            log.error("❌ Failed to ensure organization exists: {}", organizationId, e);
+            throw new RuntimeException("Failed to ensure organization exists: " + e.getMessage(), e);
+        }
         
         // Step 1: Create device (without storing PDF files in our DB) - This is transactional
         log.info("Step 1: Creating device without storing PDF files...");

@@ -159,6 +159,17 @@ public class DatabaseSchemaService {
         schema.append("    id VARCHAR(36) PRIMARY KEY,\n");
         schema.append("    name VARCHAR(255) NOT NULL,\n");
         schema.append("    description TEXT,\n");
+        schema.append("    contact_email VARCHAR(255),\n");
+        schema.append("    contact_phone VARCHAR(20),\n");
+        schema.append("    address VARCHAR(255),\n");
+        schema.append("    city VARCHAR(100),\n");
+        schema.append("    state VARCHAR(100),\n");
+        schema.append("    postal_code VARCHAR(20),\n");
+        schema.append("    country VARCHAR(100),\n");
+        schema.append("    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE', -- ACTIVE, INACTIVE, SUSPENDED, PENDING\n");
+        schema.append("    max_users INTEGER,\n");
+        schema.append("    max_devices INTEGER,\n");
+        schema.append("    subscription_plan VARCHAR(20) DEFAULT 'BASIC', -- BASIC, PREMIUM, ENTERPRISE, CUSTOM\n");
         schema.append("    created_at TIMESTAMP NOT NULL,\n");
         schema.append("    updated_at TIMESTAMP NOT NULL\n");
         schema.append(");\n\n");
