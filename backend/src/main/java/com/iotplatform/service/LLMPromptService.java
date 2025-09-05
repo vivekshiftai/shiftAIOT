@@ -55,9 +55,8 @@ public class LLMPromptService {
                 openAIClient = new OpenAIClientBuilder()
                     .credential(new AzureKeyCredential(apiKey))
                     .endpoint(endpoint)
-                    .serviceVersion(OpenAIServiceVersion.V2024_12_01_PREVIEW)
                     .buildClient();
-                log.info("✅ Azure OpenAI client initialized successfully with API version 2024-12-01-preview");
+                log.info("✅ Azure OpenAI client initialized successfully");
             } catch (Exception e) {
                 log.error("❌ Failed to initialize Azure OpenAI client", e);
                 throw new RuntimeException("Failed to initialize Azure OpenAI client", e);
