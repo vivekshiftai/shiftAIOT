@@ -16,7 +16,6 @@ import {
 import { deviceAPI } from '../services/api';
 import { pdfProcessingService, PDFImage } from '../services/pdfprocess';
 import { logError, logInfo } from '../utils/logger';
-import { getDisplayImageName } from '../utils/imageUtils';
 import '../styles/knowledge.css';
 import { pdfAPI } from '../services/api'; // Added pdfAPI import
 import { knowledgeAPI } from '../services/api'; // Added knowledgeAPI import
@@ -736,18 +735,17 @@ export const KnowledgeSection: React.FC = () => {
                             <div key={index} className="relative group">
                               <img
                                 src={`data:${image.mime_type};base64,${image.data}`}
-                                alt={getDisplayImageName(image.filename, index)}
-                                title={getDisplayImageName(image.filename, index)}
+                                alt={`Image ${index + 1}`}
                                 className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
                                 onClick={() => {
                                   const newWindow = window.open();
                                   if (newWindow) {
                                     newWindow.document.write(`
                                       <html>
-                                        <head><title>${getDisplayImageName(image.filename, index)}</title></head>
+                                        <head><title>Image ${index + 1}</title></head>
                                         <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f0f0f0;">
                                           <img src="data:${image.mime_type};base64,${image.data}" 
-                                               alt="${getDisplayImageName(image.filename, index)}" 
+                                               alt="Image ${index + 1}" 
                                                style="max-width:90%;max-height:90%;object-fit:contain;box-shadow:0 4px 20px rgba(0,0,0,0.3);border-radius:8px;">
                                         </body>
                                       </html>
@@ -755,9 +753,6 @@ export const KnowledgeSection: React.FC = () => {
                                   }
                                 }}
                               />
-                              <div className="absolute bottom-1 left-1 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-                                {getDisplayImageName(image.filename, index)}
-                              </div>
                             </div>
                           ))}
                         </div>

@@ -378,168 +378,178 @@ export const DeviceDetailsSection: React.FC = () => {
     }
     
     try {
-      // Get device PDFs from unified PDF system
+      logInfo('DeviceDetails', 'Loading PDFs for device from local database', { deviceId: device.id, deviceName: device.name });
+      
+      // First try to get PDFs from local database using device-specific endpoints
       try {
-        const pdfResponse = await pdfAPI.listPDFs(1, 100);
+        // Try the device PDF results endpoint first
+        const devicePDFResponse = await deviceAPI.getDevicePDFResults(device.id);
         
-        if (pdfResponse.data.pdfs && pdfResponse.data.pdfs.length > 0) {
-          const pdfDocuments = pdfResponse.data.pdfs;
+        if (devicePDFResponse.data && devicePDFResponse.data.pdfReferences && devicePDFResponse.data.pdfReferences.length > 0) {
+          const pdfReferences = devicePDFResponse.data.pdfReferences;
           
-          // Filter PDFs that are associated with the current device
-          const devicePDFs = pdfDocuments.filter((doc: any) => 
-            doc.device_id === device.id || 
-            doc.deviceId === device.id || 
-            doc.device_name === device.name ||
-            doc.deviceName === device.name
-          );
-          
-          const filteredPDFs: UnifiedPDF[] = devicePDFs.map((doc: any) => ({
-            id: doc.id,
-            name: doc.filename || doc.name,
-            originalFilename: doc.filename || doc.name,
-            documentType: 'pdf',
-            fileSize: doc.size_bytes || doc.size || 0,
-            processingStatus: doc.status || 'completed',
-            vectorized: doc.vectorized || true,
-            uploadedAt: doc.uploaded_at || new Date().toISOString(),
-            processedAt: doc.processed_at || new Date().toISOString(),
-            deviceId: device.id,
-            deviceName: doc.device_name || device.name,
-            organizationId: device.organizationId || 'public',
-            collectionName: doc.collection_name || doc.collectionName,
-            totalPages: doc.total_pages || doc.totalPages,
-            processedChunks: doc.chunk_count || 0,
-            processingTime: doc.processing_time || doc.processingTime
-          }));
-          
-          setDevicePDFs(filteredPDFs);
-          
-          // Update initial chat message if PDFs are found
-          if (filteredPDFs.length > 0) {
-            setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!`);
-          }
-          
-          logInfo('DeviceDetails', 'Device PDFs loaded successfully from unified system', { 
+          logInfo('DeviceDetails', 'Retrieved PDFs from device PDF results', { 
             deviceId: device.id, 
-            totalPDFs: pdfDocuments.length,
-            filteredPDFs: filteredPDFs.length 
+            totalPDFs: pdfReferences.length 
           });
-        } else {
           
-          // Try collections API as fallback
-          try {
-            const collectionsResponse = await pdfAPI.listAllCollections();
-            
-            if (collectionsResponse.data && Array.isArray(collectionsResponse.data.pdfs)) {
-              const allPDFs = collectionsResponse.data.pdfs;
-              
-              // Filter PDFs that might be related to this device (by name matching)
-              const devicePDFs = allPDFs.filter((doc: any) => {
-                const docName = doc.name || doc.pdf_name || doc.collection_name || '';
-                const deviceName = device.name.toLowerCase();
-                return docName.toLowerCase().includes(deviceName) || 
-                       deviceName.includes(docName.toLowerCase());
-              });
-              
-              
-              if (devicePDFs.length > 0) {
-                const filteredPDFs: UnifiedPDF[] = devicePDFs.map((doc: any) => ({
-                  id: doc.collection_name || doc.id || doc.name,
-                  name: doc.pdf_name || doc.name || doc.collection_name,
-                  originalFilename: doc.pdf_name || doc.name || doc.collection_name,
-                  documentType: 'pdf',
-                  fileSize: doc.size || doc.file_size || 0,
-                  processingStatus: doc.status || doc.processing_status || 'completed',
-                  vectorized: doc.vectorized !== false,
-                  uploadedAt: doc.created_at || doc.uploadedAt || new Date().toISOString(),
-                  processedAt: doc.created_at || doc.processedAt || new Date().toISOString(),
-                  deviceId: device.id,
-                  deviceName: device.name,
-                  organizationId: device.organizationId || 'public',
-                  collectionName: doc.collection_name,
-                  totalPages: doc.total_pages || doc.totalPages,
-                  processedChunks: doc.chunk_count || doc.chunkCount || 0,
-                  processingTime: doc.processing_time || doc.processingTime
-                }));
-                
-                setDevicePDFs(filteredPDFs);
-                setInitialChatMessage(`I found ${filteredPDFs.length} PDF document(s) that might be related to ${device.name}. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!`);
-                
-                logInfo('DeviceDetails', 'Device PDFs loaded from collections API fallback', { 
-                  deviceId: device.id, 
-                  totalPDFs: allPDFs.length,
-                  filteredPDFs: filteredPDFs.length 
-                });
-                return;
-              }
-            }
-          } catch (collectionsError) {
-          }
-          
-          setDevicePDFs([]);
-          setInitialChatMessage(`I don't have any PDF documents specifically associated with ${device.name} yet. To enable AI-powered assistance, upload device manuals, datasheets, or other documentation in the Knowledge Base section.`);
-          
-          logInfo('DeviceDetails', 'No PDFs found for device in unified system', { deviceId: device.id });
-        }
-      } catch (pdfError: any) {
-        // Check if it's a 404 error from external service
-        if (pdfError?.response?.status === 404 || pdfError?.message?.includes('404')) {
-          logInfo('DeviceDetails', 'External PDF service not available (404) - continuing without PDFs', { deviceId: device.id });
-          setDevicePDFs([]);
-          setInitialChatMessage(`I don't have access to PDF documents for ${device.name} at the moment. The PDF service is temporarily unavailable. You can still ask general questions about device management.`);
-          return;
-        }
-        
-        logError('DeviceDetails', 'Failed to load PDFs from unified system, trying fallback', pdfError instanceof Error ? pdfError : new Error('Unknown error'));
-        
-        // Fallback to device API method
-        const pdfResultsResponse = await deviceAPI.getDevicePDFResults(device.id);
-        
-        if (pdfResultsResponse.data.pdfReferences && pdfResultsResponse.data.pdfReferences.length > 0) {
-          const pdfDocuments = pdfResultsResponse.data.pdfReferences;
-          
-          const filteredPDFs: UnifiedPDF[] = pdfDocuments.map((doc: any) => ({
-            id: doc.id,
-            name: doc.name,
-            originalFilename: doc.name,
+          const filteredPDFs: UnifiedPDF[] = pdfReferences.map((pdfRef: any) => ({
+            id: pdfRef.id || pdfRef.pdfName,
+            name: pdfRef.pdfName || pdfRef.name,
+            originalFilename: pdfRef.originalFilename || pdfRef.pdfName || pdfRef.name,
             documentType: 'pdf',
-            fileSize: doc.size || 0,
-            processingStatus: doc.status || 'completed',
-            vectorized: doc.vectorized || true,
-            uploadedAt: doc.uploadedAt || new Date().toISOString(),
-            processedAt: doc.processedAt || new Date().toISOString(),
+            fileSize: pdfRef.fileSize || 0,
+            processingStatus: pdfRef.status || 'completed',
+            vectorized: pdfRef.vectorized !== false,
+            uploadedAt: pdfRef.uploadedAt || pdfRef.createdAt || new Date().toISOString(),
+            processedAt: pdfRef.processedAt || pdfRef.updatedAt || new Date().toISOString(),
             deviceId: device.id,
             deviceName: device.name,
             organizationId: device.organizationId || 'public',
-            collectionName: doc.collectionName,
-            totalPages: doc.totalPages,
-            processedChunks: doc.chunk_count || 0,
-            processingTime: doc.processingTime
+            collectionName: pdfRef.collectionName,
+            totalPages: pdfRef.totalPages || 0,
+            processedChunks: pdfRef.processedChunks || 0,
+            processingTime: pdfRef.processingTime
           }));
           
           setDevicePDFs(filteredPDFs);
+          setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!`);
           
-          if (filteredPDFs.length > 0) {
-            setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!`);
-          }
-          
-          logInfo('DeviceDetails', 'Device PDFs loaded successfully from fallback API', { 
+          logInfo('DeviceDetails', 'Device PDFs loaded successfully from device PDF results', { 
             deviceId: device.id, 
-            totalPDFs: pdfDocuments.length,
-            filteredPDFs: filteredPDFs.length 
+            totalPDFs: pdfReferences.length,
+            pdfNames: filteredPDFs.map(pdf => pdf.name)
           });
-        } else {
-          setDevicePDFs([]);
-          setInitialChatMessage(`I don't have any PDF documents specifically associated with ${device.name} yet. To enable AI-powered assistance, upload device manuals, datasheets, or other documentation in the Knowledge Base section.`);
-          
-          logInfo('DeviceDetails', 'No PDFs found for device', { deviceId: device.id });
+          return;
         }
+      } catch (devicePDFError) {
+        logError('DeviceDetails', 'Device PDF results failed, trying knowledge documents', devicePDFError instanceof Error ? devicePDFError : new Error('Unknown error'));
       }
       
-    } catch (error) {
-      console.error('❌ Failed to load device PDFs:', error);
-      logError('DeviceDetails', 'Failed to load device PDFs', error instanceof Error ? error : new Error('Unknown error'));
+      // Try knowledge documents by device
+      try {
+        const knowledgeResponse = await knowledgeAPI.getDocumentsByDevice(device.id);
+        
+        if (knowledgeResponse.data && knowledgeResponse.data.length > 0) {
+          const documents = knowledgeResponse.data;
+          
+          logInfo('DeviceDetails', 'Retrieved documents from knowledge API', { 
+            deviceId: device.id, 
+            totalDocuments: documents.length 
+          });
+          
+          // Filter only PDF documents
+          const pdfDocuments = documents.filter((doc: any) => 
+            doc.documentType === 'pdf' || 
+            doc.type === 'pdf' || 
+            (doc.filename && doc.filename.toLowerCase().endsWith('.pdf'))
+          );
+          
+          if (pdfDocuments.length > 0) {
+            const filteredPDFs: UnifiedPDF[] = pdfDocuments.map((doc: any) => ({
+              id: doc.id,
+              name: doc.filename || doc.name,
+              originalFilename: doc.filename || doc.name,
+              documentType: 'pdf',
+              fileSize: doc.fileSize || 0,
+              processingStatus: doc.status || 'completed',
+              vectorized: doc.vectorized !== false,
+              uploadedAt: doc.uploadedAt || doc.createdAt || new Date().toISOString(),
+              processedAt: doc.processedAt || doc.updatedAt || new Date().toISOString(),
+              deviceId: device.id,
+              deviceName: device.name,
+              organizationId: device.organizationId || 'public',
+              collectionName: doc.collectionName,
+              totalPages: doc.totalPages || 0,
+              processedChunks: doc.processedChunks || 0,
+              processingTime: doc.processingTime
+            }));
+            
+            setDevicePDFs(filteredPDFs);
+            setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!`);
+            
+            logInfo('DeviceDetails', 'Device PDFs loaded successfully from knowledge documents', { 
+              deviceId: device.id, 
+              totalDocuments: documents.length,
+              pdfDocuments: pdfDocuments.length,
+              pdfNames: filteredPDFs.map(pdf => pdf.name)
+            });
+            return;
+          }
+        }
+      } catch (knowledgeError) {
+        logError('DeviceDetails', 'Knowledge documents failed, trying general documents', knowledgeError instanceof Error ? knowledgeError : new Error('Unknown error'));
+      }
+      
+      // Try general documents with device filtering
+      try {
+        const generalResponse = await knowledgeAPI.getDocuments();
+        
+        if (generalResponse.data && generalResponse.data.length > 0) {
+          const allDocuments = generalResponse.data;
+          
+          // Filter documents that might be related to this device
+          const deviceDocuments = allDocuments.filter((doc: any) => {
+            const docName = (doc.filename || doc.name || '').toLowerCase();
+            const deviceName = device.name.toLowerCase();
+            
+            // Check for device association or name matching
+            const isMatch = (doc.deviceId && doc.deviceId === device.id) ||
+                           (doc.device_id && doc.device_id === device.id) ||
+                           (doc.deviceName && doc.deviceName.toLowerCase() === deviceName) ||
+                           (doc.device_name && doc.device_name.toLowerCase() === deviceName) ||
+                           docName.includes(deviceName) ||
+                           deviceName.includes(docName);
+            
+            return isMatch && (doc.documentType === 'pdf' || doc.type === 'pdf' || docName.endsWith('.pdf'));
+          });
+          
+          if (deviceDocuments.length > 0) {
+            const filteredPDFs: UnifiedPDF[] = deviceDocuments.map((doc: any) => ({
+              id: doc.id,
+              name: doc.filename || doc.name,
+              originalFilename: doc.filename || doc.name,
+              documentType: 'pdf',
+              fileSize: doc.fileSize || 0,
+              processingStatus: doc.status || 'completed',
+              vectorized: doc.vectorized !== false,
+              uploadedAt: doc.uploadedAt || doc.createdAt || new Date().toISOString(),
+              processedAt: doc.processedAt || doc.updatedAt || new Date().toISOString(),
+              deviceId: device.id,
+              deviceName: device.name,
+              organizationId: device.organizationId || 'public',
+              collectionName: doc.collectionName,
+              totalPages: doc.totalPages || 0,
+              processedChunks: doc.processedChunks || 0,
+              processingTime: doc.processingTime
+            }));
+            
+            setDevicePDFs(filteredPDFs);
+            setInitialChatMessage(`I found ${filteredPDFs.length} PDF document(s) that might be related to ${device.name}. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!`);
+            
+            logInfo('DeviceDetails', 'Device PDFs loaded from general documents with filtering', { 
+              deviceId: device.id, 
+              totalDocuments: allDocuments.length,
+              deviceDocuments: deviceDocuments.length,
+              pdfNames: filteredPDFs.map(pdf => pdf.name)
+            });
+            return;
+          }
+        }
+      } catch (generalError) {
+        logError('DeviceDetails', 'General documents failed', generalError instanceof Error ? generalError : new Error('Unknown error'));
+      }
+      
+      // No PDFs found in local database
       setDevicePDFs([]);
+      setInitialChatMessage(`I don't have any PDF documents specifically associated with ${device.name} in the local database. To enable AI-powered assistance, upload device manuals, datasheets, or other documentation in the Knowledge Base section.`);
+      
+      logInfo('DeviceDetails', 'No PDFs found for device in local database', { deviceId: device.id });
+      
+    } catch (error) {
+      logError('DeviceDetails', 'Failed to load PDFs from local database', error instanceof Error ? error : new Error('Unknown error'));
+      setDevicePDFs([]);
+      setInitialChatMessage(`I don't have access to PDF documents for ${device.name} at the moment. Please try again later.`);
     }
   };
 
@@ -698,7 +708,7 @@ export const DeviceDetailsSection: React.FC = () => {
     MACHINE: { icon: Settings, label: 'Machine' }
   };
 
-  const statusInfo = statusConfig[device.status as keyof typeof statusConfig] || statusConfig.UNKNOWN;
+  const statusInfo = statusConfig[device.status as keyof typeof statusConfig] || { color: 'text-gray-500', bg: 'bg-gray-50', label: 'Unknown' };
   const deviceTypeInfo = deviceTypeConfig[device.type as keyof typeof deviceTypeConfig] || { icon: Settings, label: 'Device' };
 
   const formatLastSeen = (timestamp: string) => {
@@ -895,6 +905,12 @@ export const DeviceDetailsSection: React.FC = () => {
       
       if (pdfToUse) {
         try {
+          logInfo('DeviceDetails', 'Querying PDF for device', { 
+            deviceId: device.id, 
+            pdfName: pdfToUse.name, 
+            query: userMessage.content 
+          });
+          
           const queryRequest = {
             pdf_name: pdfToUse.name, // Use PDF name behind the scenes
             query: userMessage.content,
@@ -904,10 +920,17 @@ export const DeviceDetailsSection: React.FC = () => {
           // Use the chat service with device context for better results
           const queryResponse = await pdfProcessingService.queryPDF(queryRequest);
           
-          // Response processed successfully
+          logInfo('DeviceDetails', 'PDF query successful', { 
+            deviceId: device.id, 
+            pdfName: pdfToUse.name,
+            responseLength: queryResponse.response?.length || 0,
+            chunksUsed: queryResponse.chunks_used?.length || 0,
+            imagesFound: queryResponse.images?.length || 0,
+            tablesFound: queryResponse.tables?.length || 0
+          });
           
           // Enhance content with image/table information (NO PDF name shown to user)
-          let enhancedContent = queryResponse.response || `I found relevant information in the device documentation. ${queryResponse.chunks_used.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 300) + '...' : 'Would you like me to search for more specific information?'}`;
+          let enhancedContent = queryResponse.response || `I found relevant information in the device documentation. ${queryResponse.chunks_used?.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 300) + '...' : 'Would you like me to search for more specific information?'}`;
           
           // Add information about found images and tables
           if (queryResponse.images && queryResponse.images.length > 0) {
@@ -969,6 +992,10 @@ export const DeviceDetailsSection: React.FC = () => {
               errorContent += 'The server encountered an error. Please try again in a few moments.';
             } else if (queryError.message.includes('timeout') || queryError.message.includes('Timeout')) {
               errorContent += 'The request timed out. Please try a simpler question or try again later.';
+            } else if (queryError.message.includes('404') || queryError.message.includes('Not Found')) {
+              errorContent += 'The PDF document was not found. It may have been moved or deleted.';
+            } else if (queryError.message.includes('PDF') && queryError.message.includes('not found')) {
+              errorContent += 'The PDF document is not available for querying. Please check if it was processed correctly.';
             } else {
               errorContent += `Error: ${queryError.message}. Please try again or ask a different question.`;
             }
@@ -1339,18 +1366,17 @@ export const DeviceDetailsSection: React.FC = () => {
                               <div key={index} className="relative group">
                                 <img
                                   src={`data:${image.mime_type};base64,${image.data}`}
-                                  alt={image.filename || `Image ${index + 1}`}
-                                  title={image.filename || `Image ${index + 1}`}
+                                  alt={`Image ${index + 1}`}
                                   className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
                                   onClick={() => {
                                     const newWindow = window.open();
                                     if (newWindow) {
                                       newWindow.document.write(`
                                         <html>
-                                          <head><title>${image.filename || `Image ${index + 1}`}</title></head>
+                                          <head><title>Image ${index + 1}</title></head>
                                           <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f0f0f0;">
                                             <img src="data:${image.mime_type};base64,${image.data}" 
-                                                 alt="${image.filename || `Image ${index + 1}`}" 
+                                                 alt="Image ${index + 1}" 
                                                  style="max-width:90%;max-height:90%;object-fit:contain;box-shadow:0 4px 20px rgba(0,0,0,0.3);border-radius:8px;">
                                           </body>
                                         </html>
@@ -1358,9 +1384,6 @@ export const DeviceDetailsSection: React.FC = () => {
                                     }
                                   }}
                                 />
-                                <div className="absolute bottom-1 left-1 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-                                  {image.filename || `Image ${index + 1}`}
-                                </div>
                               </div>
                             ))}
                           </div>
@@ -1433,6 +1456,21 @@ export const DeviceDetailsSection: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Debug: Available PDFs from Local Database */}
+            {devicePDFs.length > 0 && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm font-medium text-green-800 mb-2">📄 Available PDFs from Local Database:</p>
+                <div className="space-y-1">
+                  {devicePDFs.map((pdf, index) => (
+                    <div key={index} className="text-xs text-green-700">
+                      • {pdf.name} ({pdf.processingStatus})
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-green-600 mt-2">✅ Using local database PDFs for queries</p>
+              </div>
+            )}
 
             {/* Chat Input */}
             <div className="flex gap-2 mt-4">
