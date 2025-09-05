@@ -148,6 +148,7 @@ class WebSocketService {
           logInfo('WebSocket', 'Device stats update received', message.stats);
           break;
 
+
         default:
           console.warn(`⚠️ WebSocket: Unknown message type received`, { type: message.type });
           logWarn('WebSocket', 'Unknown message type received', { type: message.type });

@@ -3,21 +3,20 @@ import {
   Plus, 
   Upload, 
   FileText, 
-  Settings, 
   CheckCircle,
   X, 
   ArrowRight, 
   ArrowLeft,
   Brain,
-  Search,
   Bot,
-  Loader,
   FileText as FileSearch,
   Zap
 } from 'lucide-react';
 
 import { unifiedOnboardingService, UnifiedOnboardingProgress } from '../../services/unifiedOnboardingService';
 import { logInfo, logError } from '../../utils/logger';
+import { useIoT } from '../../contexts/IoTContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface DeviceFormData {
   name: string;
@@ -54,6 +53,9 @@ interface DeviceFormData {
   // Collections (optional)
   tags?: string[];
   config?: Record<string, string>;
+  
+  // User assignment
+  assignedUserId?: string | null;
 }
 
 interface FileUpload {
@@ -82,6 +84,8 @@ type Step = 1 | 2 | 3 | 4 | 5;
 
 export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel }: AddDeviceFormProps) => {
   const [currentStep, setCurrentStep] = useState<Step>(1);
+  const { setOnboardingState } = useIoT();
+  const { user: currentUser } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -99,7 +103,8 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
     mqttBroker: '',
     mqttTopic: '',
     tags: [],
-    config: {}
+    config: {},
+    assignedUserId: currentUser?.id || null
   });
 
   const [fileUploads, setFileUploads] = useState<FileUpload[]>([]);
@@ -108,6 +113,20 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
   const [isProcessingPDF, setIsProcessingPDF] = useState(false);
   const [aiGeneratedRules, setAiGeneratedRules] = useState<AIGeneratedRule[]>([]);
   const [processingProgress, setProcessingProgress] = useState(0);
+
+  // Update form data when current user becomes available
+  useEffect(() => {
+    if (currentUser?.id && !formData.assignedUserId) {
+      setFormData(prev => ({
+        ...prev,
+        assignedUserId: currentUser.id
+      }));
+      logInfo('AddDeviceForm', 'Updated form data with current user ID', { 
+        userId: currentUser.id,
+        userName: `${currentUser.firstName} ${currentUser.lastName}` || currentUser.email 
+      });
+    }
+  }, [currentUser?.id, formData.assignedUserId]);
 
   const handleInputChange = (field: keyof DeviceFormData, value: string | number | string[]) => {
     setFormData((prev: DeviceFormData) => ({ ...prev, [field]: value }));
@@ -239,6 +258,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
   const processPDFWithAI = async () => {
     setIsProcessingPDF(true);
     setProcessingProgress(0);
+    setOnboardingState(true); // Pause background updates
 
     try {
       // Check if we have files to process
@@ -250,14 +270,17 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
       logInfo('AddDeviceForm', 'Starting unified onboarding process with PDF', { 
         fileName: firstFile.name,
         fileSize: firstFile.size,
-        deviceName: formData.name
+        deviceName: formData.name,
+        assignedUserId: formData.assignedUserId,
+        currentUserId: currentUser?.id
       });
       
-      // Use the unified onboarding service
+      // Start onboarding process
       const result = await unifiedOnboardingService.completeUnifiedOnboarding(
         formData,
         firstFile,
         (progress: UnifiedOnboardingProgress) => {
+          // Update progress from backend
           setProcessingProgress(progress.progress);
           logInfo('AddDeviceForm', 'Onboarding progress update', { 
             stage: progress.stage, 
@@ -277,7 +300,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
       });
 
       // Convert the result to AIGeneratedRule format for display
-      const apiRules: AIGeneratedRule[] = (result.pdfData.rulesData || []).map((rule: any, index: number) => ({
+      const apiRules: AIGeneratedRule[] = (result.pdfData as any)?.rulesData?.map((rule: any, index: number) => ({
         id: `rule_${index}`,
         name: rule.name || `${rule.metric} Rule`,
         description: rule.description || `AI-generated rule for ${rule.metric}`,
@@ -290,10 +313,12 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
       setAiGeneratedRules(apiRules);
       setIsProcessingPDF(false);
       setCurrentStep(5);
+      setOnboardingState(false); // Resume background updates
 
     } catch (error) {
       logError('AddDeviceForm', 'Error processing PDF with unified service', error instanceof Error ? error : new Error('Unknown error'));
       console.error('Error processing PDF with external API:', error);
+      setOnboardingState(false); // Resume background updates
       
       // Fallback to mock rules if API fails
       const fallbackRules: AIGeneratedRule[] = [
@@ -935,7 +960,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader className="w-4 h-4 animate-spin" />
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       Adding Device...
                     </>
                   ) : (

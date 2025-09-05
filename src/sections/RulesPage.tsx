@@ -147,6 +147,27 @@ const RulesPage: React.FC = () => {
         const maintenanceData = maintenanceResponse.data || [];
         setMaintenanceTasks(maintenanceData);
         console.log('Total maintenance tasks loaded:', maintenanceData.length);
+        
+        // Check if any maintenance tasks have missing device names and update them
+        const hasMissingDeviceNames = maintenanceData.some((task: MaintenanceTask) => 
+          !task.deviceName || task.deviceName === 'N/A' || task.deviceName.trim() === ''
+        );
+        
+        if (hasMissingDeviceNames) {
+          console.log('Found maintenance tasks with missing device names, updating...');
+          try {
+            await maintenanceAPI.updateDeviceNames();
+            console.log('Device names updated successfully');
+            // Refetch maintenance data to get updated device names
+            const updatedMaintenanceResponse = await maintenanceAPI.getAll();
+            const updatedMaintenanceData = updatedMaintenanceResponse.data || [];
+            setMaintenanceTasks(updatedMaintenanceData);
+            console.log('Maintenance data refreshed with updated device names');
+          } catch (updateErr) {
+            console.warn('Failed to update device names:', updateErr);
+            // Don't fail the entire data fetch if device name update fails
+          }
+        }
       } catch (err) {
         console.error('Error fetching maintenance:', err);
         setMaintenanceError('Failed to fetch maintenance');

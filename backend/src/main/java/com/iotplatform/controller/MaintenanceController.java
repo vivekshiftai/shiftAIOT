@@ -527,6 +527,52 @@ public class MaintenanceController {
     }
 
     /**
+     * Update device names for maintenance tasks that don't have them
+     */
+    @PostMapping("/update-device-names")
+    @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
+    @Operation(
+        summary = "Update Device Names for Maintenance Tasks",
+        description = "Update device names for maintenance tasks that don't have them"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Device names updated successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    public ResponseEntity<Map<String, Object>> updateDeviceNames(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            log.info("Updating device names for maintenance tasks by user: {}", userDetails.getUsername());
+
+            String organizationId = userDetails.getUser().getOrganizationId();
+            maintenanceScheduleService.updateDeviceNamesForMaintenanceTasks(organizationId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Device names updated successfully");
+            response.put("organizationId", organizationId);
+            response.put("requestedBy", userDetails.getUsername());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error updating device names for maintenance tasks", e);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to update device names: " + e.getMessage());
+            
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
      * Get day-wise maintenance tasks grouped by date ranges
      */
     @GetMapping("/daywise")

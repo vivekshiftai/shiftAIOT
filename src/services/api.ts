@@ -192,6 +192,7 @@ export const deviceAPI = {
     },
   }),
   getDevicePDFResults: (deviceId: string) => api.get(`/api/devices/${deviceId}/pdf-references`),
+  getOnboardingProgress: (deviceId: string) => api.get(`/api/devices/${deviceId}/onboarding-progress`),
 };
 
 // Rule API
@@ -254,6 +255,7 @@ export const maintenanceAPI = {
   completeTask: (id: string) => api.patch(`/api/maintenance/${id}/complete`),
   assignTask: (id: string, assigneeId: string) => api.patch(`/api/maintenance/${id}/assign`, { assigneeId }),
   triggerNotifications: () => api.post('/api/maintenance/trigger-notifications'),
+  updateDeviceNames: () => api.post('/api/maintenance/update-device-names'),
 };
 
 // Maintenance Scheduler API

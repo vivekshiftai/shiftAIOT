@@ -98,6 +98,33 @@ export const DashboardSection: React.FC = () => {
           upcomingMaintenanceData: upcomingMaintenanceResponse.data
         });
         
+        // Check if any maintenance tasks have missing device names and update them
+        const allMaintenanceData = allMaintenanceResponse.data || [];
+        const hasMissingDeviceNames = allMaintenanceData.some((task: any) => 
+          !task.deviceName || task.deviceName === 'N/A' || task.deviceName.trim() === ''
+        );
+        
+        if (hasMissingDeviceNames) {
+          logInfo('Dashboard', 'Found maintenance tasks with missing device names, updating...');
+          try {
+            await maintenanceAPI.updateDeviceNames();
+            logInfo('Dashboard', 'Device names updated successfully');
+            // Refetch maintenance data to get updated device names
+            const updatedAllMaintenanceResponse = await maintenanceAPI.getAll();
+            const updatedUpcomingMaintenanceResponse = await maintenanceAPI.getUpcoming();
+            const updatedTodayMaintenanceResponse = await maintenanceAPI.getToday();
+            
+            setMaintenanceCount(updatedAllMaintenanceResponse.data?.length || 0);
+            setUpcomingMaintenance(updatedUpcomingMaintenanceResponse.data || []);
+            setTodayMaintenance(updatedTodayMaintenanceResponse.data || []);
+            
+            logInfo('Dashboard', 'Maintenance data refreshed with updated device names');
+          } catch (updateErr) {
+            logError('Dashboard', 'Failed to update device names', updateErr instanceof Error ? updateErr : new Error(String(updateErr)));
+            // Don't fail the entire data fetch if device name update fails
+          }
+        }
+        
         // Set total count from all maintenance tasks
         const totalMaintenanceCount = allMaintenanceResponse.data?.length || 0;
         setMaintenanceCount(totalMaintenanceCount);

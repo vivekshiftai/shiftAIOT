@@ -16,6 +16,7 @@ interface IoTContextType {
   telemetryData: TelemetryData[];
   loading: boolean;
   error: string | null;
+  isOnboarding: boolean;
   updateDeviceStatus: (deviceId: string, status: Status) => void;
   addNotification: (notification: Notification) => void;
   markNotificationAsRead: (notificationId: string) => Promise<void>;
@@ -31,6 +32,7 @@ interface IoTContextType {
   createDevice: (device: Partial<Device>) => Promise<void>;
   assignDeviceToUser: (deviceId: string, userId: string) => Promise<void>;
   deleteDevice: (deviceId: string) => Promise<void>;
+  setOnboardingState: (isOnboarding: boolean) => void;
 }
 
 const IoTContext = createContext<IoTContextType | undefined>(undefined);
@@ -54,6 +56,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   const [telemetryData, setTelemetryData] = useState<TelemetryData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isOnboarding, setIsOnboarding] = useState(false);
   
   const { user, isLoading: authLoading } = useAuth();
   const notificationService = user ? NotificationService.getInstance() : null;
@@ -602,6 +605,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       telemetryData,
       loading,
       error,
+      isOnboarding,
       updateDeviceStatus,
       addNotification,
       markNotificationAsRead,
@@ -616,7 +620,8 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       refreshRules,
       createDevice,
       assignDeviceToUser,
-      deleteDevice
+      deleteDevice,
+      setOnboardingState: setIsOnboarding
     }}>
       {children}
     </IoTContext.Provider>

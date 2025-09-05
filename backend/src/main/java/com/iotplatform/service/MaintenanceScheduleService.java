@@ -2,8 +2,10 @@ package com.iotplatform.service;
 
 import com.iotplatform.model.MaintenanceSchedule;
 import com.iotplatform.model.DeviceMaintenance;
+import com.iotplatform.model.Device;
 import com.iotplatform.repository.MaintenanceScheduleRepository;
 import com.iotplatform.repository.DeviceMaintenanceRepository;
+import com.iotplatform.repository.DeviceRepository;
 import com.iotplatform.dto.MaintenanceGenerationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,7 @@ public class MaintenanceScheduleService {
     private static final Logger log = LoggerFactory.getLogger(MaintenanceScheduleService.class);
     private final MaintenanceScheduleRepository maintenanceScheduleRepository;
     private final DeviceMaintenanceRepository deviceMaintenanceRepository;
+    private final DeviceRepository deviceRepository;
     
     // Simple frequency mapping for basic string formats
     private static final Map<String, java.time.temporal.ChronoUnit> FREQUENCY_MAP = Map.of(
@@ -763,5 +766,52 @@ public class MaintenanceScheduleService {
         log.info("Successfully assigned maintenance task: {} to user: {}", maintenance.getTaskName(), assigneeId);
         
         return savedMaintenance;
+    }
+    
+    /**
+     * Update device names for maintenance tasks that don't have them
+     */
+    public void updateDeviceNamesForMaintenanceTasks(String organizationId) {
+        log.info("Updating device names for maintenance tasks in organization: {}", organizationId);
+        
+        try {
+            // Get all maintenance tasks for the organization
+            List<DeviceMaintenance> maintenanceTasks = deviceMaintenanceRepository.findByOrganizationId(organizationId);
+            
+            int updatedCount = 0;
+            int skippedCount = 0;
+            
+            for (DeviceMaintenance maintenance : maintenanceTasks) {
+                // Check if deviceName is null or empty
+                if (maintenance.getDeviceName() == null || maintenance.getDeviceName().trim().isEmpty()) {
+                    // Get device information
+                    if (maintenance.getDevice() != null && maintenance.getDevice().getId() != null) {
+                        Optional<Device> deviceOpt = deviceRepository.findById(maintenance.getDevice().getId());
+                        if (deviceOpt.isPresent()) {
+                            maintenance.setDeviceName(deviceOpt.get().getName());
+                            deviceMaintenanceRepository.save(maintenance);
+                            updatedCount++;
+                            log.debug("Updated device name for maintenance task: {} to: {}", 
+                                    maintenance.getTaskName(), maintenance.getDeviceName());
+                        } else {
+                            log.warn("Device not found for maintenance task: {} with device ID: {}", 
+                                    maintenance.getTaskName(), maintenance.getDevice().getId());
+                            skippedCount++;
+                        }
+                    } else {
+                        log.warn("No device information for maintenance task: {}", maintenance.getTaskName());
+                        skippedCount++;
+                    }
+                } else {
+                    skippedCount++;
+                }
+            }
+            
+            log.info("Device name update completed - Updated: {}, Skipped: {}, Total: {}", 
+                    updatedCount, skippedCount, maintenanceTasks.size());
+                    
+        } catch (Exception e) {
+            log.error("Error updating device names for maintenance tasks", e);
+        }
     }
 }

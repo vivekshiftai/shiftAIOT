@@ -389,11 +389,17 @@ public class UnifiedOnboardingService {
             Optional<Device> device = deviceRepository.findById(deviceId);
             String deviceAssignee = device.map(Device::getAssignedUserId).orElse(null);
             
+            log.info("🔍 Device lookup for maintenance assignment - Device ID: {}, Assigned User: '{}'", deviceId, deviceAssignee);
+            log.info("🔍 Device details from DB - Device exists: {}, Device name: '{}', Device assignedUserId: '{}'", 
+                    device.isPresent(), 
+                    device.map(Device::getName).orElse("N/A"), 
+                    device.map(Device::getAssignedUserId).orElse("N/A"));
+            
             if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
-                log.info("🔧 Auto-assigning maintenance tasks to device assignee: {}", deviceAssignee);
+                log.info("🔧 Auto-assigning {} maintenance tasks to device assignee: {}", maintenanceResponse.getMaintenanceTasks().size(), deviceAssignee);
                 storeMaintenanceWithAutoAssignment(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId, deviceAssignee);
             } else {
-                log.warn("⚠️ No device assignee found, storing maintenance tasks without assignment");
+                log.warn("⚠️ No device assignee found for device: {}, storing {} maintenance tasks without assignment", deviceId, maintenanceResponse.getMaintenanceTasks().size());
                 maintenanceService.createMaintenanceFromPDF(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId);
             }
             log.info("✅ Stored {} maintenance items in database for device: {}", pdfResult.maintenanceItems, deviceId);
@@ -540,6 +546,9 @@ public class UnifiedOnboardingService {
                     if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
                         maintenance.setAssignedTo(deviceAssignee);
                         assignedCount++;
+                        log.info("✅ Maintenance task '{}' assigned to user: {}", taskTitle, deviceAssignee);
+                    } else {
+                        log.warn("⚠️ Maintenance task '{}' not assigned - no device assignee found", taskTitle);
                     }
                     
                     // Set dates

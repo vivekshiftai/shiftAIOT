@@ -193,7 +193,7 @@ export class UnifiedOnboardingService {
    * Prepare device data with proper validation and null handling
    */
   private prepareDeviceData(formData: any): any {
-    return {
+    const deviceData = {
          name: formData.deviceName || 'Unnamed Device',
          type: formData.type || 'SENSOR',
          status: formData.status || 'OFFLINE',
@@ -218,6 +218,14 @@ export class UnifiedOnboardingService {
          config: formData.config || {},
          assignedUserId: formData.assignedUserId || null
        };
+    
+    console.log('🔍 Frontend Device Data Preparation:', {
+      assignedUserId: deviceData.assignedUserId,
+      formDataAssignedUserId: formData.assignedUserId,
+      deviceName: deviceData.name
+    });
+    
+    return deviceData;
   }
 
   /**
