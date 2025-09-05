@@ -512,7 +512,7 @@ public class UnifiedOnboardingService {
                     }
                     
                     // Check if maintenance task already exists for this device
-                    Optional<DeviceMaintenance> existingMaintenance = deviceMaintenanceRepository
+                    Optional<DeviceMaintenance> existingMaintenance = maintenanceRepository
                         .findByDeviceIdAndTaskNameAndOrganizationId(deviceId, taskTitle, organizationId);
                     
                     if (existingMaintenance.isPresent()) {

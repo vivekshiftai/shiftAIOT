@@ -22,11 +22,12 @@ import java.util.concurrent.CompletableFuture;
  * @author IoT Platform Team
  * @version 1.0
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SlackNotificationService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(SlackNotificationService.class);
+    
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
@@ -106,16 +107,32 @@ public class SlackNotificationService {
             return "🔔";
         }
         
-        return switch (category) {
-            case DEVICE_ASSIGNMENT -> "📱";
-            case MAINTENANCE_ASSIGNMENT -> "🔧";
-            case MAINTENANCE_REMINDER -> "⏰";
-            case RULE_CREATION -> "📋";
-            case SAFETY_ALERT -> "⚠️";
-            case SYSTEM_ALERT -> "🚨";
-            case USER_ASSIGNMENT -> "👤";
-            default -> "🔔";
-        };
+        switch (category) {
+            case DEVICE_ASSIGNMENT:
+            case DEVICE_CREATION:
+            case DEVICE_UPDATE:
+                return "📱";
+            case MAINTENANCE_ASSIGNMENT:
+            case MAINTENANCE_SCHEDULE:
+            case MAINTENANCE_REMINDER:
+                return "🔧";
+            case RULE_TRIGGERED:
+            case RULE_CREATED:
+                return "📋";
+            case SAFETY_ALERT:
+                return "⚠️";
+            case SYSTEM_UPDATE:
+            case SECURITY_ALERT:
+            case PERFORMANCE_ALERT:
+                return "🚨";
+            case DEVICE_OFFLINE:
+            case DEVICE_ONLINE:
+            case TEMPERATURE_ALERT:
+            case BATTERY_LOW:
+                return "📊";
+            default:
+                return "🔔";
+        }
     }
 
     /**

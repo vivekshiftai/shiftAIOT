@@ -1510,64 +1510,6 @@ public class DeviceController {
         }
     }
 
-    /**
-     * Get onboarding progress for a device
-     */
-    @GetMapping("/{deviceId}/onboarding-progress")
-    @PreAuthorize("hasAuthority('DEVICE_READ')")
-    public ResponseEntity<Map<String, Object>> getOnboardingProgress(@PathVariable String deviceId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        if (userDetails == null || userDetails.getUser() == null) {
-            return ResponseEntity.status(401).build();
-        }
-        User user = userDetails.getUser();
-        
-        try {
-            String organizationId = user.getOrganizationId();
-            
-            Optional<Device> deviceOpt = deviceService.getDevice(deviceId, organizationId);
-            if (deviceOpt.isEmpty()) {
-                return ResponseEntity.notFound().build();
-            }
-            
-            Device device = deviceOpt.get();
-            
-            // Check if device has been processed with PDF
-            List<Rule> rules = pdfProcessingService.getDeviceRules(deviceId);
-            List<DeviceMaintenance> maintenance = pdfProcessingService.getDeviceMaintenance(deviceId);
-            List<DeviceSafetyPrecaution> safetyPrecautions = pdfProcessingService.getDeviceSafetyPrecautions(deviceId);
-            
-            Map<String, Object> progress = new HashMap<>();
-            
-            // Determine progress based on what's been processed
-            if (rules.isEmpty() && maintenance.isEmpty() && safetyPrecautions.isEmpty()) {
-                // Device created but no processing yet
-                progress.put("stage", "device");
-                progress.put("progress", 20);
-                progress.put("message", "Device created, processing PDF...");
-            } else if (rules.isEmpty() || maintenance.isEmpty() || safetyPrecautions.isEmpty()) {
-                // Partial processing
-                progress.put("stage", "processing");
-                progress.put("progress", 50);
-                progress.put("message", "Processing PDF content...");
-            } else {
-                // Complete
-                progress.put("stage", "complete");
-                progress.put("progress", 100);
-                progress.put("message", "Onboarding completed successfully");
-            }
-            
-            progress.put("rulesCount", rules.size());
-            progress.put("maintenanceCount", maintenance.size());
-            progress.put("safetyCount", safetyPrecautions.size());
-            progress.put("deviceName", device.getName());
-            
-            return ResponseEntity.ok(progress);
-            
-        } catch (Exception e) {
-            logger.error("Error retrieving onboarding progress for device: {}", deviceId, e);
-            return ResponseEntity.status(500).body(Map.of("error", "Failed to retrieve onboarding progress"));
-        }
-    }
 
     /**
      * Get device documentation for chat queries

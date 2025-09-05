@@ -15,11 +15,12 @@ import org.springframework.stereotype.Service;
  * @author IoT Platform Team
  * @version 1.0
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationInterceptorService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(NotificationInterceptorService.class);
+    
     private final SlackNotificationService slackNotificationService;
 
     /**
