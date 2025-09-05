@@ -377,12 +377,20 @@ export const DeviceDetailsSection: React.FC = () => {
     try {
       // Get device PDFs from unified PDF system
       try {
-        const pdfResponse = await pdfAPI.listPDFs(1, 100, device.id);
+        const pdfResponse = await pdfAPI.listPDFs(1, 100);
         
         if (pdfResponse.data.pdfs && pdfResponse.data.pdfs.length > 0) {
           const pdfDocuments = pdfResponse.data.pdfs;
           
-          const filteredPDFs: UnifiedPDF[] = pdfDocuments.map((doc: any) => ({
+          // Filter PDFs that are associated with the current device
+          const devicePDFs = pdfDocuments.filter((doc: any) => 
+            doc.device_id === device.id || 
+            doc.deviceId === device.id || 
+            doc.device_name === device.name ||
+            doc.deviceName === device.name
+          );
+          
+          const filteredPDFs: UnifiedPDF[] = devicePDFs.map((doc: any) => ({
             id: doc.id,
             name: doc.filename || doc.name,
             originalFilename: doc.filename || doc.name,
@@ -419,7 +427,15 @@ export const DeviceDetailsSection: React.FC = () => {
           
           logInfo('DeviceDetails', 'No PDFs found for device in unified system', { deviceId: device.id });
         }
-      } catch (pdfError) {
+      } catch (pdfError: any) {
+        // Check if it's a 404 error from external service
+        if (pdfError?.response?.status === 404 || pdfError?.message?.includes('404')) {
+          logInfo('DeviceDetails', 'External PDF service not available (404) - continuing without PDFs', { deviceId: device.id });
+          setDevicePDFs([]);
+          setInitialChatMessage(`I don't have access to PDF documents for ${device.name} at the moment. The PDF service is temporarily unavailable. You can still ask general questions about device management.`);
+          return;
+        }
+        
         logError('DeviceDetails', 'Failed to load PDFs from unified system, trying fallback', pdfError instanceof Error ? pdfError : new Error('Unknown error'));
         
         // Fallback to device API method

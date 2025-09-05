@@ -219,10 +219,12 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             HttpHeaders headers = createHeaders();
             HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
             
-            log.debug("Fetching PDF list from external service: {}", config.getBaseUrl() + "/list");
+            // Build URL with query parameters
+            String url = config.getBaseUrl() + "/pdfs?page=" + page + "&limit=" + size;
+            log.debug("Fetching PDF list from external service: {}", url);
             
             ResponseEntity<PDFListResponse> response = restTemplate.exchange(
-                config.getBaseUrl() + "/list",
+                url,
                 HttpMethod.GET,
                 requestEntity,
                 PDFListResponse.class
@@ -237,6 +239,20 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             
             return listResponse;
 
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                log.warn("External PDF service not available (404) - returning empty PDF list for organization: {}", organizationId);
+                // Return empty PDF list instead of throwing exception
+                return PDFListResponse.builder()
+                    .pdfs(new ArrayList<>())
+                    .totalCount(0)
+                    .page(page)
+                    .size(size)
+                    .build();
+            } else {
+                log.error("HTTP error while listing PDFs: {} - {}", e.getStatusCode(), e.getMessage());
+                throw new PDFProcessingException("Failed to list PDFs: HTTP " + e.getStatusCode(), e);
+            }
         } catch (Exception e) {
             log.error("Failed to list PDFs: {}", e.getMessage(), e);
             throw new PDFProcessingException("Failed to list PDFs", e);

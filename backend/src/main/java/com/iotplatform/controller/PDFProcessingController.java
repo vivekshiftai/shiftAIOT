@@ -700,21 +700,35 @@ public class PDFProcessingController {
         log.info("List all collections request received");
         
         try {
-            // Call external service directly
-            String url = config.getBaseUrl() + "/debug/collections";
+            // Call external service directly - use same endpoint as PDF list
+            String url = config.getBaseUrl() + "/pdfs?page=0&limit=1000";
             ResponseEntity<Object> response = restTemplate.getForEntity(url, Object.class);
             
             log.info("List all collections completed successfully");
             return ResponseEntity.ok(response.getBody());
             
         } catch (org.springframework.web.client.HttpClientErrorException e) {
-            log.error("HTTP client error when listing collections: {}", e.getMessage());
-            return ResponseEntity.status(e.getStatusCode())
-                .body(ErrorResponse.of("External service error: " + e.getMessage()));
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                log.warn("External PDF service not available (404) - returning empty collections list");
+                // Return empty collections list instead of error
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "collections", new ArrayList<>(),
+                    "totalCount", 0
+                ));
+            } else {
+                log.error("HTTP client error when listing collections: {}", e.getMessage());
+                return ResponseEntity.status(e.getStatusCode())
+                    .body(ErrorResponse.of("External service error: " + e.getMessage()));
+            }
         } catch (org.springframework.web.client.ResourceAccessException e) {
-            log.error("Resource access error when listing collections: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(ErrorResponse.of("External service unavailable: " + e.getMessage()));
+            log.warn("External PDF service unavailable - returning empty collections list");
+            // Return empty collections list instead of error
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "collections", new ArrayList<>(),
+                "totalCount", 0
+            ));
         } catch (Exception e) {
             log.error("Unexpected error when listing collections: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
