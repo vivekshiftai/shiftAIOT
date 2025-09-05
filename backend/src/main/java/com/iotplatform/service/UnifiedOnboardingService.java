@@ -384,8 +384,18 @@ public class UnifiedOnboardingService {
             log.info("Maintenance schedule generated successfully: {} maintenance items created", 
                     pdfResult.maintenanceItems);
             
-            // Store maintenance schedule in database
-            maintenanceService.createMaintenanceFromPDF(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId);
+            // Store maintenance schedule in database with auto-assignment to device assignee
+            // Get device to find the assigned user
+            Optional<Device> device = deviceRepository.findById(deviceId);
+            String deviceAssignee = device.map(Device::getAssignedUserId).orElse(null);
+            
+            if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
+                log.info("🔧 Auto-assigning maintenance tasks to device assignee: {}", deviceAssignee);
+                storeMaintenanceWithAutoAssignment(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId, deviceAssignee);
+            } else {
+                log.warn("⚠️ No device assignee found, storing maintenance tasks without assignment");
+                maintenanceService.createMaintenanceFromPDF(maintenanceResponse.getMaintenanceTasks(), deviceId, organizationId);
+            }
             log.info("✅ Stored {} maintenance items in database for device: {}", pdfResult.maintenanceItems, deviceId);
             
             // Send progress update for maintenance completion
@@ -593,6 +603,39 @@ public class UnifiedOnboardingService {
             
             log.info("✅ Maintenance tasks processing completed for device: {} - Processed: {}, Skipped: {}, Assigned: {}", 
                      deviceId, processedCount, skippedCount, assignedCount);
+            
+            // Send notification to assigned user about new maintenance tasks
+            if (assignedCount > 0 && deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
+                try {
+                    Optional<Device> device = deviceRepository.findById(deviceId);
+                    String deviceName = device.map(Device::getName).orElse("Unknown Device");
+                    
+                    Notification notification = new Notification();
+                    notification.setUserId(deviceAssignee);
+                    notification.setTitle("New Maintenance Tasks Assigned");
+                    notification.setMessage(String.format(
+                        "You have been assigned %d new maintenance task%s for device '%s' during onboarding. " +
+                        "Please review and schedule these tasks accordingly.",
+                        assignedCount, assignedCount > 1 ? "s" : "", deviceName
+                    ));
+                    notification.setCategory(Notification.NotificationCategory.MAINTENANCE_ASSIGNMENT);
+                    notification.setOrganizationId(organizationId);
+                    notification.setDeviceId(deviceId);
+                    notification.setRead(false);
+                    
+                    Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(deviceAssignee, notification);
+                    if (createdNotification.isPresent()) {
+                        log.info("✅ Created maintenance assignment notification for user: {} for {} tasks on device: {}", 
+                               deviceAssignee, assignedCount, deviceName);
+                    } else {
+                        log.info("⚠️ Maintenance assignment notification blocked by user preferences for user: {}", deviceAssignee);
+                    }
+                } catch (Exception e) {
+                    log.error("❌ Failed to create maintenance assignment notification for user: {} device: {}", 
+                             deviceAssignee, deviceId, e);
+                    // Don't fail the entire process if notification fails
+                }
+            }
             
         } catch (Exception e) {
             log.error("❌ Failed to store maintenance tasks for device: {} - {}", deviceId, e.getMessage(), e);
