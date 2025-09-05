@@ -148,6 +148,7 @@ export class UnifiedOnboardingService {
   private prepareDeviceData(formData: any): any {
     const deviceData = {
          name: formData.deviceName || 'Unnamed Device',
+         type: formData.deviceType || formData.type || 'SENSOR', // Default to SENSOR if not provided
          status: formData.status || 'ONLINE',
          location: formData.location || 'Unknown Location',
       protocol: formData.connectionType || 'HTTP',

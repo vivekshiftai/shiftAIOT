@@ -10,6 +10,7 @@ import { mapBackendStageToStep } from '../../utils/onboardingSteps.tsx';
 
 interface DeviceFormData {
   deviceName: string;
+  deviceType: 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER' | 'MACHINE';
   location: string;
   manufacturer: string;
   assignedUserId?: string;
@@ -62,6 +63,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [formData, setFormData] = useState<DeviceFormData>({
     deviceName: '',
+    deviceType: 'SENSOR',
     location: '',
     manufacturer: '',
     assignedUserId: '',
@@ -210,6 +212,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
     if (step === 1) {
       if (!formData.deviceName.trim()) newErrors.deviceName = 'Device name is required';
+      if (!formData.deviceType) newErrors.deviceType = 'Device type is required';
       if (!formData.location.trim()) newErrors.location = 'Location is required';
       if (!formData.manufacturer.trim()) newErrors.manufacturer = 'Manufacturer is required';
       
@@ -234,7 +237,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formData.deviceName, formData.location, formData.manufacturer, formData.connectionType, formData.brokerUrl, formData.topic, formData.httpEndpoint, formData.coapHost, currentUser]); // Specific dependencies instead of entire formData object
+  }, [formData.deviceName, formData.deviceType, formData.location, formData.manufacturer, formData.connectionType, formData.brokerUrl, formData.topic, formData.httpEndpoint, formData.coapHost, currentUser]); // Specific dependencies instead of entire formData object
 
   const nextStep = useCallback(() => {
     if (validateStep(currentStep)) {
@@ -483,6 +486,34 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           />
           {errors.deviceName && (
             <p className="text-red-600 text-sm mt-2">{errors.deviceName}</p>
+          )}
+        </div>
+
+        {/* Device Type */}
+        <div className="space-y-3">
+          <label className="block text-sm font-bold text-gray-700">
+            Device Type *
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            {(['SENSOR', 'ACTUATOR', 'GATEWAY', 'CONTROLLER', 'MACHINE'] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleInputChange('deviceType', type)}
+                className={`p-3 rounded-xl border-2 transition-all duration-300 shadow-sm hover:shadow-md ${
+                  formData.deviceType === type
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-lg'
+                    : 'border-gray-300 hover:border-gray-400 bg-white text-gray-700 hover:text-gray-900'
+                }`}
+              >
+                <div className="text-center">
+                  <div className="text-sm font-bold">{type}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+          {errors.deviceType && (
+            <p className="text-red-600 text-sm mt-2">{errors.deviceType}</p>
           )}
         </div>
 

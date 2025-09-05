@@ -238,6 +238,8 @@ export const DeviceDetailsSection: React.FC = () => {
   const navigate = useNavigate();
   const { devices, updateDeviceStatus } = useIoT();
   const { hasPermission } = useAuth();
+  
+  console.log('🔍 DeviceDetailsSection: Component loaded', { deviceId, devicesCount: devices.length });
   const [activeTab, setActiveTab] = useState('device-info');
   const [isTabLoading, setIsTabLoading] = useState(false);
   const [documentationInfo, setDocumentationInfo] = useState<DocumentationInfo | null>(null);
@@ -274,6 +276,7 @@ export const DeviceDetailsSection: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const device = devices.find(d => d.id === deviceId);
+  console.log('🔍 Device lookup result', { deviceId, deviceFound: !!device, deviceName: device?.name, totalDevices: devices.length });
   
   // Get user display name for assigned user
   const { displayName: assignedUserName, loading: userNameLoading } = useUserDisplayName(device?.assignedUserId);
@@ -364,7 +367,11 @@ export const DeviceDetailsSection: React.FC = () => {
   };
 
   const loadDevicePDFs = async () => {
-    if (!device) return;
+    console.log('🔍 loadDevicePDFs: Function called', { device: device?.name, deviceId: device?.id });
+    if (!device) {
+      console.log('🔍 loadDevicePDFs: No device found, returning early');
+      return;
+    }
     
     // Check authentication before making the request
     const token = tokenService.getToken();
@@ -378,6 +385,8 @@ export const DeviceDetailsSection: React.FC = () => {
       // Get device PDFs from unified PDF system
       try {
         const pdfResponse = await pdfAPI.listPDFs(1, 100);
+        console.log('Device PDF response:', pdfResponse);
+        console.log('Device PDF response data:', pdfResponse.data);
         
         if (pdfResponse.data.pdfs && pdfResponse.data.pdfs.length > 0) {
           const pdfDocuments = pdfResponse.data.pdfs;
@@ -410,6 +419,7 @@ export const DeviceDetailsSection: React.FC = () => {
           }));
           
           setDevicePDFs(filteredPDFs);
+          console.log('Filtered device PDFs:', filteredPDFs);
           
           // Update initial chat message if PDFs are found
           if (filteredPDFs.length > 0) {
@@ -422,6 +432,62 @@ export const DeviceDetailsSection: React.FC = () => {
             filteredPDFs: filteredPDFs.length 
           });
         } else {
+          console.log('No PDFs found in list API, trying collections API as fallback...');
+          
+          // Try collections API as fallback
+          try {
+            const collectionsResponse = await pdfAPI.listAllCollections();
+            console.log('Collections fallback response:', collectionsResponse);
+            
+            if (collectionsResponse.data && Array.isArray(collectionsResponse.data.pdfs)) {
+              const allPDFs = collectionsResponse.data.pdfs;
+              console.log('All PDFs from collections:', allPDFs);
+              
+              // Filter PDFs that might be related to this device (by name matching)
+              const devicePDFs = allPDFs.filter((doc: any) => {
+                const docName = doc.name || doc.pdf_name || doc.collection_name || '';
+                const deviceName = device.name.toLowerCase();
+                return docName.toLowerCase().includes(deviceName) || 
+                       deviceName.includes(docName.toLowerCase());
+              });
+              
+              console.log('Device-related PDFs from collections:', devicePDFs);
+              
+              if (devicePDFs.length > 0) {
+                const filteredPDFs: UnifiedPDF[] = devicePDFs.map((doc: any) => ({
+                  id: doc.collection_name || doc.id || doc.name,
+                  name: doc.pdf_name || doc.name || doc.collection_name,
+                  originalFilename: doc.pdf_name || doc.name || doc.collection_name,
+                  documentType: 'pdf',
+                  fileSize: doc.size || doc.file_size || 0,
+                  processingStatus: doc.status || doc.processing_status || 'completed',
+                  vectorized: doc.vectorized !== false,
+                  uploadedAt: doc.created_at || doc.uploadedAt || new Date().toISOString(),
+                  processedAt: doc.created_at || doc.processedAt || new Date().toISOString(),
+                  deviceId: device.id,
+                  deviceName: device.name,
+                  organizationId: device.organizationId || 'public',
+                  collectionName: doc.collection_name,
+                  totalPages: doc.total_pages || doc.totalPages,
+                  processedChunks: doc.chunk_count || doc.chunkCount || 0,
+                  processingTime: doc.processing_time || doc.processingTime
+                }));
+                
+                setDevicePDFs(filteredPDFs);
+                setInitialChatMessage(`I found ${filteredPDFs.length} PDF document(s) that might be related to ${device.name}. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!`);
+                
+                logInfo('DeviceDetails', 'Device PDFs loaded from collections API fallback', { 
+                  deviceId: device.id, 
+                  totalPDFs: allPDFs.length,
+                  filteredPDFs: filteredPDFs.length 
+                });
+                return;
+              }
+            }
+          } catch (collectionsError) {
+            console.log('Collections API fallback also failed:', collectionsError);
+          }
+          
           setDevicePDFs([]);
           setInitialChatMessage(`I don't have any PDF documents specifically associated with ${device.name} yet. To enable AI-powered assistance, upload device manuals, datasheets, or other documentation in the Knowledge Base section.`);
           
@@ -518,9 +584,11 @@ export const DeviceDetailsSection: React.FC = () => {
 
   // Main data loading effect
   useEffect(() => {
+    console.log('🔍 Main data loading useEffect triggered', { device: device?.name, deviceId, isInitialLoading });
           // useEffect triggered with device data
     
     if (device && deviceId) {
+      console.log('🔍 Starting data loading for device', { deviceName: device.name, deviceId });
               // Starting data loading for device
       setIsInitialLoading(true);
       
@@ -643,8 +711,8 @@ export const DeviceDetailsSection: React.FC = () => {
     CONTROLLER: { icon: Settings, label: 'Controller' }
   };
 
-  const statusInfo = statusConfig[device.status];
-  const deviceTypeInfo = deviceTypeConfig[device.type];
+  const statusInfo = statusConfig[device.status as keyof typeof statusConfig];
+  const deviceTypeInfo = deviceTypeConfig[device.type as keyof typeof deviceTypeConfig];
 
   const formatLastSeen = (timestamp: string) => {
     const diff = Date.now() - new Date(timestamp).getTime();

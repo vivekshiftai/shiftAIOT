@@ -173,6 +173,8 @@ export const KnowledgeSection: React.FC = () => {
         try {
           const collectionsResponse = await pdfAPI.listAllCollections();
           console.log('Collections response:', collectionsResponse);
+          console.log('Collections response data:', collectionsResponse.data);
+          console.log('Collections response data type:', typeof collectionsResponse.data);
           
           // Handle both response formats from external service
           let collections = [];
@@ -185,18 +187,25 @@ export const KnowledgeSection: React.FC = () => {
           } else if (Array.isArray(collectionsResponse.data)) {
             // Direct array format: [...]
             collections = collectionsResponse.data;
+          } else if (collectionsResponse.data && Array.isArray(collectionsResponse.data.pdfs)) {
+            // External service format: { pdfs: [...] }
+            collections = collectionsResponse.data.pdfs;
           } else {
             console.error('Unexpected collections response format:', collectionsResponse.data);
+            console.log('Available keys in response data:', Object.keys(collectionsResponse.data || {}));
             throw new Error('Invalid collections response format');
           }
 
+          console.log('Collections array:', collections);
+          console.log('First collection item:', collections[0]);
+          
           const convertedDocuments: UnifiedPDF[] = collections.map((collection: any, index: number) => ({
-            id: collection.collection_name || collection.id || index.toString(),
+            id: collection.collection_name || collection.id || collection.name || index.toString(),
             name: collection.pdf_name || collection.name || collection.collection_name || `PDF_${index}`,
             originalFilename: collection.pdf_name || collection.name || collection.collection_name || `PDF_${index}`,
             documentType: 'pdf',
-            fileSize: collection.size || 0,
-            processingStatus: collection.status || 'completed',
+            fileSize: collection.size || collection.file_size || 0,
+            processingStatus: collection.status || collection.processing_status || 'completed',
             vectorized: collection.vectorized !== false, // Default to true unless explicitly false
             uploadedAt: collection.created_at || collection.uploadedAt || new Date().toISOString(),
             processedAt: collection.created_at || collection.processedAt || new Date().toISOString(),
@@ -208,6 +217,8 @@ export const KnowledgeSection: React.FC = () => {
             processedChunks: collection.chunk_count || collection.chunkCount || 0,
             processingTime: collection.processing_time || collection.processingTime
           }));
+          
+          console.log('Converted documents:', convertedDocuments);
           setDocuments(convertedDocuments);
           logInfo('Knowledge', 'PDF documents loaded from external collections', { count: convertedDocuments.length });
         } catch (collectionsError) {
