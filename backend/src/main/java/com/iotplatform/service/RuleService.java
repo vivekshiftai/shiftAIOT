@@ -365,10 +365,19 @@ public class RuleService {
         System.out.println("Creating rules from PDF for device: " + deviceId);
         
         int processedCount = 0;
+        int skippedCount = 0;
         
         for (RulesGenerationResponse.Rule ruleData : rules) {
             try {
                 String ruleName = ruleData.getName();
+                
+                // Check if rule already exists for this device (deviceId + name)
+                Optional<Rule> existingRule = ruleRepository.findByDeviceIdAndNameAndOrganizationId(deviceId, ruleName, organizationId);
+                if (existingRule.isPresent()) {
+                    System.out.println("⚠️ Rule '" + ruleName + "' already exists for device: " + deviceId + ", skipping");
+                    skippedCount++;
+                    continue;
+                }
                 
                 Rule rule = new Rule();
                 rule.setId(UUID.randomUUID().toString());
@@ -394,6 +403,6 @@ public class RuleService {
             }
         }
         
-        System.out.println("Rules processing completed for device: " + deviceId + " - Processed: " + processedCount);
+        System.out.println("Rules processing completed for device: " + deviceId + " - Processed: " + processedCount + ", Skipped: " + skippedCount);
     }
 }

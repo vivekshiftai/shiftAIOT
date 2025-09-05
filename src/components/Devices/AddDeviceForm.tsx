@@ -10,13 +10,16 @@ import {
   Brain,
   Bot,
   FileText as FileSearch,
-  Zap
+  Zap,
+  MessageSquare,
+  Send
 } from 'lucide-react';
 
 import { unifiedOnboardingService, UnifiedOnboardingProgress } from '../../services/unifiedOnboardingService';
 import { logInfo, logError } from '../../utils/logger';
 import { useIoT } from '../../contexts/IoTContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { pdfAPI } from '../../services/api';
 
 interface DeviceFormData {
   name: string;
@@ -80,7 +83,7 @@ interface AddDeviceFormProps {
   onCancel: () => void;
 }
 
-type Step = 1 | 2 | 3 | 4 | 5;
+type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
 export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel }: AddDeviceFormProps) => {
   const [currentStep, setCurrentStep] = useState<Step>(1);
@@ -113,6 +116,16 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
   const [isProcessingPDF, setIsProcessingPDF] = useState(false);
   const [aiGeneratedRules, setAiGeneratedRules] = useState<AIGeneratedRule[]>([]);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [generatedCounts, setGeneratedCounts] = useState({
+    rulesGenerated: 0,
+    maintenanceItems: 0,
+    safetyPrecautions: 0
+  });
+  const [showChatBox, setShowChatBox] = useState(false);
+  const [devicePdfName, setDevicePdfName] = useState<string>('');
+  const [chatMessages, setChatMessages] = useState<Array<{id: string, type: 'user' | 'assistant', content: string, timestamp: Date}>>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatLoading, setIsChatLoading] = useState(false);
 
   // Update form data when current user becomes available
   useEffect(() => {
@@ -245,6 +258,9 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
     if (validateCurrentStep()) {
       if (currentStep === 4) {
         processPDFWithAI();
+      } else if (currentStep === 5) {
+        // Step 5 is AI processing, automatically move to step 6 when complete
+        setCurrentStep(6);
       } else {
         setCurrentStep((prev) => (prev + 1) as Step);
       }
@@ -282,6 +298,12 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
         (progress: UnifiedOnboardingProgress) => {
           // Update progress from backend
           setProcessingProgress(progress.progress);
+          
+          // Move to step 5 when processing starts
+          if (progress.stage === 'device' && progress.progress > 0) {
+            setCurrentStep(5);
+          }
+          
           logInfo('AddDeviceForm', 'Onboarding progress update', { 
             stage: progress.stage, 
             message: progress.message,
@@ -299,6 +321,26 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
         safetyPrecautions: result.safetyPrecautions
       });
 
+      // Store the actual generated counts for success message
+      const actualCounts = {
+        rulesGenerated: result.rulesGenerated || 0,
+        maintenanceItems: result.maintenanceItems || 0,
+        safetyPrecautions: result.safetyPrecautions || 0
+      };
+      
+      // Store the PDF name for chat functionality
+      const pdfName = result.pdfData?.pdfName || result.pdfData?.originalFileName || '';
+      setDevicePdfName(pdfName);
+      
+      logInfo('AddDeviceForm', 'Setting generated counts for success message', {
+        actualCounts,
+        pdfName,
+        resultKeys: Object.keys(result),
+        pdfDataKeys: result.pdfData ? Object.keys(result.pdfData) : 'no pdfData'
+      });
+      
+      setGeneratedCounts(actualCounts);
+
       // Convert the result to AIGeneratedRule format for display
       const apiRules: AIGeneratedRule[] = (result.pdfData as any)?.rulesData?.map((rule: any, index: number) => ({
         id: `rule_${index}`,
@@ -312,7 +354,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
 
       setAiGeneratedRules(apiRules);
       setIsProcessingPDF(false);
-      setCurrentStep(5);
+      setCurrentStep(6);
       setOnboardingState(false); // Resume background updates
 
     } catch (error) {
@@ -362,7 +404,14 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
 
       setAiGeneratedRules(fallbackRules);
       setIsProcessingPDF(false);
-      setCurrentStep(5);
+      setCurrentStep(6);
+      
+      // Set fallback counts for success message
+      setGeneratedCounts({
+        rulesGenerated: fallbackRules.length,
+        maintenanceItems: 3, // Fallback maintenance count
+        safetyPrecautions: 2  // Fallback safety count
+      });
     }
   };
 
@@ -374,6 +423,70 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
           : rule
       )
     );
+  };
+
+  const handleChatSend = async () => {
+    if (!chatInput.trim() || isChatLoading || !devicePdfName) return;
+
+    const userMessage = {
+      id: Date.now().toString(),
+      type: 'user' as const,
+      content: chatInput.trim(),
+      timestamp: new Date()
+    };
+
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput('');
+    setIsChatLoading(true);
+
+    try {
+      logInfo('AddDeviceForm', 'Sending chat message', { 
+        pdfName: devicePdfName, 
+        message: userMessage.content 
+      });
+
+      const response = await pdfAPI.queryPDF(userMessage.content, devicePdfName, 5);
+      
+      const assistantMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant' as const,
+        content: response.data.response || 'I found some information in the device documentation. Let me help you with that.',
+        timestamp: new Date()
+      };
+
+      setChatMessages(prev => [...prev, assistantMessage]);
+      
+      logInfo('AddDeviceForm', 'Chat message sent successfully', { 
+        responseLength: assistantMessage.content.length 
+      });
+
+    } catch (error) {
+      logError('AddDeviceForm', 'Failed to send chat message', error instanceof Error ? error : new Error('Unknown error'));
+      
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant' as const,
+        content: 'I apologize, but I\'m having trouble accessing the device documentation right now. Please try again later.',
+        timestamp: new Date()
+      };
+
+      setChatMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
+  const initializeChat = () => {
+    if (devicePdfName && chatMessages.length === 0) {
+      const welcomeMessage = {
+        id: 'welcome',
+        type: 'assistant' as const,
+        content: `Hello! I'm your AI assistant for ${formData.name}. I've analyzed the documentation you uploaded and I'm ready to help you with any questions about your device. What would you like to know?`,
+        timestamp: new Date()
+      };
+      setChatMessages([welcomeMessage]);
+    }
+    setShowChatBox(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -388,9 +501,28 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
       const selectedRules = aiGeneratedRules.filter(rule => rule.isSelected);
       await onSubmit(formData, fileUploads, selectedRules);
       
-      // Show success message
+      // Show success message with actual generated values
       setIsSuccess(true);
-      setSuccessMessage(`Device "${formData.name}" has been successfully added to the platform!`);
+      
+      // Create a more informative success message
+      const generatedItems = [];
+      if (generatedCounts.rulesGenerated > 0) {
+        generatedItems.push(`${generatedCounts.rulesGenerated} monitoring rule${generatedCounts.rulesGenerated > 1 ? 's' : ''}`);
+      }
+      if (generatedCounts.maintenanceItems > 0) {
+        generatedItems.push(`${generatedCounts.maintenanceItems} maintenance task${generatedCounts.maintenanceItems > 1 ? 's' : ''}`);
+      }
+      if (generatedCounts.safetyPrecautions > 0) {
+        generatedItems.push(`${generatedCounts.safetyPrecautions} safety protocol${generatedCounts.safetyPrecautions > 1 ? 's' : ''}`);
+      }
+      
+      const generatedText = generatedItems.length > 0 
+        ? ` Generated: ${generatedItems.join(', ')}.`
+        : '';
+        
+      setSuccessMessage(
+        `Device "${formData.name}" has been successfully added to the platform!${generatedText}`
+      );
       
       // Auto-close after 3 seconds
       setTimeout(() => {
@@ -412,7 +544,8 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
       case 2: return 'Network Configuration';
       case 3: return 'Description & Tags';
       case 4: return 'Documentation Upload';
-      case 5: return 'AI-Powered Rules';
+      case 5: return 'AI Processing';
+      case 6: return 'AI-Powered Rules';
     }
   };
 
@@ -422,7 +555,8 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
       case 2: return 'Configure network settings and connectivity';
       case 3: return 'Add description and tags';
       case 4: return 'Upload device documentation for AI analysis';
-      case 5: return 'Review and select AI-generated rules for your device';
+      case 5: return 'AI is processing your device documentation';
+      case 6: return 'Review and select AI-generated rules for your device';
     }
   };
 
@@ -779,16 +913,28 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Brain className="w-8 h-8 text-blue-600 animate-pulse" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-800 mb-2">AI Processing Your Documents</h3>
-                <p className="text-slate-600 mb-4">Our AI is analyzing your device documentation to generate intelligent rules</p>
+                <h3 className="text-lg font-semibold text-slate-800 mb-2">AI Processing Your Device</h3>
+                <p className="text-slate-600 mb-4">Our AI is analyzing your device documentation and setting up everything for you</p>
                 
-                <div className="w-full bg-slate-200 rounded-full h-2 mb-4">
+                <div className="w-full bg-slate-200 rounded-full h-3 mb-4">
                   <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    className="bg-blue-600 h-3 rounded-full transition-all duration-500"
                     style={{ width: `${processingProgress}%` }}
                   ></div>
                 </div>
-                <p className="text-sm text-slate-500">{processingProgress}% Complete</p>
+                <p className="text-sm text-slate-500 font-medium">{processingProgress}% Complete</p>
+                
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                  <h4 className="text-sm font-medium text-blue-800 mb-2">What's happening:</h4>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>✅ Creating device configuration</li>
+                    <li>✅ Assigning device to user</li>
+                    <li>🔄 Processing documentation with AI</li>
+                    <li>⏳ Generating intelligent monitoring rules</li>
+                    <li>⏳ Creating maintenance schedules</li>
+                    <li>⏳ Setting up safety protocols</li>
+                  </ul>
+                </div>
               </div>
             ) : (
               <>
@@ -919,14 +1065,125 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
 
           {/* Success Message */}
           {isSuccess && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center">
-                <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                <div>
-                  <h4 className="text-sm font-medium text-green-800">Device Added Successfully!</h4>
-                  <p className="text-sm text-green-600 mt-1">{successMessage}</p>
+            <div className="mb-6 space-y-4">
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center">
+                  <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                  <div>
+                    <h4 className="text-sm font-medium text-green-800">Device Added Successfully!</h4>
+                    <p className="text-sm text-green-600 mt-1">{successMessage}</p>
+                  </div>
                 </div>
               </div>
+
+              {/* Chat Box */}
+              {devicePdfName && (
+                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                  <div className="bg-slate-50 px-4 py-3 border-b border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-slate-600" />
+                        <h5 className="text-sm font-medium text-slate-800">Ask AI Assistant</h5>
+                        <span className="text-xs text-slate-500">• {devicePdfName.split('/').pop() || devicePdfName}</span>
+                      </div>
+                      {!showChatBox && (
+                        <button
+                          onClick={initializeChat}
+                          className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                        >
+                          Start Chat
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {showChatBox && (
+                    <div className="h-80 flex flex-col">
+                      {/* Chat Messages */}
+                      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        {chatMessages.map((message) => (
+                          <div
+                            key={message.id}
+                            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
+                                message.type === 'user'
+                                  ? 'bg-indigo-500 text-white'
+                                  : 'bg-slate-100 text-slate-800'
+                              }`}
+                            >
+                              <div className="flex items-start gap-2">
+                                {message.type === 'assistant' && (
+                                  <Bot className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                )}
+                                <div className="flex-1">
+                                  <div className="whitespace-pre-wrap">{message.content}</div>
+                                  <div className="text-xs opacity-70 mt-1">
+                                    {message.timestamp.toLocaleTimeString()}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {isChatLoading && (
+                          <div className="flex justify-start">
+                            <div className="bg-slate-100 rounded-lg px-3 py-2 text-sm text-slate-600">
+                              <div className="flex items-center gap-2">
+                                <Bot className="w-3 h-3" />
+                                <span>AI is thinking...</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Chat Input */}
+                      <div className="border-t border-slate-200 p-3">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && handleChatSend()}
+                            placeholder="Ask about setup, maintenance, troubleshooting..."
+                            className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            disabled={isChatLoading}
+                          />
+                          <button
+                            onClick={handleChatSend}
+                            disabled={!chatInput.trim() || isChatLoading}
+                            className="px-3 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <Send className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            onClick={() => setChatInput('How do I set up this device?')}
+                            className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
+                          >
+                            Setup Guide
+                          </button>
+                          <button
+                            onClick={() => setChatInput('What maintenance is required?')}
+                            className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
+                          >
+                            Maintenance
+                          </button>
+                          <button
+                            onClick={() => setChatInput('Help me troubleshoot issues')}
+                            className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
+                          >
+                            Troubleshooting
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

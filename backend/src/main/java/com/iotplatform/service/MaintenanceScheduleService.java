@@ -307,6 +307,18 @@ public class MaintenanceScheduleService {
         
         log.info("🔍 Device lookup for maintenance assignment - Device ID: {}, Assigned User: '{}'", deviceId, deviceAssignee);
         
+        // Additional validation - ensure device exists and has assigned user
+        if (!device.isPresent()) {
+            log.error("❌ CRITICAL: Device not found in database during maintenance assignment! Device ID: {}", deviceId);
+            throw new RuntimeException("Device not found during maintenance assignment: " + deviceId);
+        }
+        
+        if (deviceAssignee == null || deviceAssignee.trim().isEmpty()) {
+            log.error("❌ CRITICAL: Device has no assigned user! Device ID: {}, Device Name: '{}'", 
+                     deviceId, device.get().getName());
+            log.error("❌ This means the device was created without proper user assignment!");
+        }
+        
         int processedCount = 0;
         int skippedCount = 0;
         int assignedCount = 0;
@@ -361,6 +373,14 @@ public class MaintenanceScheduleService {
                     continue;
                 }
                 
+                // Check if maintenance task already exists for this device (deviceId + taskName)
+                Optional<DeviceMaintenance> existingMaintenance = deviceMaintenanceRepository
+                    .findByDeviceIdAndTaskNameAndOrganizationId(deviceId, taskTitle, organizationId);
+                if (existingMaintenance.isPresent()) {
+                    log.info("⚠️ Maintenance task '{}' already exists for device: {}, skipping", taskTitle, deviceId);
+                    skippedCount++;
+                    continue;
+                }
                 
                 // All required fields are present, create maintenance task
                 DeviceMaintenance maintenance = new DeviceMaintenance();

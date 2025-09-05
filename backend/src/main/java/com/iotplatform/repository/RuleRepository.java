@@ -20,6 +20,8 @@ public interface RuleRepository extends JpaRepository<Rule, String> {
     
     List<Rule> findByDeviceIdAndOrganizationId(String deviceId, String organizationId);
     
+    @Query("SELECT r FROM Rule r WHERE r.deviceId = :deviceId AND r.name = :name AND r.organizationId = :organizationId")
+    Optional<Rule> findByDeviceIdAndNameAndOrganizationId(@Param("deviceId") String deviceId, @Param("name") String name, @Param("organizationId") String organizationId);
     
     void deleteByDeviceId(String deviceId);
 }

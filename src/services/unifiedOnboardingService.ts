@@ -1,10 +1,9 @@
 import { getApiConfig } from '../config/api';
-import { logInfo, logError, logWarn } from '../utils/logger';
+import { logInfo, logError } from '../utils/logger';
 import { deviceAPI } from './api';
-import { tokenService } from '../services/tokenService';
 
 export interface UnifiedOnboardingProgress {
-  stage: 'upload' | 'device' | 'rules' | 'maintenance' | 'safety' | 'complete';
+  stage: 'device' | 'assignment' | 'upload' | 'rules' | 'maintenance' | 'safety' | 'complete';
   progress: number;
   message: string;
   subMessage?: string;
@@ -69,14 +68,6 @@ export class UnifiedOnboardingService {
   ): Promise<UnifiedOnboardingResult> {
     const startTime = Date.now();
     const errors: string[] = [];
-    const processingSteps: PDFProcessingStep[] = [
-      { name: 'Device Creation', status: 'pending' },
-      { name: 'PDF Upload', status: 'pending' },
-      { name: 'Rules Generation', status: 'pending' },
-      { name: 'Maintenance Generation', status: 'pending' },
-      { name: 'Safety Generation', status: 'pending' },
-      { name: 'Finalization', status: 'pending' }
-    ];
     
     try {
       logInfo('UnifiedOnboarding', 'Starting unified onboarding process', {
@@ -138,7 +129,6 @@ export class UnifiedOnboardingService {
       const pdfResults = await this.monitorPDFProcessing(deviceResponse.id, onProgress);
 
       // Step 6: Finalize and return results
-      const processingTime = Date.now() - startTime;
       
       this.updateProgress(onProgress, {
         stage: 'complete',
@@ -148,12 +138,23 @@ export class UnifiedOnboardingService {
         stepDetails: { currentStep: 6, totalSteps: 6, stepName: 'Complete' }
       });
 
+      // Log the actual values being returned
+      logInfo('UnifiedOnboardingService', 'Returning onboarding result with actual counts', {
+        deviceId: deviceResponse.id,
+        deviceName: deviceResponse.name,
+        rulesGenerated: deviceResponse.pdfData?.rulesGenerated || 0,
+        maintenanceItems: deviceResponse.pdfData?.maintenanceItems || 0,
+        safetyPrecautions: deviceResponse.pdfData?.safetyPrecautions || 0,
+        pdfDataExists: !!deviceResponse.pdfData,
+        pdfDataKeys: deviceResponse.pdfData ? Object.keys(deviceResponse.pdfData) : 'no pdfData'
+      });
+
       return {
         deviceId: deviceResponse.id,
         deviceName: deviceResponse.name,
-        rulesGenerated: pdfResults.rulesCount,
-        maintenanceItems: pdfResults.maintenanceCount,
-        safetyPrecautions: pdfResults.safetyCount,
+        rulesGenerated: deviceResponse.pdfData?.rulesGenerated || 0,
+        maintenanceItems: deviceResponse.pdfData?.maintenanceItems || 0,
+        safetyPrecautions: deviceResponse.pdfData?.safetyPrecautions || 0,
         deviceData: deviceResponse,
         pdfData: {
           pdfName: deviceResponse.pdfData?.pdfName || uploadedFile?.name || 'unknown.pdf',
@@ -163,15 +164,14 @@ export class UnifiedOnboardingService {
           rulesGenerated: deviceResponse.pdfData?.rulesGenerated || 0,
           maintenanceItems: deviceResponse.pdfData?.maintenanceItems || 0,
           safetyPrecautions: deviceResponse.pdfData?.safetyPrecautions || 0,
-          processingTime: deviceResponse.pdfData?.processingTime || processingTime
+          processingTime: deviceResponse.pdfData?.processingTime || (Date.now() - startTime)
         },
-        processingTime,
+        processingTime: Date.now() - startTime,
         success: true,
         errors: errors.length > 0 ? errors : undefined
       };
 
     } catch (error) {
-      const processingTime = Date.now() - startTime;
       const errorObj = error instanceof Error ? error : new Error(String(error));
       logError('UnifiedOnboarding', 'Unified onboarding failed', errorObj);
       
@@ -306,93 +306,51 @@ export class UnifiedOnboardingService {
    * Monitor PDF processing with detailed progress tracking
    */
   private async monitorPDFProcessing(deviceId: string, onProgress?: (progress: UnifiedOnboardingProgress) => void): Promise<any> {
-    const maxWaitTime = 300000; // 5 minutes
-    const checkInterval = 5000; // 5 seconds
+    const maxWaitTime = 3000000; // 5 minutes
+    const checkInterval = 2000; // 2 seconds for more responsive updates
     const startTime = Date.now();
     
-    let rulesCount = 0;
-    let maintenanceCount = 0;
-    let safetyCount = 0;
-    let rulesData = null;
-    let maintenanceData = null;
-    let safetyData = null;
+    logInfo('UnifiedOnboardingService', 'Starting real-time progress monitoring', { deviceId });
 
-    // Update progress for PDF processing stages
-    const processingStages = [
-      { stage: 'rules', progress: 35, message: 'Processing AI-generated rules...', duration: 2000 },
-      { stage: 'maintenance', progress: 50, message: 'Processing maintenance schedule...', duration: 2000 },
-      { stage: 'safety', progress: 65, message: 'Processing safety precautions...', duration: 2000 },
-      { stage: 'complete', progress: 90, message: 'Finalizing processing...', duration: 1000 }
-    ];
-
-    let currentStageIndex = 0;
-
-    const updateProcessingProgress = () => {
-      if (currentStageIndex < processingStages.length) {
-        const stage = processingStages[currentStageIndex];
-        this.updateProgress(onProgress, {
-          stage: stage.stage as any,
-          progress: stage.progress,
-          message: stage.message,
-          stepDetails: { currentStep: 5, totalSteps: 6, stepName: 'PDF Processing' }
-        });
-        currentStageIndex++;
-        
-        if (currentStageIndex < processingStages.length) {
-          setTimeout(updateProcessingProgress, stage.duration);
-        }
-      }
-    };
-
-    // Start progress updates
-    setTimeout(updateProcessingProgress, 1000);
-
-    // Poll for results
+    // Poll for results with real backend progress
     while (Date.now() - startTime < maxWaitTime) {
       try {
-        const pdfResultsResponse = await deviceAPI.getDevicePDFResults(deviceId);
-        const pdfResults = pdfResultsResponse.data;
+        const response = await deviceAPI.getOnboardingProgress(deviceId);
         
-        if (pdfResults) {
-          rulesCount = pdfResults.rules?.length || 0;
-          maintenanceCount = pdfResults.maintenance?.length || 0;
-          safetyCount = pdfResults.safetyPrecautions?.length || 0;
-          rulesData = pdfResults.rules || null;
-          maintenanceData = pdfResults.maintenance || null;
-          safetyData = pdfResults.safetyPrecautions || null;
-        
-        logInfo('UnifiedOnboarding', 'PDF processing results retrieved', {
-            deviceId,
-          rulesCount,
-          maintenanceCount,
-          safetyCount
-        });
-
-          break;
+        if (response.data && response.data.completed) {
+          // Processing completed
+          this.updateProgress(onProgress, {
+            stage: 'complete',
+            progress: 100,
+            message: 'Processing completed successfully',
+            stepDetails: { currentStep: 6, totalSteps: 6, stepName: 'Completion' }
+          });
+          
+          logInfo('UnifiedOnboardingService', 'Processing completed', { deviceId });
+          return response.data;
         }
-      } catch (error) {
-        logWarn('UnifiedOnboarding', 'Failed to fetch PDF results, will retry', error instanceof Error ? error : new Error(String(error)));
-      }
-
-      await this.delay(checkInterval);
-    }
-
-    // If we didn't get results, use fallback values
-    if (rulesCount === 0 && maintenanceCount === 0 && safetyCount === 0) {
-      logWarn('UnifiedOnboarding', 'No PDF results found, using fallback values');
-      rulesCount = 5;
-      maintenanceCount = 3;
-      safetyCount = 2;
-    }
         
-        return {
-      rulesCount,
-      maintenanceCount,
-      safetyCount,
-      rulesData,
-      maintenanceData,
-      safetyData
-    };
+        // Update progress based on backend response
+        if (response.data && response.data.progress) {
+          logInfo('UnifiedOnboardingService', 'Progress update received', { 
+            deviceId, 
+            stage: response.data.progress.stage,
+            progress: response.data.progress.progress,
+            message: response.data.progress.message
+          });
+          this.updateProgress(onProgress, response.data.progress);
+        }
+        
+        // Wait before next check
+        await new Promise(resolve => setTimeout(resolve, checkInterval));
+        
+      } catch (error) {
+        logError('UnifiedOnboardingService', 'Error checking progress', error instanceof Error ? error : new Error(String(error)));
+        await new Promise(resolve => setTimeout(resolve, checkInterval));
+      }
+    }
+    
+    throw new Error('PDF processing timeout - please try again');
   }
 
   /**

@@ -164,11 +164,21 @@ public class DeviceSafetyPrecautionService {
         logger.info("Creating safety precautions from PDF for device: {} in organization: {}", deviceId, organizationId);
         
         int processedCount = 0;
+        int skippedCount = 0;
         
         try {
             for (SafetyGenerationResponse.SafetyPrecaution safetyData : safetyPrecautions) {
                 try {
                     String safetyTitle = safetyData.getTitle();
+                    
+                    // Check if safety precaution already exists for this device (deviceId + title)
+                    Optional<DeviceSafetyPrecaution> existingSafety = deviceSafetyPrecautionRepository
+                        .findByDeviceIdAndTitleAndOrganizationId(deviceId, safetyTitle, organizationId);
+                    if (existingSafety.isPresent()) {
+                        logger.info("⚠️ Safety precaution '{}' already exists for device: {}, skipping", safetyTitle, deviceId);
+                        skippedCount++;
+                        continue;
+                    }
                     
                     DeviceSafetyPrecaution safety = new DeviceSafetyPrecaution();
                     safety.setId(UUID.randomUUID().toString());
@@ -197,8 +207,8 @@ public class DeviceSafetyPrecautionService {
                 }
             }
             
-            logger.info("Safety precautions processing completed for device: {} - Processed: {}", 
-                       deviceId, processedCount);
+            logger.info("Safety precautions processing completed for device: {} - Processed: {}, Skipped: {}", 
+                       deviceId, processedCount, skippedCount);
         } catch (Exception e) {
             logger.error("Error creating safety precautions from PDF for device: {} - Error: {}", deviceId, e.getMessage(), e);
             throw e; // Re-throw to ensure proper error handling

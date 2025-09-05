@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface DeviceSafetyPrecautionRepository extends JpaRepository<DeviceSafetyPrecaution, String> {
@@ -35,6 +36,9 @@ public interface DeviceSafetyPrecautionRepository extends JpaRepository<DeviceSa
                                                                            @Param("organizationId") String organizationId);
     
     void deleteByDeviceIdAndOrganizationId(String deviceId, String organizationId);
+    
+    @Query("SELECT dsp FROM DeviceSafetyPrecaution dsp WHERE dsp.deviceId = :deviceId AND dsp.title = :title AND dsp.organizationId = :organizationId")
+    Optional<DeviceSafetyPrecaution> findByDeviceIdAndTitleAndOrganizationId(@Param("deviceId") String deviceId, @Param("title") String title, @Param("organizationId") String organizationId);
     
     @Query("SELECT COUNT(dsp) FROM DeviceSafetyPrecaution dsp WHERE dsp.deviceId = :deviceId AND dsp.organizationId = :organizationId AND dsp.isActive = true")
     long countActiveByDeviceIdAndOrganizationId(@Param("deviceId") String deviceId, @Param("organizationId") String organizationId);
