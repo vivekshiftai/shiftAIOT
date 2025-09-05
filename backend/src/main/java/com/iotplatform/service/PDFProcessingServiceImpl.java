@@ -214,6 +214,14 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
     public PDFListResponse listPDFs(String organizationId, int page, int size) throws PDFProcessingException {
         log.info("Listing PDFs for organization: {} (page: {}, size: {})", organizationId, page, size);
         
+        // Validate parameters for external service requirements
+        if (page < 1) {
+            throw new PDFProcessingException("Page number must be >= 1");
+        }
+        if (size > 100) {
+            throw new PDFProcessingException("Page size must be <= 100");
+        }
+        
         try {
             // Call external service to get PDF list
             HttpHeaders headers = createHeaders();

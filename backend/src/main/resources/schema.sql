@@ -430,6 +430,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     user_id VARCHAR(255) NOT NULL,
     organization_id VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     -- Enhanced device information fields
     device_name VARCHAR(255),
@@ -452,6 +453,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 -- This ensures the table structure matches the Java entity model
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(50) NOT NULL DEFAULT 'INFO';
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'DEVICE_ASSIGNMENT';
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS device_name VARCHAR(255);
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS device_type VARCHAR(100);
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS device_location VARCHAR(255);

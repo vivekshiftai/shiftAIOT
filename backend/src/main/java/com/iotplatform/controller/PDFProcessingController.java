@@ -257,7 +257,7 @@ public class PDFProcessingController {
     /**
      * List PDF documents with pagination.
      * 
-     * @param page Page number (0-based)
+     * @param page Page number (1-based)
      * @param size Page size
      * @param userDetails The authenticated user details
      * @return Paginated list of PDF documents
@@ -274,8 +274,8 @@ public class PDFProcessingController {
     })
     @GetMapping("/list")
     public ResponseEntity<PDFListResponse> listPDFs(
-            @Parameter(description = "Page number (0-based)", example = "0")
-            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page number (1-based)", example = "1")
+            @RequestParam(defaultValue = "1") int page,
             
             @Parameter(description = "Page size", example = "10")
             @RequestParam(defaultValue = "10") int size,
@@ -702,7 +702,8 @@ public class PDFProcessingController {
         
         try {
             // Call external service directly - use same endpoint as PDF list
-            String url = config.getBaseUrl() + "/pdfs?page=0&limit=1000";
+            // Note: External service requires page >= 1 and limit <= 100
+            String url = config.getBaseUrl() + "/pdfs?page=1&limit=100";
             ResponseEntity<Object> response = restTemplate.getForEntity(url, Object.class);
             
             log.info("List all collections completed successfully");
