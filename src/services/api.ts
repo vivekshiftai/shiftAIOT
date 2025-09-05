@@ -387,6 +387,7 @@ export const userAPI = {
   delete: (id: string) => api.delete(`/api/users/${id}`),
   getProfile: () => api.get('/api/users/profile'),
   getComprehensiveProfile: () => api.get('/api/users/profile/comprehensive'),
+  getStats: () => api.get('/api/users/stats'),
   changePassword: (passwordData: any) => api.post('/api/users/change-password', passwordData),
   updateIntegrationIds: (integrationIds: { gmailId?: string | null; slackId?: string | null; teamId?: string | null }) => 
     api.post('/api/users/update-integration-ids', integrationIds),

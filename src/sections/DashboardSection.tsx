@@ -1,11 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useIoT } from '../contexts/IoTContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useUserDisplayNames } from '../hooks/useUserDisplayName';
 import { StatsCard } from '../components/Dashboard/StatsCard';
 import Skeleton, { SkeletonCard } from '../components/UI/Skeleton';
 import Button from '../components/UI/Button';
 
-import { maintenanceAPI, ruleAPI } from '../services/api';
+import { maintenanceAPI, ruleAPI, userAPI } from '../services/api';
 import { logError, logInfo } from '../utils/logger';
 
 import { 
@@ -14,14 +16,15 @@ import {
   Shield,
   ArrowRight,
   Cpu,
-  Wifi,
   Zap,
   Wrench,
-  Activity
+  Activity,
+  User
 } from 'lucide-react';
 
 export const DashboardSection: React.FC = () => {
   const { devices, loading } = useIoT();
+  const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const [selectedTimeRange, setSelectedTimeRange] = useState('24h');
   const [upcomingMaintenance, setUpcomingMaintenance] = useState<any[]>([]);
@@ -29,6 +32,33 @@ export const DashboardSection: React.FC = () => {
   const [maintenanceCount, setMaintenanceCount] = useState(0);
   const [maintenanceLoading, setMaintenanceLoading] = useState(true);
   const [rulesCount, setRulesCount] = useState(0);
+  const [usersCount, setUsersCount] = useState(0);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [usersStats, setUsersStats] = useState<any>(null);
+
+  // Get unique user IDs from maintenance tasks for fetching user names
+  const assigneeIds = useMemo(() => {
+    const allTasks = [...upcomingMaintenance, ...todayMaintenance];
+    const uniqueIds = [...new Set(allTasks.map(task => task.assignedTo).filter(Boolean))];
+    return uniqueIds;
+  }, [upcomingMaintenance, todayMaintenance]);
+
+  // Fetch user display names
+  const { displayNames, loading: userNamesLoading } = useUserDisplayNames(assigneeIds);
+
+  // Helper function to format assignee name
+  const getAssigneeDisplayName = (assignedTo: string | null | undefined): string => {
+    if (!assignedTo) return 'Unassigned';
+    
+    const userName = displayNames[assignedTo] || `User ${assignedTo}`;
+    
+    // If the assignee is the current user, add "(YOU)"
+    if (currentUser && assignedTo === currentUser.id) {
+      return `${userName} (YOU)`;
+    }
+    
+    return userName;
+  };
 
   // Fetch real-time data
   useEffect(() => {
@@ -73,15 +103,42 @@ export const DashboardSection: React.FC = () => {
         setMaintenanceCount(totalMaintenanceCount);
         
         // Set upcoming maintenance for the upcoming section
-        setUpcomingMaintenance(upcomingMaintenanceResponse.data?.upcomingMaintenance || []);
+        const upcomingTasks = upcomingMaintenanceResponse.data?.upcomingMaintenance || [];
+        setUpcomingMaintenance(upcomingTasks);
         
         // Set today's maintenance tasks
-        setTodayMaintenance(todayMaintenanceResponse.data || []);
+        const todayTasks = todayMaintenanceResponse.data || [];
+        setTodayMaintenance(todayTasks);
+        
+        // Log sample data to verify backend data structure
+        if (upcomingTasks.length > 0) {
+          const sampleTask = upcomingTasks[0];
+          logInfo('Dashboard', 'Sample upcoming maintenance task data from backend', {
+            id: sampleTask.id,
+            taskName: sampleTask.taskName,
+            status: sampleTask.status,
+            nextMaintenance: sampleTask.nextMaintenance,
+            assignedTo: sampleTask.assignedTo,
+            deviceName: sampleTask.deviceName
+          });
+        }
+        
+        if (todayTasks.length > 0) {
+          const sampleTodayTask = todayTasks[0];
+          logInfo('Dashboard', 'Sample today maintenance task data from backend', {
+            id: sampleTodayTask.id,
+            taskName: sampleTodayTask.taskName,
+            status: sampleTodayTask.status,
+            nextMaintenance: sampleTodayTask.nextMaintenance,
+            assignedTo: sampleTodayTask.assignedTo,
+            deviceName: sampleTodayTask.deviceName
+          });
+        }
         
         logInfo('Dashboard', 'Maintenance data fetched successfully', { 
           totalCount: totalMaintenanceCount,
-          upcomingCount: upcomingMaintenanceResponse.data?.upcomingMaintenance?.length || 0,
-          todayCount: todayMaintenanceResponse.data?.length || 0
+          upcomingCount: upcomingTasks.length,
+          todayCount: todayTasks.length
         });
         
         // Log dashboard icon updates
@@ -123,6 +180,36 @@ export const DashboardSection: React.FC = () => {
         logError('Dashboard', 'Failed to fetch rules count', error instanceof Error ? error : new Error('Unknown error'));
         setRulesCount(0);
       }
+
+      try {
+        // Fetch users count - using the stats endpoint for better performance
+        setUsersLoading(true);
+        const usersStatsResponse = await userAPI.getStats();
+        const totalUsers = usersStatsResponse.data?.totalUsers || 0;
+        setUsersCount(totalUsers);
+        setUsersStats(usersStatsResponse.data);
+        logInfo('Dashboard', 'Users stats fetched successfully from database', { 
+          totalUsers,
+          activeUsers: usersStatsResponse.data?.activeUsers || 0,
+          adminUsers: usersStatsResponse.data?.adminUsers || 0,
+          organizationId: usersStatsResponse.data?.organizationId
+        });
+      } catch (error) {
+        logError('Dashboard', 'Failed to fetch users stats, falling back to getAll', error instanceof Error ? error : new Error('Unknown error'));
+        
+        // Fallback to getAll if stats endpoint fails
+        try {
+          const usersResponse = await userAPI.getAll();
+          const totalUsers = usersResponse.data?.length || 0;
+          setUsersCount(totalUsers);
+          logInfo('Dashboard', 'Users data fetched successfully via fallback', { totalUsers });
+        } catch (fallbackError) {
+          logError('Dashboard', 'Failed to fetch users count via fallback', fallbackError instanceof Error ? fallbackError : new Error('Unknown error'));
+          setUsersCount(0);
+        }
+      } finally {
+        setUsersLoading(false);
+      }
     };
 
     // Initial fetch
@@ -150,11 +237,12 @@ export const DashboardSection: React.FC = () => {
       onlineDevices,
       totalRules: rulesCount, // Use real-time count from API
       totalMaintenance: maintenanceCount, // Use real-time count from API
+      totalUsers: usersCount, // Use real-time count from API
       pendingMaintenance: upcomingMaintenance.length,
       todayMaintenance: todayMaintenance.length,
       completedMaintenance: 0 // This would need to be calculated from completed tasks
     };
-  }, [devices, rulesCount, maintenanceCount, upcomingMaintenance, todayMaintenance]);
+  }, [devices, rulesCount, maintenanceCount, usersCount, upcomingMaintenance, todayMaintenance]);
 
   // Handle maintenance card click
   const handleMaintenanceClick = () => {
@@ -162,28 +250,46 @@ export const DashboardSection: React.FC = () => {
   };
 
   // Format maintenance date
-  const formatMaintenanceDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
+  const formatMaintenanceDate = (dateString: string | null | undefined) => {
+    if (!dateString) return 'Not scheduled';
     
-    if (date.toDateString() === today.toDateString()) {
-      return 'Today';
-    } else if (date.toDateString() === tomorrow.toDateString()) {
-      return 'Tomorrow';
-    } else {
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        year: 'numeric'
-      });
+    try {
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        logError('Dashboard', 'Invalid date format received from backend', new Error(`Invalid date: ${dateString}`));
+        return 'Invalid date';
+      }
+      
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      
+      // Reset time to compare only dates
+      today.setHours(0, 0, 0, 0);
+      tomorrow.setHours(0, 0, 0, 0);
+      date.setHours(0, 0, 0, 0);
+      
+      if (date.getTime() === today.getTime()) {
+        return 'Today';
+      } else if (date.getTime() === tomorrow.getTime()) {
+        return 'Tomorrow';
+      } else {
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: 'numeric'
+        });
+      }
+    } catch (error) {
+      logError('Dashboard', 'Error formatting maintenance date', error instanceof Error ? error : new Error('Unknown error'));
+      return 'Invalid date';
     }
   };
 
   // Navigation handlers
   const handleNavigateDevices = () => navigate('/devices');
-  const handleShowActiveDevices = () => navigate('/devices?status=ONLINE');
 
   if (loading) {
     return (
@@ -239,42 +345,40 @@ export const DashboardSection: React.FC = () => {
 
       {/* Top Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                 <StatsCard
-           title="Total Devices"
-           value={metrics.totalDevices}
-           subtitle={`${metrics.onlineDevices} online`}
-           icon={Cpu}
-           color="blue"
-           onClick={handleNavigateDevices}
-           className="hover-lift animate-fade-in"
-         />
-                 <StatsCard
-           title="Active Devices"
-           value={metrics.onlineDevices}
-           subtitle="Currently online"
-           icon={Wifi}
-           color="green"
-           onClick={handleShowActiveDevices}
-           className="hover-lift animate-fade-in"
-         />
-                                   <StatsCard
-            title="Total Rules"
-            value={metrics.totalRules}
-            subtitle="Automation rules"
-            icon={Zap}
-            color="purple"
-            // Removed onClick handler - no longer clickable
-            className="animate-fade-in"
-          />
-                  <StatsCard
-            title="Total Maintenance"
-            value={maintenanceLoading ? '...' : (metrics.totalMaintenance > 0 ? metrics.totalMaintenance : '0')}
-            subtitle={maintenanceLoading ? 'Loading...' : (metrics.totalMaintenance > 0 ? `${metrics.todayMaintenance} today, ${metrics.pendingMaintenance} upcoming` : 'No maintenance tasks')}
-            icon={Wrench}
-            color="yellow"
-            onClick={handleMaintenanceClick}
-            className="hover-lift animate-fade-in cursor-pointer"
-          />
+        <StatsCard
+          title="Devices"
+          value={metrics.totalDevices}
+          subtitle={`${metrics.onlineDevices} active`}
+          icon={Cpu}
+          color="blue"
+          onClick={handleNavigateDevices}
+          className="hover-lift animate-fade-in"
+        />
+        <StatsCard
+          title="Total Users"
+          value={usersLoading ? '...' : (metrics.totalUsers > 0 ? metrics.totalUsers : '0')}
+          subtitle={usersLoading ? 'Loading...' : (usersStats ? `${usersStats.activeUsers || 0} active, ${usersStats.adminUsers || 0} admins` : 'Registered users')}
+          icon={User}
+          color="green"
+          className="animate-fade-in"
+        />
+        <StatsCard
+          title="Total Rules"
+          value={metrics.totalRules}
+          subtitle="Automation rules"
+          icon={Zap}
+          color="purple"
+          className="animate-fade-in"
+        />
+        <StatsCard
+          title="Total Maintenance"
+          value={maintenanceLoading ? '...' : (metrics.totalMaintenance > 0 ? metrics.totalMaintenance : '0')}
+          subtitle={maintenanceLoading ? 'Loading...' : (metrics.totalMaintenance > 0 ? `${metrics.todayMaintenance} today, ${metrics.pendingMaintenance} upcoming` : 'No maintenance tasks')}
+          icon={Wrench}
+          color="yellow"
+          onClick={handleMaintenanceClick}
+          className="hover-lift animate-fade-in cursor-pointer"
+        />
       </div>
 
       {/* Today's Maintenance Alert */}
@@ -290,6 +394,9 @@ export const DashboardSection: React.FC = () => {
               </h3>
               <p className="text-yellow-700 text-sm">
                 {todayMaintenance.length > 1 ? 'Tasks' : 'Task'} scheduled for completion today
+                {currentUser && todayMaintenance.some(task => task.assignedTo === currentUser.id) && (
+                  <span className="ml-2 font-medium">• You have {todayMaintenance.filter(task => task.assignedTo === currentUser.id).length} task{todayMaintenance.filter(task => task.assignedTo === currentUser.id).length > 1 ? 's' : ''} assigned</span>
+                )}
               </p>
             </div>
             <Button
@@ -409,7 +516,7 @@ export const DashboardSection: React.FC = () => {
                           </td>
                           <td className="py-3 px-4">
                             <div className="text-sm text-secondary">
-                              {item.assignedTo || 'Unassigned'}
+                              {userNamesLoading ? 'Loading...' : getAssigneeDisplayName(item.assignedTo)}
                             </div>
                           </td>
                           <td className="py-3 px-4">
@@ -417,11 +524,16 @@ export const DashboardSection: React.FC = () => {
                               item.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
                               item.status === 'ACTIVE' ? 'bg-blue-100 text-blue-700' :
                               item.status === 'OVERDUE' ? 'bg-red-100 text-red-700' :
+                              item.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                              item.status === 'CANCELLED' ? 'bg-gray-100 text-gray-700' :
                               'bg-gray-100 text-gray-700'
                             }`}>
                               {item.status === 'COMPLETED' ? 'Done' : 
-                               item.status === 'ACTIVE' ? 'Pending' :
-                               item.status === 'OVERDUE' ? 'Overdue' : 'Unknown'}
+                               item.status === 'ACTIVE' ? 'Active' :
+                               item.status === 'OVERDUE' ? 'Overdue' :
+                               item.status === 'PENDING' ? 'Pending' :
+                               item.status === 'CANCELLED' ? 'Cancelled' : 
+                               item.status || 'Unknown'}
                             </span>
                           </td>
                           <td className="py-3 px-4">
