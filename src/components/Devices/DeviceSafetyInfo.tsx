@@ -64,14 +64,11 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
     try {
       setLoading(true);
       logInfo('DeviceSafetyInfo', 'Loading safety precautions for device', { deviceId });
-      console.log('🔧 DeviceSafetyInfo: Loading safety precautions for device', deviceId);
       
       // Use device safety precautions API to get safety precautions for this specific device
       const safetyResponse = await deviceSafetyPrecautionsAPI.getByDevice(deviceId);
-      console.log('🔧 DeviceSafetyInfo: Raw safety response:', safetyResponse);
       
       const safetyData = safetyResponse.data || [];
-      console.log('🔧 DeviceSafetyInfo: Safety data:', safetyData);
       
       // Transform the data to match the expected format
       const transformedPrecautions: DeviceSafetyPrecaution[] = safetyData.map((precaution: any) => {
@@ -94,16 +91,6 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
           updatedAt: precaution.updatedAt || precaution.updated_at || new Date().toISOString()
         };
         
-        // Log the transformation for debugging
-        console.log('🔧 DeviceSafetyInfo: Transformed precaution:', {
-          original: precaution,
-          transformed: transformed,
-          hasAboutReaction: !!transformed.aboutReaction,
-          hasCauses: !!transformed.causes,
-          hasHowToAvoid: !!transformed.howToAvoid,
-          hasSafetyInfo: !!transformed.safetyInfo
-        });
-        
         return transformed;
       });
       
@@ -120,7 +107,6 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
           safetyInfo: transformedPrecautions.filter(p => p.safetyInfo).length
         }
       });
-      console.log(`🔧 DeviceSafetyInfo: Loaded ${transformedPrecautions.length} safety precautions for device ${deviceId}`);
     } catch (err) {
       logError('DeviceSafetyInfo', 'Error loading safety precautions', err instanceof Error ? err : new Error('Unknown error'));
       console.error('Error loading safety precautions:', err);

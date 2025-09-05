@@ -118,7 +118,6 @@ export const KnowledgeSection: React.FC = () => {
     try {
       setLoading(true);
       const collectionsResponse = await pdfAPI.listAllCollections();
-      console.log('Collections refresh response:', collectionsResponse);
       
       // Handle both response formats from external service
       let collections = [];
@@ -172,9 +171,6 @@ export const KnowledgeSection: React.FC = () => {
         // Load PDF documents from external collections API
         try {
           const collectionsResponse = await pdfAPI.listAllCollections();
-          console.log('Collections response:', collectionsResponse);
-          console.log('Collections response data:', collectionsResponse.data);
-          console.log('Collections response data type:', typeof collectionsResponse.data);
           
           // Handle both response formats from external service
           let collections = [];
@@ -192,12 +188,9 @@ export const KnowledgeSection: React.FC = () => {
             collections = collectionsResponse.data.pdfs;
           } else {
             console.error('Unexpected collections response format:', collectionsResponse.data);
-            console.log('Available keys in response data:', Object.keys(collectionsResponse.data || {}));
             throw new Error('Invalid collections response format');
           }
 
-          console.log('Collections array:', collections);
-          console.log('First collection item:', collections[0]);
           
           const convertedDocuments: UnifiedPDF[] = collections.map((collection: any, index: number) => ({
             id: collection.collection_name || collection.id || collection.name || index.toString(),
@@ -218,7 +211,6 @@ export const KnowledgeSection: React.FC = () => {
             processingTime: collection.processing_time || collection.processingTime
           }));
           
-          console.log('Converted documents:', convertedDocuments);
           setDocuments(convertedDocuments);
           logInfo('Knowledge', 'PDF documents loaded from external collections', { count: convertedDocuments.length });
         } catch (collectionsError) {
@@ -374,7 +366,6 @@ export const KnowledgeSection: React.FC = () => {
       } else {
         // Use unified query service for general queries
         try {
-          console.log('🔍 Sending unified query to backend:', userMessage.content);
           
           const unifiedRequest: UnifiedQueryRequest = {
             query: userMessage.content
@@ -382,7 +373,6 @@ export const KnowledgeSection: React.FC = () => {
           
           const unifiedResponse = await UnifiedQueryService.sendUnifiedQuery(unifiedRequest);
           
-          console.log('✅ Received unified response:', unifiedResponse);
           
           const assistantMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
@@ -459,33 +449,6 @@ export const KnowledgeSection: React.FC = () => {
     setTimeout(() => setShowSuggestions(false), 200);
   };
 
-  const testBackendConnection = async () => {
-    try {
-      console.log('🔍 Testing backend connection...');
-      const result = await UnifiedQueryService.testBackend();
-      console.log('✅ Backend test successful:', result);
-      
-      const testMessage: ChatMessage = {
-        id: Date.now().toString(),
-        type: 'assistant',
-        content: `✅ Backend connection test successful! Message: ${result.message}`,
-        timestamp: new Date(),
-        queryType: 'UNKNOWN'
-      };
-      setChatMessages((prev: ChatMessage[]) => [...prev, testMessage]);
-    } catch (error) {
-      console.error('❌ Backend test failed:', error);
-      
-      const errorMessage: ChatMessage = {
-        id: Date.now().toString(),
-        type: 'assistant',
-        content: `❌ Backend connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        timestamp: new Date(),
-        queryType: 'UNKNOWN'
-      };
-      setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
-    }
-  };
 
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -573,17 +536,6 @@ export const KnowledgeSection: React.FC = () => {
       const document = documents.find((doc: UnifiedPDF) => doc.id === documentId);
       if (document) {
         logInfo('Knowledge', `🗑️ Starting deletion process for document: "${document.name}" (ID: ${documentId})`);
-        console.log(`📋 [Knowledge] Document details:`, {
-          id: document.id,
-          name: document.name,
-          type: document.documentType,
-          size: document.fileSize,
-          status: document.processingStatus,
-          vectorized: document.vectorized,
-          chunk_count: document.processedChunks,
-          deviceId: document.deviceId,
-          deviceName: document.deviceName
-        });
 
         // Delete from external PDF processing service
         logInfo('Knowledge', `🌐 Calling external PDF processing service to delete: "${document.name}"`);
@@ -600,7 +552,6 @@ export const KnowledgeSection: React.FC = () => {
         logInfo('Knowledge', `🗂️ Removing "${document.name}" from local state`);
         setDocuments((prev: UnifiedPDF[]) => {
           const updatedDocs = prev.filter((doc: UnifiedPDF) => doc.id !== documentId);
-          console.log(`📊 [Knowledge] Documents count: ${prev.length} → ${updatedDocs.length}`);
           return updatedDocs;
         });
         
@@ -619,25 +570,11 @@ export const KnowledgeSection: React.FC = () => {
         setChatMessages(prev => [...prev, deletionMessage]);
         
         logInfo('Knowledge', `🎉 Complete deletion process finished for "${document.name}"`);
-        console.log(`📈 [Knowledge] Deletion summary:`, {
-          documentName: document.name,
-          documentId: documentId,
-          externalServiceDuration: `${deleteDuration}ms`,
-          totalDocumentsRemaining: documents.length - 1,
-          selectedDocumentCleared: selectedDocument?.id === documentId
-        });
       } else {
         logError('Knowledge', `❌ Document not found for deletion (ID: ${documentId})`);
-        console.error(`🔍 [Knowledge] Available document IDs:`, documents.map(d => d.id));
       }
     } catch (error) {
       logError('Knowledge', `💥 Failed to delete document (ID: ${documentId})`, error instanceof Error ? error : new Error('Unknown error'));
-      console.error(`💥 [Knowledge] Deletion error details:`, {
-        documentId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        availableDocuments: documents.map(d => ({ id: d.id, name: d.name }))
-      });
       alert('Failed to delete document. Please try again.');
     }
   };
@@ -952,14 +889,6 @@ export const KnowledgeSection: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={testBackendConnection}
-                  className="px-4 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-all flex items-center gap-2 shadow-sm"
-                  title="Test Backend Connection"
-                >
-                  <span className="text-sm">🔍</span>
-                  Test
-                </button>
                 <button
                   onClick={sendMessage}
                   disabled={!newMessage.trim() || isTyping}

@@ -172,12 +172,6 @@ export class UnifiedOnboardingService {
          assignedUserId: formData.assignedUserId || null
        };
     
-    console.log('🔍 Frontend Device Data Preparation:', {
-      assignedUserId: deviceData.assignedUserId,
-      formDataAssignedUserId: formData.assignedUserId,
-      deviceName: deviceData.name
-    });
-    
     return deviceData;
   }
 

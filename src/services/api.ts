@@ -44,15 +44,10 @@ api.interceptors.request.use(
       const token = tokenService.getToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log(`🔐 Adding auth header for: ${config.url}`);
-        console.log(`🔐 Token length: ${token.length}`);
-        console.log(`🔐 Token preview: ${token.substring(0, 20)}...`);
       } else {
         console.warn(`⚠️ No token found for protected endpoint: ${config.url}`);
       }
     } else {
-      console.log(`🌐 Public endpoint (no auth): ${config.url}`);
-      console.log(`🌐 Public endpoint check passed for: ${config.url}`);
     }
 
     // Set Content-Type for JSON requests only
@@ -62,27 +57,10 @@ api.interceptors.request.use(
 
     // Log multipart requests for debugging
     if (config.data instanceof FormData) {
-      console.log(`📤 Multipart request to: ${config.url}`);
-      console.log(`📤 FormData entries:`, Array.from(config.data.entries()).map(([key, value]) => ({
-        key,
-        type: typeof value,
-        isFile: value instanceof File,
-        size: value instanceof File ? value.size : null,
-        name: value instanceof File ? value.name : null
-      })));
       
       // Ensure Content-Type is not set for multipart requests
       delete config.headers['Content-Type'];
-      console.log(`📤 Headers after Content-Type removal:`, config.headers);
       
-      // Additional debugging: Log the actual request configuration
-      console.log(`📤 Request config:`, {
-        url: config.url,
-        method: config.method,
-        headers: config.headers,
-        dataType: config.data?.constructor?.name,
-        dataEntries: config.data instanceof FormData ? Array.from(config.data.entries()).length : 'Not FormData'
-      });
     }
 
     return config;
@@ -102,24 +80,14 @@ api.interceptors.response.use(
     const status = error.response?.status;
     const url = error.config?.url || '';
 
-    console.log(`🚨 API Error: ${status} for ${url}`);
-    console.log('Error details:', {
-      status,
-      url,
-      hasToken: !!tokenService.getToken(),
-      tokenLength: tokenService.getToken()?.length,
-      retry: originalRequest._retry
-    });
 
     // Log the actual error response from backend
     if (error.response?.data) {
-      console.log('🚨 Backend error response:', error.response.data);
     }
 
     // Handle 401/403 auth errors
     if ((status === 401 || status === 403) && !originalRequest._retry) {
       originalRequest._retry = true;
-      console.log('🔄 Attempting token refresh...');
 
       try {
         // Attempt token refresh
@@ -127,7 +95,6 @@ api.interceptors.response.use(
         if (newToken) {
           // Retry the original request with new token
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          console.log('✅ Token refreshed, retrying request');
           return api(originalRequest);
         } else {
           // Token refresh failed
@@ -530,20 +497,11 @@ export const pdfAPI = {
 
   // Delete PDF through backend
   deletePDF: async (pdfName: string) => {
-    console.log(`🗑️ [API] Starting PDF deletion via backend: "${pdfName}"`);
     
     const startTime = Date.now();
     
     try {
       const response = await api.delete(`/api/pdf/delete/${pdfName}`);
-      const endTime = Date.now();
-      const duration = endTime - startTime;
-      
-      console.log(`✅ [API] PDF deletion successful: "${pdfName}"`, {
-        duration: `${duration}ms`,
-        status: response.status,
-        data: response.data
-      });
       
       return response;
     } catch (error) {

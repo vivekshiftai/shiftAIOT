@@ -32,11 +32,9 @@ export class UnifiedQueryService {
    */
   static async sendUnifiedQuery(request: UnifiedQueryRequest): Promise<UnifiedQueryResponse> {
     try {
-      console.log('🔍 Sending unified query:', request.query);
       
       const response = await api.post('/knowledge/unified-query', request);
       
-      console.log('✅ Unified query response:', response.data);
       
       // Validate response structure
       if (!response.data) {
@@ -67,35 +65,16 @@ export class UnifiedQueryService {
     }
   }
 
-  /**
-   * Test backend connectivity
-   */
-  static async testBackend(): Promise<{ success: boolean; message: string; timestamp: number }> {
-    try {
-      console.log('🔍 Testing backend connectivity...');
-      
-      const response = await api.get('/knowledge/test');
-      
-      console.log('✅ Backend test response:', response.data);
-      return response.data;
-      
-    } catch (error: any) {
-      console.error('❌ Backend test failed:', error);
-      throw new Error(`Backend test failed: ${error.message}`);
-    }
-  }
 
   /**
    * Get query suggestions
    */
   static async getQuerySuggestions(context?: string): Promise<QuerySuggestionsResponse> {
     try {
-      console.log('💡 Getting query suggestions for context:', context);
       
       const params = context ? { context } : {};
       const response = await api.get('/knowledge/suggestions', { params });
       
-      console.log('✅ Query suggestions response:', response.data);
       return response.data as QuerySuggestionsResponse;
       
     } catch (error) {

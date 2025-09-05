@@ -98,6 +98,7 @@ export const DashboardSection: React.FC = () => {
           upcomingMaintenanceData: upcomingMaintenanceResponse.data
         });
         
+        
         // Check if any maintenance tasks have missing device names and update them
         const allMaintenanceData = allMaintenanceResponse.data || [];
         const hasMissingDeviceNames = allMaintenanceData.some((task: any) => 
@@ -136,6 +137,7 @@ export const DashboardSection: React.FC = () => {
         // Set today's maintenance tasks
         const todayTasks = todayMaintenanceResponse.data || [];
         setTodayMaintenance(todayTasks);
+        
         
         // Log sample data to verify backend data structure
         if (upcomingTasks.length > 0) {
@@ -190,6 +192,7 @@ export const DashboardSection: React.FC = () => {
           timestamp: new Date().toISOString(),
           endpoint: '/api/devices/maintenance/upcoming'
         });
+        
         
         setUpcomingMaintenance([]);
         setMaintenanceCount(0);

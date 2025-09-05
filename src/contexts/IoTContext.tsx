@@ -287,7 +287,6 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       const deviceName = device?.name || 'Unknown Device';
       const oldStatus = device?.status || 'UNKNOWN';
       
-      console.log(`🔄 Updating device status: ${deviceName} (${deviceId}) from ${oldStatus} to ${status}`);
       
       // Validate status value
       const validStatuses = ['ONLINE', 'OFFLINE', 'WARNING', 'ERROR'];
@@ -517,15 +516,12 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       // First, verify the device exists
       try {
         const deviceCheck = await deviceAPI.getById(deviceId);
-        console.log('✅ IoTContext: Device verification successful:', deviceCheck);
       } catch (checkError) {
         console.error('❌ IoTContext: Device not found during verification:', checkError);
         throw new Error(`Device not found: ${deviceId}. The device may have already been deleted or you don't have access to it.`);
       }
       
-      console.log('🔍 IoTContext: Proceeding with device deletion...');
-      const response = await deviceAPI.delete(deviceId);
-      console.log('✅ IoTContext: Device deletion API call successful:', response);
+      await deviceAPI.delete(deviceId);
       logInfo('IoT', 'Device deleted successfully', { deviceId });
       await refreshDevices();
     } catch (error) {

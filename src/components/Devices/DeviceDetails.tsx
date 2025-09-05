@@ -11,12 +11,9 @@ import {
   Shield,
   Wrench,
   Eye,
-  ArrowDown,
-  ArrowUp
 } from 'lucide-react';
 import { unifiedDeviceService, DeviceRules, DeviceMaintenance, DeviceSafetyPrecaution } from '../../services/unifiedDeviceService';
 import { logError, logInfo } from '../../utils/logger';
-import { DeviceStatusTest } from './DeviceStatusTest';
 
 interface Device {
   id: string;
@@ -101,17 +98,6 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
     }
   };
 
-  const testAuthentication = async () => {
-    setAuthStatus('checking');
-    try {
-      const isAuthenticated = await unifiedDeviceService.testDeviceAuth();
-      setAuthStatus(isAuthenticated ? 'success' : 'failed');
-      logInfo('DeviceDetails', `Authentication test result: ${isAuthenticated ? 'success' : 'failed'}`);
-    } catch (error) {
-      setAuthStatus('failed');
-      logError('DeviceDetails', 'Authentication test failed', error instanceof Error ? error : new Error('Unknown error'));
-    }
-  };
 
   const downloadDocumentation = async (doc: DeviceDocumentation) => {
     try {
@@ -275,29 +261,6 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
                     </div>
                   </div>
 
-                  {/* Authentication Test */}
-                  <div className="bg-white p-6 rounded-lg border border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Authentication Test</h3>
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={testAuthentication}
-                        disabled={authStatus === 'checking'}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-                      >
-                        {authStatus === 'checking' ? 'Testing...' : 'Test Authentication'}
-                      </button>
-                      <div className="flex items-center gap-2">
-                        {authStatus === 'checking' && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-500"></div>}
-                        {authStatus === 'success' && <CheckCircle className="w-4 h-4 text-green-600" />}
-                                                 {authStatus === 'failed' && <X className="w-4 h-4 text-red-600" />}
-                        <span className="text-sm text-gray-600">
-                          {authStatus === 'checking' && 'Testing connection...'}
-                          {authStatus === 'success' && 'Authentication successful'}
-                          {authStatus === 'failed' && 'Authentication failed'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
 
                   {/* Device Status Test */}
                   <div className="bg-white p-6 rounded-lg border border-gray-200">

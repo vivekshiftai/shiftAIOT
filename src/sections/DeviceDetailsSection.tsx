@@ -239,7 +239,6 @@ export const DeviceDetailsSection: React.FC = () => {
   const { devices, updateDeviceStatus } = useIoT();
   const { hasPermission } = useAuth();
   
-  console.log('🔍 DeviceDetailsSection: Component loaded', { deviceId, devicesCount: devices.length });
   const [activeTab, setActiveTab] = useState('device-info');
   const [isTabLoading, setIsTabLoading] = useState(false);
   const [documentationInfo, setDocumentationInfo] = useState<DocumentationInfo | null>(null);
@@ -276,7 +275,6 @@ export const DeviceDetailsSection: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const device = devices.find(d => d.id === deviceId);
-  console.log('🔍 Device lookup result', { deviceId, deviceFound: !!device, deviceName: device?.name, totalDevices: devices.length });
   
   // Get user display name for assigned user
   const { displayName: assignedUserName, loading: userNameLoading } = useUserDisplayName(device?.assignedUserId);
@@ -367,9 +365,7 @@ export const DeviceDetailsSection: React.FC = () => {
   };
 
   const loadDevicePDFs = async () => {
-    console.log('🔍 loadDevicePDFs: Function called', { device: device?.name, deviceId: device?.id });
     if (!device) {
-      console.log('🔍 loadDevicePDFs: No device found, returning early');
       return;
     }
     
@@ -385,8 +381,6 @@ export const DeviceDetailsSection: React.FC = () => {
       // Get device PDFs from unified PDF system
       try {
         const pdfResponse = await pdfAPI.listPDFs(1, 100);
-        console.log('Device PDF response:', pdfResponse);
-        console.log('Device PDF response data:', pdfResponse.data);
         
         if (pdfResponse.data.pdfs && pdfResponse.data.pdfs.length > 0) {
           const pdfDocuments = pdfResponse.data.pdfs;
@@ -419,7 +413,6 @@ export const DeviceDetailsSection: React.FC = () => {
           }));
           
           setDevicePDFs(filteredPDFs);
-          console.log('Filtered device PDFs:', filteredPDFs);
           
           // Update initial chat message if PDFs are found
           if (filteredPDFs.length > 0) {
@@ -432,16 +425,13 @@ export const DeviceDetailsSection: React.FC = () => {
             filteredPDFs: filteredPDFs.length 
           });
         } else {
-          console.log('No PDFs found in list API, trying collections API as fallback...');
           
           // Try collections API as fallback
           try {
             const collectionsResponse = await pdfAPI.listAllCollections();
-            console.log('Collections fallback response:', collectionsResponse);
             
             if (collectionsResponse.data && Array.isArray(collectionsResponse.data.pdfs)) {
               const allPDFs = collectionsResponse.data.pdfs;
-              console.log('All PDFs from collections:', allPDFs);
               
               // Filter PDFs that might be related to this device (by name matching)
               const devicePDFs = allPDFs.filter((doc: any) => {
@@ -451,7 +441,6 @@ export const DeviceDetailsSection: React.FC = () => {
                        deviceName.includes(docName.toLowerCase());
               });
               
-              console.log('Device-related PDFs from collections:', devicePDFs);
               
               if (devicePDFs.length > 0) {
                 const filteredPDFs: UnifiedPDF[] = devicePDFs.map((doc: any) => ({
@@ -485,7 +474,6 @@ export const DeviceDetailsSection: React.FC = () => {
               }
             }
           } catch (collectionsError) {
-            console.log('Collections API fallback also failed:', collectionsError);
           }
           
           setDevicePDFs([]);
@@ -584,11 +572,9 @@ export const DeviceDetailsSection: React.FC = () => {
 
   // Main data loading effect
   useEffect(() => {
-    console.log('🔍 Main data loading useEffect triggered', { device: device?.name, deviceId, isInitialLoading });
           // useEffect triggered with device data
     
     if (device && deviceId) {
-      console.log('🔍 Starting data loading for device', { deviceName: device.name, deviceId });
               // Starting data loading for device
       setIsInitialLoading(true);
       
