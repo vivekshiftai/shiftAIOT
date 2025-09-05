@@ -573,6 +573,54 @@ public class MaintenanceController {
     }
 
     /**
+     * Update maintenance task assignments for a specific device
+     */
+    @PostMapping("/update-assignments/{deviceId}")
+    @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
+    @Operation(
+        summary = "Update Maintenance Task Assignments",
+        description = "Update maintenance task assignments for a specific device with the device's assigned user"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Maintenance task assignments updated successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    public ResponseEntity<Map<String, Object>> updateMaintenanceAssignments(
+            @PathVariable String deviceId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            log.info("Updating maintenance task assignments for device: {} by user: {}", deviceId, userDetails.getUsername());
+
+            String organizationId = userDetails.getUser().getOrganizationId();
+            maintenanceScheduleService.updateMaintenanceTasksAssignment(deviceId, organizationId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Maintenance task assignments updated successfully");
+            response.put("deviceId", deviceId);
+            response.put("organizationId", organizationId);
+            response.put("requestedBy", userDetails.getUsername());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error updating maintenance task assignments for device: {}", deviceId, e);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to update maintenance task assignments: " + e.getMessage());
+            
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    /**
      * Remove duplicate maintenance tasks for a device
      */
     @PostMapping("/remove-duplicates/{deviceId}")

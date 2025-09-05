@@ -21,8 +21,9 @@ public interface DeviceMaintenanceRepository extends JpaRepository<DeviceMainten
     @Query("SELECT dm FROM DeviceMaintenance dm WHERE dm.device.id = :deviceId AND dm.organizationId = :organizationId")
     List<DeviceMaintenance> findByDeviceIdAndOrganizationId(@Param("deviceId") String deviceId, @Param("organizationId") String organizationId);
     
-    @Query("SELECT dm FROM DeviceMaintenance dm WHERE dm.device.id = :deviceId AND dm.taskName = :taskName AND dm.organizationId = :organizationId")
-    Optional<DeviceMaintenance> findByDeviceIdAndTaskNameAndOrganizationId(@Param("deviceId") String deviceId, @Param("taskName") String taskName, @Param("organizationId") String organizationId);
+    
+    @Query("SELECT dm FROM DeviceMaintenance dm WHERE dm.device.id = :deviceId AND dm.organizationId = :organizationId AND dm.assignedTo IS NULL")
+    List<DeviceMaintenance> findByDeviceIdAndOrganizationIdAndAssignedToIsNull(@Param("deviceId") String deviceId, @Param("organizationId") String organizationId);
     
     List<DeviceMaintenance> findByOrganizationId(String organizationId);
     

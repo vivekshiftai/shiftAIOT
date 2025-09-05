@@ -38,4 +38,5 @@ public interface DeviceSafetyPrecautionRepository extends JpaRepository<DeviceSa
     
     @Query("SELECT COUNT(dsp) FROM DeviceSafetyPrecaution dsp WHERE dsp.deviceId = :deviceId AND dsp.organizationId = :organizationId AND dsp.isActive = true")
     long countActiveByDeviceIdAndOrganizationId(@Param("deviceId") String deviceId, @Param("organizationId") String organizationId);
+    
 }

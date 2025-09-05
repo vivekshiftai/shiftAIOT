@@ -363,23 +363,37 @@ public class RuleService {
     
     public void createRulesFromPDF(List<RulesGenerationResponse.Rule> rules, String deviceId, String organizationId) {
         System.out.println("Creating rules from PDF for device: " + deviceId);
+        
+        int processedCount = 0;
+        
         for (RulesGenerationResponse.Rule ruleData : rules) {
-            Rule rule = new Rule();
-            rule.setId(UUID.randomUUID().toString());
-            rule.setName(ruleData.getName());
-            rule.setDescription(ruleData.getDescription());
-            rule.setMetric(ruleData.getMetric());
-            rule.setMetricValue(ruleData.getMetricValue());
-            rule.setThreshold(ruleData.getThreshold());
-            rule.setConsequence(ruleData.getConsequence());
-            rule.setActive(true);
-            rule.setDeviceId(deviceId);
-            rule.setOrganizationId(organizationId);
-            rule.setCreatedAt(LocalDateTime.now());
-            rule.setUpdatedAt(LocalDateTime.now());
-            
-            ruleRepository.save(rule);
+            try {
+                String ruleName = ruleData.getName();
+                
+                Rule rule = new Rule();
+                rule.setId(UUID.randomUUID().toString());
+                rule.setName(ruleData.getName());
+                rule.setDescription(ruleData.getDescription());
+                rule.setMetric(ruleData.getMetric());
+                rule.setMetricValue(ruleData.getMetricValue());
+                rule.setThreshold(ruleData.getThreshold());
+                rule.setConsequence(ruleData.getConsequence());
+                rule.setActive(true);
+                rule.setDeviceId(deviceId);
+                rule.setOrganizationId(organizationId);
+                rule.setCreatedAt(LocalDateTime.now());
+                rule.setUpdatedAt(LocalDateTime.now());
+                
+                ruleRepository.save(rule);
+                processedCount++;
+                
+                System.out.println("✅ Created rule: " + ruleName + " for device: " + deviceId);
+                
+            } catch (Exception e) {
+                System.out.println("❌ Failed to create rule: " + ruleData.getName() + " for device: " + deviceId + " - " + e.getMessage());
+            }
         }
-        System.out.println("Created " + rules.size() + " rules from PDF for device: " + deviceId);
+        
+        System.out.println("Rules processing completed for device: " + deviceId + " - Processed: " + processedCount);
     }
 }

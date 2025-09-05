@@ -448,41 +448,23 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                 // Convert rules from external format to our format
                 List<Map<String, Object>> externalRules = (List<Map<String, Object>>) responseBody.get("rules");
                 if (externalRules != null) {
-                    List<Rule> rules = new ArrayList<>();
-                    for (Map<String, Object> externalRule : externalRules) {
-                        Rule rule = new Rule();
-                        rule.setName((String) externalRule.get("rule_name"));
-                        rule.setDescription((String) externalRule.get("description"));
-                        rule.setMetric((String) externalRule.get("metric"));
-                        rule.setThreshold((String) externalRule.get("threshold"));
-                        rule.setConsequence((String) externalRule.get("consequence"));
-                        rule.setDeviceId(deviceId);
-                        rule.setOrganizationId(organizationId);
-                        rule.setActive(true);
-                        rule.setCreatedAt(LocalDateTime.now());
-                        rule.setUpdatedAt(LocalDateTime.now());
-                        
-                        // Store rule in database
-                        ruleRepository.save(rule);
-                        rules.add(rule);
-                    }
-                    // Convert to DTO format
+                    // Convert to DTO format directly without storing in database
                     List<RulesGenerationResponse.Rule> dtoRules = new ArrayList<>();
-                    for (Rule rule : rules) {
+                    for (Map<String, Object> externalRule : externalRules) {
                         RulesGenerationResponse.Rule dtoRule = new RulesGenerationResponse.Rule();
-                        dtoRule.setName(rule.getName());
-                        dtoRule.setDescription(rule.getDescription());
-                        dtoRule.setMetric(rule.getMetric());
-                        dtoRule.setThreshold(rule.getThreshold());
-                        dtoRule.setConsequence(rule.getConsequence());
-                        dtoRule.setCondition("metric: " + rule.getMetric() + ", threshold: " + rule.getThreshold());
-                        dtoRule.setAction("consequence: " + rule.getConsequence());
+                        dtoRule.setName((String) externalRule.get("rule_name"));
+                        dtoRule.setDescription((String) externalRule.get("description"));
+                        dtoRule.setMetric((String) externalRule.get("metric"));
+                        dtoRule.setThreshold((String) externalRule.get("threshold"));
+                        dtoRule.setConsequence((String) externalRule.get("consequence"));
+                        dtoRule.setCondition("metric: " + dtoRule.getMetric() + ", threshold: " + dtoRule.getThreshold());
+                        dtoRule.setAction("consequence: " + dtoRule.getConsequence());
                         dtoRules.add(dtoRule);
                     }
                     rulesResponse.setRules(dtoRules);
                 }
                 
-                log.info("Rules generated and stored successfully for device: {}, rules count: {}", 
+                log.info("Rules generated successfully for device: {}, rules count: {}", 
                     deviceId, rulesResponse.getRules() != null ? rulesResponse.getRules().size() : 0);
             } else {
                 throw new PDFProcessingException("Rules generation failed: External service returned success=false");
@@ -640,87 +622,24 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                 List<Map<String, Object>> externalPrecautions = (List<Map<String, Object>>) responseBody.get("safety_information");
                 if (externalPrecautions != null) {
                     log.info("Processing {} external safety precautions for device: {}", externalPrecautions.size(), deviceId);
-                    List<DeviceSafetyPrecaution> safetyPrecautions = new ArrayList<>();
-                    for (Map<String, Object> externalPrecaution : externalPrecautions) {
-                        DeviceSafetyPrecaution safety = new DeviceSafetyPrecaution();
-                        safety.setId(UUID.randomUUID().toString()); // Set required ID
-                        safety.setTitle((String) externalPrecaution.get("name"));
-                        safety.setDescription((String) externalPrecaution.get("about_reaction"));
-                        safety.setSeverity("HIGH"); // Default severity since not provided in response
-                        safety.setType("PDF_GENERATED"); // Set required type field
-                        safety.setCategory("general"); // Set default category since not provided in response
-                        safety.setDeviceId(deviceId);
-                        safety.setOrganizationId(organizationId);
-                        safety.setIsActive(true);
-                        // Store additional safety information in separate fields
-                        String aboutReaction = (String) externalPrecaution.get("about_reaction");
-                        String causes = (String) externalPrecaution.get("causes");
-                        String howToAvoid = (String) externalPrecaution.get("how_to_avoid");
-                        String safetyInfo = (String) externalPrecaution.get("safety_info");
-                        
-                        // Set individual fields
-                        safety.setAboutReaction(aboutReaction);
-                        safety.setCauses(causes);
-                        safety.setHowToAvoid(howToAvoid);
-                        safety.setSafetyInfo(safetyInfo);
-                        
-                        // Set description to about_reaction for backward compatibility
-                        safety.setDescription(aboutReaction != null ? aboutReaction : "No description available");
-                        
-                        safety.setCreatedAt(LocalDateTime.now());
-                        safety.setUpdatedAt(LocalDateTime.now());
-                        
-                        // Log the complete safety precaution after all fields are set
-                        log.debug("Created safety precaution from external data: ID={}, Title={}, Type={}, Category={}, AboutReaction={}, Causes={}, HowToAvoid={}, SafetyInfo={}", 
-                            safety.getId(), safety.getTitle(), safety.getType(), safety.getCategory(),
-                            safety.getAboutReaction() != null ? safety.getAboutReaction().substring(0, Math.min(50, safety.getAboutReaction().length())) + "..." : "null",
-                            safety.getCauses() != null ? safety.getCauses().substring(0, Math.min(50, safety.getCauses().length())) + "..." : "null",
-                            safety.getHowToAvoid() != null ? safety.getHowToAvoid().substring(0, Math.min(50, safety.getHowToAvoid().length())) + "..." : "null",
-                            safety.getSafetyInfo() != null ? safety.getSafetyInfo().substring(0, Math.min(50, safety.getSafetyInfo().length())) + "..." : "null");
-                        
-                        // Validate the safety precaution before saving
-                        if (!safety.isValid()) {
-                            List<String> validationErrors = safety.getValidationErrors();
-                            log.warn("Safety precaution validation failed, skipping: ID={}, Errors: {}", 
-                                safety.getId(), validationErrors);
-                            continue;
-                        }
-                        
-                        if (safety.getDescription() == null || safety.getDescription().trim().isEmpty()) {
-                            log.warn("Safety precaution has empty description, setting default: {}", safety.getId());
-                            safety.setDescription("No description available");
-                        }
-                        
-                        // Store safety precaution in database
-                        try {
-                            DeviceSafetyPrecaution savedSafety = deviceSafetyPrecautionRepository.save(safety);
-                            safetyPrecautions.add(savedSafety);
-                            log.debug("Successfully saved safety precaution to database: ID={}, Title={}", 
-                                savedSafety.getId(), savedSafety.getTitle());
-                        } catch (Exception e) {
-                            log.error("Failed to save safety precaution to database: ID={}, Title={}, Error: {}", 
-                                safety.getId(), safety.getTitle(), e.getMessage(), e);
-                            // Continue with other precautions even if one fails
-                        }
-                    }
-                    // Convert to DTO format
+                    // Convert to DTO format directly without storing in database
                     List<SafetyGenerationResponse.SafetyPrecaution> dtoPrecautions = new ArrayList<>();
-                    for (DeviceSafetyPrecaution safety : safetyPrecautions) {
+                    for (Map<String, Object> externalPrecaution : externalPrecautions) {
                         SafetyGenerationResponse.SafetyPrecaution dtoPrecaution = new SafetyGenerationResponse.SafetyPrecaution();
-                        dtoPrecaution.setTitle(safety.getTitle());
-                        dtoPrecaution.setDescription(safety.getDescription());
-                        dtoPrecaution.setCategory(safety.getCategory());
-                        dtoPrecaution.setSeverity(safety.getSeverity());
-                        dtoPrecaution.setAboutReaction(safety.getAboutReaction());
-                        dtoPrecaution.setCauses(safety.getCauses());
-                        dtoPrecaution.setHowToAvoid(safety.getHowToAvoid());
-                        dtoPrecaution.setSafetyInfo(safety.getSafetyInfo());
+                        dtoPrecaution.setTitle((String) externalPrecaution.get("name"));
+                        dtoPrecaution.setDescription((String) externalPrecaution.get("about_reaction"));
+                        dtoPrecaution.setSeverity("HIGH"); // Default severity since not provided in response
+                        dtoPrecaution.setCategory("general"); // Set default category since not provided in response
+                        dtoPrecaution.setAboutReaction((String) externalPrecaution.get("about_reaction"));
+                        dtoPrecaution.setCauses((String) externalPrecaution.get("causes"));
+                        dtoPrecaution.setHowToAvoid((String) externalPrecaution.get("how_to_avoid"));
+                        dtoPrecaution.setSafetyInfo((String) externalPrecaution.get("safety_info"));
                         dtoPrecautions.add(dtoPrecaution);
                     }
                     safetyResponse.setSafetyPrecautions(dtoPrecautions);
                 }
                 
-                log.info("Safety precautions generated and stored successfully for device: {}, precautions count: {}", 
+                log.info("Safety precautions generated successfully for device: {}, precautions count: {}", 
                     deviceId, safetyResponse.getSafetyPrecautions() != null ? safetyResponse.getSafetyPrecautions().size() : 0);
                 
                 // Log detailed summary of stored data

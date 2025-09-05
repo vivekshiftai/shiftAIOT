@@ -301,8 +301,15 @@ public class MaintenanceScheduleService {
     public void createMaintenanceFromPDF(List<MaintenanceGenerationResponse.MaintenanceTask> maintenanceTasks, String deviceId, String organizationId) {
         log.info("Creating maintenance tasks from PDF for device: {} in organization: {}", deviceId, organizationId);
         
+        // Get device assignee for auto-assignment
+        Optional<Device> device = deviceRepository.findById(deviceId);
+        String deviceAssignee = device.map(Device::getAssignedUserId).orElse(null);
+        
+        log.info("🔍 Device lookup for maintenance assignment - Device ID: {}, Assigned User: '{}'", deviceId, deviceAssignee);
+        
         int processedCount = 0;
         int skippedCount = 0;
+        int assignedCount = 0;
         
         for (MaintenanceGenerationResponse.MaintenanceTask maintenanceData : maintenanceTasks) {
             try {
@@ -354,15 +361,6 @@ public class MaintenanceScheduleService {
                     continue;
                 }
                 
-                // Check if maintenance task already exists for this device
-                Optional<DeviceMaintenance> existingMaintenance = deviceMaintenanceRepository
-                    .findByDeviceIdAndTaskNameAndOrganizationId(deviceId, taskTitle, organizationId);
-                
-                if (existingMaintenance.isPresent()) {
-                    log.info("⚠️ Maintenance task '{}' already exists for device: {}, skipping creation", taskTitle, deviceId);
-                    skippedCount++;
-                    continue;
-                }
                 
                 // All required fields are present, create maintenance task
                 DeviceMaintenance maintenance = new DeviceMaintenance();
@@ -398,6 +396,15 @@ public class MaintenanceScheduleService {
                 maintenance.setCreatedAt(LocalDateTime.now());
                 maintenance.setUpdatedAt(LocalDateTime.now());
                 
+                // Auto-assign to device assignee
+                if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
+                    maintenance.setAssignedTo(deviceAssignee);
+                    assignedCount++;
+                    log.info("✅ Maintenance task '{}' assigned to user: {}", taskTitle, deviceAssignee);
+                } else {
+                    log.warn("⚠️ Maintenance task '{}' not assigned - no device assignee found", taskTitle);
+                }
+                
                 // Final validation - ensure maintenance type is set
                 if (maintenance.getMaintenanceType() == null) {
                     log.warn("Maintenance type is null for task: {}, setting to GENERAL", taskTitle);
@@ -426,8 +433,45 @@ public class MaintenanceScheduleService {
             }
         }
         
-        log.info("Maintenance task creation completed for device: {} - Processed: {}, Skipped: {}", 
-            deviceId, processedCount, skippedCount);
+        log.info("Maintenance task creation completed for device: {} - Processed: {}, Skipped: {}, Assigned: {}", 
+            deviceId, processedCount, skippedCount, assignedCount);
+    }
+    
+    /**
+     * Update existing maintenance tasks for a device with assigned user if they don't have one.
+     * This is useful for fixing existing data where maintenance tasks were created without assignment.
+     */
+    public void updateMaintenanceTasksAssignment(String deviceId, String organizationId) {
+        log.info("Updating maintenance task assignments for device: {} in organization: {}", deviceId, organizationId);
+        
+        // Get device assignee
+        Optional<Device> device = deviceRepository.findById(deviceId);
+        String deviceAssignee = device.map(Device::getAssignedUserId).orElse(null);
+        
+        if (deviceAssignee == null || deviceAssignee.trim().isEmpty()) {
+            log.warn("⚠️ No device assignee found for device: {}, cannot update maintenance assignments", deviceId);
+            return;
+        }
+        
+        // Find all maintenance tasks for this device that don't have assigned users
+        List<DeviceMaintenance> unassignedTasks = deviceMaintenanceRepository
+            .findByDeviceIdAndOrganizationIdAndAssignedToIsNull(deviceId, organizationId);
+        
+        if (unassignedTasks.isEmpty()) {
+            log.info("✅ All maintenance tasks for device: {} are already assigned", deviceId);
+            return;
+        }
+        
+        int updatedCount = 0;
+        for (DeviceMaintenance task : unassignedTasks) {
+            task.setAssignedTo(deviceAssignee);
+            task.setUpdatedAt(LocalDateTime.now());
+            deviceMaintenanceRepository.save(task);
+            updatedCount++;
+            log.info("✅ Updated maintenance task '{}' with assigned user: {}", task.getTaskName(), deviceAssignee);
+        }
+        
+        log.info("Maintenance task assignment update completed for device: {} - Updated: {} tasks", deviceId, updatedCount);
     }
     
     /**
