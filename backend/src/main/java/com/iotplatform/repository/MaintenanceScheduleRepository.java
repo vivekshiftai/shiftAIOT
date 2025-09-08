@@ -68,13 +68,14 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
     List<Object[]> findTodaysMaintenanceTasksWithDetails(@Param("organizationId") String organizationId);
     
     // Find ALL today's maintenance tasks with device and user details (across all organizations)
+    // This includes overdue tasks and tasks scheduled for today
     @Query(value = """
         SELECT m.*, d.name as device_name, d.assigned_user_id, u.first_name, u.last_name, u.email 
         FROM device_maintenance m 
         LEFT JOIN devices d ON m.device_id = d.id 
         LEFT JOIN users u ON d.assigned_user_id = u.id 
-        WHERE m.next_maintenance = CURRENT_DATE 
-        AND m.status != 'completed'
+        WHERE m.next_maintenance <= CURRENT_DATE 
+        AND m.status IN ('ACTIVE', 'PENDING', 'OVERDUE')
         AND d.assigned_user_id IS NOT NULL
         """, nativeQuery = true)
     List<Object[]> findAllTodaysMaintenanceTasksWithDetails();

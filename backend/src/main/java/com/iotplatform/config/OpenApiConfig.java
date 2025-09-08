@@ -53,7 +53,10 @@ public class OpenApiConfig {
                 .servers(List.of(
                         new Server()
                                 .url("http://localhost:8100")
-                                .description("Development Server"),
+                                .description("Local Development Server"),
+                        new Server()
+                                .url("http://localhost:8100")
+                                .description("VM/Docker Development Server (use your VM IP)"),
                         new Server()
                                 .url("https://api.shiftaiot.com")
                                 .description("Production Server")))

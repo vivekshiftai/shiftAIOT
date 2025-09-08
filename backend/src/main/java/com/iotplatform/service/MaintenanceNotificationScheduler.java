@@ -53,12 +53,16 @@ public class MaintenanceNotificationScheduler {
         log.info("Starting daily maintenance notification process for date: {}", LocalDate.now());
 
         try {
-            // Search by today's date and fetch ALL maintenance tasks for today
+            // Search by today's date and fetch ALL maintenance tasks for today (including overdue)
             List<Object[]> todaysTasks = maintenanceScheduleRepository
                 .findAllTodaysMaintenanceTasksWithDetails();
 
             if (todaysTasks.isEmpty()) {
-                log.info("No maintenance tasks found for today");
+                log.warn("No maintenance tasks found for today or overdue. This could indicate:");
+                log.warn("1. No tasks scheduled for today or earlier");
+                log.warn("2. All tasks have status = 'COMPLETED' or other excluded statuses");
+                log.warn("3. No devices have assigned users");
+                log.warn("4. Database connection issues");
                 return;
             }
 
@@ -253,6 +257,45 @@ public class MaintenanceNotificationScheduler {
 
         log.info("Manual maintenance notification trigger completed. Sent: {} notifications", notificationsSent);
         return notificationsSent;
+    }
+
+    /**
+     * Debug method to check maintenance task data without sending notifications.
+     * This helps troubleshoot why no tasks are found.
+     */
+    public void debugMaintenanceTasks() {
+        log.info("🔍 DEBUG: Checking maintenance task data...");
+        
+        try {
+            // Check total maintenance tasks in database
+            List<Object[]> allTasks = maintenanceScheduleRepository.findAllTodaysMaintenanceTasksWithDetails();
+            log.info("📊 Total maintenance tasks found: {}", allTasks.size());
+            
+            if (allTasks.isEmpty()) {
+                log.warn("❌ No maintenance tasks found. Checking possible causes:");
+                
+                // Let's check what's in the database
+                log.info("🔍 Checking database for maintenance tasks...");
+                // This would require additional repository methods to debug further
+                log.warn("💡 Suggestion: Check if maintenance tasks exist in device_maintenance table");
+                log.warn("💡 Suggestion: Verify next_maintenance dates are set correctly");
+                log.warn("💡 Suggestion: Check if devices have assigned_user_id values");
+                log.warn("💡 Suggestion: Verify maintenance task statuses are ACTIVE, PENDING, or OVERDUE");
+            } else {
+                log.info("✅ Found {} maintenance tasks for notification processing", allTasks.size());
+                
+                // Log details of first few tasks for debugging
+                int count = Math.min(allTasks.size(), 3);
+                for (int i = 0; i < count; i++) {
+                    Object[] task = allTasks.get(i);
+                    log.info("📋 Task {}: ID={}, Name={}, Device={}, Status={}, NextMaintenance={}", 
+                        i+1, task[0], task[1], task[2], task[6], task[5]);
+                }
+            }
+            
+        } catch (Exception e) {
+            log.error("❌ Error during maintenance task debug: {}", e.getMessage(), e);
+        }
     }
 
     /**

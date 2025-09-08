@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.HashMap;
 
 /**
  * REST Controller for maintenance notification operations.
@@ -116,5 +117,51 @@ public class MaintenanceNotificationController {
         status.put("user", userDetails.getUsername());
 
         return ResponseEntity.ok(status);
+    }
+
+    /**
+     * Debug maintenance tasks to troubleshoot notification issues.
+     */
+    @Operation(
+        summary = "Debug Maintenance Tasks",
+        description = "Debug maintenance tasks to understand why notifications might not be sent"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Debug information retrieved successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @ApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    @GetMapping("/debug")
+    @PreAuthorize("hasAuthority('MAINTENANCE_NOTIFICATION_READ')")
+    public ResponseEntity<Map<String, Object>> debugMaintenanceTasks(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            log.info("Debug maintenance tasks requested by user: {}", userDetails.getUsername());
+            
+            // Call the debug method
+            maintenanceNotificationScheduler.debugMaintenanceTasks();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Debug information logged to server logs");
+            response.put("user", userDetails.getUsername());
+            response.put("timestamp", java.time.LocalDateTime.now());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error during maintenance task debug: {}", e.getMessage(), e);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to debug maintenance tasks: " + e.getMessage());
+            
+            return ResponseEntity.status(500).body(response);
+        }
     }
 }
