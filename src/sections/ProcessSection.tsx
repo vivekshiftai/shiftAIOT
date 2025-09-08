@@ -61,11 +61,9 @@ interface StrategyAgentResponse {
   RejectedRecommendations: Recommendation[];
   AlreadyPurchasedRecommendations: Recommendation[];
   Summary: {
-    TotalUpSell: number;
-    TotalCrossSell: number;
-    TotalRejected: number;
-    TotalAlreadyPurchased: number;
-    TotalRecommendations: number;
+    total_recommendations: number;
+    total_rejected: number;
+    total_already_purchased: number;
   };
   files_generated: {
     json_file: string;
@@ -101,8 +99,10 @@ export const ProcessSection: React.FC = () => {
       console.log('🔍 Testing Strategy Agent API connectivity...');
       const response = await fetch('http://20.57.36.66:8001/health', {
         method: 'GET',
+        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
       });
       console.log('🔍 Health check response:', response.status, response.statusText);
@@ -147,9 +147,10 @@ export const ProcessSection: React.FC = () => {
       
       const response = await fetch('http://20.57.36.66:8001/generate-recommendations', {
         method: 'POST',
+        mode: 'cors',
         headers: {
           'Content-Type': 'application/json',
-          'accept': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({
           customer_id: selectedCustomer
@@ -157,6 +158,8 @@ export const ProcessSection: React.FC = () => {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error Response:', errorText);
         throw new Error(`Strategy Agent API error: ${response.status} ${response.statusText}`);
       }
 
@@ -165,10 +168,11 @@ export const ProcessSection: React.FC = () => {
       
       logInfo('Process', 'Marketing intelligence recommendations generated successfully', {
         customerId: selectedCustomer,
-        totalRecommendations: data.Summary.TotalRecommendations
+        totalRecommendations: data.Summary.total_recommendations
       });
       
     } catch (error) {
+      console.error('❌ Full error details:', error);
       throw error;
     }
   };
@@ -184,8 +188,9 @@ export const ProcessSection: React.FC = () => {
       
       const response = await fetch(pdfUrl, {
         method: 'GET',
+        mode: 'cors',
         headers: {
-          'accept': 'application/pdf',
+          'Accept': 'application/pdf',
         },
       });
       
@@ -319,7 +324,7 @@ export const ProcessSection: React.FC = () => {
                       <CheckCircle className="w-4 h-4 text-green-600" />
                       <span className="text-sm font-medium text-green-800">Accepted</span>
                     </div>
-                    <p className="text-2xl font-bold text-green-900">{recommendations.Summary.TotalCrossSell}</p>
+                    <p className="text-2xl font-bold text-green-900">{recommendations.AcceptedRecommendations.length}</p>
                   </div>
                   
                   <div className="bg-red-50 rounded-lg p-4">
@@ -327,7 +332,7 @@ export const ProcessSection: React.FC = () => {
                       <X className="w-4 h-4 text-red-600" />
                       <span className="text-sm font-medium text-red-800">Rejected</span>
                     </div>
-                    <p className="text-2xl font-bold text-red-900">{recommendations.Summary.TotalRejected}</p>
+                    <p className="text-2xl font-bold text-red-900">{recommendations.Summary.total_rejected}</p>
                   </div>
                   
                   <div className="bg-blue-50 rounded-lg p-4">
@@ -335,7 +340,7 @@ export const ProcessSection: React.FC = () => {
                       <Clock className="w-4 h-4 text-blue-600" />
                       <span className="text-sm font-medium text-blue-800">Already Purchased</span>
                     </div>
-                    <p className="text-2xl font-bold text-blue-900">{recommendations.Summary.TotalAlreadyPurchased}</p>
+                    <p className="text-2xl font-bold text-blue-900">{recommendations.Summary.total_already_purchased}</p>
                   </div>
                   
                   <div className="bg-gray-50 rounded-lg p-4">
@@ -343,7 +348,7 @@ export const ProcessSection: React.FC = () => {
                       <Plus className="w-4 h-4 text-gray-600" />
                       <span className="text-sm font-medium text-gray-800">Total</span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">{recommendations.Summary.TotalRecommendations}</p>
+                    <p className="text-2xl font-bold text-gray-900">{recommendations.Summary.total_recommendations}</p>
                   </div>
                 </div>
                 
