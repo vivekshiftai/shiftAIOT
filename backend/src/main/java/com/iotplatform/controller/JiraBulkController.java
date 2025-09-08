@@ -18,7 +18,7 @@ import java.util.HashMap;
  */
 @RestController
 @RequestMapping("/api/jira/bulk")
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*")
 public class JiraBulkController {
 
     private static final Logger logger = LoggerFactory.getLogger(JiraBulkController.class);

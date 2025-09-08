@@ -28,7 +28,7 @@ import com.iotplatform.service.ConversationConfigService;
 
 import jakarta.validation.Valid;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(originPatterns = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/conversation-configs")
 public class ConversationConfigController {

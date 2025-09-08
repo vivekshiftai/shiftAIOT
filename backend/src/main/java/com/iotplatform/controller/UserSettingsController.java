@@ -21,7 +21,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/user-settings")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*")
 public class UserSettingsController {
     
     private final UserPreferencesRepository userPreferencesRepository;

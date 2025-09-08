@@ -32,7 +32,7 @@ import com.iotplatform.service.RuleService;
 
 import jakarta.validation.Valid;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(originPatterns = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/rules")
 public class RuleController {

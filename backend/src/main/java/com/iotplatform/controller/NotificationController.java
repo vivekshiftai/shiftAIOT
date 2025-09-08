@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/notifications")
-@CrossOrigin(origins = "*")
+@CrossOrigin(originPatterns = "*")
 public class NotificationController {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationController.class);

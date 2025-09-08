@@ -77,7 +77,7 @@ import com.iotplatform.dto.UnifiedOnboardingProgress;
 import java.util.function.Consumer;
 import io.swagger.v3.oas.annotations.Operation;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(originPatterns = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/devices")
 public class DeviceController {

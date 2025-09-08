@@ -18,7 +18,7 @@ import com.iotplatform.model.User;
 import com.iotplatform.model.UserPreferences;
 import com.iotplatform.repository.UserPreferencesRepository;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(originPatterns = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/user-preferences")
 public class UserPreferencesController {

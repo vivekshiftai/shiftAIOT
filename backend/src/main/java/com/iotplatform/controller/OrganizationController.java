@@ -27,7 +27,7 @@ import com.iotplatform.service.OrganizationService;
 
 import jakarta.validation.Valid;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(originPatterns = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/organizations")
 public class OrganizationController {

@@ -27,7 +27,7 @@ import com.iotplatform.model.User;
 import com.iotplatform.repository.UserRepository;
 import com.iotplatform.security.CustomUserDetails;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(originPatterns = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/users")
 public class UserController {

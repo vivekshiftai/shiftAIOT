@@ -64,7 +64,7 @@ import com.iotplatform.dto.HealthCheckResponse;
 @RequestMapping("/api/pdf")
 @RequiredArgsConstructor
 @Tag(name = "PDF Processing", description = "PDF document processing and management operations")
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(originPatterns = "*", maxAge = 3600)
 public class PDFProcessingController {
     
     private static final Logger log = LoggerFactory.getLogger(PDFProcessingController.class);

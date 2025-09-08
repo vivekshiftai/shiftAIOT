@@ -16,6 +16,6 @@ public class SwaggerConfig implements WebMvcConfigurer {
                 .allowedOriginPatterns("*")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
-                .allowCredentials(true);
+                .allowCredentials(false); // Changed to false to allow wildcard origins
     }
 }
