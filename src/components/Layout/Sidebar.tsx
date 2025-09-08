@@ -6,7 +6,8 @@ import {
   User, 
   Zap,
   BarChart3,
-  Cpu
+  Cpu,
+  Layers
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -20,6 +21,7 @@ const menuItems = [
   { id: 'devices', label: 'Devices', icon: Cpu, path: '/devices' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
   { id: 'knowledge', label: 'Knowledge Base', icon: Bell, path: '/knowledge' },
+  { id: 'process', label: 'Process', icon: Layers, path: '/process' },
   { id: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
   { id: 'users', label: 'Users', icon: User, path: '/users' },
 ];
@@ -35,6 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
     if (path === '/devices') return 'devices';
     if (path === '/analytics') return 'analytics';
     if (path === '/knowledge') return 'knowledge';
+    if (path === '/process') return 'process';
     if (path === '/notifications') return 'notifications';
     if (path === '/users') return 'users';
     if (path === '/settings') return 'settings';

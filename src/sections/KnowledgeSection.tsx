@@ -179,11 +179,6 @@ export const KnowledgeSection: React.FC = () => {
     loadQuerySuggestions();
   }, [loadData]); // Include loadData in dependencies
 
-  // Add a manual refresh function that can be called when needed
-  const refreshData = useCallback(() => {
-    console.log('🔍 Manual refresh triggered for Knowledge section');
-    loadData();
-  }, [loadData]);
 
   // Add a ref to detect when the component is visible
   const knowledgeSectionRef = useRef<HTMLDivElement>(null);
@@ -786,19 +781,6 @@ export const KnowledgeSection: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">AI Ready Machines</h2>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={refreshData}
-                  disabled={loading}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all shadow-sm disabled:opacity-50"
-                  title="Refresh machines list"
-                >
-                  {loading ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  ) : (
-                    <span>↻</span>
-                  )}
-                  {loading ? 'Loading...' : 'Refresh'}
-                </button>
                 <label className="cursor-pointer">
                   <input
                     type="file"

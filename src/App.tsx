@@ -46,6 +46,7 @@ import { DashboardSection } from './sections/DashboardSection';
 import { DevicesSection } from './sections/DevicesSection';
 import { DeviceDetailsSection } from './sections/DeviceDetailsSection';
 import { KnowledgeSection } from './sections/KnowledgeSection';
+import { ProcessSection } from './sections/ProcessSection';
 import { NotificationsSection } from './sections/NotificationsSection';
 import { AnalyticsSection } from './sections/AnalyticsSection';
 import { UsersSection } from './sections/UsersSection';
@@ -192,6 +193,7 @@ const MainAppLayout: React.FC = () => {
             <Route path="/devices" element={<DevicesSection />} />
             <Route path="/devices/:deviceId" element={<DeviceDetailsSection />} />
             <Route path="/knowledge" element={<KnowledgeSection />} />
+            <Route path="/process" element={<ProcessSection />} />
             <Route path="/notifications" element={<NotificationsSection />} />
             <Route path="/analytics" element={<AnalyticsSection />} />
             <Route path="/users" element={<UsersSection />} />
