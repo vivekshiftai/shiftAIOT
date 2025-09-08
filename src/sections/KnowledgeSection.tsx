@@ -125,6 +125,12 @@ export const KnowledgeSection: React.FC = () => {
         // Load documents from unified PDFs table via knowledge API
         const knowledgeResponse = await knowledgeAPI.getDocuments();
         
+        // Debug: Log the actual response
+        console.log('🔍 Knowledge API Response:', knowledgeResponse);
+        console.log('🔍 Documents array:', knowledgeResponse.data?.documents);
+        console.log('🔍 Response status:', knowledgeResponse.status);
+        console.log('🔍 Response headers:', knowledgeResponse.headers);
+        
         if (isMounted && knowledgeResponse.data.documents) {
           const knowledgeDocuments: UnifiedPDF[] = knowledgeResponse.data.documents.map((doc: any) => ({
             id: doc.id.toString(),
@@ -133,12 +139,12 @@ export const KnowledgeSection: React.FC = () => {
             documentType: doc.documentType || 'pdf',
             fileSize: doc.fileSize || 0,
             processingStatus: doc.processingStatus || 'completed',
-            vectorized: doc.vectorized || true,
+            vectorized: doc.vectorized === true || doc.vectorized === 'true', // Handle both boolean and string
             uploadedAt: doc.uploadedAt,
             processedAt: doc.processedAt || doc.uploadedAt,
             deviceId: doc.deviceId,
             deviceName: doc.deviceName,
-            organizationId: doc.organizationId || 'public',
+            organizationId: doc.organizationId || 'shiftAIOT-org-2024',
             collectionName: doc.collectionName,
             totalPages: doc.totalPages,
             processedChunks: doc.processedChunks || 0,
@@ -146,11 +152,18 @@ export const KnowledgeSection: React.FC = () => {
           }));
           
           setDocuments(knowledgeDocuments);
+          
+          // Debug: Log document details
+          console.log('🔍 Processed documents:', knowledgeDocuments);
+          console.log('🔍 Documents with device info:', knowledgeDocuments.filter(doc => doc.deviceId && doc.deviceName));
+          
           logInfo('Knowledge', 'Devices loaded successfully', { 
             totalDocuments: knowledgeDocuments.length,
             devicesWithPDFs: knowledgeDocuments.filter(doc => doc.deviceId && doc.deviceName).length
           });
         } else {
+          console.log('🔍 No documents found - response data:', knowledgeResponse.data);
+          console.log('🔍 Response structure:', Object.keys(knowledgeResponse.data || {}));
           logInfo('Knowledge', 'No documents found in unified PDFs table');
           setDocuments([]);
         }
@@ -191,8 +204,8 @@ export const KnowledgeSection: React.FC = () => {
     try {
       // If a device is selected, query its PDFs
       if (selectedDevice) {
-        // Get device PDFs from the selected device
-        const devicePDFs = selectedDevice.pdfs || documents.filter(doc => doc.deviceId === selectedDevice.id && doc.processingStatus === 'completed' && doc.vectorized);
+        // Get device PDFs from the selected device - use any PDF regardless of processing status
+        const devicePDFs = selectedDevice.pdfs || documents.filter(doc => doc.deviceName === selectedDevice.name);
         
         if (devicePDFs.length > 0) {
           // Try to query the first available PDF for the device
@@ -391,27 +404,34 @@ export const KnowledgeSection: React.FC = () => {
 
   // Get devices from unified PDFs table (devices that have PDFs) - memoized to prevent unnecessary recalculations
   const devicesWithPDFs = useMemo(() => {
-    return documents
-      .filter(doc => doc.deviceName && doc.processingStatus === 'completed' && doc.vectorized) // Only completed and vectorized documents
-      .reduce((acc, doc) => {
-        // Group by device name instead of device ID
-        const existingDevice = acc.find(d => d.name === doc.deviceName);
-        if (existingDevice) {
-          existingDevice.pdfs!.push(doc);
-          existingDevice.pdfCount!++;
-        } else {
-          acc.push({
-            id: doc.deviceId || `device-${doc.deviceName}`, // Use deviceId if available, otherwise generate one
-            name: doc.deviceName!,
-            type: 'Machine', // Default type for devices from PDFs
-            status: 'online', // Default status
-            pdfs: [doc],
-            pdfCount: 1,
-            hasPDFs: true
-          });
-        }
-        return acc;
-      }, [] as Array<Device & { pdfs: UnifiedPDF[]; pdfCount: number; hasPDFs: boolean }>);
+    console.log('🔍 Calculating devicesWithPDFs from documents:', documents);
+    
+    // Remove all filters - show ALL devices with PDFs regardless of processing status
+    const filteredDocs = documents.filter(doc => doc.deviceName); // Only filter by deviceName
+    console.log('🔍 Filtered documents (with deviceName only):', filteredDocs);
+    
+    const devices = filteredDocs.reduce((acc, doc) => {
+      // Group by device name instead of device ID
+      const existingDevice = acc.find(d => d.name === doc.deviceName);
+      if (existingDevice) {
+        existingDevice.pdfs!.push(doc);
+        existingDevice.pdfCount!++;
+      } else {
+        acc.push({
+          id: doc.deviceId || `device-${doc.deviceName}`, // Use deviceId if available, otherwise generate one
+          name: doc.deviceName!,
+          type: 'Machine', // Default type for devices from PDFs
+          status: 'online', // Default status
+          pdfs: [doc],
+          pdfCount: 1,
+          hasPDFs: true
+        });
+      }
+      return acc;
+    }, [] as Array<Device & { pdfs: UnifiedPDF[]; pdfCount: number; hasPDFs: boolean }>);
+    
+    console.log('🔍 Final devices array:', devices);
+    return devices;
   }, [documents]); // Only recalculate when documents change
 
   // Filter devices based on search query - memoized to prevent unnecessary recalculations

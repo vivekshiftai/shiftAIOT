@@ -138,7 +138,7 @@ public class KnowledgeController {
     @PostMapping("/query")
     public ResponseEntity<?> queryPDF(@RequestBody Map<String, Object> request) {
         try {
-            String organizationId = "public"; // Default organization for all users
+            String organizationId = "shiftAIOT-org-2024"; // Use the actual organization ID from your data
             String pdfName = (String) request.get("pdf_name");
             String query = (String) request.get("query");
             Integer topK = (Integer) request.getOrDefault("top_k", 5);
@@ -360,18 +360,29 @@ public class KnowledgeController {
     public ResponseEntity<?> getDocuments(
             @RequestParam(value = "deviceId", required = false) String deviceId) {
         try {
-            String organizationId = "public"; // Default organization for all users
+            // Get organization from authenticated user or use default
+            String organizationId = "shiftAIOT-org-2024"; // Use the actual organization ID from your data
+            System.out.println("🔍 KnowledgeController.getDocuments - Organization ID: " + organizationId);
+            
             List<UnifiedPDF> documents;
             if (deviceId != null) {
                 documents = unifiedPDFService.getPDFsByDeviceAndOrganization(deviceId, organizationId);
             } else {
                 documents = unifiedPDFService.getPDFsByOrganization(organizationId);
             }
+            
+            System.out.println("🔍 KnowledgeController.getDocuments - Found " + documents.size() + " documents");
+            for (UnifiedPDF doc : documents) {
+                System.out.println("🔍 Document: " + doc.getName() + " | Device: " + doc.getDeviceName() + " | Status: " + doc.getProcessingStatus());
+            }
+            
             return ResponseEntity.ok(Map.of(
                 "documents", documents,
                 "totalCount", documents.size()
             ));
         } catch (Exception e) {
+            System.err.println("❌ KnowledgeController.getDocuments error: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
@@ -379,7 +390,7 @@ public class KnowledgeController {
     @GetMapping("/documents/device/{deviceId}")
     public ResponseEntity<?> getDocumentsByDevice(@PathVariable String deviceId) {
         try {
-            String organizationId = "public"; // Default organization for all users
+            String organizationId = "shiftAIOT-org-2024"; // Use the actual organization ID from your data
             List<UnifiedPDF> documents = unifiedPDFService.getPDFsByDeviceAndOrganization(deviceId, organizationId);
             return ResponseEntity.ok(Map.of(
                 "documents", documents,
@@ -394,7 +405,7 @@ public class KnowledgeController {
     @GetMapping("/documents/general")
     public ResponseEntity<?> getGeneralDocuments() {
         try {
-            String organizationId = "public"; // Default organization for all users
+            String organizationId = "shiftAIOT-org-2024"; // Use the actual organization ID from your data
             List<UnifiedPDF> documents = unifiedPDFService.getPDFsByType(organizationId, UnifiedPDF.DocumentType.GENERAL);
             return ResponseEntity.ok(Map.of(
                 "documents", documents,
