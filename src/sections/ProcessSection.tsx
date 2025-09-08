@@ -98,11 +98,11 @@ export const ProcessSection: React.FC = () => {
 
   const testAPIConnectivity = async () => {
     try {
-      console.log('🔍 Testing Strategy Agent API connectivity via backend proxy...');
-      const response = await fetch('/api/strategy-agent/health', {
+      console.log('🔍 Testing Strategy Agent API connectivity...');
+      const response = await fetch('http://20.57.36.66:8001/health', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
         },
       });
       console.log('🔍 Health check response:', response.status, response.statusText);
@@ -143,13 +143,13 @@ export const ProcessSection: React.FC = () => {
 
   const generateRecommendationsViaBackend = async () => {
     try {
-      console.log('🔍 Trying backend proxy for Strategy Agent API...');
+      console.log('🔍 Calling Strategy Agent API directly...');
       
-      const response = await fetch('/api/strategy-agent/generate-recommendations', {
+      const response = await fetch('http://20.57.36.66:8001/generate-recommendations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'accept': 'application/json',
         },
         body: JSON.stringify({
           customer_id: selectedCustomer
@@ -157,13 +157,13 @@ export const ProcessSection: React.FC = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`Backend proxy error: ${response.status} ${response.statusText}`);
+        throw new Error(`Strategy Agent API error: ${response.status} ${response.statusText}`);
       }
 
       const data: StrategyAgentResponse = await response.json();
       setRecommendations(data);
       
-      logInfo('Process', 'Marketing intelligence recommendations generated via backend proxy', {
+      logInfo('Process', 'Marketing intelligence recommendations generated successfully', {
         customerId: selectedCustomer,
         totalRecommendations: data.Summary.TotalRecommendations
       });
@@ -177,12 +177,15 @@ export const ProcessSection: React.FC = () => {
     if (!recommendations) return;
 
     try {
-      console.log('🔍 Downloading PDF report via backend proxy...');
+      console.log('🔍 Downloading PDF report from Strategy Agent API...');
       
-      const response = await fetch(`/api/strategy-agent/recommendations/${recommendations.customer_id}/download`, {
+      // Use the PDF file path from the API response
+      const pdfUrl = `http://20.57.36.66:8001/${recommendations.files_generated.pdf_file}`;
+      
+      const response = await fetch(pdfUrl, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'accept': 'application/pdf',
         },
       });
       
@@ -202,7 +205,7 @@ export const ProcessSection: React.FC = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      logInfo('Process', 'PDF report downloaded successfully via backend proxy', { 
+      logInfo('Process', 'PDF report downloaded successfully', { 
         customerId: recommendations.customer_id 
       });
     } catch (error) {
