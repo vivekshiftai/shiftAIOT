@@ -701,7 +701,7 @@ export const DeviceDetailsSection: React.FC = () => {
   };
 
   const deviceTypeConfig = {
-    SENSOR: { icon: Settings, label: 'Sensor' },
+    SENSOR: { icon: Settings, label: 'Machine' },
     ACTUATOR: { icon: Settings, label: 'Actuator' },
     GATEWAY: { icon: Settings, label: 'Gateway' },
     CONTROLLER: { icon: Settings, label: 'Controller' },
@@ -1521,7 +1521,7 @@ export const DeviceDetailsSection: React.FC = () => {
                 </button>
                 {device?.type === 'SENSOR' && (
                   <button
-                    onClick={() => setNewMessage('What are the sensor calibration procedures?')}
+                    onClick={() => setNewMessage('What are the machine calibration procedures?')}
                     className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
                   >
                     Calibration

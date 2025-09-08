@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, Filter, Search, CheckCircle, RefreshCw } from 'lucide-react';
+import { Plus, Filter, Search, CheckCircle } from 'lucide-react';
 import { DeviceCard } from '../components/Devices/DeviceCard';
 // import { DeviceOnboardingForm } from '../components/Devices/DeviceOnboardingForm';
 import { EnhancedDeviceOnboardingForm } from '../components/Devices/EnhancedDeviceOnboardingForm';
@@ -21,7 +21,6 @@ export const DevicesSection: React.FC = () => {
   const [sortBy, setSortBy] = useState<'name' | 'status' | 'updatedAt'>('name');
   const [showAddForm, setShowAddForm] = useState(false);
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -33,19 +32,16 @@ export const DevicesSection: React.FC = () => {
     logInfo('DevicesSection', 'Component mounted - data loaded from IoT context');
   }, []);
 
-  // Handle refresh devices
-  const handleRefreshDevices = useCallback(async () => {
+  // Handle section click to reload devices
+  const handleSectionClick = useCallback(async () => {
     try {
-      setIsRefreshing(true);
       setErrorMessage('');
       await refreshDevices();
-      setSuccessMessage('Devices refreshed successfully');
+      setSuccessMessage('Devices reloaded successfully');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
-      setErrorMessage('Failed to refresh devices');
+      setErrorMessage('Failed to reload devices');
       setTimeout(() => setErrorMessage(''), 3000);
-    } finally {
-      setIsRefreshing(false);
     }
   }, [refreshDevices]);
 
@@ -77,7 +73,8 @@ export const DevicesSection: React.FC = () => {
 
   logInfo('DevicesSection', 'Filtered devices', { filteredDevices, count: filteredDevices.length });
 
-  const handleAddDeviceClick = () => {
+  const handleAddDeviceClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering section click
     logInfo('DevicesSection', 'Add Device button clicked, setting showAddForm to true');
     setShowAddForm(true);
   };
@@ -87,13 +84,14 @@ export const DevicesSection: React.FC = () => {
     setShowAddForm(false);
   }, []);
 
-  const handleDeviceSubmit = useCallback(async (deviceData: any, file: any) => {
+  const handleDeviceSubmit = useCallback(async (deviceData: any, _file: any) => {
     setSuccessMessage(`Device "${deviceData.deviceName}" has been successfully added to the platform!`);
     setTimeout(() => setSuccessMessage(''), 5000);
     setShowAddForm(false);
   }, []);
 
-  const handleDeviceClick = (device: Device) => {
+  const handleDeviceClick = (device: Device, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering section click
     navigate(`/devices/${device.id}`);
   };
 
@@ -177,7 +175,7 @@ export const DevicesSection: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onClick={handleSectionClick}>
       {/* Success Message */}
       {successMessage && (
         <div className="mb-4 p-4 bg-success-500/20 border border-success-500/30 rounded-lg glass">
@@ -187,7 +185,10 @@ export const DevicesSection: React.FC = () => {
               <span className="text-success-300">{successMessage}</span>
             </div>
             <button
-              onClick={() => setSuccessMessage('')}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSuccessMessage('');
+              }}
               className="text-success-400 hover:text-success-300"
             >
               <CheckCircle className="w-4 h-4" />
@@ -205,7 +206,10 @@ export const DevicesSection: React.FC = () => {
               <span className="text-green-300">{successMessage}</span>
             </div>
             <button
-              onClick={() => setSuccessMessage('')}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSuccessMessage('');
+              }}
               className="text-green-400 hover:text-green-300"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
@@ -222,7 +226,10 @@ export const DevicesSection: React.FC = () => {
               <span className="text-danger-300">{errorMessage}</span>
             </div>
             <button
-              onClick={() => setErrorMessage('')}
+              onClick={(e) => {
+                e.stopPropagation();
+                setErrorMessage('');
+              }}
               className="text-danger-400 hover:text-danger-300"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
@@ -241,15 +248,6 @@ export const DevicesSection: React.FC = () => {
         </div>
         
         <div className="flex gap-2">
-          <button 
-            onClick={handleRefreshDevices}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2 btn-secondary disabled:opacity-50"
-            title="Refresh devices"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
-          </button>
           <button 
             onClick={handleAddDeviceClick}
             className="flex items-center gap-2 px-4 py-2 btn-secondary"
@@ -271,6 +269,7 @@ export const DevicesSection: React.FC = () => {
                 placeholder="Search devices..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onClick={(e) => e.stopPropagation()}
                 className="w-full pl-10 pr-4 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 minimal-input"
               />
             </div>
@@ -281,6 +280,7 @@ export const DevicesSection: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
               className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 minimal-input"
             >
               <option value="all">All Status</option>
@@ -293,6 +293,7 @@ export const DevicesSection: React.FC = () => {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
               className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 minimal-input"
             >
               <option value="all">All Types</option>
@@ -305,6 +306,7 @@ export const DevicesSection: React.FC = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
+              onClick={(e) => e.stopPropagation()}
               className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 minimal-input"
               aria-label="Sort devices"
               title="Sort by"
@@ -320,7 +322,7 @@ export const DevicesSection: React.FC = () => {
       {/* Device List - Vertical Layout */}
       <div className="space-y-4">
         {filteredDevices.map((device) => (
-          <div key={device.id} onClick={() => handleDeviceClick(device)}>
+          <div key={device.id} onClick={(e) => handleDeviceClick(device, e)}>
             <DeviceCard
               device={device}
               onStatusChange={updateDeviceStatus}

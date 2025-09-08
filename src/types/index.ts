@@ -175,7 +175,7 @@ export interface MaintenanceTask {
 export interface AnalyticsData {
   deviceId: string;
   timestamp: string;
-  temperature?: number;
+  load?: number;
   humidity?: number;
   pressure?: number;
   voltage?: number;

@@ -365,10 +365,10 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
       const fallbackRules: AIGeneratedRule[] = [
         {
           id: '1',
-          name: 'Temperature Alert',
-          description: 'Alert when temperature exceeds safe operating range',
-          condition: 'temperature > 45°C',
-          action: 'Send notification and activate cooling system',
+          name: 'Machine Overload Alert',
+          description: 'Alert when machine exceeds safe operating range',
+          condition: 'load > 85%',
+          action: 'Send notification and activate safety systems',
           priority: 'HIGH',
           isSelected: true
         },
@@ -576,7 +576,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                   className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     errors.name ? 'border-red-500' : 'border-slate-300'
                   }`}
-                  placeholder="e.g., Temperature Sensor 001"
+                  placeholder="e.g., Industrial Machine 001"
                 />
                 {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
               </div>
@@ -724,7 +724,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                   value={formData.mqttTopic || ''}
                   onChange={(e) => handleInputChange('mqttTopic', e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="e.g., sensors/temperature/001"
+                  placeholder="e.g., machines/industrial/001"
                 />
               </div>
 

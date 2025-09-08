@@ -266,7 +266,7 @@ export const RuleForm: React.FC<RuleFormProps> = ({
                 value={formData.category}
                 onChange={(e) => handleInputChange('category', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="e.g., Temperature, Security, Performance"
+                placeholder="e.g., Load, Security, Performance"
               />
             </div>
           </div>
@@ -300,7 +300,7 @@ export const RuleForm: React.FC<RuleFormProps> = ({
                 value={formData.metric}
                 onChange={(e) => handleInputChange('metric', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="e.g., temperature, humidity"
+                placeholder="e.g., load, pressure"
               />
             </div>
 
@@ -344,7 +344,7 @@ export const RuleForm: React.FC<RuleFormProps> = ({
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   fieldErrors.condition ? 'border-red-300' : 'border-gray-300'
                 }`}
-                placeholder="e.g., temperature > 30°C"
+                placeholder="e.g., load > 85%"
               />
               {fieldErrors.condition && (
                 <p className="text-red-600 text-sm mt-1">{fieldErrors.condition}</p>

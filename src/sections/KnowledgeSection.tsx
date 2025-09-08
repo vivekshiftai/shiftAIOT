@@ -3,21 +3,15 @@ import {
   Search, 
   FileText, 
   Brain, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock,
   Send,
-  Trash2,
   Bot,
   User,
-  Plus,
-  Settings
+  Plus
 } from 'lucide-react';
 import { deviceAPI } from '../services/api';
 import { pdfProcessingService, PDFImage } from '../services/pdfprocess';
 import { logError, logInfo } from '../utils/logger';
 import '../styles/knowledge.css';
-import { pdfAPI } from '../services/api'; // Added pdfAPI import
 import { knowledgeAPI } from '../services/api'; // Added knowledgeAPI import
 import { UnifiedQueryService, UnifiedQueryRequest } from '../services/unifiedQueryService';
 
@@ -66,7 +60,7 @@ interface ChatMessage {
 
 export const KnowledgeSection: React.FC = () => {
   const [documents, setDocuments] = useState<UnifiedPDF[]>([]);
-  const [selectedDocument, setSelectedDocument] = useState<UnifiedPDF | null>(null);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedDeviceForUpload, setSelectedDeviceForUpload] = useState<string>('');
   const [showDeviceSelector, setShowDeviceSelector] = useState(false);
@@ -74,7 +68,7 @@ export const KnowledgeSection: React.FC = () => {
     {
       id: '1',
       type: 'assistant',
-      content: 'Hello! I\'m your AI assistant for the IoT knowledge base. I can help you with:\n\n📊 **Database Queries**: Ask about devices, users, maintenance tasks, notifications, and more\n📄 **Document Queries**: Search through PDF documents, manuals, and guides\n🤖 **General Questions**: Ask about IoT concepts, device management, and platform usage\n🔄 **Mixed Queries**: Get both database information and document references\n\nTry asking: "Show me all offline devices", "How to setup this device?", or "What is IoT device management?"',
+      content: 'Hello! I\'m your AI assistant for the mechanical machine knowledge base. I can help you with:\n\n📱 **Machine Queries**: Select a machine to ask about its documentation and manuals\n📄 **PDF Document Queries**: Search through machine-specific PDF documents\n🤖 **General Questions**: Ask about mechanical concepts, machine management, and platform usage\n\nSelect a machine from the right panel to start asking questions about its documentation!',
       timestamp: new Date()
     }
   ]);
@@ -85,7 +79,6 @@ export const KnowledgeSection: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const [showDeviceSummary, setShowDeviceSummary] = useState(false);
   const [querySuggestions, setQuerySuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -112,170 +105,47 @@ export const KnowledgeSection: React.FC = () => {
     }
   };
 
-  // Function to refresh collections data
-  const refreshCollections = async () => {
-    try {
-      setLoading(true);
-      const collectionsResponse = await pdfAPI.listAllCollections();
-      
-      // Handle both response formats from external service
-      let collections = [];
-      if (collectionsResponse.data.success && collectionsResponse.data.data && collectionsResponse.data.data.collections) {
-        // New format: { success: true, data: { collections: [...] } }
-        collections = collectionsResponse.data.data.collections;
-      } else if (collectionsResponse.data.success && collectionsResponse.data.collections) {
-        // Alternative format: { success: true, collections: [...] }
-        collections = collectionsResponse.data.collections;
-      } else if (Array.isArray(collectionsResponse.data)) {
-        // Direct array format: [...]
-        collections = collectionsResponse.data;
-      } else {
-        console.error('Unexpected collections response format:', collectionsResponse.data);
-        throw new Error('Invalid collections response format');
-      }
 
-      const convertedDocuments: UnifiedPDF[] = collections.map((collection: any, index: number) => ({
-        id: collection.collection_name || collection.id || index.toString(),
-        name: collection.pdf_name || collection.name || collection.collection_name || `PDF_${index}`,
-        originalFilename: collection.pdf_name || collection.name || collection.collection_name || `PDF_${index}`,
-        documentType: 'pdf',
-        fileSize: collection.size || 0,
-        processingStatus: collection.status || 'completed',
-        vectorized: collection.vectorized !== false, // Default to true unless explicitly false
-        uploadedAt: collection.created_at || collection.uploadedAt || new Date().toISOString(),
-        processedAt: collection.created_at || collection.processedAt || new Date().toISOString(),
-        deviceId: collection.deviceId || undefined,
-        deviceName: collection.deviceName || undefined,
-        organizationId: 'public',
-        collectionName: collection.collection_name,
-        totalPages: collection.total_pages || collection.totalPages,
-        processedChunks: collection.chunk_count || collection.chunkCount || 0,
-        processingTime: collection.processing_time || collection.processingTime
-      }));
-      setDocuments(convertedDocuments);
-      logInfo('Knowledge', 'Collections refreshed successfully', { count: convertedDocuments.length });
-    } catch (error) {
-      logError('Knowledge', 'Failed to refresh collections', error instanceof Error ? error : new Error('Unknown error'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load documents from external PDF API and devices on component mount
+  // Load devices from unified PDFs table
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true);
         
-        // Load PDF documents from external collections API
+        // Load documents from unified PDFs table via knowledge API
         try {
-          const collectionsResponse = await pdfAPI.listAllCollections();
-          
-          // Handle both response formats from external service
-          let collections = [];
-          if (collectionsResponse.data.success && collectionsResponse.data.data && collectionsResponse.data.data.collections) {
-            // New format: { success: true, data: { collections: [...] } }
-            collections = collectionsResponse.data.data.collections;
-          } else if (collectionsResponse.data.success && collectionsResponse.data.collections) {
-            // Alternative format: { success: true, collections: [...] }
-            collections = collectionsResponse.data.collections;
-          } else if (Array.isArray(collectionsResponse.data)) {
-            // Direct array format: [...]
-            collections = collectionsResponse.data;
-          } else if (collectionsResponse.data && Array.isArray(collectionsResponse.data.pdfs)) {
-            // External service format: { pdfs: [...] }
-            collections = collectionsResponse.data.pdfs;
+          const knowledgeResponse = await knowledgeAPI.getDocuments();
+          if (knowledgeResponse.data.documents) {
+            const knowledgeDocuments: UnifiedPDF[] = knowledgeResponse.data.documents.map((doc: any) => ({
+              id: doc.id.toString(),
+              name: doc.name,
+              originalFilename: doc.originalFilename || doc.name,
+              documentType: doc.documentType || 'pdf',
+              fileSize: doc.fileSize || 0,
+              processingStatus: doc.processingStatus || 'completed',
+              vectorized: doc.vectorized || true,
+              uploadedAt: doc.uploadedAt,
+              processedAt: doc.processedAt || doc.uploadedAt,
+              deviceId: doc.deviceId,
+              deviceName: doc.deviceName,
+              organizationId: doc.organizationId || 'public',
+              collectionName: doc.collectionName,
+              totalPages: doc.totalPages,
+              processedChunks: doc.processedChunks || 0,
+              processingTime: doc.processingTime
+            }));
+            setDocuments(knowledgeDocuments);
+            logInfo('Knowledge', 'PDF documents loaded from unified PDFs table', { count: knowledgeDocuments.length });
           } else {
-            console.error('Unexpected collections response format:', collectionsResponse.data);
-            throw new Error('Invalid collections response format');
+            throw new Error('Invalid response format from knowledge API');
           }
-
-          
-          const convertedDocuments: UnifiedPDF[] = collections.map((collection: any, index: number) => ({
-            id: collection.collection_name || collection.id || collection.name || index.toString(),
-            name: collection.pdf_name || collection.name || collection.collection_name || `PDF_${index}`,
-            originalFilename: collection.pdf_name || collection.name || collection.collection_name || `PDF_${index}`,
-            documentType: 'pdf',
-            fileSize: collection.size || collection.file_size || 0,
-            processingStatus: collection.status || collection.processing_status || 'completed',
-            vectorized: collection.vectorized !== false, // Default to true unless explicitly false
-            uploadedAt: collection.created_at || collection.uploadedAt || new Date().toISOString(),
-            processedAt: collection.created_at || collection.processedAt || new Date().toISOString(),
-            deviceId: collection.deviceId || undefined,
-            deviceName: collection.deviceName || undefined,
-            organizationId: 'public',
-            collectionName: collection.collection_name,
-            totalPages: collection.total_pages || collection.totalPages,
-            processedChunks: collection.chunk_count || collection.chunkCount || 0,
-            processingTime: collection.processing_time || collection.processingTime
-          }));
-          
-          setDocuments(convertedDocuments);
-          logInfo('Knowledge', 'PDF documents loaded from external collections', { count: convertedDocuments.length });
-        } catch (collectionsError) {
-          logError('Knowledge', 'Failed to load PDF documents from external collections', collectionsError instanceof Error ? collectionsError : new Error('Unknown error'));
-          
-          // Try knowledge API first (better device association support)
-          try {
-            const knowledgeResponse = await knowledgeAPI.getDocuments();
-            if (knowledgeResponse.data.documents) {
-              const knowledgeDocuments: UnifiedPDF[] = knowledgeResponse.data.documents.map((doc: any) => ({
-                id: doc.id.toString(),
-                name: doc.name,
-                originalFilename: doc.name,
-                documentType: doc.type || 'pdf',
-                fileSize: doc.size || 0,
-                processingStatus: doc.status || 'completed',
-                vectorized: doc.vectorized || true,
-                uploadedAt: doc.uploadedAt,
-                processedAt: doc.processedAt || doc.uploadedAt,
-                deviceId: doc.deviceId,
-                deviceName: doc.deviceName,
-                organizationId: doc.organizationId || 'public',
-                collectionName: doc.collectionName,
-                totalPages: doc.totalPages,
-                processedChunks: doc.chunkCount || 0,
-                processingTime: doc.processingTime
-              }));
-              setDocuments(knowledgeDocuments);
-              logInfo('Knowledge', 'PDF documents loaded from knowledge API', { count: knowledgeDocuments.length });
-            } else {
-              throw new Error('Invalid response format from knowledge API');
-            }
-          } catch (knowledgeError) {
-            logError('Knowledge', 'Failed to load documents from knowledge API', knowledgeError instanceof Error ? knowledgeError : new Error('Unknown error'));
-            // Fallback to backend PDF API
-            try {
-              const pdfListResponse = await pdfAPI.listPDFs(0, 50);
-              const convertedDocuments: UnifiedPDF[] = pdfListResponse.data.pdfs.map((pdf: any, index: number) => ({
-                id: pdf.id || index.toString(),
-                name: pdf.name || pdf.filename || `PDF_${index}`,
-                originalFilename: pdf.name || pdf.filename || `PDF_${index}`,
-                documentType: 'pdf',
-                fileSize: pdf.file_size || pdf.size_bytes || 0,
-                processingStatus: pdf.status || 'completed',
-                vectorized: pdf.vectorized || true,
-                uploadedAt: pdf.uploaded_at || pdf.created_at || new Date().toISOString(),
-                processedAt: pdf.processed_at || pdf.created_at || new Date().toISOString(),
-                deviceId: pdf.device_id || undefined,
-                deviceName: pdf.device_name || undefined,
-                organizationId: pdf.organization_id || pdf.organizationId || 'public',
-                collectionName: pdf.collection_name || pdf.collectionName,
-                totalPages: pdf.total_pages || pdf.totalPages,
-                processedChunks: pdf.chunk_count || 0,
-                processingTime: pdf.processing_time || pdf.processingTime
-              }));
-              setDocuments(convertedDocuments);
-              logInfo('Knowledge', 'PDF documents loaded from backend fallback', { count: convertedDocuments.length });
-            } catch (pdfError) {
-              logError('Knowledge', 'Failed to load PDF documents from backend fallback', pdfError instanceof Error ? pdfError : new Error('Unknown error'));
-              // Keep empty array as final fallback
-              setDocuments([]);
-            }
-          }
+        } catch (knowledgeError) {
+          logError('Knowledge', 'Failed to load documents from unified PDFs table', knowledgeError instanceof Error ? knowledgeError : new Error('Unknown error'));
+          // Keep empty array as fallback
+          setDocuments([]);
         }
 
-        // Load devices for association
+        // Load devices for association (fallback for upload functionality)
         try {
           const devicesResponse = await deviceAPI.getAll();
           setDevices(devicesResponse.data || []);
@@ -300,18 +170,6 @@ export const KnowledgeSection: React.FC = () => {
   }, []);
 
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'processing':
-        return <Clock className="w-4 h-4 text-blue-500" />;
-      case 'failed':
-        return <AlertTriangle className="w-4 h-4 text-red-500" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-500" />;
-    }
-  };
 
   const sendMessage = async () => {
     if (!newMessage.trim() || isTyping) return;
@@ -328,55 +186,116 @@ export const KnowledgeSection: React.FC = () => {
     setIsTyping(true);
 
     try {
-      // If a document is selected, query it specifically (PDF mode)
-      if (selectedDocument) {
-        try {
-          const queryRequest = {
-            pdf_name: selectedDocument.name,
-            query: userMessage.content,
-            top_k: 5
-          };
+      // If a device is selected, query its PDFs automatically
+      if (selectedDevice) {
+        // Get device PDFs and query them automatically
+        const devicePDFs = documents.filter(doc => doc.deviceId === selectedDevice.id);
+        
+        if (devicePDFs.length > 0) {
+          // Try to query the first available PDF for the device using the stored PDF name
+          const primaryPDF = devicePDFs.find(pdf => pdf.processingStatus === 'completed' && pdf.vectorized) || devicePDFs[0];
           
-          const queryResponse = await pdfProcessingService.queryPDF(queryRequest);
-          
-          const assistantMessage: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            type: 'assistant',
-            content: queryResponse.response || `I found relevant results in "${selectedDocument.name}". ${queryResponse.chunks_used?.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 200) + '...' : 'Would you like me to search for more specific information?'}`,
-            timestamp: new Date(),
-            images: queryResponse.images || [],
-            tables: queryResponse.tables || [],
-            chunks_used: queryResponse.chunks_used || [],
-            processing_time: queryResponse.processing_time,
-            queryType: 'PDF'
-          };
-          setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
-        } catch (queryError) {
-          logError('Knowledge', 'Failed to query PDF', queryError instanceof Error ? queryError : new Error('Unknown error'));
-          const errorMessage: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            type: 'assistant',
-            content: `I encountered an error while searching "${selectedDocument.name}". Please try again or ask a different question.`,
-            timestamp: new Date(),
-            queryType: 'PDF'
-          };
-          setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
+          try {
+            // Use the PDF name stored in the unified PDFs table
+            const queryRequest = {
+              pdf_name: primaryPDF.name, // This is the PDF name stored in the database
+              query: userMessage.content,
+              top_k: 5
+            };
+            
+            logInfo('Knowledge', `Querying PDF "${primaryPDF.name}" for device "${selectedDevice.name}"`);
+            
+            const queryResponse = await pdfProcessingService.queryPDF(queryRequest);
+            
+            const assistantMessage: ChatMessage = {
+              id: (Date.now() + 1).toString(),
+              type: 'assistant',
+              content: queryResponse.response || `I found relevant results for device "${selectedDevice.name}". ${queryResponse.chunks_used?.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 200) + '...' : 'Would you like me to search for more specific information?'}`,
+              timestamp: new Date(),
+              images: queryResponse.images || [],
+              tables: queryResponse.tables || [],
+              chunks_used: queryResponse.chunks_used || [],
+              processing_time: queryResponse.processing_time,
+              queryType: 'PDF'
+            };
+            setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
+          } catch (queryError) {
+            logError('Knowledge', 'Failed to query device PDF', queryError instanceof Error ? queryError : new Error('Unknown error'));
+            
+            // Fallback to unified query
+            try {
+              const unifiedRequest: UnifiedQueryRequest = {
+                query: userMessage.content
+              };
+              
+              const unifiedResponse = await UnifiedQueryService.sendUnifiedQuery(unifiedRequest);
+              
+              const assistantMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                type: 'assistant',
+                content: unifiedResponse.response || `I processed your query for device "${selectedDevice.name}" but didn't find specific results. Please try rephrasing your question.`,
+                timestamp: new Date(),
+                queryType: unifiedResponse.queryType,
+                databaseResults: unifiedResponse.databaseResults,
+                rowCount: unifiedResponse.rowCount,
+                sqlQuery: unifiedResponse.sqlQuery
+              };
+              setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
+            } catch (unifiedError) {
+              const errorMessage: ChatMessage = {
+                id: (Date.now() + 1).toString(),
+                type: 'assistant',
+                content: `I encountered an error while processing your query for device "${selectedDevice.name}". Please check the backend connection and try again.`,
+                timestamp: new Date(),
+                queryType: 'UNKNOWN'
+              };
+              setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
+            }
+          }
+        } else {
+          // No PDFs available for this device, use unified query
+          try {
+            const unifiedRequest: UnifiedQueryRequest = {
+              query: userMessage.content
+            };
+            
+            const unifiedResponse = await UnifiedQueryService.sendUnifiedQuery(unifiedRequest);
+            
+            const assistantMessage: ChatMessage = {
+              id: (Date.now() + 1).toString(),
+              type: 'assistant',
+              content: unifiedResponse.response || `I processed your query for device "${selectedDevice.name}" but no PDF documentation is available. Please try rephrasing your question or ask about general device information.`,
+              timestamp: new Date(),
+              queryType: unifiedResponse.queryType,
+              databaseResults: unifiedResponse.databaseResults,
+              rowCount: unifiedResponse.rowCount,
+              sqlQuery: unifiedResponse.sqlQuery
+            };
+            setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
+          } catch (unifiedError) {
+            const errorMessage: ChatMessage = {
+              id: (Date.now() + 1).toString(),
+              type: 'assistant',
+              content: `I encountered an error while processing your query for device "${selectedDevice.name}". Please check the backend connection and try again.`,
+              timestamp: new Date(),
+              queryType: 'UNKNOWN'
+            };
+            setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
+          }
         }
       } else {
         // Use unified query service for general queries
         try {
-          
           const unifiedRequest: UnifiedQueryRequest = {
             query: userMessage.content
           };
           
           const unifiedResponse = await UnifiedQueryService.sendUnifiedQuery(unifiedRequest);
           
-          
           const assistantMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
             type: 'assistant',
-            content: unifiedResponse.response || 'I processed your query but didn\'t find specific results. Please try rephrasing your question.',
+            content: unifiedResponse.response || 'I processed your query but didn\'t find specific results. Please try rephrasing your question or select a device to get device-specific information.',
             timestamp: new Date(),
             queryType: unifiedResponse.queryType,
             databaseResults: unifiedResponse.databaseResults,
@@ -387,7 +306,6 @@ export const KnowledgeSection: React.FC = () => {
         } catch (unifiedError) {
           logError('Knowledge', 'Failed to process unified query', unifiedError instanceof Error ? unifiedError : new Error('Unknown error'));
           
-          // Show proper error message instead of fallback
           const errorMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
             type: 'assistant',
@@ -403,7 +321,7 @@ export const KnowledgeSection: React.FC = () => {
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: 'I apologize, but I encountered an error while processing your request. Please try again or select a specific document to query.',
+        content: 'I apologize, but I encountered an error while processing your request. Please try again or select a device to query its documentation.',
         timestamp: new Date(),
         queryType: 'UNKNOWN'
       };
@@ -528,70 +446,35 @@ export const KnowledgeSection: React.FC = () => {
     }
   };
 
-  const deleteDocument = async (documentId: string) => {
-    if (!confirm('Are you sure you want to delete this document?')) return;
 
-    try {
-      const document = documents.find((doc: UnifiedPDF) => doc.id === documentId);
-      if (document) {
-        logInfo('Knowledge', `🗑️ Starting deletion process for document: "${document.name}" (ID: ${documentId})`);
-
-        // Delete from external PDF processing service
-        logInfo('Knowledge', `🌐 Calling external PDF processing service to delete: "${document.name}"`);
-        const deleteStartTime = Date.now();
-        
-        await pdfProcessingService.deletePDF(document.name);
-        
-        const deleteEndTime = Date.now();
-        const deleteDuration = deleteEndTime - deleteStartTime;
-        
-        logInfo('Knowledge', `✅ Successfully deleted "${document.name}" from external PDF processing service in ${deleteDuration}ms`);
-        
-        // Remove from local state
-        logInfo('Knowledge', `🗂️ Removing "${document.name}" from local state`);
-        setDocuments((prev: UnifiedPDF[]) => {
-          const updatedDocs = prev.filter((doc: UnifiedPDF) => doc.id !== documentId);
-          return updatedDocs;
-        });
-        
-        if (selectedDocument?.id === documentId) {
-          logInfo('Knowledge', `🔄 Clearing selected document since it was deleted`);
-          setSelectedDocument(null);
-        }
-
-        // Show deletion message
-        const deletionMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          type: 'assistant',
-          content: `Successfully deleted "${document.name}" from the knowledge base and external processing service.`,
-          timestamp: new Date()
-        };
-        setChatMessages(prev => [...prev, deletionMessage]);
-        
-        logInfo('Knowledge', `🎉 Complete deletion process finished for "${document.name}"`);
+  // Get devices from unified PDFs table (devices that have PDFs)
+  const devicesWithPDFs = documents
+    .filter(doc => doc.deviceId && doc.deviceName) // Only documents with device association
+    .reduce((acc, doc) => {
+      const existingDevice = acc.find(d => d.id === doc.deviceId);
+      if (existingDevice) {
+        existingDevice.pdfs.push(doc);
+        existingDevice.pdfCount++;
       } else {
-        logError('Knowledge', `❌ Document not found for deletion (ID: ${documentId})`);
+        acc.push({
+          id: doc.deviceId!,
+          name: doc.deviceName!,
+          type: 'Machine', // Default type for devices from PDFs
+          status: 'online', // Default status
+          pdfs: [doc],
+          pdfCount: 1,
+          hasPDFs: true
+        });
       }
-    } catch (error) {
-      logError('Knowledge', `💥 Failed to delete document (ID: ${documentId})`, error instanceof Error ? error : new Error('Unknown error'));
-      alert('Failed to delete document. Please try again.');
-    }
-  };
+      return acc;
+    }, [] as Array<Device & { pdfs: UnifiedPDF[]; pdfCount: number; hasPDFs: boolean }>);
 
-  const filteredDocuments = documents.filter(doc =>
-    doc.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    (!selectedDeviceForUpload || doc.deviceId === selectedDeviceForUpload)
+  // Filter devices based on search query
+  const filteredDevices = devicesWithPDFs.filter(device =>
+    device.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    device.type.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Get device summary statistics
-  const deviceSummary = devices.map(device => {
-    const devicePDFs = documents.filter(doc => doc.deviceId === device.id);
-    return {
-      ...device,
-      pdfCount: devicePDFs.length,
-      hasPDFs: devicePDFs.length > 0
-    };
-  }).filter(device => device.hasPDFs);
 
   return (
     <div className="knowledge-section flex flex-col bg-gray-50 h-full">
@@ -605,10 +488,10 @@ export const KnowledgeSection: React.FC = () => {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Knowledge Base</h1>
               <p className="text-sm text-gray-600">
-                AI-powered document analysis and chat assistant
-                {selectedDocument && (
+                AI-powered machine documentation and chat assistant
+                {selectedDevice && (
                   <span className="ml-2 text-blue-600 font-medium">
-                    • Active: {selectedDocument.name}
+                    • Active: {selectedDevice.name}
                   </span>
                 )}
               </p>
@@ -833,10 +716,10 @@ export const KnowledgeSection: React.FC = () => {
               {/* Quick Actions */}
               <div className="flex gap-2">
                 <button
-                  onClick={() => setNewMessage('How do I troubleshoot temperature sensor issues?')}
+                  onClick={() => setNewMessage('How do I troubleshoot mechanical machine issues?')}
                   className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
                 >
-                  Temperature sensors
+                  Machine troubleshooting
                 </button>
                 <button
                   onClick={() => setNewMessage('What maintenance procedures are recommended?')}
@@ -845,10 +728,10 @@ export const KnowledgeSection: React.FC = () => {
                   Maintenance
                 </button>
                 <button
-                  onClick={() => setNewMessage('How do I install IoT gateways?')}
+                  onClick={() => setNewMessage('How do I install mechanical machines?')}
                   className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
                 >
-                  Installation
+                  Machine installation
                 </button>
               </div>
               
@@ -862,7 +745,7 @@ export const KnowledgeSection: React.FC = () => {
                     onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                     onFocus={handleInputFocus}
                     onBlur={handleInputBlur}
-                    placeholder={selectedDocument ? `Ask about "${selectedDocument.name}"...` : "Ask about your devices, documents, or troubleshooting..."}
+                    placeholder={selectedDevice ? `Ask about "${selectedDevice.name}"...` : "Ask about your machines, documents, or troubleshooting..."}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 shadow-sm"
                   />
                   
@@ -897,39 +780,13 @@ export const KnowledgeSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Panel - PDF Document Library - 33% width */}
+        {/* Right Panel - AI Ready Devices - 33% width */}
         <div className="w-1/3 flex flex-col bg-white border-l border-gray-200 min-h-0">
-          {/* PDF Library Header - Fixed */}
+          {/* AI Ready Devices Header - Fixed */}
           <div className="knowledge-fixed-header flex-shrink-0 p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">PDF Library</h2>
+              <h2 className="text-lg font-semibold text-gray-900">AI Ready Machines</h2>
               <div className="flex items-center gap-2">
-                {deviceSummary.length > 0 && (
-                  <button
-                    onClick={() => setShowDeviceSummary(!showDeviceSummary)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
-                      showDeviceSummary 
-                        ? 'bg-green-100 text-green-700 border border-green-300' 
-                        : 'bg-gray-100 text-gray-700 border border-gray-300'
-                    }`}
-                  >
-                    📊 {showDeviceSummary ? 'Hide Summary' : 'Device Summary'}
-                  </button>
-                )}
-
-                <button
-                  onClick={refreshCollections}
-                  disabled={loading}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all shadow-sm disabled:opacity-50"
-                  title="Refresh collections from external service"
-                >
-                  {loading ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-                  ) : (
-                    <Settings className="w-4 h-4" />
-                  )}
-                  Refresh
-                </button>
                 <label className="cursor-pointer">
                   <input
                     type="file"
@@ -944,77 +801,28 @@ export const KnowledgeSection: React.FC = () => {
                     ) : (
                       <Plus className="w-4 h-4" />
                     )}
-                    {uploading ? 'Uploading...' : 'Upload'}
+                    {uploading ? 'Uploading...' : 'Upload PDF'}
                   </div>
                 </label>
               </div>
             </div>
 
-            {/* Device Summary */}
-            {showDeviceSummary && deviceSummary.length > 0 && (
-              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="p-1 bg-green-100 rounded">
-                    <FileText className="w-4 h-4 text-green-600" />
-                  </div>
-                  <h4 className="text-sm font-medium text-green-800">Device PDF Summary</h4>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {deviceSummary.map((device) => (
-                    <div key={device.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-green-200">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 bg-blue-100 rounded">
-                          <FileText className="w-3 h-3 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{device.name}</p>
-                          <p className="text-xs text-gray-500">{device.type}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-blue-600">{device.pdfCount}</span>
-                        <p className="text-xs text-gray-500">PDF{device.pdfCount !== 1 ? 's' : ''}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-green-600 mt-2">
-                  💡 These PDFs are available for chat queries in their respective device detail pages.
-                </p>
-              </div>
-            )}
-
-            {/* Search and Filters */}
+            {/* Search */}
             <div className="space-y-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search PDF documents..."
+                  placeholder="Search machines..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 shadow-sm"
                 />
               </div>
-              
-              {devices.length > 0 && (
-                <select
-                  value={selectedDeviceForUpload}
-                  onChange={(e) => setSelectedDeviceForUpload(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-900 shadow-sm"
-                >
-                  <option value="">All devices</option>
-                  {devices.map((device) => (
-                    <option key={device.id} value={device.id}>
-                      {device.name} ({device.type})
-                    </option>
-                  ))}
-                </select>
-              )}
             </div>
           </div>
 
-          {/* PDF Documents List - Scrollable content only */}
+          {/* Devices List - Scrollable content only */}
           <div 
             ref={documentsListRef}
             className="knowledge-documents-list"
@@ -1022,21 +830,21 @@ export const KnowledgeSection: React.FC = () => {
             {loading ? (
               <div className="p-4 text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                <p className="text-gray-500 mt-2 text-sm">Loading PDF documents...</p>
+                <p className="text-gray-500 mt-2 text-sm">Loading machines...</p>
               </div>
-            ) : filteredDocuments.length === 0 ? (
+            ) : filteredDevices.length === 0 ? (
               <div className="p-4 text-center text-gray-500 text-sm">
-                {searchQuery ? 'No PDF documents found' : 'No PDF documents uploaded yet'}
+                {searchQuery ? 'No machines found' : 'No machines with PDFs available'}
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
-                {filteredDocuments.map((doc) => (
+                {filteredDevices.map((device) => (
                   <div
-                    key={doc.id}
+                    key={device.id}
                     className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                      selectedDocument?.id === doc.id ? 'bg-blue-50 border-r-4 border-blue-500' : ''
+                      selectedDevice?.id === device.id ? 'bg-blue-50 border-r-4 border-blue-500' : ''
                     }`}
-                    onClick={() => setSelectedDocument(doc)}
+                    onClick={() => setSelectedDevice(device)}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -1046,49 +854,30 @@ export const KnowledgeSection: React.FC = () => {
                         
                         <div className="flex-1 min-w-0">
                           <h4 className="font-medium text-gray-900 truncate text-sm">
-                            {doc.deviceName ? `${doc.deviceName} - ${doc.name}` : doc.name}
+                            {device.name}
                           </h4>
                           <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
-                            {/* <span>{formatFileSize(doc.size)}</span> */}
+                            <span>{device.type}</span>
                             <span>•</span>
-                            <span>{new Date(doc.uploadedAt).toLocaleDateString()}</span>
-                            {doc.processedChunks && (
-                              <>
-                                <span>•</span>
-                                <span>{doc.processedChunks} chunks</span>
-                              </>
-                            )}
+                            <span className="text-blue-600 font-medium">{device.pdfCount} PDF{device.pdfCount !== 1 ? 's' : ''}</span>
                           </div>
-                          {doc.deviceName && (
-                            <div className="flex items-center gap-1 mt-1">
-                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
-                                📱 {doc.deviceName}
-                              </span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                              device.status === 'online' ? 'bg-green-100 text-green-700' :
+                              device.status === 'offline' ? 'bg-red-100 text-red-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {device.status === 'online' ? '🟢 Online' :
+                               device.status === 'offline' ? '🔴 Offline' :
+                               '⚪ Unknown'}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       
                       <div className="flex items-center gap-2 ml-2">
-                        {getStatusIcon(doc.processingStatus)}
-                        {doc.processingStatus === 'processing' && (
-                          <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
-                            Processing...
-                          </span>
-                        )}
-                        {doc.processingStatus === 'completed' && doc.vectorized && (
+                        {device.hasPDFs && (
                           <Brain className="w-4 h-4 text-green-500" />
-                        )}
-                        {doc.processingStatus === 'completed' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteDocument(doc.id);
-                            }}
-                            className="p-1 hover:bg-red-100 rounded transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4 text-red-500" />
-                          </button>
                         )}
                       </div>
                     </div>
@@ -1098,14 +887,14 @@ export const KnowledgeSection: React.FC = () => {
             )}
           </div>
 
-          {/* PDF Library Footer - Fixed at bottom */}
+          {/* AI Ready Devices Footer - Fixed at bottom */}
           <div className="knowledge-fixed-footer flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between text-sm text-gray-600">
               <div className="flex items-center gap-4">
-                <span>{documents.length} PDF documents</span>
-                <span>{documents.filter(d => d.vectorized).length} AI ready</span>
+                <span>{devicesWithPDFs.length} machines with PDFs</span>
+                <span>{devicesWithPDFs.filter(d => d.hasPDFs).length} AI ready</span>
                 <span className="text-blue-600 font-medium">
-                  📱 {documents.filter(d => d.deviceName).length} device-associated
+                  📄 {documents.length} total PDFs
                 </span>
               </div>
             </div>
@@ -1123,7 +912,7 @@ export const KnowledgeSection: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Upload PDF Document</h3>
-                <p className="text-sm text-gray-600">Associate with a device for better organization</p>
+                <p className="text-sm text-gray-600">Associate with a machine for better organization</p>
               </div>
             </div>
             
@@ -1143,14 +932,14 @@ export const KnowledgeSection: React.FC = () => {
             {/* Device Selection */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Device Association (Optional)
+                Machine Association (Optional)
               </label>
               <select
                 value={selectedDeviceForUpload}
                 onChange={(e) => setSelectedDeviceForUpload(e.target.value)}
                 className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">📄 No device association (General document)</option>
+                <option value="">📄 No machine association (General document)</option>
                 {devices.map((device) => (
                   <option key={device.id} value={device.id}>
                     📱 {device.name} ({device.type})
@@ -1159,7 +948,7 @@ export const KnowledgeSection: React.FC = () => {
               </select>
               <p className="text-xs text-gray-500 mt-1">
                 {selectedDeviceForUpload 
-                  ? 'This PDF will be available for chat queries in the device details section.'
+                  ? 'This PDF will be available for chat queries in the machine details section.'
                   : 'This PDF will be available in the general knowledge base.'
                 }
               </p>

@@ -481,7 +481,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
               errors.deviceName ? 'border-red-400' : ''
             }`}
-            placeholder="e.g., Temperature Sensor 001"
+            placeholder="e.g., Industrial Machine 001"
           />
           {errors.deviceName && (
             <p className="text-red-600 text-sm mt-2">{errors.deviceName}</p>
@@ -643,7 +643,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
                   errors.topic ? 'border-red-400' : ''
                 }`}
-                placeholder="e.g., device/sensor001/data"
+                placeholder="e.g., device/machine001/data"
               />
               {errors.topic && (
                 <p className="text-red-600 text-sm mt-2">{errors.topic}</p>
@@ -861,7 +861,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                   value={formData.coapPath || ''}
                   onChange={(e) => handleInputChange('coapPath', e.target.value)}
                   className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500"
-                  placeholder="/sensor/data"
+                  placeholder="/machine/data"
                 />
               </div>
             </div>
