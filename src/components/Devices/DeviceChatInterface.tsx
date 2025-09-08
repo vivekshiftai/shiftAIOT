@@ -3,8 +3,6 @@ import {
   Send, 
   Bot, 
   User, 
-  FileText, 
-  MessageSquare, 
   Settings,
   AlertTriangle,
   CheckCircle,
@@ -19,8 +17,8 @@ interface DeviceChatInterfaceProps {
   deviceName: string;
   deviceId: string;
   pdfFileName: string;
-  onClose: () => void;
-  onContinue: () => void;
+  onClose?: () => void;
+  onContinue?: () => void;
 }
 
 export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
@@ -33,7 +31,6 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [aiStatus, setAiStatus] = useState<'idle' | 'thinking' | 'responding'>('idle');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -58,7 +55,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
           const welcomeMessage: ChatMessage = {
             id: 'welcome_' + Date.now(),
             type: 'assistant',
-            content: `Hello! I'm your AI assistant for ${deviceName}. I've analyzed the documentation you uploaded (${pdfFileName}) and I'm ready to help you with any questions about your device. You can ask me about setup, maintenance, troubleshooting, technical specifications, or any other aspects of your device. What would you like to know?`,
+            content: `Hello! I'm here to help you with information about this device. What would you like to know?`,
             timestamp: new Date(),
             pdfName: pdfFileName,
             deviceId: deviceId
@@ -72,7 +69,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
         const welcomeMessage: ChatMessage = {
           id: 'welcome_' + Date.now(),
           type: 'assistant',
-          content: `Hello! I'm your AI assistant for ${deviceName}. I'm ready to help you with any questions about your device.`,
+          content: `Hello! I'm here to help you with information about this device. What would you like to know?`,
           timestamp: new Date(),
           pdfName: pdfFileName,
           deviceId: deviceId
@@ -99,7 +96,6 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     const query = inputValue.trim();
     setInputValue('');
     setIsLoading(true);
-    setAiStatus('thinking');
 
     try {
       logInfo('DeviceChatInterface', 'Sending message to AI', { 
@@ -108,7 +104,6 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
         queryLength: query.length 
       });
 
-      setAiStatus('responding');
 
       // Use the clean chat service - stores conversation automatically in backend
       const queryResponse = await chatService.queryPDF({
@@ -151,7 +146,6 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
       }, errorMessage]);
     } finally {
       setIsLoading(false);
-      setAiStatus('idle');
     }
   };
 
@@ -241,7 +235,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask me about setup, maintenance, troubleshooting, or specifications..."
+              placeholder="Ask about this device"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-sm bg-white text-gray-800 placeholder-gray-500 transition-all duration-300"
               rows={2}
               disabled={isLoading}
@@ -297,31 +291,6 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="border-t border-gray-200 p-4 bg-white flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <FileText className="w-3 h-3" />
-            <span>Analyzed: {pdfFileName}</span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setMessages([messages[0]])}
-              className="flex items-center gap-1 px-3 py-1 text-gray-500 hover:text-gray-700 transition-colors text-xs hover:bg-gray-50 rounded-lg"
-            >
-              <Clock className="w-3 h-3" />
-              Reset
-            </button>
-            <button
-              onClick={onContinue}
-              className="flex items-center gap-1 px-4 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-300 font-medium text-xs"
-            >
-              <CheckCircle className="w-3 h-3" />
-              Continue
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
