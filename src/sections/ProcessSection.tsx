@@ -98,12 +98,18 @@ export const ProcessSection: React.FC = () => {
 
   const testAPIConnectivity = async () => {
     try {
-      console.log('🔍 Testing Strategy Agent API connectivity...');
-      const response = await fetch('http://20.57.36.66:8001/health', {
+      console.log('🔍 Testing Strategy Agent API connectivity via backend proxy...');
+      const response = await fetch('/api/strategy-agent/health', {
         method: 'GET',
-        mode: 'cors',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
       });
       console.log('🔍 Health check response:', response.status, response.statusText);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Strategy Agent API is accessible:', data);
+      }
     } catch (error) {
       console.error('❌ Strategy Agent API connectivity test failed:', error);
     }
@@ -124,62 +130,11 @@ export const ProcessSection: React.FC = () => {
         customerId: selectedCustomer 
       });
 
-      // Call Strategy Agent API
-      console.log('🔍 Making API call to Strategy Agent:', {
-        url: 'http://20.57.36.66:8001/generate-recommendations',
-        method: 'POST',
-        customer_id: selectedCustomer
-      });
-
-      const response = await fetch('http://20.57.36.66:8001/generate-recommendations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        mode: 'cors',
-        body: JSON.stringify({
-          customer_id: selectedCustomer
-        })
-      });
-
-      console.log('🔍 API Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error Response:', errorText);
-        throw new Error(`Strategy Agent API error: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const data: StrategyAgentResponse = await response.json();
-      console.log('✅ API Success Response:', data);
-      setRecommendations(data);
-
-      logInfo('Process', 'Marketing intelligence recommendations generated successfully', {
-        customerId: selectedCustomer,
-        totalRecommendations: data.Summary.TotalRecommendations,
-        crossSell: data.Summary.TotalCrossSell,
-        rejected: data.Summary.TotalRejected
-      });
+      // Use backend proxy to avoid CORS issues
+      await generateRecommendationsViaBackend();
 
     } catch (error) {
       logError('Process', 'Failed to generate marketing intelligence recommendations', error instanceof Error ? error : new Error('Unknown error'));
-      
-      // If direct API call fails, try through backend proxy
-      if (error instanceof Error && error.message.includes('405')) {
-        console.log('🔄 Direct API call failed, trying backend proxy...');
-        try {
-          await generateRecommendationsViaBackend();
-          return;
-        } catch (backendError) {
-          console.error('❌ Backend proxy also failed:', backendError);
-        }
-      }
-      
       setError(error instanceof Error ? error.message : 'Failed to generate recommendations');
     } finally {
       setIsLoading(false);
@@ -222,10 +177,19 @@ export const ProcessSection: React.FC = () => {
     if (!recommendations) return;
 
     try {
-      const response = await fetch(`http://20.57.36.66:8001/recommendations/${recommendations.customer_id}/download`);
+      console.log('🔍 Downloading PDF report via backend proxy...');
+      
+      const response = await fetch(`/api/strategy-agent/recommendations/${recommendations.customer_id}/download`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
       
       if (!response.ok) {
-        throw new Error('Failed to download PDF report');
+        const errorText = await response.text();
+        console.error('❌ PDF Download Error:', errorText);
+        throw new Error(`Failed to download PDF report: ${response.status} ${response.statusText}`);
       }
 
       const blob = await response.blob();
@@ -238,7 +202,7 @@ export const ProcessSection: React.FC = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      logInfo('Process', 'PDF report downloaded successfully', { 
+      logInfo('Process', 'PDF report downloaded successfully via backend proxy', { 
         customerId: recommendations.customer_id 
       });
     } catch (error) {
