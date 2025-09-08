@@ -5,13 +5,6 @@ import com.iotplatform.dto.PDFProcessingDTOs.PDFStatusResponse;
 import com.iotplatform.exception.PDFProcessingException;
 import com.iotplatform.service.PDFProcessingService;
 import com.iotplatform.security.CustomUserDetails;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,7 +56,6 @@ import com.iotplatform.dto.HealthCheckResponse;
 @RestController
 @RequestMapping("/api/pdf")
 @RequiredArgsConstructor
-@Tag(name = "PDF Processing", description = "PDF document processing and management operations")
 @CrossOrigin(originPatterns = "*", maxAge = 3600)
 public class PDFProcessingController {
     
@@ -82,20 +74,8 @@ public class PDFProcessingController {
      * @param userDetails The authenticated user details
      * @return PDF upload response with processing details
      */
-    @Operation(
-        summary = "Upload PDF Document (Authenticated)",
-        description = "Upload a PDF file to the processing service for analysis and storage. Requires authentication."
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "PDF uploaded successfully",
-            content = @Content(schema = @Schema(implementation = PDFUploadResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid file type, size, or corrupted PDF"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadPDF(
-            @Parameter(description = "PDF file to upload", required = true)
             @RequestParam("file") MultipartFile file,
             
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -145,19 +125,8 @@ public class PDFProcessingController {
      * @param file The PDF file to upload
      * @return PDF upload response with processing details
      */
-    @Operation(
-        summary = "Upload PDF Document (Public)",
-        description = "Upload a PDF file to the processing service for analysis and storage. Public endpoint matching port 8000 specification."
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "PDF uploaded successfully",
-            content = @Content(schema = @Schema(implementation = PDFUploadResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid file type, size, or corrupted PDF"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
     @PostMapping(value = "/upload-pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadPDFPublic(
-            @Parameter(description = "PDF file to upload", required = true)
             @RequestParam("file") MultipartFile file) {
         
         log.info("Public PDF upload request received for file: {} ({} bytes)", 
@@ -205,22 +174,9 @@ public class PDFProcessingController {
      * @param userDetails The authenticated user details
      * @return Query response with AI-generated answer
      */
-    @Operation(
-        summary = "Query PDF Document",
-        description = "Query a PDF document using natural language and receive AI-generated responses"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Query processed successfully",
-            content = @Content(schema = @Schema(implementation = PDFQueryResponse.class))),
-        @ApiResponse(responseCode = "400", description = "Invalid query request"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "404", description = "PDF document not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @PostMapping("/query")
+            @PostMapping("/query")
     public ResponseEntity<PDFQueryResponse> queryPDF(
-            @Parameter(description = "Query request", required = true)
-            @Valid @RequestBody PDFQueryRequest request,
+                        @Valid @RequestBody PDFQueryRequest request,
             
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
@@ -262,23 +218,11 @@ public class PDFProcessingController {
      * @param userDetails The authenticated user details
      * @return Paginated list of PDF documents
      */
-    @Operation(
-        summary = "List PDF Documents",
-        description = "Retrieve a paginated list of PDF documents for the organization"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "PDF list retrieved successfully",
-            content = @Content(schema = @Schema(implementation = PDFListResponse.class))),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping("/list")
+            @GetMapping("/list")
     public ResponseEntity<PDFListResponse> listPDFs(
-            @Parameter(description = "Page number (1-based)", example = "1")
             @RequestParam(defaultValue = "1") int page,
             
-            @Parameter(description = "Page size", example = "10")
-            @RequestParam(defaultValue = "10") int size,
+                        @RequestParam(defaultValue = "10") int size,
             
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
@@ -307,11 +251,7 @@ public class PDFProcessingController {
     }
 
     @PostMapping("/{pdfName}/generate-rules")
-    @Operation(
-        summary = "Generate Rules",
-        description = "Generate rules from a PDF document"
-    )
-    public ResponseEntity<?> generateRules(
+        public ResponseEntity<?> generateRules(
             @PathVariable String pdfName,
             @RequestBody PDFGenerationRequest request) {
         
@@ -337,11 +277,7 @@ public class PDFProcessingController {
     }
 
     @PostMapping("/{pdfName}/generate-maintenance")
-    @Operation(
-        summary = "Generate Maintenance",
-        description = "Generate maintenance tasks from a PDF document"
-    )
-    public ResponseEntity<?> generateMaintenance(
+        public ResponseEntity<?> generateMaintenance(
             @PathVariable String pdfName,
             @RequestBody PDFGenerationRequest request) {
         
@@ -367,11 +303,7 @@ public class PDFProcessingController {
     }
 
     @PostMapping("/{pdfName}/generate-safety")
-    @Operation(
-        summary = "Generate Safety",
-        description = "Generate safety precautions from a PDF document"
-    )
-    public ResponseEntity<?> generateSafety(
+        public ResponseEntity<?> generateSafety(
             @PathVariable String pdfName,
             @RequestBody PDFGenerationRequest request) {
         
@@ -397,11 +329,7 @@ public class PDFProcessingController {
     }
 
     @GetMapping("/{pdfName}/status")
-    @Operation(
-        summary = "Get Processing Status",
-        description = "Get the processing status of a PDF document"
-    )
-    public ResponseEntity<ProcessingStatusResponse> getProcessingStatus(@PathVariable String pdfName) {
+        public ResponseEntity<ProcessingStatusResponse> getProcessingStatus(@PathVariable String pdfName) {
         log.info("Processing status request received for: {}", pdfName);
         
         try {
@@ -422,11 +350,7 @@ public class PDFProcessingController {
     }
 
     @DeleteMapping("/{pdfName}")
-    @Operation(
-        summary = "Delete PDF",
-        description = "Delete a PDF document and all its processed data"
-    )
-    public ResponseEntity<PDFDeleteResponse> deletePDF(@PathVariable String pdfName) {
+        public ResponseEntity<PDFDeleteResponse> deletePDF(@PathVariable String pdfName) {
         log.info("PDF deletion request received for: {}", pdfName);
         
         try {
@@ -446,11 +370,7 @@ public class PDFProcessingController {
     }
 
     @GetMapping("/health")
-    @Operation(
-        summary = "Health Check",
-        description = "Check the health of the PDF processing service"
-    )
-    public ResponseEntity<HealthCheckResponse> healthCheck() {
+        public ResponseEntity<HealthCheckResponse> healthCheck() {
         log.info("Health check request received");
         
         try {
@@ -471,11 +391,7 @@ public class PDFProcessingController {
      * @param limit Items per page
      * @return PDF list in external service format
      */
-    @Operation(
-        summary = "List PDFs (External Format)",
-        description = "List PDFs in the format expected by external service"
-    )
-    @GetMapping("/pdfs")
+        @GetMapping("/pdfs")
     public ResponseEntity<?> listPDFsExternal(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int limit) {
@@ -503,11 +419,7 @@ public class PDFProcessingController {
      * @param pdfName The name of the PDF to delete
      * @return Deletion response
      */
-    @Operation(
-        summary = "Delete PDF (External Format)",
-        description = "Delete PDF using external service endpoint format"
-    )
-    @DeleteMapping("/pdfs/{pdfName}")
+        @DeleteMapping("/pdfs/{pdfName}")
     public ResponseEntity<?> deletePDFExternal(@PathVariable String pdfName) {
         
         log.info("External PDF deletion request received for: {}", pdfName);
@@ -533,11 +445,7 @@ public class PDFProcessingController {
      * @param pdfName The name of the PDF
      * @return Rules generation response
      */
-    @Operation(
-        summary = "Generate Rules (External Format)",
-        description = "Generate rules using external service endpoint format"
-    )
-    @PostMapping("/generate-rules/{pdfName}")
+        @PostMapping("/generate-rules/{pdfName}")
     public ResponseEntity<?> generateRulesExternal(@PathVariable String pdfName) {
         
         log.info("External rules generation request received for: {}", pdfName);
@@ -563,11 +471,7 @@ public class PDFProcessingController {
      * @param pdfName The name of the PDF
      * @return Maintenance generation response
      */
-    @Operation(
-        summary = "Generate Maintenance (External Format)",
-        description = "Generate maintenance using external service endpoint format"
-    )
-    @PostMapping("/generate-maintenance/{pdfName}")
+        @PostMapping("/generate-maintenance/{pdfName}")
     public ResponseEntity<?> generateMaintenanceExternal(@PathVariable String pdfName) {
         
         log.info("External maintenance generation request received for: {}", pdfName);
@@ -593,11 +497,7 @@ public class PDFProcessingController {
      * @param pdfName The name of the PDF
      * @return Safety generation response
      */
-    @Operation(
-        summary = "Generate Safety (External Format)",
-        description = "Generate safety using external service endpoint format"
-    )
-    @PostMapping("/generate-safety/{pdfName}")
+        @PostMapping("/generate-safety/{pdfName}")
     public ResponseEntity<?> generateSafetyExternal(@PathVariable String pdfName) {
         
         log.info("External safety generation request received for: {}", pdfName);
@@ -625,11 +525,7 @@ public class PDFProcessingController {
      * @param pdfName The name of the PDF
      * @return Collection analysis
      */
-    @Operation(
-        summary = "Debug Collection Analysis",
-        description = "Analyze a specific PDF collection"
-    )
-    @GetMapping("/debug/collection/{pdfName}")
+        @GetMapping("/debug/collection/{pdfName}")
     public ResponseEntity<?> debugCollection(@PathVariable String pdfName) {
         
         log.info("Debug collection analysis request received for: {}", pdfName);
@@ -656,11 +552,7 @@ public class PDFProcessingController {
      * @param request The test query request
      * @return Test query response
      */
-    @Operation(
-        summary = "Test Query Pipeline",
-        description = "Test the query pipeline step by step"
-    )
-    @PostMapping("/debug/test-query/{pdfName}")
+        @PostMapping("/debug/test-query/{pdfName}")
     public ResponseEntity<?> testQueryPipeline(
             @PathVariable String pdfName,
             @RequestBody Map<String, Object> request) {
@@ -691,11 +583,7 @@ public class PDFProcessingController {
      * 
      * @return All collections
      */
-    @Operation(
-        summary = "List All Collections",
-        description = "List all available PDF collections"
-    )
-    @GetMapping("/collections")
+        @GetMapping("/collections")
     public ResponseEntity<?> listAllCollections() {
         
         log.info("List all collections request received");
@@ -743,11 +631,7 @@ public class PDFProcessingController {
      * 
      * @return Global health check response
      */
-    @Operation(
-        summary = "Global Health Check",
-        description = "Global health check for all services"
-    )
-    @GetMapping("/health/global")
+        @GetMapping("/health/global")
     public ResponseEntity<?> globalHealthCheck() {
         
         log.info("Global health check request received");
@@ -772,11 +656,7 @@ public class PDFProcessingController {
      * 
      * @return Service information
      */
-    @Operation(
-        summary = "Root Endpoint",
-        description = "Get service information and available endpoints"
-    )
-    @GetMapping("/info")
+        @GetMapping("/info")
     public ResponseEntity<?> getServiceInfo() {
         
         log.info("Service info request received");

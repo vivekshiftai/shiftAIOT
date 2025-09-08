@@ -5,11 +5,6 @@ import com.iotplatform.model.Notification;
 import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.service.MaintenanceScheduleService;
 import com.iotplatform.service.MaintenanceNotificationScheduler;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +27,6 @@ import com.iotplatform.service.NotificationService;
 @RestController
 @RequestMapping("/api/maintenance")
 @RequiredArgsConstructor
-@Tag(name = "Maintenance Management", description = "APIs for managing device maintenance tasks, schedules, and notifications")
 public class MaintenanceController {
     
     private static final Logger log = LoggerFactory.getLogger(MaintenanceController.class);
@@ -43,16 +37,7 @@ public class MaintenanceController {
     /**
      * Get today's maintenance tasks for the organization.
      */
-    @Operation(
-        summary = "Get Today's Maintenance Tasks",
-        description = "Get all maintenance tasks scheduled for today for the current user's organization"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Today's maintenance tasks retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "403", description = "Forbidden")
-    })
-    @GetMapping("/today")
+            @GetMapping("/today")
     @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
     public ResponseEntity<List<DeviceMaintenance>> getTodayMaintenance(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -87,16 +72,7 @@ public class MaintenanceController {
     /**
      * Get all maintenance tasks for the organization.
      */
-    @Operation(
-        summary = "Get All Maintenance Tasks",
-        description = "Get all maintenance tasks for the current user's organization"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Maintenance tasks retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "403", description = "Forbidden")
-    })
-    @GetMapping
+            @GetMapping
     @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
     public ResponseEntity<List<DeviceMaintenance>> getAllMaintenance(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -123,20 +99,10 @@ public class MaintenanceController {
     /**
      * Get a maintenance task by ID.
      */
-    @Operation(
-        summary = "Get Maintenance Task by ID",
-        description = "Get a specific maintenance task by its ID"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Maintenance task retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "404", description = "Maintenance task not found")
-    })
-    @GetMapping("/{id}")
+            @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
     public ResponseEntity<DeviceMaintenance> getMaintenanceById(
-            @Parameter(description = "Maintenance task ID")
-            @PathVariable String id,
+                        @PathVariable String id,
             
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
@@ -165,16 +131,7 @@ public class MaintenanceController {
     /**
      * Create a new maintenance task.
      */
-    @Operation(
-        summary = "Create Maintenance Task",
-        description = "Create a new maintenance task"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Maintenance task created successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized")
-    })
-    @PostMapping
+            @PostMapping
     @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
     public ResponseEntity<DeviceMaintenance> createMaintenance(
             @RequestBody DeviceMaintenance maintenance,
@@ -237,21 +194,10 @@ public class MaintenanceController {
     /**
      * Update a maintenance task.
      */
-    @Operation(
-        summary = "Update Maintenance Task",
-        description = "Update an existing maintenance task"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Maintenance task updated successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "404", description = "Maintenance task not found")
-    })
-    @PutMapping("/{id}")
+            @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
     public ResponseEntity<DeviceMaintenance> updateMaintenance(
-            @Parameter(description = "Maintenance task ID")
-            @PathVariable String id,
+                        @PathVariable String id,
             
             @RequestBody DeviceMaintenance maintenance,
             
@@ -279,20 +225,10 @@ public class MaintenanceController {
     /**
      * Delete a maintenance task.
      */
-    @Operation(
-        summary = "Delete Maintenance Task",
-        description = "Delete a maintenance task"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "Maintenance task deleted successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "404", description = "Maintenance task not found")
-    })
-    @DeleteMapping("/{id}")
+            @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
     public ResponseEntity<Void> deleteMaintenance(
-            @Parameter(description = "Maintenance task ID")
-            @PathVariable String id,
+                        @PathVariable String id,
             
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
@@ -316,22 +252,10 @@ public class MaintenanceController {
     /**
      * Complete a maintenance task and calculate next maintenance date.
      */
-    @Operation(
-        summary = "Complete Maintenance Task",
-        description = "Mark a maintenance task as completed and calculate the next maintenance date based on frequency"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Maintenance task completed successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "404", description = "Maintenance task not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @PostMapping("/{maintenanceId}/complete")
+            @PostMapping("/{maintenanceId}/complete")
     @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
     public ResponseEntity<Map<String, Object>> completeMaintenanceTask(
-            @Parameter(description = "Maintenance task ID")
-            @PathVariable String maintenanceId,
+                        @PathVariable String maintenanceId,
             
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
@@ -377,20 +301,10 @@ public class MaintenanceController {
     /**
      * Get maintenance tasks for a device.
      */
-    @Operation(
-        summary = "Get Device Maintenance Tasks",
-        description = "Get all maintenance tasks for a specific device"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Maintenance tasks retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "403", description = "Forbidden")
-    })
-    @GetMapping("/device/{deviceId}")
+            @GetMapping("/device/{deviceId}")
     @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
     public ResponseEntity<Map<String, Object>> getDeviceMaintenance(
-            @Parameter(description = "Device ID")
-            @PathVariable String deviceId,
+                        @PathVariable String deviceId,
             
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
@@ -431,20 +345,10 @@ public class MaintenanceController {
     /**
      * Get overdue maintenance tasks for a device.
      */
-    @Operation(
-        summary = "Get Overdue Maintenance Tasks",
-        description = "Get all overdue maintenance tasks for a specific device"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Overdue maintenance tasks retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "403", description = "Forbidden")
-    })
-    @GetMapping("/device/{deviceId}/overdue")
+            @GetMapping("/device/{deviceId}/overdue")
     @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
     public ResponseEntity<Map<String, Object>> getOverdueMaintenance(
-            @Parameter(description = "Device ID")
-            @PathVariable String deviceId,
+                        @PathVariable String deviceId,
             
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
@@ -480,20 +384,10 @@ public class MaintenanceController {
     /**
      * Get upcoming maintenance tasks for a device.
      */
-    @Operation(
-        summary = "Get Upcoming Maintenance Tasks",
-        description = "Get all upcoming maintenance tasks for a specific device (next 30 days)"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Upcoming maintenance tasks retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "403", description = "Forbidden")
-    })
-    @GetMapping("/device/{deviceId}/upcoming")
+        @GetMapping("/device/{deviceId}/upcoming")
     @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
     public ResponseEntity<Map<String, Object>> getUpcomingMaintenance(
-            @Parameter(description = "Device ID")
-            @PathVariable String deviceId,
+                        @PathVariable String deviceId,
             
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
@@ -531,16 +425,7 @@ public class MaintenanceController {
      */
     @PostMapping("/update-device-names")
     @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
-    @Operation(
-        summary = "Update Device Names for Maintenance Tasks",
-        description = "Update device names for maintenance tasks that don't have them"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Device names updated successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "403", description = "Forbidden")
-    })
-    public ResponseEntity<Map<String, Object>> updateDeviceNames(
+            public ResponseEntity<Map<String, Object>> updateDeviceNames(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
         if (userDetails == null || userDetails.getUser() == null) {
@@ -577,16 +462,7 @@ public class MaintenanceController {
      */
     @PostMapping("/update-assignments/{deviceId}")
     @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
-    @Operation(
-        summary = "Update Maintenance Task Assignments",
-        description = "Update maintenance task assignments for a specific device with the device's assigned user"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Maintenance task assignments updated successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "403", description = "Forbidden")
-    })
-    public ResponseEntity<Map<String, Object>> updateMaintenanceAssignments(
+            public ResponseEntity<Map<String, Object>> updateMaintenanceAssignments(
             @PathVariable String deviceId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
@@ -625,16 +501,7 @@ public class MaintenanceController {
      */
     @PostMapping("/remove-duplicates/{deviceId}")
     @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
-    @Operation(
-        summary = "Remove Duplicate Maintenance Tasks",
-        description = "Remove duplicate maintenance tasks for a specific device"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Duplicate maintenance tasks removed successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "403", description = "Forbidden")
-    })
-    public ResponseEntity<Map<String, Object>> removeDuplicateMaintenanceTasks(
+            public ResponseEntity<Map<String, Object>> removeDuplicateMaintenanceTasks(
             @PathVariable String deviceId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
@@ -730,8 +597,6 @@ public class MaintenanceController {
         }
     }
 
-
-
     /**
      * Assign a maintenance task to a user
      */
@@ -792,16 +657,7 @@ public class MaintenanceController {
     /**
      * Manually trigger maintenance notifications for testing.
      */
-    @Operation(
-        summary = "Trigger Maintenance Notifications",
-        description = "Manually trigger the daily maintenance notification process for testing purposes"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Maintenance notifications triggered successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "403", description = "Forbidden - Admin access required")
-    })
-    @PostMapping("/trigger-notifications")
+            @PostMapping("/trigger-notifications")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> triggerMaintenanceNotifications(
             @AuthenticationPrincipal CustomUserDetails userDetails) {

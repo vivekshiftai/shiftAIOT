@@ -2,10 +2,6 @@ package com.iotplatform.controller;
 
 import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.service.PushNotificationService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +20,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/push-notifications")
 @RequiredArgsConstructor
-@Tag(name = "Push Notifications", description = "Web push notification management")
 public class PushNotificationController {
 
     private final PushNotificationService pushNotificationService;
@@ -32,16 +27,7 @@ public class PushNotificationController {
     /**
      * Get VAPID public key for client subscription.
      */
-    @Operation(
-        summary = "Get VAPID Public Key",
-        description = "Retrieve the VAPID public key needed for push notification subscription"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "VAPID key retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "404", description = "VAPID key not configured")
-    })
-    @GetMapping("/vapid-public-key")
+            @GetMapping("/vapid-public-key")
     @PreAuthorize("hasAuthority('PUSH_NOTIFICATION_READ')")
     public ResponseEntity<Map<String, String>> getVapidPublicKey(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -67,17 +53,7 @@ public class PushNotificationController {
     /**
      * Register a push notification subscription.
      */
-    @Operation(
-        summary = "Register Push Subscription",
-        description = "Register a new push notification subscription for the current user"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Subscription registered successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid subscription data"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "403", description = "Push notifications disabled")
-    })
-    @PostMapping("/subscribe")
+            @PostMapping("/subscribe")
     @PreAuthorize("hasAuthority('PUSH_NOTIFICATION_WRITE')")
     public ResponseEntity<Map<String, Object>> subscribe(
             @RequestBody PushSubscriptionRequest request,
@@ -128,15 +104,7 @@ public class PushNotificationController {
     /**
      * Unregister a push notification subscription.
      */
-    @Operation(
-        summary = "Unregister Push Subscription",
-        description = "Remove the push notification subscription for the current user"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Subscription unregistered successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized")
-    })
-    @PostMapping("/unsubscribe")
+            @PostMapping("/unsubscribe")
     @PreAuthorize("hasAuthority('PUSH_NOTIFICATION_WRITE')")
     public ResponseEntity<Map<String, Object>> unsubscribe(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -172,15 +140,7 @@ public class PushNotificationController {
     /**
      * Get subscription status for the current user.
      */
-    @Operation(
-        summary = "Get Subscription Status",
-        description = "Check if the current user has an active push notification subscription"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Status retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized")
-    })
-    @GetMapping("/status")
+            @GetMapping("/status")
     @PreAuthorize("hasAuthority('PUSH_NOTIFICATION_READ')")
     public ResponseEntity<Map<String, Object>> getSubscriptionStatus(
             @AuthenticationPrincipal CustomUserDetails userDetails) {

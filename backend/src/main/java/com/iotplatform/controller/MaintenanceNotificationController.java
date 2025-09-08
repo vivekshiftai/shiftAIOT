@@ -2,11 +2,6 @@ package com.iotplatform.controller;
 
 import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.service.MaintenanceNotificationScheduler;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +21,6 @@ import java.util.HashMap;
 @RestController
 @RequestMapping("/api/maintenance-notifications")
 @RequiredArgsConstructor
-@Tag(name = "Maintenance Notifications", description = "Maintenance notification management and testing")
 public class MaintenanceNotificationController {
 
     private final MaintenanceNotificationScheduler maintenanceNotificationScheduler;
@@ -34,22 +28,10 @@ public class MaintenanceNotificationController {
     /**
      * Manually trigger maintenance notifications for testing purposes.
      */
-    @Operation(
-        summary = "Trigger Maintenance Notifications",
-        description = "Manually trigger maintenance notifications for the specified organization"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Notifications triggered successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "403", description = "Forbidden"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @PostMapping("/trigger")
+            @PostMapping("/trigger")
     @PreAuthorize("hasAuthority('MAINTENANCE_NOTIFICATION_WRITE')")
     public ResponseEntity<Map<String, Object>> triggerMaintenanceNotifications(
-            @Parameter(description = "Organization ID to process")
-            @RequestParam(required = false) String organizationId,
+                        @RequestParam(required = false) String organizationId,
             
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
@@ -91,16 +73,7 @@ public class MaintenanceNotificationController {
     /**
      * Get scheduler status and configuration.
      */
-    @Operation(
-        summary = "Get Scheduler Status",
-        description = "Get the current status and configuration of the maintenance notification scheduler"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Status retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "403", description = "Forbidden")
-    })
-    @GetMapping("/status")
+            @GetMapping("/status")
     @PreAuthorize("hasAuthority('MAINTENANCE_NOTIFICATION_READ')")
     public ResponseEntity<Map<String, Object>> getSchedulerStatus(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -122,16 +95,7 @@ public class MaintenanceNotificationController {
     /**
      * Debug maintenance tasks to troubleshoot notification issues.
      */
-    @Operation(
-        summary = "Debug Maintenance Tasks",
-        description = "Debug maintenance tasks to understand why notifications might not be sent"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Debug information retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "403", description = "Forbidden")
-    })
-    @GetMapping("/debug")
+            @GetMapping("/debug")
     @PreAuthorize("hasAuthority('MAINTENANCE_NOTIFICATION_READ')")
     public ResponseEntity<Map<String, Object>> debugMaintenanceTasks(
             @AuthenticationPrincipal CustomUserDetails userDetails) {

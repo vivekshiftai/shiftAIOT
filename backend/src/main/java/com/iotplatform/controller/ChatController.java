@@ -5,11 +5,6 @@ import com.iotplatform.dto.PDFQueryResponse;
 import com.iotplatform.model.PDFQuery;
 import com.iotplatform.security.CustomUserDetails;
 import com.iotplatform.service.PDFProcessingService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +35,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/chat")
 @RequiredArgsConstructor
-@Tag(name = "Chat & PDF Query", description = "PDF document querying and chat history operations")
 public class ChatController {
 
     private final PDFProcessingService pdfProcessingService;
@@ -48,23 +42,10 @@ public class ChatController {
     /**
      * Query a PDF document with optional device context.
      */
-    @Operation(
-        summary = "Query PDF Document",
-        description = "Query a PDF document with natural language and optional device context"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Query processed successfully"),
-        @ApiResponse(responseCode = "400", description = "Invalid request"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "404", description = "PDF document not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @PostMapping("/query")
+            @PostMapping("/query")
     public ResponseEntity<?> queryPDF(
-            @Parameter(description = "PDF query request", required = true)
-            @Valid @RequestBody PDFQueryRequest request,
+                        @Valid @RequestBody PDFQueryRequest request,
             
-            @Parameter(description = "Device ID for context (optional)")
             @RequestParam(required = false) String deviceId,
             
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -105,19 +86,9 @@ public class ChatController {
     /**
      * Get chat history for the current user.
      */
-    @Operation(
-        summary = "Get User Chat History",
-        description = "Retrieve chat history for the current user"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Chat history retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping("/history")
+            @GetMapping("/history")
     public ResponseEntity<?> getChatHistory(
-            @Parameter(description = "Maximum number of messages to return")
-            @RequestParam(defaultValue = "50") int limit,
+                        @RequestParam(defaultValue = "50") int limit,
             
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
@@ -150,23 +121,11 @@ public class ChatController {
     /**
      * Get chat history for a specific device.
      */
-    @Operation(
-        summary = "Get Device Chat History",
-        description = "Retrieve chat history for a specific device"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Device chat history retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "404", description = "Device not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping("/history/device/{deviceId}")
+            @GetMapping("/history/device/{deviceId}")
     public ResponseEntity<?> getDeviceChatHistory(
-            @Parameter(description = "Device ID", required = true)
-            @PathVariable String deviceId,
+                        @PathVariable String deviceId,
             
-            @Parameter(description = "Maximum number of messages to return")
-            @RequestParam(defaultValue = "50") int limit,
+                        @RequestParam(defaultValue = "50") int limit,
             
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
@@ -203,23 +162,11 @@ public class ChatController {
     /**
      * Get chat history for a specific PDF document.
      */
-    @Operation(
-        summary = "Get PDF Chat History",
-        description = "Retrieve chat history for a specific PDF document"
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "PDF chat history retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "404", description = "PDF document not found"),
-        @ApiResponse(responseCode = "500", description = "Internal server error")
-    })
-    @GetMapping("/history/pdf/{pdfName}")
+            @GetMapping("/history/pdf/{pdfName}")
     public ResponseEntity<?> getPDFChatHistory(
-            @Parameter(description = "PDF document name", required = true)
-            @PathVariable String pdfName,
+                        @PathVariable String pdfName,
             
-            @Parameter(description = "Maximum number of messages to return")
-            @RequestParam(defaultValue = "50") int limit,
+                        @RequestParam(defaultValue = "50") int limit,
             
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         

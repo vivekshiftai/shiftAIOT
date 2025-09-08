@@ -75,7 +75,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.iotplatform.dto.UnifiedOnboardingProgress;
 import java.util.function.Consumer;
-import io.swagger.v3.oas.annotations.Operation;
 
 @CrossOrigin(originPatterns = "*", maxAge = 3600)
 @RestController
@@ -1637,8 +1636,6 @@ public class DeviceController {
      * Get device documentation for chat queries
      */
     @GetMapping("/{deviceId}/documentation/chat")
-    @Operation(summary = "Get device documentation for chat queries", 
-               description = "Retrieve device documentation that can be used for chat queries")
     public ResponseEntity<?> getDeviceDocumentationForChat(
             @PathVariable String deviceId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -1665,8 +1662,6 @@ public class DeviceController {
      * Get device documentation summary for chat interface
      */
     @GetMapping("/{deviceId}/documentation/chat/summary")
-    @Operation(summary = "Get device documentation summary for chat", 
-               description = "Retrieve a summary of device documentation for the chat interface")
     public ResponseEntity<?> getDeviceDocumentationSummaryForChat(
             @PathVariable String deviceId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -1700,8 +1695,6 @@ public class DeviceController {
      * Get device documentation by type for chat queries
      */
     @GetMapping("/{deviceId}/documentation/chat/type/{documentType}")
-    @Operation(summary = "Get device documentation by type for chat", 
-               description = "Retrieve device documentation of a specific type for chat queries")
     public ResponseEntity<?> getDeviceDocumentationByTypeForChat(
             @PathVariable String deviceId,
             @PathVariable String documentType,
