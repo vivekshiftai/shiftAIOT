@@ -36,16 +36,19 @@ api.interceptors.request.use(
                            config.url?.includes('/api/health/') ||
                            config.url?.includes('/upload-pdf') ||
                            config.url?.includes('/query') ||
-                           config.url?.includes('/pdfs/');
+                           config.url?.includes('/pdfs/') ||
+                           config.url?.includes('/knowledge/suggestions'); // Temporarily make suggestions public for testing
     
     if (!isPublicEndpoint) {
       const token = tokenService.getToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log(`🔐 Adding auth header for protected endpoint: ${config.url}`);
       } else {
         console.warn(`⚠️ No token found for protected endpoint: ${config.url}`);
       }
     } else {
+      console.log(`🌐 Public endpoint, no auth header needed: ${config.url}`);
     }
 
     // Set Content-Type for JSON requests only

@@ -8,12 +8,10 @@ import {
   User,
   Plus
 } from 'lucide-react';
-import { deviceAPI } from '../services/api';
 import { pdfProcessingService, PDFImage } from '../services/pdfprocess';
 import { logError, logInfo } from '../utils/logger';
 import '../styles/knowledge.css';
-import { knowledgeAPI } from '../services/api'; // Added knowledgeAPI import
-import { UnifiedQueryService, UnifiedQueryRequest } from '../services/unifiedQueryService';
+import { knowledgeAPI } from '../services/api';
 
 // Updated interface to match UnifiedPDF API response
 interface UnifiedPDF {
@@ -64,14 +62,14 @@ interface ChatMessage {
 export const KnowledgeSection: React.FC = () => {
   const [documents, setDocuments] = useState<UnifiedPDF[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
-  const [devices, setDevices] = useState<Device[]>([]);
+  const [devices] = useState<Device[]>([]);
   const [selectedDeviceForUpload, setSelectedDeviceForUpload] = useState<string>('');
   const [showDeviceSelector, setShowDeviceSelector] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       type: 'assistant',
-      content: 'Hello! I\'m your AI assistant for the mechanical machine knowledge base. I can help you with:\n\n📱 **Machine Queries**: Select a machine from the right panel to ask about its documentation and manuals\n📄 **PDF Document Queries**: I\'ll automatically search through the machine\'s PDF documents using their stored names\n🤖 **General Questions**: Ask about mechanical concepts, machine management, and platform usage\n\n**How it works:**\n1. Select a machine from the "AI Ready Machines" panel on the right\n2. Ask questions about that machine - I\'ll query its PDF documentation automatically\n3. I\'ll use the PDF names stored in the unified PDF tables for accurate results\n\nSelect a machine to get started!',
+      content: 'Hello! I\'m your AI assistant for machine documentation.\n\n**How to use:**\n1. Select a machine from the "AI Ready Machines" panel on the right\n2. Ask questions about that machine\'s documentation\n3. I\'ll search through the machine\'s PDF files to answer your questions\n\n**Available machines with PDFs will appear on the right. Select one to get started!**',
       timestamp: new Date()
     }
   ]);
@@ -96,101 +94,69 @@ export const KnowledgeSection: React.FC = () => {
     }
   }, [chatMessages]);
 
-  // Function to load query suggestions
+  // Simple function to load query suggestions (optional)
   const loadQuerySuggestions = async () => {
     try {
-      logInfo('Knowledge', 'Loading query suggestions...');
-      const suggestions = await UnifiedQueryService.getQuerySuggestions();
-      if (suggestions.success) {
-        setQuerySuggestions(suggestions.suggestions);
-        logInfo('Knowledge', 'Query suggestions loaded successfully', { count: suggestions.suggestions.length });
-      } else {
-        logError('Knowledge', 'Failed to load query suggestions', new Error(suggestions.error || 'Unknown error'));
-      }
+      // Set some default suggestions instead of calling API
+      const defaultSuggestions = [
+        "How do I troubleshoot this machine?",
+        "What maintenance procedures are needed?",
+        "How do I install this device?",
+        "What are the safety precautions?",
+        "How do I operate this machine?"
+      ];
+      setQuerySuggestions(defaultSuggestions);
+      logInfo('Knowledge', 'Default query suggestions loaded', { count: defaultSuggestions.length });
     } catch (error) {
       logError('Knowledge', 'Failed to load query suggestions', error instanceof Error ? error : new Error('Unknown error'));
     }
   };
 
 
-  // Load devices from unified PDFs table - only once on component mount
+  // Simple data loading - fetch devices from unified PDFs table
   useEffect(() => {
-    let isMounted = true; // Flag to prevent state updates if component unmounts
+    let isMounted = true;
     
     const loadData = async () => {
       try {
         setLoading(true);
+        logInfo('Knowledge', 'Loading devices from unified PDFs table...');
         
         // Load documents from unified PDFs table via knowledge API
-        try {
-          const knowledgeResponse = await knowledgeAPI.getDocuments();
-          if (isMounted && knowledgeResponse.data.documents) {
-            const knowledgeDocuments: UnifiedPDF[] = knowledgeResponse.data.documents.map((doc: any) => ({
-              id: doc.id.toString(),
-              name: doc.name,
-              originalFilename: doc.originalFilename || doc.name,
-              documentType: doc.documentType || 'pdf',
-              fileSize: doc.fileSize || 0,
-              processingStatus: doc.processingStatus || 'completed',
-              vectorized: doc.vectorized || true,
-              uploadedAt: doc.uploadedAt,
-              processedAt: doc.processedAt || doc.uploadedAt,
-              deviceId: doc.deviceId,
-              deviceName: doc.deviceName,
-              organizationId: doc.organizationId || 'public',
-              collectionName: doc.collectionName,
-              totalPages: doc.totalPages,
-              processedChunks: doc.processedChunks || 0,
-              processingTime: doc.processingTime
-            }));
-            setDocuments(knowledgeDocuments);
-            logInfo('Knowledge', 'PDF documents loaded from unified PDFs table', { count: knowledgeDocuments.length });
-            
-            // Log device information for debugging
-            const devicesWithPDFs = knowledgeDocuments.filter(doc => doc.deviceId && doc.deviceName);
-            const uniqueDevices = [...new Set(devicesWithPDFs.map(doc => doc.deviceId))];
-            logInfo('Knowledge', 'Devices with PDFs found', { 
-              totalDevices: uniqueDevices.length,
-              devices: uniqueDevices.map(deviceId => {
-                const deviceDocs = devicesWithPDFs.filter(doc => doc.deviceId === deviceId);
-                return {
-                  deviceId,
-                  deviceName: deviceDocs[0]?.deviceName,
-                  pdfCount: deviceDocs.length,
-                  pdfNames: deviceDocs.map(doc => doc.name)
-                };
-              })
-            });
-          } else if (isMounted) {
-            throw new Error('Invalid response format from knowledge API');
-          }
-        } catch (knowledgeError) {
-          if (isMounted) {
-            logError('Knowledge', 'Failed to load documents from unified PDFs table', knowledgeError instanceof Error ? knowledgeError : new Error('Unknown error'));
-            // Keep empty array as fallback
-            setDocuments([]);
-          }
-        }
-
-        // Load devices for association (fallback for upload functionality)
-        if (isMounted) {
-          try {
-            const devicesResponse = await deviceAPI.getAll();
-            setDevices(devicesResponse.data || []);
-            logInfo('Knowledge', 'Devices loaded successfully', { count: devicesResponse.data?.length || 0 });
-          } catch (deviceError) {
-            logError('Knowledge', 'Failed to load devices', deviceError instanceof Error ? deviceError : new Error('Unknown error'));
-            // Continue without devices
-            setDevices([]);
-          }
+        const knowledgeResponse = await knowledgeAPI.getDocuments();
+        
+        if (isMounted && knowledgeResponse.data.documents) {
+          const knowledgeDocuments: UnifiedPDF[] = knowledgeResponse.data.documents.map((doc: any) => ({
+            id: doc.id.toString(),
+            name: doc.name,
+            originalFilename: doc.originalFilename || doc.name,
+            documentType: doc.documentType || 'pdf',
+            fileSize: doc.fileSize || 0,
+            processingStatus: doc.processingStatus || 'completed',
+            vectorized: doc.vectorized || true,
+            uploadedAt: doc.uploadedAt,
+            processedAt: doc.processedAt || doc.uploadedAt,
+            deviceId: doc.deviceId,
+            deviceName: doc.deviceName,
+            organizationId: doc.organizationId || 'public',
+            collectionName: doc.collectionName,
+            totalPages: doc.totalPages,
+            processedChunks: doc.processedChunks || 0,
+            processingTime: doc.processingTime
+          }));
+          
+          setDocuments(knowledgeDocuments);
+          logInfo('Knowledge', 'Devices loaded successfully', { 
+            totalDocuments: knowledgeDocuments.length,
+            devicesWithPDFs: knowledgeDocuments.filter(doc => doc.deviceId && doc.deviceName).length
+          });
+        } else {
+          logInfo('Knowledge', 'No documents found in unified PDFs table');
+          setDocuments([]);
         }
       } catch (error) {
-        if (isMounted) {
-          logError('Knowledge', 'Failed to load data', error instanceof Error ? error : new Error('Unknown error'));
-          // Keep empty arrays as fallback
-          setDocuments([]);
-          setDevices([]);
-        }
+        logError('Knowledge', 'Failed to load devices from unified PDFs table', error instanceof Error ? error : new Error('Unknown error'));
+        setDocuments([]);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -201,11 +167,10 @@ export const KnowledgeSection: React.FC = () => {
     loadData();
     loadQuerySuggestions();
 
-    // Cleanup function to prevent state updates after unmount
     return () => {
       isMounted = false;
     };
-  }, []); // Empty dependency array ensures this only runs once
+  }, []); // Load once on mount
 
 
 
@@ -224,148 +189,73 @@ export const KnowledgeSection: React.FC = () => {
     setIsTyping(true);
 
     try {
-      // If a device is selected, query its PDFs automatically
+      // If a device is selected, query its PDFs
       if (selectedDevice) {
-        // Get device PDFs from the selected device (which already has PDFs filtered)
+        // Get device PDFs from the selected device
         const devicePDFs = selectedDevice.pdfs || documents.filter(doc => doc.deviceId === selectedDevice.id && doc.processingStatus === 'completed' && doc.vectorized);
         
         if (devicePDFs.length > 0) {
-          // Try to query all available PDFs for the device
-          let bestResponse = null;
-          let bestPDF = null;
+          // Try to query the first available PDF for the device
+          const primaryPDF = devicePDFs[0];
           
-          // Try each PDF and use the best response
-          for (const pdf of devicePDFs) {
-            try {
-              // Use the PDF name stored in the unified PDFs table
-              const queryRequest = {
-                pdf_name: pdf.name, // This is the PDF name stored in the database
-                query: userMessage.content,
-                top_k: 5
-              };
-              
-              logInfo('Knowledge', `Querying PDF "${pdf.name}" for device "${selectedDevice.name}"`);
-              
-              const queryResponse = await pdfProcessingService.queryPDF(queryRequest);
-              
-              // Use the first successful response or the one with the most chunks
-              if (!bestResponse || (queryResponse.chunks_used && queryResponse.chunks_used.length > (bestResponse.chunks_used?.length || 0))) {
-                bestResponse = queryResponse;
-                bestPDF = pdf;
-              }
-            } catch (queryError) {
-              logError('Knowledge', `Failed to query PDF "${pdf.name}" for device "${selectedDevice.name}"`, queryError instanceof Error ? queryError : new Error('Unknown error'));
-              // Continue to next PDF
-            }
-          }
-          
-          if (bestResponse && bestPDF) {
+          try {
+            // Use the PDF name stored in the unified PDFs table
+            const queryRequest = {
+              pdf_name: primaryPDF.name,
+              query: userMessage.content,
+              top_k: 5
+            };
+            
+            logInfo('Knowledge', `Querying PDF "${primaryPDF.name}" for device "${selectedDevice.name}"`);
+            
+            const queryResponse = await pdfProcessingService.queryPDF(queryRequest);
+            
             const assistantMessage: ChatMessage = {
               id: (Date.now() + 1).toString(),
               type: 'assistant',
-              content: bestResponse.response || `I found relevant results for device "${selectedDevice.name}" from PDF "${bestPDF.name}". ${bestResponse.chunks_used?.length > 0 ? 'Here\'s what I found: ' + bestResponse.response.substring(0, 200) + '...' : 'Would you like me to search for more specific information?'}`,
+              content: queryResponse.response || `I found relevant results for device "${selectedDevice.name}". ${queryResponse.chunks_used?.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 200) + '...' : 'Would you like me to search for more specific information?'}`,
               timestamp: new Date(),
-              images: bestResponse.images || [],
-              tables: bestResponse.tables || [],
-              chunks_used: bestResponse.chunks_used || [],
-              processing_time: bestResponse.processing_time,
+              images: queryResponse.images || [],
+              tables: queryResponse.tables || [],
+              chunks_used: queryResponse.chunks_used || [],
+              processing_time: queryResponse.processing_time,
               queryType: 'PDF'
             };
             setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
-          } else {
-            // No PDFs returned results, try unified query
-            try {
-              const unifiedRequest: UnifiedQueryRequest = {
-                query: userMessage.content
-              };
-              
-              const unifiedResponse = await UnifiedQueryService.sendUnifiedQuery(unifiedRequest);
-              
-              const assistantMessage: ChatMessage = {
-                id: (Date.now() + 1).toString(),
-                type: 'assistant',
-                content: unifiedResponse.response || `I processed your query for device "${selectedDevice.name}" but didn't find specific results in the PDF documentation. Please try rephrasing your question or ask about general device information.`,
-                timestamp: new Date(),
-                queryType: unifiedResponse.queryType,
-                databaseResults: unifiedResponse.databaseResults,
-                rowCount: unifiedResponse.rowCount,
-                sqlQuery: unifiedResponse.sqlQuery
-              };
-              setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
-            } catch (unifiedError) {
-              const errorMessage: ChatMessage = {
-                id: (Date.now() + 1).toString(),
-                type: 'assistant',
-                content: `I encountered an error while processing your query for device "${selectedDevice.name}". Please check the backend connection and try again.`,
-                timestamp: new Date(),
-                queryType: 'UNKNOWN'
-              };
-              setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
-            }
-          }
-        } else {
-          // No PDFs available for this device, use unified query
-          try {
-            const unifiedRequest: UnifiedQueryRequest = {
-              query: userMessage.content
-            };
+          } catch (queryError) {
+            logError('Knowledge', `Failed to query documentation for device "${selectedDevice.name}"`, queryError instanceof Error ? queryError : new Error('Unknown error'));
             
-            const unifiedResponse = await UnifiedQueryService.sendUnifiedQuery(unifiedRequest);
-            
-            const assistantMessage: ChatMessage = {
+            // Simple fallback message
+            const fallbackMessage: ChatMessage = {
               id: (Date.now() + 1).toString(),
               type: 'assistant',
-              content: unifiedResponse.response || `I processed your query for device "${selectedDevice.name}" but no PDF documentation is available. Please try rephrasing your question or ask about general device information.`,
-              timestamp: new Date(),
-              queryType: unifiedResponse.queryType,
-              databaseResults: unifiedResponse.databaseResults,
-              rowCount: unifiedResponse.rowCount,
-              sqlQuery: unifiedResponse.sqlQuery
-            };
-            setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
-          } catch (unifiedError) {
-            const errorMessage: ChatMessage = {
-              id: (Date.now() + 1).toString(),
-              type: 'assistant',
-              content: `I encountered an error while processing your query for device "${selectedDevice.name}". Please check the backend connection and try again.`,
+              content: `I'm having trouble accessing the documentation for "${selectedDevice.name}" right now. Please try again later or contact support if the issue persists.`,
               timestamp: new Date(),
               queryType: 'UNKNOWN'
             };
-            setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
+            setChatMessages((prev: ChatMessage[]) => [...prev, fallbackMessage]);
           }
-        }
-      } else {
-        // Use unified query service for general queries
-        try {
-          const unifiedRequest: UnifiedQueryRequest = {
-            query: userMessage.content
-          };
-          
-          const unifiedResponse = await UnifiedQueryService.sendUnifiedQuery(unifiedRequest);
-          
-          const assistantMessage: ChatMessage = {
+        } else {
+          // No PDFs available for this device
+          const noPDFMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
             type: 'assistant',
-            content: unifiedResponse.response || 'I processed your query but didn\'t find specific results. Please try rephrasing your question or select a device to get device-specific information.',
-            timestamp: new Date(),
-            queryType: unifiedResponse.queryType,
-            databaseResults: unifiedResponse.databaseResults,
-            rowCount: unifiedResponse.rowCount,
-            sqlQuery: unifiedResponse.sqlQuery
-          };
-          setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
-        } catch (unifiedError) {
-          logError('Knowledge', 'Failed to process unified query', unifiedError instanceof Error ? unifiedError : new Error('Unknown error'));
-          
-          const errorMessage: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            type: 'assistant',
-            content: `I encountered an error while processing your query: "${userMessage.content}". Please check the backend connection and try again.`,
+            content: `No documentation is available for device "${selectedDevice.name}". Please upload documentation for this device to enable AI-powered queries.`,
             timestamp: new Date(),
             queryType: 'UNKNOWN'
           };
-          setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
+          setChatMessages((prev: ChatMessage[]) => [...prev, noPDFMessage]);
         }
+      } else {
+        // No device selected - show helpful message
+        const noDeviceMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: `Please select a device from the "AI Ready Machines" panel on the right to ask questions about its documentation. I can help you with troubleshooting, maintenance, installation, and other device-related questions once you select a machine.`,
+          timestamp: new Date(),
+          queryType: 'UNKNOWN'
+        };
+        setChatMessages((prev: ChatMessage[]) => [...prev, noDeviceMessage]);
       }
     } catch (error) {
       logError('Knowledge', 'Failed to send message', error instanceof Error ? error : new Error('Unknown error'));
@@ -502,15 +392,16 @@ export const KnowledgeSection: React.FC = () => {
   // Get devices from unified PDFs table (devices that have PDFs) - memoized to prevent unnecessary recalculations
   const devicesWithPDFs = useMemo(() => {
     return documents
-      .filter(doc => doc.deviceId && doc.deviceName && doc.processingStatus === 'completed' && doc.vectorized) // Only completed and vectorized documents
+      .filter(doc => doc.deviceName && doc.processingStatus === 'completed' && doc.vectorized) // Only completed and vectorized documents
       .reduce((acc, doc) => {
-        const existingDevice = acc.find(d => d.id === doc.deviceId);
+        // Group by device name instead of device ID
+        const existingDevice = acc.find(d => d.name === doc.deviceName);
         if (existingDevice) {
           existingDevice.pdfs!.push(doc);
           existingDevice.pdfCount!++;
         } else {
           acc.push({
-            id: doc.deviceId!,
+            id: doc.deviceId || `device-${doc.deviceName}`, // Use deviceId if available, otherwise generate one
             name: doc.deviceName!,
             type: 'Machine', // Default type for devices from PDFs
             status: 'online', // Default status
@@ -600,7 +491,7 @@ export const KnowledgeSection: React.FC = () => {
                           message.queryType === 'LLM_ANSWER' ? 'bg-orange-100 text-orange-700' :
                           'bg-gray-100 text-gray-700'
                         }`}>
-                          {UnifiedQueryService.getQueryTypeIcon(message.queryType)} {message.queryType}
+                          {message.queryType === 'PDF' ? '📄' : message.queryType === 'DATABASE' ? '📊' : '🤖'} {message.queryType}
                         </span>
                         {message.rowCount && (
                           <span className="text-xs text-gray-500">
@@ -906,7 +797,7 @@ export const KnowledgeSection: React.FC = () => {
                       const deviceSelectionMessage: ChatMessage = {
                         id: (Date.now() + 1).toString(),
                         type: 'assistant',
-                        content: `✅ **${device.name}** selected! I now have access to ${device.pdfCount} PDF document${device.pdfCount !== 1 ? 's' : ''} for this machine.\n\n**Available PDFs:**\n${device.pdfs.map((pdf, index) => `${index + 1}. ${pdf.name}`).join('\n')}\n\nAsk me anything about this machine - I'll search through its documentation to provide accurate answers!`,
+                        content: `✅ **${device.name}** selected! I now have access to this machine's documentation.\n\nAsk me anything about this machine - I'll search through its documentation to provide accurate answers!`,
                         timestamp: new Date(),
                         queryType: 'PDF'
                       };
@@ -926,7 +817,7 @@ export const KnowledgeSection: React.FC = () => {
                           <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
                             <span>{device.type}</span>
                             <span>•</span>
-                            <span className="text-blue-600 font-medium">{device.pdfCount} PDF{device.pdfCount !== 1 ? 's' : ''}</span>
+                            <span className="text-green-600 font-medium">AI Ready</span>
                           </div>
                           <div className="flex items-center gap-1 mt-1">
                             <span className={`text-xs px-2 py-1 rounded-full font-medium ${

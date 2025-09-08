@@ -64,7 +64,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 "/api/devices/health",
                 "/upload-pdf",
                 "/query",
-                "/pdfs/"
+                "/pdfs/",
+                "/knowledge/suggestions" // Temporarily make suggestions public for testing
             };
             
             for (String endpoint : publicEndpoints) {

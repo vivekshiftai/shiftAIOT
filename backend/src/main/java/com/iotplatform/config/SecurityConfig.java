@@ -90,6 +90,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/devices/health").permitAll()
                 .requestMatchers("/devices/health").permitAll()
                 .requestMatchers("/api/organizations").permitAll() // Allow organization listing for signup
+                .requestMatchers("/knowledge/suggestions").permitAll() // Temporarily make suggestions public for testing
 
                 // Documentation and monitoring
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()

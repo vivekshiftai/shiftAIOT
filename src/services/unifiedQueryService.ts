@@ -73,6 +73,10 @@ export class UnifiedQueryService {
     try {
       console.log('🔍 Getting query suggestions with context:', context);
       
+      // Check if we have a valid token before making the request
+      const token = localStorage.getItem('token');
+      console.log('🔍 Token check for query suggestions:', token ? 'exists' : 'not found');
+      
       const params = context ? { context } : {};
       const response = await api.get('/knowledge/suggestions', { params });
       
@@ -86,6 +90,19 @@ export class UnifiedQueryService {
       if (error.response) {
         console.error('Backend response status:', error.response.status);
         console.error('Backend response data:', error.response.data);
+        console.error('Backend response headers:', error.response.headers);
+        
+        // Check if it's an authentication error
+        if (error.response.status === 401) {
+          console.error('🔐 Authentication error - checking token validity');
+          const token = localStorage.getItem('token');
+          if (!token) {
+            throw new Error('No authentication token found. Please log in again.');
+          } else {
+            throw new Error('Authentication token is invalid or expired. Please log in again.');
+          }
+        }
+        
         throw new Error(`Backend error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`);
       } else if (error.request) {
         console.error('No response received:', error.request);
