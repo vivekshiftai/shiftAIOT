@@ -241,3 +241,4 @@ logging:
     name: logs/iot-platform.log
     max-size: 20MB
     max-history: 30
+
