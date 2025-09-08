@@ -91,7 +91,23 @@ export const ProcessSection: React.FC = () => {
     logInfo('Process', 'Marketing Intelligence Process section loaded', { 
       availableCustomers: availableCustomers.length 
     });
+    
+    // Test API connectivity
+    testAPIConnectivity();
   }, []);
+
+  const testAPIConnectivity = async () => {
+    try {
+      console.log('🔍 Testing Strategy Agent API connectivity...');
+      const response = await fetch('http://20.57.36.66:8001/health', {
+        method: 'GET',
+        mode: 'cors',
+      });
+      console.log('🔍 Health check response:', response.status, response.statusText);
+    } catch (error) {
+      console.error('❌ Strategy Agent API connectivity test failed:', error);
+    }
+  };
 
   const generateRecommendations = async () => {
     if (!selectedCustomer) {
@@ -109,21 +125,38 @@ export const ProcessSection: React.FC = () => {
       });
 
       // Call Strategy Agent API
+      console.log('🔍 Making API call to Strategy Agent:', {
+        url: 'http://20.57.36.66:8001/generate-recommendations',
+        method: 'POST',
+        customer_id: selectedCustomer
+      });
+
       const response = await fetch('http://20.57.36.66:8001/generate-recommendations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
+        mode: 'cors',
         body: JSON.stringify({
           customer_id: selectedCustomer
         })
       });
 
+      console.log('🔍 API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+
       if (!response.ok) {
-        throw new Error(`Strategy Agent API error: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('❌ API Error Response:', errorText);
+        throw new Error(`Strategy Agent API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const data: StrategyAgentResponse = await response.json();
+      console.log('✅ API Success Response:', data);
       setRecommendations(data);
 
       logInfo('Process', 'Marketing intelligence recommendations generated successfully', {
@@ -135,9 +168,53 @@ export const ProcessSection: React.FC = () => {
 
     } catch (error) {
       logError('Process', 'Failed to generate marketing intelligence recommendations', error instanceof Error ? error : new Error('Unknown error'));
+      
+      // If direct API call fails, try through backend proxy
+      if (error instanceof Error && error.message.includes('405')) {
+        console.log('🔄 Direct API call failed, trying backend proxy...');
+        try {
+          await generateRecommendationsViaBackend();
+          return;
+        } catch (backendError) {
+          console.error('❌ Backend proxy also failed:', backendError);
+        }
+      }
+      
       setError(error instanceof Error ? error.message : 'Failed to generate recommendations');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const generateRecommendationsViaBackend = async () => {
+    try {
+      console.log('🔍 Trying backend proxy for Strategy Agent API...');
+      
+      const response = await fetch('/api/strategy-agent/generate-recommendations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          customer_id: selectedCustomer
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend proxy error: ${response.status} ${response.statusText}`);
+      }
+
+      const data: StrategyAgentResponse = await response.json();
+      setRecommendations(data);
+      
+      logInfo('Process', 'Marketing intelligence recommendations generated via backend proxy', {
+        customerId: selectedCustomer,
+        totalRecommendations: data.Summary.TotalRecommendations
+      });
+      
+    } catch (error) {
+      throw error;
     }
   };
 
