@@ -21,7 +21,6 @@ import java.util.List;
  * @version 1.0
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class LLMPromptService {
 
@@ -44,7 +43,11 @@ public class LLMPromptService {
     private double temperature;
 
     private OpenAIClient openAIClient;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
+
+    public LLMPromptService(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     /**
      * Initialize the OpenAI client

@@ -17,10 +17,14 @@ import java.util.HashMap;
 public class DeviceWebSocketService {
 
     private static final Logger logger = LoggerFactory.getLogger(DeviceWebSocketService.class);
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+
+    public DeviceWebSocketService(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     /**
      * Send device status update to all connected clients

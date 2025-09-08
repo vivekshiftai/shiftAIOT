@@ -1,296 +1,439 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Brain, 
+  Download,
   Send,
-  Bot,
-  User
+  User,
+  Plus,
+  CheckCircle,
+  X,
+  Clock,
+  BarChart3
 } from 'lucide-react';
 import { logError, logInfo } from '../utils/logger';
 import '../styles/knowledge.css';
 
-// Chat message interface
-interface ChatMessage {
-  id: string;
-  type: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-  images?: any[];
-  tables?: any[];
-  chunks_used?: any[];
-  processing_time?: string;
-  queryType?: 'DATABASE' | 'PDF' | 'MIXED' | 'LLM_ANSWER' | 'UNKNOWN';
-  databaseResults?: any[];
-  rowCount?: number;
-  sqlQuery?: string;
+// Strategy Agent interfaces
+interface CustomerInfo {
+  CustomerID: string;
+  CustomerName: string;
+}
+
+interface CustomerClassification {
+  CustomerType: string;
+  TotalQuantitySold: number;
+  NumberOfStores: number;
+  ClassificationCriteria: {
+    StoresGreaterThan50: boolean;
+    QuantityGreaterThan200K: boolean;
+  };
+}
+
+interface Recommendation {
+  CustomerCatalogueItemID: string;
+  ProductName: string;
+  QuantityRequired: number;
+  Ingredients: string[];
+  CrossSell?: CrossSellRecommendation[];
+  RejectedCrossSell?: CrossSellRecommendation[];
+  AlreadyPurchasedCrossSell?: CrossSellRecommendation[];
+}
+
+interface CrossSellRecommendation {
+  Ingredient: string;
+  SuggestedProduct: string;
+  ProductID: number;
+  Similarity: number;
+  Category: string;
+  Price: number;
+  AIReasoning: string;
+  Status: 'Accepted' | 'Rejected' | 'Already Purchased';
+}
+
+interface StrategyAgentResponse {
+  success: boolean;
+  message: string;
+  customer_id: string;
+  timestamp: string;
+  CustomerInfo: CustomerInfo;
+  CustomerClassification: CustomerClassification;
+  AcceptedRecommendations: Recommendation[];
+  RejectedRecommendations: Recommendation[];
+  AlreadyPurchasedRecommendations: Recommendation[];
+  Summary: {
+    TotalUpSell: number;
+    TotalCrossSell: number;
+    TotalRejected: number;
+    TotalAlreadyPurchased: number;
+    TotalRecommendations: number;
+  };
+  files_generated: {
+    json_file: string;
+    pdf_file: string;
+  };
 }
 
 export const ProcessSection: React.FC = () => {
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      type: 'assistant',
-      content: 'Hello! I\'m your AI assistant for marketing intelligence.\n\n**How to use:**\n1. Ask me questions about market trends, customer insights, or competitive analysis\n2. I can help you with marketing strategies, campaign optimization, and market research\n\n**What would you like to know about your market intelligence?**',
-      timestamp: new Date()
-    }
-  ]);
-  const [newMessage, setNewMessage] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [recommendations, setRecommendations] = useState<StrategyAgentResponse | null>(null);
+  const [error, setError] = useState<string>('');
 
-  // Refs for scrolling
-  const chatMessagesRef = useRef<HTMLDivElement>(null);
+  // Available customers from Strategy Agent
+  const availableCustomers = [
+    { id: 'C001', name: 'Starbucks' },
+    { id: 'C002', name: 'McDonald\'s' },
+    { id: 'C003', name: 'Subway' }
+  ];
 
-  // Auto-scroll to bottom when new messages are added
+  // Load available customers on component mount
   useEffect(() => {
-    if (chatMessagesRef.current) {
-      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
-    }
-  }, [chatMessages]);
-
-  // Simple function to load query suggestions (optional)
-  const loadQuerySuggestions = async () => {
-    try {
-      // Set some default suggestions for marketing intelligence
-      const defaultSuggestions = [
-        "What are the current market trends?",
-        "How can I analyze customer behavior?",
-        "What is our competitive advantage?",
-        "How can I optimize our marketing campaigns?",
-        "What are the key performance indicators for our market?"
-      ];
-      logInfo('Process', 'Default marketing intelligence suggestions loaded', { count: defaultSuggestions.length });
-    } catch (error) {
-      logError('Process', 'Failed to load query suggestions', error instanceof Error ? error : new Error('Unknown error'));
-    }
-  };
-
-  // Load suggestions on component mount
-  useEffect(() => {
-    loadQuerySuggestions();
+    logInfo('Process', 'Marketing Intelligence Process section loaded', { 
+      availableCustomers: availableCustomers.length 
+    });
   }, []);
 
-  const sendMessage = async () => {
-    if (!newMessage.trim() || isTyping) return;
+  const generateRecommendations = async () => {
+    if (!selectedCustomer) {
+      setError('Please select a customer first');
+      return;
+    }
 
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: newMessage,
-      timestamp: new Date()
-    };
-
-    setChatMessages((prev: ChatMessage[]) => [...prev, userMessage]);
-    setNewMessage('');
-    setIsTyping(true);
+    setIsLoading(true);
+    setError('');
+    setRecommendations(null);
 
     try {
-      // Simple response for process queries
-      const assistantMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: `I understand you're asking about: "${userMessage.content}"\n\nI'm here to help with process management, workflow optimization, and procedure documentation. Please provide more specific details about the process you'd like to discuss, and I'll assist you with analysis, optimization, or documentation.`,
-        timestamp: new Date(),
-        queryType: 'UNKNOWN'
-      };
-      setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
+      logInfo('Process', 'Generating marketing intelligence recommendations', { 
+        customerId: selectedCustomer 
+      });
+
+      // Call Strategy Agent API
+      const response = await fetch('http://20.57.36.66:8001/generate-recommendations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customer_id: selectedCustomer
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Strategy Agent API error: ${response.status} ${response.statusText}`);
+      }
+
+      const data: StrategyAgentResponse = await response.json();
+      setRecommendations(data);
+
+      logInfo('Process', 'Marketing intelligence recommendations generated successfully', {
+        customerId: selectedCustomer,
+        totalRecommendations: data.Summary.TotalRecommendations,
+        crossSell: data.Summary.TotalCrossSell,
+        rejected: data.Summary.TotalRejected
+      });
+
     } catch (error) {
-      logError('Process', 'Failed to send message', error instanceof Error ? error : new Error('Unknown error'));
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'assistant',
-        content: `I encountered an error while processing your request. Please try again or rephrase your question.`,
-        timestamp: new Date(),
-        queryType: 'UNKNOWN'
-      };
-      setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
+      logError('Process', 'Failed to generate marketing intelligence recommendations', error instanceof Error ? error : new Error('Unknown error'));
+      setError(error instanceof Error ? error.message : 'Failed to generate recommendations');
     } finally {
-      setIsTyping(false);
+      setIsLoading(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
+  const downloadPDFReport = async () => {
+    if (!recommendations) return;
+
+    try {
+      const response = await fetch(`http://20.57.36.66:8001/recommendations/${recommendations.customer_id}/download`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to download PDF report');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `marketing_intelligence_report_${recommendations.customer_id}_${recommendations.timestamp}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      logInfo('Process', 'PDF report downloaded successfully', { 
+        customerId: recommendations.customer_id 
+      });
+    } catch (error) {
+      logError('Process', 'Failed to download PDF report', error instanceof Error ? error : new Error('Unknown error'));
+      setError('Failed to download PDF report');
     }
   };
 
   return (
     <div className="process-section flex flex-col bg-gray-50 h-full">
       {/* Fixed Header */}
-      <div className="knowledge-fixed-header flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
+      <div className="knowledge-fixed-header flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="p-2 bg-green-500 rounded-lg">
-              <Brain className="w-6 h-6 text-white" />
+              <Brain className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Process Management</h1>
-              <p className="text-gray-600">AI-powered process optimization and documentation</p>
+              <h1 className="text-xl font-bold text-gray-900">Process</h1>
+              <p className="text-sm text-gray-600">AI-powered marketing intelligence and cross-sell recommendations</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content - Full Width Chat Interface */}
-      <div className="flex-1 flex flex-col min-h-0">
-        {/* Chat Messages Area */}
-        <div 
-          ref={chatMessagesRef}
-          className="knowledge-chat-messages flex-1 overflow-y-auto p-6 space-y-4"
-        >
-          {chatMessages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-3xl rounded-lg p-4 ${
-                  message.type === 'user'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white border border-gray-200'
-                }`}
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-4xl mx-auto space-y-6">
+          
+          {/* Customer Selection Form */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <User className="w-5 h-5 text-green-600" />
+              <h2 className="text-lg font-semibold text-gray-900">Select Customer</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Choose a customer to generate marketing intelligence recommendations:
+                </label>
+                <select
+                  value={selectedCustomer}
+                  onChange={(e) => setSelectedCustomer(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  disabled={isLoading}
+                >
+                  <option value="">Select a customer...</option>
+                  {availableCustomers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name} ({customer.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <button
+                onClick={generateRecommendations}
+                disabled={!selectedCustomer || isLoading}
+                className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
               >
-                <div className="flex items-start gap-3">
-                  {message.type === 'assistant' && (
-                    <div className="p-1 bg-green-100 rounded-full flex-shrink-0">
-                      <Bot className="w-4 h-4 text-green-600" />
-                    </div>
-                  )}
-                  {message.type === 'user' && (
-                    <div className="p-1 bg-blue-100 rounded-full flex-shrink-0">
-                      <User className="w-4 h-4 text-blue-600" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
+                {isLoading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Generating Recommendations...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Generate Marketing Intelligence
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center gap-2">
+                <X className="w-5 h-5 text-red-600" />
+                <p className="text-red-800 font-medium">Error</p>
+              </div>
+              <p className="text-red-700 mt-1">{error}</p>
+            </div>
+          )}
+
+          {/* Results Display */}
+          {recommendations && (
+            <div className="space-y-6">
+              
+              {/* Customer Info & Summary */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <BarChart3 className="w-5 h-5 text-green-600" />
+                    <h2 className="text-lg font-semibold text-gray-900">Analysis Summary</h2>
+                  </div>
+                  <button
+                    onClick={downloadPDFReport}
+                    className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2 text-sm"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download PDF Report
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-green-50 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="font-medium text-sm">
-                        {message.type === 'user' ? 'You' : 'Process AI'}
-                      </span>
-                      <span className="text-xs opacity-70">
-                        {message.timestamp.toLocaleTimeString()}
-                      </span>
-                      {message.queryType && (
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          message.queryType === 'PDF' ? 'bg-green-100 text-green-700' :
-                          message.queryType === 'DATABASE' ? 'bg-blue-100 text-blue-700' :
-                          message.queryType === 'MIXED' ? 'bg-purple-100 text-purple-700' :
-                          message.queryType === 'LLM_ANSWER' ? 'bg-orange-100 text-orange-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
-                          {message.queryType === 'PDF' ? '📄' : message.queryType === 'DATABASE' ? '📊' : '🤖'} {message.queryType}
-                        </span>
-                      )}
-                      {message.rowCount && (
-                        <span className="text-xs text-gray-500">
-                          {message.rowCount} result{message.rowCount === 1 ? '' : 's'}
-                        </span>
-                      )}
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-800">Accepted</span>
                     </div>
-                    <div className="prose prose-sm max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-                        {message.content}
-                      </pre>
+                    <p className="text-2xl font-bold text-green-900">{recommendations.Summary.TotalCrossSell}</p>
+                  </div>
+                  
+                  <div className="bg-red-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <X className="w-4 h-4 text-red-600" />
+                      <span className="text-sm font-medium text-red-800">Rejected</span>
                     </div>
-                    {message.images && message.images.length > 0 && (
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        {message.images.map((image, index) => (
-                          <div key={index} className="border rounded-lg p-2">
-                            <img 
-                              src={image.url || image.imageUrl} 
-                              alt={`Process image ${index + 1}`}
-                              className="w-full h-32 object-cover rounded"
-                            />
-                            <p className="text-xs text-gray-600 mt-1">{image.caption || image.description}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {message.tables && message.tables.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        {message.tables.map((table, index) => (
-                          <div key={index} className="border rounded-lg overflow-hidden">
-                            <div className="bg-gray-50 px-3 py-2 border-b">
-                              <h4 className="font-medium text-sm">Process Data Table {index + 1}</h4>
-                            </div>
-                            <div className="p-3">
-                              <pre className="text-xs overflow-x-auto">
-                                {JSON.stringify(table, null, 2)}
-                              </pre>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {message.chunks_used && message.chunks_used.length > 0 && (
-                      <div className="mt-3">
-                        <details className="text-xs">
-                          <summary className="cursor-pointer text-gray-600 hover:text-gray-800">
-                            📋 View {message.chunks_used.length} source chunk{message.chunks_used.length === 1 ? '' : 's'}
-                          </summary>
-                          <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
-                            {message.chunks_used.map((chunk, index) => (
-                              <div key={index} className="bg-gray-50 p-2 rounded text-xs">
-                                <strong>Chunk {index + 1}:</strong> {chunk.substring(0, 100)}...
+                    <p className="text-2xl font-bold text-red-900">{recommendations.Summary.TotalRejected}</p>
+                  </div>
+                  
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-800">Already Purchased</span>
+                    </div>
+                    <p className="text-2xl font-bold text-blue-900">{recommendations.Summary.TotalAlreadyPurchased}</p>
+                  </div>
+                  
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Plus className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-800">Total</span>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">{recommendations.Summary.TotalRecommendations}</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="font-medium text-gray-900 mb-2">Customer Information</h3>
+                    <p className="text-sm text-gray-600">
+                      <strong>Name:</strong> {recommendations.CustomerInfo.CustomerName}<br/>
+                      <strong>ID:</strong> {recommendations.CustomerInfo.CustomerID}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-900 mb-2">Classification</h3>
+                    <p className="text-sm text-gray-600">
+                      <strong>Type:</strong> {recommendations.CustomerClassification.CustomerType}<br/>
+                      <strong>Stores:</strong> {recommendations.CustomerClassification.NumberOfStores}<br/>
+                      <strong>Total Quantity Sold:</strong> {recommendations.CustomerClassification.TotalQuantitySold.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Accepted Recommendations */}
+              {recommendations.AcceptedRecommendations.length > 0 && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <h2 className="text-lg font-semibold text-gray-900">Accepted Cross-Sell Recommendations</h2>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {recommendations.AcceptedRecommendations.map((rec, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4">
+                        <h3 className="font-medium text-gray-900 mb-2">{rec.ProductName}</h3>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Required Quantity: {rec.QuantityRequired} | Ingredients: {rec.Ingredients.join(', ')}
+                        </p>
+                        
+                        {rec.CrossSell && rec.CrossSell.length > 0 && (
+                          <div className="space-y-3">
+                            {rec.CrossSell.map((crossSell, csIndex) => (
+                              <div key={csIndex} className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h4 className="font-medium text-green-900">{crossSell.SuggestedProduct}</h4>
+                                  <span className="text-sm font-bold text-green-700">${crossSell.Price}</span>
+                                </div>
+                                <p className="text-sm text-green-800 mb-2">
+                                  <strong>Category:</strong> {crossSell.Category} | 
+                                  <strong> Similarity:</strong> {(crossSell.Similarity * 100).toFixed(1)}%
+                                </p>
+                                <p className="text-sm text-green-700">{crossSell.AIReasoning}</p>
                               </div>
                             ))}
                           </div>
-                        </details>
+                        )}
                       </div>
-                    )}
-                    {message.processing_time && (
-                      <div className="mt-2 text-xs text-gray-500">
-                        ⏱️ Processed in {message.processing_time}
-                      </div>
-                    )}
+                    ))}
                   </div>
                 </div>
-              </div>
-            </div>
-          ))}
-          {isTyping && (
-            <div className="flex justify-start">
-              <div className="max-w-3xl rounded-lg p-4 bg-white border border-gray-200">
-                <div className="flex items-start gap-3">
-                  <div className="p-1 bg-green-100 rounded-full flex-shrink-0">
-                    <Bot className="w-4 h-4 text-green-600" />
+              )}
+
+              {/* Rejected Recommendations */}
+              {recommendations.RejectedRecommendations.length > 0 && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <X className="w-5 h-5 text-red-600" />
+                    <h2 className="text-lg font-semibold text-gray-900">Rejected Recommendations</h2>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    </div>
-                    <span className="text-sm text-gray-500">Process AI is thinking...</span>
+                  
+                  <div className="space-y-4">
+                    {recommendations.RejectedRecommendations.map((rec, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4">
+                        <h3 className="font-medium text-gray-900 mb-2">{rec.ProductName}</h3>
+                        
+                        {rec.RejectedCrossSell && rec.RejectedCrossSell.length > 0 && (
+                          <div className="space-y-3">
+                            {rec.RejectedCrossSell.map((crossSell, csIndex) => (
+                              <div key={csIndex} className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h4 className="font-medium text-red-900">{crossSell.SuggestedProduct}</h4>
+                                  <span className="text-sm font-bold text-red-700">${crossSell.Price}</span>
+                                </div>
+                                <p className="text-sm text-red-800 mb-2">
+                                  <strong>Category:</strong> {crossSell.Category} | 
+                                  <strong> Similarity:</strong> {(crossSell.Similarity * 100).toFixed(1)}%
+                                </p>
+                                <p className="text-sm text-red-700">{crossSell.AIReasoning}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* Already Purchased Recommendations */}
+              {recommendations.AlreadyPurchasedRecommendations.length > 0 && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Clock className="w-5 h-5 text-blue-600" />
+                    <h2 className="text-lg font-semibold text-gray-900">Already Purchased Products</h2>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {recommendations.AlreadyPurchasedRecommendations.map((rec, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4">
+                        <h3 className="font-medium text-gray-900 mb-2">{rec.ProductName}</h3>
+                        
+                        {rec.AlreadyPurchasedCrossSell && rec.AlreadyPurchasedCrossSell.length > 0 && (
+                          <div className="space-y-3">
+                            {rec.AlreadyPurchasedCrossSell.map((crossSell, csIndex) => (
+                              <div key={csIndex} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h4 className="font-medium text-blue-900">{crossSell.SuggestedProduct}</h4>
+                                  <span className="text-sm font-bold text-blue-700">${crossSell.Price}</span>
+                                </div>
+                                <p className="text-sm text-blue-800 mb-2">
+                                  <strong>Category:</strong> {crossSell.Category} | 
+                                  <strong> Similarity:</strong> {(crossSell.Similarity * 100).toFixed(1)}%
+                                </p>
+                                <p className="text-sm text-blue-700">{crossSell.AIReasoning}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-        </div>
-
-        {/* Chat Input Area */}
-        <div className="knowledge-chat-input flex-shrink-0 p-6 bg-white border-t border-gray-200">
-          <div className="flex gap-3">
-            <div className="flex-1 relative">
-              <textarea
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Ask about processes, workflows, or procedures..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none"
-                rows={3}
-                disabled={isTyping}
-              />
-            </div>
-            <button
-              onClick={sendMessage}
-              disabled={!newMessage.trim() || isTyping}
-              className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            >
-              <Send className="w-4 h-4" />
-              Send
-            </button>
-          </div>
         </div>
       </div>
     </div>

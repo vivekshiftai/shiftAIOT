@@ -80,11 +80,11 @@ import java.util.function.Consumer;
 public class DeviceController {
 
     private static final Logger logger = LoggerFactory.getLogger(DeviceController.class);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final String ANONYMOUS_USER = "anonymous";
     private static final String DEFAULT_ORGANIZATION = "shiftAIOT-org-2024";
     private static final int MAX_FILE_SIZE = 524288000; // 500MB in bytes
 
+    private final ObjectMapper objectMapper;
     private final DeviceService deviceService;
     private final TelemetryService telemetryService;
     private final FileStorageService fileStorageService;
@@ -103,7 +103,8 @@ public class DeviceController {
     private final DeviceNotificationEnhancerService deviceNotificationEnhancerService;
     private final UnifiedPDFService unifiedPDFService;
 
-    public DeviceController(DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService, MaintenanceScheduleService maintenanceScheduleService, DeviceNotificationEnhancerService deviceNotificationEnhancerService, UnifiedPDFService unifiedPDFService) {
+    public DeviceController(ObjectMapper objectMapper, DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService, MaintenanceScheduleService maintenanceScheduleService, DeviceNotificationEnhancerService deviceNotificationEnhancerService, UnifiedPDFService unifiedPDFService) {
+        this.objectMapper = objectMapper;
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
         this.fileStorageService = fileStorageService;
@@ -1464,7 +1465,6 @@ public class DeviceController {
             logger.info("✅ User {} starting simplified device onboarding", userDetails.getUser().getEmail());
             
             // Parse device data
-            ObjectMapper objectMapper = new ObjectMapper();
             DeviceCreateWithFileRequest deviceRequest = objectMapper.readValue(deviceData, DeviceCreateWithFileRequest.class);
             
             // Log file information
@@ -1546,7 +1546,6 @@ public class DeviceController {
                     .data("{\"stage\":\"upload\",\"progress\":5,\"message\":\"Initializing onboarding process...\",\"stepDetails\":{\"currentStep\":1,\"totalSteps\":6,\"stepName\":\"Initialization\"}}"));
                 
                 // Parse device data
-                ObjectMapper objectMapper = new ObjectMapper();
                 DeviceCreateWithFileRequest deviceRequest = objectMapper.readValue(deviceData, DeviceCreateWithFileRequest.class);
                 
                 // Log file information
