@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { 
   Search, 
   FileText, 
@@ -113,77 +113,109 @@ export const KnowledgeSection: React.FC = () => {
   };
 
 
-  // Simple data loading - fetch devices from unified PDFs table
-  useEffect(() => {
-    let isMounted = true;
-    
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        logInfo('Knowledge', 'Loading devices from unified PDFs table...');
+  // Data loading function - can be called multiple times
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      logInfo('Knowledge', 'Loading devices from unified PDFs table...');
+      
+      // Load documents from unified PDFs table via knowledge API
+      const knowledgeResponse = await knowledgeAPI.getDocuments();
+      
+      // Debug: Log the actual response
+      console.log('🔍 Knowledge API Response:', knowledgeResponse);
+      console.log('🔍 Documents array:', knowledgeResponse.data?.documents);
+      console.log('🔍 Response status:', knowledgeResponse.status);
+      console.log('🔍 Response headers:', knowledgeResponse.headers);
+      
+      if (knowledgeResponse.data.documents) {
+        const knowledgeDocuments: UnifiedPDF[] = knowledgeResponse.data.documents.map((doc: any) => ({
+          id: doc.id.toString(),
+          name: doc.name,
+          originalFilename: doc.originalFilename || doc.name,
+          documentType: doc.documentType || 'pdf',
+          fileSize: doc.fileSize || 0,
+          processingStatus: doc.processingStatus || 'completed',
+          vectorized: doc.vectorized === true || doc.vectorized === 'true', // Handle both boolean and string
+          uploadedAt: doc.uploadedAt,
+          processedAt: doc.processedAt || doc.uploadedAt,
+          deviceId: doc.deviceId,
+          deviceName: doc.deviceName,
+          organizationId: doc.organizationId || 'shiftAIOT-org-2024',
+          collectionName: doc.collectionName,
+          totalPages: doc.totalPages,
+          processedChunks: doc.processedChunks || 0,
+          processingTime: doc.processingTime
+        }));
         
-        // Load documents from unified PDFs table via knowledge API
-        const knowledgeResponse = await knowledgeAPI.getDocuments();
+        setDocuments(knowledgeDocuments);
         
-        // Debug: Log the actual response
-        console.log('🔍 Knowledge API Response:', knowledgeResponse);
-        console.log('🔍 Documents array:', knowledgeResponse.data?.documents);
-        console.log('🔍 Response status:', knowledgeResponse.status);
-        console.log('🔍 Response headers:', knowledgeResponse.headers);
+        // Debug: Log document details
+        console.log('🔍 Processed documents:', knowledgeDocuments);
+        console.log('🔍 Documents with device info:', knowledgeDocuments.filter(doc => doc.deviceId && doc.deviceName));
         
-        if (isMounted && knowledgeResponse.data.documents) {
-          const knowledgeDocuments: UnifiedPDF[] = knowledgeResponse.data.documents.map((doc: any) => ({
-            id: doc.id.toString(),
-            name: doc.name,
-            originalFilename: doc.originalFilename || doc.name,
-            documentType: doc.documentType || 'pdf',
-            fileSize: doc.fileSize || 0,
-            processingStatus: doc.processingStatus || 'completed',
-            vectorized: doc.vectorized === true || doc.vectorized === 'true', // Handle both boolean and string
-            uploadedAt: doc.uploadedAt,
-            processedAt: doc.processedAt || doc.uploadedAt,
-            deviceId: doc.deviceId,
-            deviceName: doc.deviceName,
-            organizationId: doc.organizationId || 'shiftAIOT-org-2024',
-            collectionName: doc.collectionName,
-            totalPages: doc.totalPages,
-            processedChunks: doc.processedChunks || 0,
-            processingTime: doc.processingTime
-          }));
-          
-          setDocuments(knowledgeDocuments);
-          
-          // Debug: Log document details
-          console.log('🔍 Processed documents:', knowledgeDocuments);
-          console.log('🔍 Documents with device info:', knowledgeDocuments.filter(doc => doc.deviceId && doc.deviceName));
-          
-          logInfo('Knowledge', 'Devices loaded successfully', { 
-            totalDocuments: knowledgeDocuments.length,
-            devicesWithPDFs: knowledgeDocuments.filter(doc => doc.deviceId && doc.deviceName).length
-          });
-        } else {
-          console.log('🔍 No documents found - response data:', knowledgeResponse.data);
-          console.log('🔍 Response structure:', Object.keys(knowledgeResponse.data || {}));
-          logInfo('Knowledge', 'No documents found in unified PDFs table');
-          setDocuments([]);
-        }
-      } catch (error) {
-        logError('Knowledge', 'Failed to load devices from unified PDFs table', error instanceof Error ? error : new Error('Unknown error'));
+        logInfo('Knowledge', 'Devices loaded successfully', { 
+          totalDocuments: knowledgeDocuments.length,
+          devicesWithPDFs: knowledgeDocuments.filter(doc => doc.deviceId && doc.deviceName).length
+        });
+      } else {
+        console.log('🔍 No documents found - response data:', knowledgeResponse.data);
+        console.log('🔍 Response structure:', Object.keys(knowledgeResponse.data || {}));
+        logInfo('Knowledge', 'No documents found in unified PDFs table');
         setDocuments([]);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
       }
-    };
+    } catch (error) {
+      logError('Knowledge', 'Failed to load devices from unified PDFs table', error instanceof Error ? error : new Error('Unknown error'));
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
+  // Load data on component mount
+  useEffect(() => {
+    // Load data immediately when component mounts
     loadData();
     loadQuerySuggestions();
+  }, [loadData]); // Include loadData in dependencies
+
+  // Add a manual refresh function that can be called when needed
+  const refreshData = useCallback(() => {
+    console.log('🔍 Manual refresh triggered for Knowledge section');
+    loadData();
+  }, [loadData]);
+
+  // Add a ref to detect when the component is visible
+  const knowledgeSectionRef = useRef<HTMLDivElement>(null);
+
+  // Use intersection observer to detect when Knowledge section becomes visible
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            console.log('🔍 Knowledge section is now visible, checking if data needs refresh...');
+            // Only refresh if we don't have any documents loaded
+            if (documents.length === 0) {
+              console.log('🔍 No documents loaded, refreshing data...');
+              loadData();
+            }
+          }
+        });
+      },
+      { threshold: 0.1 } // Trigger when 10% of the component is visible
+    );
+
+    if (knowledgeSectionRef.current) {
+      observer.observe(knowledgeSectionRef.current);
+    }
 
     return () => {
-      isMounted = false;
+      if (knowledgeSectionRef.current) {
+        observer.unobserve(knowledgeSectionRef.current);
+      }
     };
-  }, []); // Load once on mount
+  }, [documents.length, loadData]);
 
 
 
@@ -444,7 +476,7 @@ export const KnowledgeSection: React.FC = () => {
 
 
   return (
-    <div className="knowledge-section flex flex-col bg-gray-50 h-full">
+    <div ref={knowledgeSectionRef} className="knowledge-section flex flex-col bg-gray-50 h-full">
       {/* Fixed Header */}
       <div className="knowledge-fixed-header flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -754,6 +786,19 @@ export const KnowledgeSection: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">AI Ready Machines</h2>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={refreshData}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-all shadow-sm disabled:opacity-50"
+                  title="Refresh machines list"
+                >
+                  {loading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    <span>↻</span>
+                  )}
+                  {loading ? 'Loading...' : 'Refresh'}
+                </button>
                 <label className="cursor-pointer">
                   <input
                     type="file"
@@ -850,14 +895,6 @@ export const KnowledgeSection: React.FC = () => {
                                '⚪ Unknown'}
                             </span>
                           </div>
-                          {/* Show PDF names for debugging */}
-                          {device.pdfs && device.pdfs.length > 0 && (
-                            <div className="mt-1">
-                              <div className="text-xs text-gray-400">
-                                PDFs: {device.pdfs.map(pdf => pdf.name).join(', ')}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </div>
                       
