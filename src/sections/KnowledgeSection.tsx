@@ -69,7 +69,7 @@ export const KnowledgeSection: React.FC = () => {
     {
       id: '1',
       type: 'assistant',
-      content: 'Hello! I\'m your AI assistant for machine documentation.\n\n**How to use:**\n1. Select a machine from the "AI Ready Machines" panel on the right\n2. Ask questions about that machine\'s documentation\n3. I\'ll search through the machine\'s PDF files to answer your questions\n\n**Available machines with PDFs will appear on the right. Select one to get started!**',
+      content: 'Hello! I\'m your AI assistant for machine documentation.\n\n**How to use:**\n1. Select a machine from the "AI Ready Machines" panel on the right\n2. Ask questions about that machine\'s documentation\n\n\n**Available machines with Device Guides will appear on the right. Select one to get started!**',
       timestamp: new Date()
     }
   ]);
@@ -249,11 +249,11 @@ export const KnowledgeSection: React.FC = () => {
             setChatMessages((prev: ChatMessage[]) => [...prev, fallbackMessage]);
           }
         } else {
-          // No PDFs available for this device
+          // No Device Guides available for this device
           const noPDFMessage: ChatMessage = {
             id: (Date.now() + 1).toString(),
             type: 'assistant',
-            content: `No documentation is available for device "${selectedDevice.name}". Please upload documentation for this device to enable AI-powered queries.`,
+            content: `No Device Guide is available for device "${selectedDevice.name}". Please upload a Device Guide for this device to enable AI-powered queries.`,
             timestamp: new Date(),
             queryType: 'UNKNOWN'
           };
@@ -382,7 +382,7 @@ export const KnowledgeSection: React.FC = () => {
         const successMessage: ChatMessage = {
           id: (Date.now() + 1).toString(),
           type: 'assistant',
-          content: uploadResponse.data.message || `✅ PDF "${newDocument.name}" uploaded successfully. We're processing your document in the background. You'll receive a notification when it's ready for AI chat queries.`,
+            content: uploadResponse.data.message || `✅ Device Guide "${newDocument.name}" uploaded successfully. We're processing your document in the background. You'll receive a notification when it's ready for AI chat queries.`,
           timestamp: new Date()
         };
         setChatMessages((prev: ChatMessage[]) => [...prev, successMessage]);
@@ -768,7 +768,7 @@ export const KnowledgeSection: React.FC = () => {
                     ) : (
                       <Plus className="w-4 h-4" />
                     )}
-                    {uploading ? 'Uploading...' : 'Upload PDF'}
+                    {uploading ? 'Uploading...' : 'Upload Device Guide'}
                   </div>
                 </label>
               </div>
@@ -801,7 +801,7 @@ export const KnowledgeSection: React.FC = () => {
               </div>
             ) : filteredDevices.length === 0 ? (
               <div className="p-4 text-center text-gray-500 text-sm">
-                {searchQuery ? 'No machines found' : 'No machines with PDFs available'}
+                {searchQuery ? 'No machines found' : 'No machines with Device Guides available'}
               </div>
             ) : (
               <div className="divide-y divide-gray-200">
@@ -877,10 +877,10 @@ export const KnowledgeSection: React.FC = () => {
           <div className="knowledge-fixed-footer flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between text-sm text-gray-600">
               <div className="flex items-center gap-4">
-                <span>{devicesWithPDFs.length} machines with PDFs</span>
+                <span>{devicesWithPDFs.length} machines with Device Guides</span>
                 <span>{devicesWithPDFs.filter(d => d.hasPDFs).length} AI ready</span>
                 <span className="text-blue-600 font-medium">
-                  📄 {documents.length} total PDFs
+                  📄 {documents.length} total Device Guides
                 </span>
               </div>
             </div>
@@ -897,7 +897,7 @@ export const KnowledgeSection: React.FC = () => {
                 <FileText className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Upload PDF Document</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Upload Device Guide</h3>
                 <p className="text-sm text-gray-600">Associate with a machine for better organization</p>
               </div>
             </div>
@@ -934,8 +934,8 @@ export const KnowledgeSection: React.FC = () => {
               </select>
               <p className="text-xs text-gray-500 mt-1">
                 {selectedDeviceForUpload 
-                  ? 'This PDF will be available for chat queries in the machine details section.'
-                  : 'This PDF will be available in the general knowledge base.'
+                  ? 'This Device Guide will be available for chat queries in the machine details section.'
+                  : 'This Device Guide will be available in the general knowledge base.'
                 }
               </p>
             </div>
@@ -968,7 +968,7 @@ export const KnowledgeSection: React.FC = () => {
                     Uploading...
                   </div>
                 ) : (
-                  'Upload PDF'
+                    'Upload Device Guide'
                 )}
               </button>
             </div>
