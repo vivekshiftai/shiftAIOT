@@ -34,8 +34,6 @@ api.interceptors.request.use(
                            config.url?.includes('/api/auth/') ||
                            config.url?.includes('/health') ||
                            config.url?.includes('/api/health/') ||
-                           config.url?.includes('/api/knowledge/') ||
-                           config.url?.includes('/knowledge/') ||
                            config.url?.includes('/upload-pdf') ||
                            config.url?.includes('/query') ||
                            config.url?.includes('/pdfs/');
@@ -78,8 +76,6 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config || {};
     const status = error.response?.status;
-    const url = error.config?.url || '';
-
 
     // Log the actual error response from backend
     if (error.response?.data) {

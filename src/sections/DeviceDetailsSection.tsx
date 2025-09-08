@@ -1457,20 +1457,6 @@ export const DeviceDetailsSection: React.FC = () => {
               )}
             </div>
 
-            {/* Debug: Available PDFs from Local Database */}
-            {devicePDFs.length > 0 && (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm font-medium text-green-800 mb-2">📄 Available PDFs from Local Database:</p>
-                <div className="space-y-1">
-                  {devicePDFs.map((pdf, index) => (
-                    <div key={index} className="text-xs text-green-700">
-                      • {pdf.name} ({pdf.processingStatus})
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-green-600 mt-2">✅ Using local database PDFs for queries</p>
-              </div>
-            )}
 
             {/* Chat Input */}
             <div className="flex gap-2 mt-4">

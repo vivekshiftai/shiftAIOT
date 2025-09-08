@@ -84,8 +84,6 @@ public class SecurityConfig {
                 // Public endpoints (no authentication required)
                 .requestMatchers("/auth/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/knowledge/**").permitAll()
-                .requestMatchers("/api/knowledge/**").permitAll()
                 .requestMatchers("/upload-pdf").permitAll()
                 .requestMatchers("/query").permitAll()
                 .requestMatchers("/pdfs/**").permitAll()
@@ -116,6 +114,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/conversation-configs/**").authenticated()
                 .requestMatchers("/api/pdf/**").authenticated()
                 .requestMatchers("/api/chat/**").authenticated()
+                .requestMatchers("/knowledge/**").authenticated()
+                .requestMatchers("/api/knowledge/**").authenticated()
                 
                 // Legacy endpoints (for backward compatibility)
                 .requestMatchers("/devices/**").authenticated()

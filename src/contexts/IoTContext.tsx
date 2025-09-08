@@ -127,25 +127,29 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     return unsubscribe;
   }, [notificationService, user]);
 
-  // Load data from backend when user is authenticated
+  // Load data from backend when user is authenticated - only once per user session
   useEffect(() => {
+    let isMounted = true; // Flag to prevent state updates if component unmounts
+    
     logInfo('IoT', `useEffect triggered, user: ${user ? 'exists' : 'null'}, authLoading: ${authLoading}`);
     
     // If AuthContext is still loading, keep IoTContext in loading state
     if (authLoading) {
       logInfo('IoT', 'AuthContext still loading, keeping IoTContext in loading state');
-      setLoading(true);
+      if (isMounted) setLoading(true);
       return;
     }
 
     // AuthContext has finished loading, now check if we have a user
     if (!user) {
       logInfo('IoT', 'No user after auth finished loading, setting loading to false and skipping data load');
-      setLoading(false);
-      setDevices([]);
-      setRules([]);
-      setNotifications([]);
-      setTelemetryData([]);
+      if (isMounted) {
+        setLoading(false);
+        setDevices([]);
+        setRules([]);
+        setNotifications([]);
+        setTelemetryData([]);
+      }
       return;
     }
 
@@ -155,11 +159,13 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     
     if (!token) {
       logInfo('IoT', 'No token found, setting loading to false and skipping data load');
-      setLoading(false);
-      setDevices([]);
-      setRules([]);
-      setNotifications([]);
-      setTelemetryData([]);
+      if (isMounted) {
+        setLoading(false);
+        setDevices([]);
+        setRules([]);
+        setNotifications([]);
+        setTelemetryData([]);
+      }
       return;
     }
 
@@ -171,26 +177,31 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         if (!isValid) {
           logWarn('IoT', 'Token validation failed, but continuing with data load attempt');
           // Don't skip data load, try anyway with existing token
-          setLoading(true);
-          await loadData();
+          if (isMounted) setLoading(true);
+          if (isMounted) await loadData();
           return;
         }
         
         // Token is valid, proceed with data loading
         logInfo('IoT', 'Token validated, starting data load');
-        setLoading(true);
-        await loadData();
+        if (isMounted) setLoading(true);
+        if (isMounted) await loadData();
       } catch (error) {
         logError('IoT', 'Token validation failed', error instanceof Error ? error : new Error('Unknown error'));
         // Don't stop loading, try to load data anyway
         logInfo('IoT', 'Attempting data load despite token validation failure');
-        setLoading(true);
-        await loadData();
+        if (isMounted) setLoading(true);
+        if (isMounted) await loadData();
       }
     };
 
     validateAndLoadData();
-  }, [user, authLoading]); // Add authLoading dependency to wait for AuthContext
+
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, authLoading]); // Only depend on user.id and authLoading to prevent unnecessary re-runs
 
   const loadData = async () => {
     logInfo('IoT', 'Starting data loading process');
@@ -270,13 +281,8 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
 
   // Note: Removed telemetry simulation to prevent unwanted notifications and data interference
 
-  // Load data only when user changes or component mounts
-  useEffect(() => {
-    if (user) {
-      logInfo('IoT', 'Loading data on user change or mount');
-      loadData();
-    }
-  }, [user]);
+  // Note: Removed duplicate useEffect that was causing double loading
+  // Data loading is already handled in the main useEffect above (lines 131-193)
 
   const updateDeviceStatus = async (deviceId: string, status: Status) => {
     logInfo('IoT', 'Updating device status', { deviceId, status });
@@ -515,7 +521,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       
       // First, verify the device exists
       try {
-        const deviceCheck = await deviceAPI.getById(deviceId);
+        await deviceAPI.getById(deviceId);
       } catch (checkError) {
         console.error('❌ IoTContext: Device not found during verification:', checkError);
         throw new Error(`Device not found: ${deviceId}. The device may have already been deleted or you don't have access to it.`);

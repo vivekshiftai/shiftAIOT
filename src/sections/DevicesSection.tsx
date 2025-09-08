@@ -13,7 +13,7 @@ import { logInfo } from '../utils/logger';
 export const DevicesSection: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { devices, updateDeviceStatus, loading, deleteDevice, refreshDevices } = useIoT();
+  const { devices, updateDeviceStatus, loading, deleteDevice } = useIoT();
   const { isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -32,18 +32,8 @@ export const DevicesSection: React.FC = () => {
     logInfo('DevicesSection', 'Component mounted - data loaded from IoT context');
   }, []);
 
-  // Handle section click to reload devices
-  const handleSectionClick = useCallback(async () => {
-    try {
-      setErrorMessage('');
-      await refreshDevices();
-      setSuccessMessage('Devices reloaded successfully');
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
-      setErrorMessage('Failed to reload devices');
-      setTimeout(() => setErrorMessage(''), 3000);
-    }
-  }, [refreshDevices]);
+  // Note: Removed handleSectionClick to prevent unnecessary device refreshing
+  // Devices are now loaded once from IoT context and don't need manual refreshing
 
   // Initialize filters from query params
   useEffect(() => {
@@ -175,7 +165,7 @@ export const DevicesSection: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6" onClick={handleSectionClick}>
+    <div className="space-y-6">
       {/* Success Message */}
       {successMessage && (
         <div className="mb-4 p-4 bg-success-500/20 border border-success-500/30 rounded-lg glass">

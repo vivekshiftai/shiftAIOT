@@ -71,15 +71,29 @@ export class UnifiedQueryService {
    */
   static async getQuerySuggestions(context?: string): Promise<QuerySuggestionsResponse> {
     try {
+      console.log('🔍 Getting query suggestions with context:', context);
       
       const params = context ? { context } : {};
       const response = await api.get('/knowledge/suggestions', { params });
       
+      console.log('✅ Query suggestions response:', response.data);
       return response.data as QuerySuggestionsResponse;
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Failed to get query suggestions:', error);
-      throw error;
+      
+      // Provide more detailed error information
+      if (error.response) {
+        console.error('Backend response status:', error.response.status);
+        console.error('Backend response data:', error.response.data);
+        throw new Error(`Backend error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        throw new Error('No response from backend - check if backend is running');
+      } else {
+        console.error('Request setup error:', error.message);
+        throw new Error(`Request failed: ${error.message}`);
+      }
     }
   }
 
