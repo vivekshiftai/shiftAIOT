@@ -32,7 +32,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iotplatform.dto.DeviceCreateResponse;
 import com.iotplatform.dto.DeviceCreateWithFileRequest;
@@ -76,7 +75,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.iotplatform.dto.UnifiedOnboardingProgress;
 import java.util.function.Consumer;
 
-@CrossOrigin(originPatterns = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/devices")
 public class DeviceController {
@@ -1331,7 +1329,6 @@ public class DeviceController {
     }
     
 
-
     /**
      * Get device onboarding progress
      */
@@ -1631,7 +1628,6 @@ public class DeviceController {
         return emitter;
     }
 
-
     /**
      * Get device documentation for chat queries
      */
@@ -1724,7 +1720,6 @@ public class DeviceController {
                 .body(Map.of("error", "Failed to fetch device documentation by type for chat"));
         }
     }
-
 
     private String convertEmptyToNull(String value) {
         if (value == null) {

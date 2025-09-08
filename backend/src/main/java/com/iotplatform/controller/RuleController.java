@@ -32,7 +32,6 @@ import com.iotplatform.service.RuleService;
 
 import jakarta.validation.Valid;
 
-@CrossOrigin(originPatterns = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/rules")
 public class RuleController {
@@ -263,7 +262,6 @@ public class RuleController {
         }
     }
     
-
 
     private RuleCondition convertToRuleCondition(com.iotplatform.dto.RuleConditionRequest dto) {
         RuleCondition condition = new RuleCondition();

@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 
-@CrossOrigin(originPatterns = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/auth")
 public class AuthController {

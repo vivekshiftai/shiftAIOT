@@ -32,7 +32,6 @@ import com.iotplatform.service.IntelligentQueryService;
 import com.iotplatform.dto.PDFQueryRequest;
 import com.iotplatform.dto.PDFQueryResponse;
 
-@CrossOrigin(originPatterns = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/knowledge")
 public class KnowledgeController {
@@ -595,6 +594,5 @@ public class KnowledgeController {
             return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
-
 
 }
