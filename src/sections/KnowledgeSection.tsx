@@ -141,7 +141,7 @@ export const KnowledgeSection: React.FC = () => {
           processedAt: doc.processedAt || doc.uploadedAt,
           deviceId: doc.deviceId,
           deviceName: doc.deviceName,
-          organizationId: doc.organizationId || 'shiftAIOT-org-2024',
+          organizationId: doc.organizationId || 'activeops-hub-org-2024',
           collectionName: doc.collectionName,
           totalPages: doc.totalPages,
           processedChunks: doc.processedChunks || 0,

@@ -261,9 +261,9 @@ export const SignupForm: React.FC = () => {
               <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg backdrop-blur-sm">
                 <User className="w-10 h-10 text-white" />
               </div>
-              <h2 className="text-2xl font-bold mb-3">Join shiftAIOT Platform</h2>
+              <h2 className="text-2xl font-bold mb-3">Join ActiveOps Hub</h2>
               <p className="text-sm text-white/90 mb-6 leading-relaxed">
-                Create your account to start managing your IoT devices and monitoring your infrastructure.
+                Create your account to start managing your smart assets and monitoring your infrastructure.
               </p>
               <div className="space-y-3 text-left max-w-xs mx-auto">
                 <div className="flex items-center bg-white/10 p-3 rounded-lg backdrop-blur-sm">
@@ -302,7 +302,7 @@ export const SignupForm: React.FC = () => {
                   <Settings className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-800">shiftAIOT Platform</h1>
+                  <h1 className="text-2xl font-bold text-slate-800">ActiveOps Hub</h1>
                   <p className="text-slate-600 text-sm">Create your account</p>
                 </div>
               </div>

@@ -6,8 +6,8 @@ export const AppLoadingScreen: React.FC = () => (
   <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
     <div className="text-center">
       <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-      <h2 className="text-2xl font-bold text-slate-800 mb-2">Loading shiftAIOT Platform</h2>
-      <p className="text-slate-600">Initializing your IoT dashboard...</p>
+      <h2 className="text-2xl font-bold text-slate-800 mb-2">Loading ActiveOps Hub</h2>
+      <p className="text-slate-600">Initializing your command center...</p>
     </div>
   </div>
 );
@@ -210,8 +210,8 @@ export const EmptyStateLoading: React.FC<{
 export const DevicesEmptyLoading: React.FC = () => (
   <EmptyStateLoading
     icon={<Cpu className="w-8 h-8 text-slate-400" />}
-    title="Loading Devices"
-    description="Fetching device information from the platform..."
+    title="Loading Assets"
+    description="Fetching asset information from the platform..."
   />
 );
 
@@ -234,7 +234,7 @@ export const NotificationsEmptyLoading: React.FC = () => (
 export const AnalyticsEmptyLoading: React.FC = () => (
   <EmptyStateLoading
     icon={<BarChart3 className="w-8 h-8 text-slate-400" />}
-    title="Loading Analytics"
+    title="Loading Intelligence"
     description="Preparing charts and performance metrics..."
   />
 );

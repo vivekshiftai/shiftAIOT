@@ -177,7 +177,7 @@ export const DeviceConnectionManager: React.FC<DeviceConnectionManagerProps> = (
               <div className="w-5 h-5 text-slate-600">×</div>
             </button>
           </div>
-          <p className="text-slate-600 mt-2">Manage IoT device connections and communication protocols.</p>
+          <p className="text-slate-600 mt-2">Manage smart asset connections and communication protocols.</p>
         </div>
 
         <div className="p-6">

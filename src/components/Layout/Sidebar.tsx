@@ -18,11 +18,11 @@ interface SidebarProps {
 }
 
 const menuItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: BarChart3, path: '/dashboard' },
-  { id: 'devices', label: 'Devices', icon: Cpu, path: '/devices' },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
+  { id: 'dashboard', label: 'Command Center', icon: BarChart3, path: '/dashboard' },
+  { id: 'devices', label: 'Smart Assets', icon: Cpu, path: '/devices' },
+  { id: 'analytics', label: 'Intelligence', icon: BarChart3, path: '/analytics' },
   { id: 'knowledge', label: 'Knowledge Base', icon: Brain, path: '/knowledge' },
-  { id: 'process', label: 'Process', icon: Send, path: '/process' },
+  { id: 'process', label: 'Smart Process', icon: Send, path: '/process' },
   { id: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
   { id: 'users', label: 'Users', icon: User, path: '/users' },
 ];
@@ -52,7 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
   return (
     <div className="bg-white border-r border-gray-200 w-64 min-h-screen p-4">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">IoT Platform</h1>
+        <h1 className="text-2xl font-bold text-gray-900">ActiveOps Hub</h1>
       </div>
       
       <nav className="space-y-2">

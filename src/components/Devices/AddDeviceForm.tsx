@@ -550,7 +550,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
 
   const getStepDescription = (step: Step): string => {
     switch (step) {
-      case 1: return 'Enter the basic details about your IoT device';
+      case 1: return 'Enter the basic details about your smart asset';
       case 2: return 'Configure network settings and connectivity';
       case 3: return 'Add description and tags';
       case 4: return 'Upload device documentation for AI analysis';
@@ -1001,7 +1001,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
         <div className="p-6 border-b border-slate-200">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">Add IoT Device</h2>
+              <h2 className="text-2xl font-bold text-slate-800">Add Smart Asset</h2>
               <p className="text-slate-600 mt-1">{getStepDescription(currentStep)}</p>
             </div>
             <button
@@ -1206,7 +1206,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
                   ) : (
                     <>
                       <Plus className="w-4 h-4" />
-                      Add Device
+                      Add Asset
                     </>
                   )}
                 </button>

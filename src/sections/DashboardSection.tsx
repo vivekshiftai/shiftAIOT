@@ -343,10 +343,10 @@ export const DashboardSection: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold text-primary mb-2">
-            Dashboard
+            Command Center
           </h1>
           <p className="text-secondary text-lg">
-            Welcome back! Here's what's happening with your IoT devices.
+            Welcome back! Here's what's happening with your smart assets.
           </p>
         </div>
         
@@ -358,7 +358,7 @@ export const DashboardSection: React.FC = () => {
             onClick={handleAddDevice}
             className="btn-secondary"
           >
-            Add Device
+            Add Asset
           </Button>
 
           <Button
@@ -368,7 +368,7 @@ export const DashboardSection: React.FC = () => {
             onClick={() => navigate('/analytics')}
             className="btn-primary"
           >
-            View Analytics
+            View Intelligence
           </Button>
         </div> */}
       </div>
@@ -376,7 +376,7 @@ export const DashboardSection: React.FC = () => {
       {/* Top Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
-          title="Devices"
+          title="Assets"
           value={metrics.totalDevices}
           subtitle={`${metrics.onlineDevices} active`}
           icon={Cpu}
@@ -607,8 +607,8 @@ export const DashboardSection: React.FC = () => {
           <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Shield className="w-6 h-6 text-primary-300" />
           </div>
-          <h4 className="font-semibold text-primary mb-2">Manage Devices</h4>
-          <p className="text-secondary text-sm">View and configure your IoT devices</p>
+          <h4 className="font-semibold text-primary mb-2">Manage Smart Assets</h4>
+          <p className="text-secondary text-sm">View and configure your smart assets</p>
         </div>
 
         <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/device-care?tab=rules')}>
@@ -623,7 +623,7 @@ export const DashboardSection: React.FC = () => {
           <div className="w-12 h-12 bg-success-50 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Shield className="w-6 h-6 text-success-400" />
           </div>
-          <h4 className="font-semibold text-primary mb-2">Analytics</h4>
+          <h4 className="font-semibold text-primary mb-2">Intelligence</h4>
           <p className="text-secondary text-sm">View detailed performance insights</p>
         </div>
 

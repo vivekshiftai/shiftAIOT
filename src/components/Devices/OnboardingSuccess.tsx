@@ -128,7 +128,7 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
                   </div>
                   <div>
                     <span className="text-green-600 font-medium">Type:</span>
-                    <p className="text-green-800 font-semibold">{result.deviceType || 'IoT Device'}</p>
+                    <p className="text-green-800 font-semibold">{result.deviceType || 'Smart Asset'}</p>
                   </div>
                   <div>
                     <span className="text-green-600 font-medium">Processing Time:</span>

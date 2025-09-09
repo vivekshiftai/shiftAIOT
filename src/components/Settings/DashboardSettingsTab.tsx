@@ -24,7 +24,7 @@ import { logInfo, logError } from '../../utils/logger';
 interface DashboardSettings {
   theme: 'light' | 'dark' | 'auto';
   layout: 'grid' | 'list' | 'compact';
-  defaultView: 'overview' | 'devices' | 'analytics' | 'maintenance';
+  defaultView: 'overview' | 'devices' | 'intelligence' | 'maintenance';
   refreshInterval: number; // in seconds
   showCharts: boolean;
   showNotifications: boolean;
@@ -54,7 +54,7 @@ export const DashboardSettingsTab: React.FC = () => {
     autoRefresh: true,
     compactMode: false,
     responsiveLayout: true,
-    widgetOrder: ['overview', 'devices', 'analytics', 'maintenance'],
+    widgetOrder: ['overview', 'devices', 'intelligence', 'maintenance'],
     hiddenWidgets: []
   });
 
@@ -226,7 +226,7 @@ export const DashboardSettingsTab: React.FC = () => {
             >
               <option value="overview">Overview</option>
               <option value="devices">Devices</option>
-              <option value="analytics">Analytics</option>
+              <option value="intelligence">Intelligence</option>
               <option value="maintenance">Maintenance</option>
             </select>
           </div>

@@ -1225,7 +1225,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               <div className="mb-8">
                 <h2 className="text-2xl font-bold mb-3 text-gray-800">Device Onboarding</h2>
                 <p className="text-gray-600 text-sm leading-relaxed">
-                  Enter basic device information and specifications
+                  Enter basic asset information and specifications
                 </p>
               </div>
 
@@ -1274,7 +1274,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span>MQTT: Lightweight messaging protocol for IoT devices</span>
+                        <span>MQTT: Lightweight messaging protocol for smart assets</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <CheckCircle className="w-4 h-4 text-green-500" />

@@ -53,7 +53,7 @@ export const LoginForm: React.FC = () => {
               </div>
               <h2 className="text-2xl font-bold mb-3">Welcome Back</h2>
               <p className="text-sm text-white/90 mb-6 leading-relaxed">
-                Sign in to manage your IoT devices and access analytics.
+                Sign in to manage your smart assets and access intelligence.
               </p>
               <div className="space-y-3 text-left max-w-xs mx-auto">
                 <div className="flex items-center bg-white/10 p-3 rounded-lg backdrop-blur-sm">
@@ -92,7 +92,7 @@ export const LoginForm: React.FC = () => {
                   <Settings className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-800">shiftAIOT Platform</h1>
+                  <h1 className="text-2xl font-bold text-slate-800">ActiveOps Hub</h1>
                   <p className="text-slate-600 text-sm">Sign in to your account</p>
                 </div>
               </div>

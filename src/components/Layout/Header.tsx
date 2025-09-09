@@ -84,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search devices, rules, users..."
+            placeholder="Search assets, rules, users..."
             className="pl-10 pr-4 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-card text-primary w-80 transition-all placeholder-secondary futuristic-input"
           />
         </form>

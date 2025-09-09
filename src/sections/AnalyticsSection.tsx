@@ -72,7 +72,7 @@ export const AnalyticsSection: React.FC = () => {
       {/* Header & Filters */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-primary">Analytics</h1>
+          <h1 className="text-3xl font-bold text-primary">Intelligence</h1>
           <p className="text-secondary mt-2">KPI-driven insights for maintenance, rules, and workforce efficiency</p>
         </div>
         <div className="flex items-center gap-2">

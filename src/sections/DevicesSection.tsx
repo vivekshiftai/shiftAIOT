@@ -231,9 +231,9 @@ export const DevicesSection: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-primary">Device Management</h1>
+          <h1 className="text-3xl font-bold text-primary">Smart Assets</h1>
           <p className="text-secondary mt-2">
-            {isAdmin() ? 'Monitor and control your IoT devices' : 'View your IoT devices'}
+            {isAdmin() ? 'Monitor and control your smart assets' : 'View your smart assets'}
           </p>
         </div>
         
@@ -243,7 +243,7 @@ export const DevicesSection: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2 btn-secondary"
           >
             <Plus className="w-4 h-4" />
-            Add Device
+            Add Asset
           </button>
         </div>
       </div>
@@ -256,7 +256,7 @@ export const DevicesSection: React.FC = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Search devices..."
+                placeholder="Search assets..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onClick={(e) => e.stopPropagation()}
@@ -298,7 +298,7 @@ export const DevicesSection: React.FC = () => {
               onChange={(e) => setSortBy(e.target.value as any)}
               onClick={(e) => e.stopPropagation()}
               className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 minimal-input"
-              aria-label="Sort devices"
+              aria-label="Sort assets"
               title="Sort by"
             >
               <option value="name">Sort: Name</option>
@@ -327,9 +327,9 @@ export const DevicesSection: React.FC = () => {
           <div className="w-16 h-16 bg-secondary-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Plus className="w-8 h-8 text-secondary-400" />
           </div>
-          <h3 className="text-lg font-medium text-primary mb-2">No devices found</h3>
+          <h3 className="text-lg font-medium text-primary mb-2">No assets found</h3>
           <p className="text-secondary mb-6">
-            No devices match your current search criteria. Try adjusting your filters or add your first device.
+            No assets match your current search criteria. Try adjusting your filters or add your first asset.
           </p>
           <button 
             onClick={handleAddDeviceClick}

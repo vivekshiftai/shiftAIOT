@@ -1,4 +1,4 @@
-// Logging utility for the IoT Platform application
+// Logging utility for the ActiveOps Hub application
 export enum LogLevel {
   DEBUG = 0,
   INFO = 1,
