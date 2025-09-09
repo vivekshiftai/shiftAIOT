@@ -476,7 +476,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                                        {rec.Category || 'General'}
+                                        {rec.CrossSell?.[0]?.Category || 'General'}
                                       </span>
                                     </div>
                                   </div>
@@ -485,7 +485,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                                   <div className="grid grid-cols-3 gap-4 mb-3">
                                     <div>
                                       <p className="text-xs text-gray-500">Category</p>
-                                      <p className="text-sm font-medium text-gray-900">{rec.Category || 'N/A'}</p>
+                                      <p className="text-sm font-medium text-gray-900">{rec.CrossSell?.[0]?.Category || 'N/A'}</p>
                                     </div>
                                     <div>
                                       <p className="text-xs text-gray-500">Price</p>
@@ -545,7 +545,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
-                                        {rec.Category || 'General'}
+                                        {rec.RejectedCrossSell?.[0]?.Category || 'General'}
                                       </span>
                                     </div>
                                   </div>
@@ -554,7 +554,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                                   <div className="grid grid-cols-2 gap-4 mb-3">
                                     <div>
                                       <p className="text-xs text-gray-500">Category</p>
-                                      <p className="text-sm font-medium text-gray-900">{rec.Category || 'N/A'}</p>
+                                      <p className="text-sm font-medium text-gray-900">{rec.RejectedCrossSell?.[0]?.Category || 'N/A'}</p>
                                     </div>
                                     <div>
                                       <p className="text-xs text-gray-500">Price</p>
@@ -600,7 +600,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                                        {rec.Category || 'General'}
+                                        {rec.AlreadyPurchasedCrossSell?.[0]?.Category || 'General'}
                                       </span>
                                     </div>
                                   </div>
@@ -609,7 +609,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                                   <div className="grid grid-cols-2 gap-4 mb-3">
                                     <div>
                                       <p className="text-xs text-gray-500">Category</p>
-                                      <p className="text-sm font-medium text-gray-900">{rec.Category || 'N/A'}</p>
+                                      <p className="text-sm font-medium text-gray-900">{rec.AlreadyPurchasedCrossSell?.[0]?.Category || 'N/A'}</p>
                                     </div>
                                     <div>
                                       <p className="text-xs text-gray-500">Price</p>
