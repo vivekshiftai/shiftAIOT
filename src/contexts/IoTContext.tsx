@@ -208,7 +208,9 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     setLoading(true);
     setError(null);
 
-    // Removed timeout for better user experience
+    // Add minimum loading time to ensure loading screen is visible
+    const startTime = Date.now();
+    const minLoadingTime = 800; // 800ms minimum loading time
     
     try {
       // Load all data from backend independently to handle partial failures
@@ -274,6 +276,15 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       // Don't set any dummy data - let the UI show empty state if no data
       logInfo('IoT', 'No data loaded from backend, showing empty state');
     } finally {
+      // Ensure minimum loading time for better UX
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, minLoadingTime - elapsedTime);
+      
+      if (remainingTime > 0) {
+        logInfo('IoT', `Waiting ${remainingTime}ms to complete minimum loading time`);
+        await new Promise(resolve => setTimeout(resolve, remainingTime));
+      }
+      
       logInfo('IoT', 'Setting loading to false');
       setLoading(false);
     }

@@ -19,7 +19,7 @@ import '../styles/knowledge.css';
 
 // Interfaces are now imported from StrategyAgentService
 
-export const SmartProcessSection: React.FC = () => {
+export const ProcessSection: React.FC = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<StrategyAgentResponse | null>(null);

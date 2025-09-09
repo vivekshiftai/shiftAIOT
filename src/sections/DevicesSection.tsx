@@ -26,6 +26,11 @@ export const DevicesSection: React.FC = () => {
 
   // Debug logging
   logInfo('DevicesSection', 'Devices data', { devices: devices, loading, count: devices?.length || 0 });
+  
+  // Additional loading state debugging
+  useEffect(() => {
+    console.log('🔄 DevicesSection loading state changed:', { loading, devicesCount: devices?.length || 0 });
+  }, [loading, devices]);
 
   // Load data only when component mounts
   useEffect(() => {
@@ -161,6 +166,7 @@ export const DevicesSection: React.FC = () => {
 
   // Show loading screen while data is being fetched
   if (loading) {
+    console.log('🔄 Showing loading screen for Assets section');
     return <DevicesLoading />;
   }
 
