@@ -7,7 +7,8 @@ import {
   Zap,
   BarChart3,
   Cpu,
-  Layers
+  Send,
+  Brain
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -20,8 +21,8 @@ const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: BarChart3, path: '/dashboard' },
   { id: 'devices', label: 'Devices', icon: Cpu, path: '/devices' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
-  { id: 'knowledge', label: 'Knowledge Base', icon: Bell, path: '/knowledge' },
-  { id: 'process', label: 'Process', icon: Layers, path: '/process' },
+  { id: 'knowledge', label: 'Knowledge Base', icon: Brain, path: '/knowledge' },
+  { id: 'process', label: 'Process', icon: Send, path: '/process' },
   { id: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
   { id: 'users', label: 'Users', icon: User, path: '/users' },
 ];
