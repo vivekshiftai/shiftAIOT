@@ -315,7 +315,7 @@ export class StrategyAgentService {
       return [
         { id: 'C001', name: 'Starbucks' },
         { id: 'C002', name: 'McDonald\'s' },
-        { id: 'C003', name: 'Subway' }
+        { id: 'C003', name: 'Walmart' }
       ];
     }
   }
