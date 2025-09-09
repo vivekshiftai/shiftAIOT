@@ -182,7 +182,7 @@ export const ProcessSection: React.FC = () => {
       <div className="knowledge-fixed-header flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
             <div>
-            <h1 className="text-2xl font-bold text-gray-900">Sales Intelligence Dashboard</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Sales Intelligence</h1>
             <p className="text-sm text-gray-600 mt-1">AI-powered cross-sell recommendations and analysis</p>
           </div>
           {recommendations && (
