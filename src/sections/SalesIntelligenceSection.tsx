@@ -123,7 +123,18 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
 
     try {
       logInfo('Process', 'Downloading PDF report');
-      await StrategyAgentService.downloadPDFReport(selectedCustomer);
+      const pdfBlob = await StrategyAgentService.downloadPDFReport(selectedCustomer);
+      
+      // Create download link and trigger download
+      const url = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `sales-intelligence-report-${selectedCustomer}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
       logInfo('Process', 'PDF report downloaded successfully');
     } catch (error) {
       logError('Process', 'Failed to download PDF report via backend', error instanceof Error ? error : new Error('Unknown error'));

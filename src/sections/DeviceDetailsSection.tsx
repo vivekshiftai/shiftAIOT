@@ -1340,7 +1340,7 @@ export const DeviceDetailsSection: React.FC = () => {
                   key={message.id}
                   className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className="flex items-start gap-3 max-w-3xl">
+                  <div className="flex items-start gap-3 w-1/2">
                     <div className={`p-2 rounded-full flex-shrink-0 shadow-sm ${
                       message.type === 'user'
                         ? 'bg-blue-500 text-white'
@@ -1349,7 +1349,7 @@ export const DeviceDetailsSection: React.FC = () => {
                       {message.type === 'user' ? (<User className="w-4 h-4" />) : (<Bot className="w-4 h-4" />)}
                     </div>
                     <div
-                      className={`px-4 py-2 rounded-lg max-w-xs lg:max-w-md ${
+                      className={`px-4 py-2 rounded-lg flex-1 ${
                         message.type === 'user'
                           ? 'bg-blue-500 text-white'
                           : 'bg-white text-slate-800 border border-slate-200'
@@ -1441,11 +1441,11 @@ export const DeviceDetailsSection: React.FC = () => {
               ))}
               {isTyping && (
                 <div className="flex justify-start">
-                  <div className="flex items-start gap-3 max-w-3xl">
+                  <div className="flex items-start gap-3 w-1/2">
                     <div className="p-2 rounded-full flex-shrink-0 shadow-sm bg-white text-slate-600 border border-slate-200">
                       <Bot className="w-4 h-4" />
                     </div>
-                    <div className="px-4 py-2 rounded-lg bg-white text-slate-800 border border-slate-200">
+                    <div className="px-4 py-2 rounded-lg bg-white text-slate-800 border border-slate-200 flex-1">
                       <div className="flex space-x-1">
                         <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
                         <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
