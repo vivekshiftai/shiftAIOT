@@ -82,6 +82,11 @@ export class StrategyAgentService {
     try {
       logInfo('StrategyAgent', `Generating recommendations for customer: ${customerId}`);
       
+      // Validate input
+      if (!customerId || typeof customerId !== 'string') {
+        throw new Error('Invalid customer ID provided');
+      }
+      
       const request: GenerateRecommendationsRequest = {
         customer_id: customerId
       };
@@ -92,17 +97,92 @@ export class StrategyAgentService {
         throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
       }
       
-      const data: StrategyAgentResponse = response.data;
+      const data = response.data;
+      
+      // Validate response data structure
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response data received from backend');
+      }
+      
+      // Validate required fields
+      if (!data.Summary || !data.CustomerInfo || !data.CustomerClassification) {
+        throw new Error('Incomplete response data - missing required fields');
+      }
+      
+      // Ensure arrays exist and validate structure
+      const validatedData: StrategyAgentResponse = {
+        ...data,
+        AcceptedRecommendations: (data.AcceptedRecommendations || []).map((rec: any) => ({
+          ...rec,
+          ProductName: rec.ProductName || 'Unknown Product',
+          QuantityRequired: rec.QuantityRequired || 0,
+          Ingredients: rec.Ingredients || [],
+          CrossSell: (rec.CrossSell || []).map((cs: any) => ({
+            ...cs,
+            SuggestedProduct: cs.SuggestedProduct || 'Unknown Product',
+            Price: cs.Price || 0,
+            Category: cs.Category || 'N/A',
+            Similarity: cs.Similarity || 0,
+            AIReasoning: cs.AIReasoning || 'No reasoning provided'
+          }))
+        })),
+        RejectedRecommendations: (data.RejectedRecommendations || []).map((rec: any) => ({
+          ...rec,
+          ProductName: rec.ProductName || 'Unknown Product',
+          QuantityRequired: rec.QuantityRequired || 0,
+          Ingredients: rec.Ingredients || [],
+          RejectedCrossSell: (rec.RejectedCrossSell || []).map((cs: any) => ({
+            ...cs,
+            SuggestedProduct: cs.SuggestedProduct || 'Unknown Product',
+            Price: cs.Price || 0,
+            Category: cs.Category || 'N/A',
+            Similarity: cs.Similarity || 0,
+            AIReasoning: cs.AIReasoning || 'No reasoning provided'
+          }))
+        })),
+        AlreadyPurchasedRecommendations: (data.AlreadyPurchasedRecommendations || []).map((rec: any) => ({
+          ...rec,
+          ProductName: rec.ProductName || 'Unknown Product',
+          QuantityRequired: rec.QuantityRequired || 0,
+          Ingredients: rec.Ingredients || [],
+          AlreadyPurchasedCrossSell: (rec.AlreadyPurchasedCrossSell || []).map((cs: any) => ({
+            ...cs,
+            SuggestedProduct: cs.SuggestedProduct || 'Unknown Product',
+            Price: cs.Price || 0,
+            Category: cs.Category || 'N/A',
+            Similarity: cs.Similarity || 0,
+            AIReasoning: cs.AIReasoning || 'No reasoning provided'
+          }))
+        })),
+        Summary: {
+          total_recommendations: data.Summary.total_recommendations || 0,
+          total_rejected: data.Summary.total_rejected || 0,
+          total_already_purchased: data.Summary.total_already_purchased || 0
+        },
+        CustomerInfo: {
+          CustomerID: data.CustomerInfo?.CustomerID || 'N/A',
+          CustomerName: data.CustomerInfo?.CustomerName || 'N/A'
+        },
+        CustomerClassification: {
+          CustomerType: data.CustomerClassification?.CustomerType || 'N/A',
+          TotalQuantitySold: data.CustomerClassification?.TotalQuantitySold || 0,
+          NumberOfStores: data.CustomerClassification?.NumberOfStores || 0,
+          ClassificationCriteria: data.CustomerClassification?.ClassificationCriteria || {
+            StoresGreaterThan50: false,
+            QuantityGreaterThan200K: false
+          }
+        }
+      };
       
       logInfo('StrategyAgent', 'Recommendations generated successfully', {
         customerId,
-        totalRecommendations: data.Summary.total_recommendations,
-        accepted: data.AcceptedRecommendations.length,
-        rejected: data.RejectedRecommendations.length,
-        alreadyPurchased: data.AlreadyPurchasedRecommendations.length
+        totalRecommendations: validatedData.Summary.total_recommendations,
+        accepted: validatedData.AcceptedRecommendations.length,
+        rejected: validatedData.RejectedRecommendations.length,
+        alreadyPurchased: validatedData.AlreadyPurchasedRecommendations.length
       });
       
-      return data;
+      return validatedData;
       
     } catch (error: any) {
       logError('StrategyAgent', 'Failed to generate recommendations', error);

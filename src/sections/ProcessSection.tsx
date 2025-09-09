@@ -22,6 +22,7 @@ export const ProcessSection: React.FC = () => {
   const [recommendations, setRecommendations] = useState<StrategyAgentResponse | null>(null);
   const [error, setError] = useState<string>('');
   const [availableCustomers, setAvailableCustomers] = useState<Array<{ id: string; name: string }>>([]);
+  const [activeTab, setActiveTab] = useState<'accepted' | 'rejected' | 'purchased'>('accepted');
 
   // Load available customers on component mount
   useEffect(() => {
@@ -96,9 +97,23 @@ export const ProcessSection: React.FC = () => {
       const data = await StrategyAgentService.generateRecommendations(selectedCustomer);
       setRecommendations(data);
       
+      // Auto-select tab with most recommendations
+      const acceptedCount = data.AcceptedRecommendations?.length || 0;
+      const rejectedCount = data.RejectedRecommendations?.length || 0;
+      const purchasedCount = data.AlreadyPurchasedRecommendations?.length || 0;
+      
+      if (acceptedCount >= rejectedCount && acceptedCount >= purchasedCount) {
+        setActiveTab('accepted');
+      } else if (rejectedCount >= purchasedCount) {
+        setActiveTab('rejected');
+      } else {
+        setActiveTab('purchased');
+      }
+      
       logInfo('Process', 'Marketing intelligence recommendations generated successfully via backend', {
         customerId: selectedCustomer,
-        totalRecommendations: data.Summary.total_recommendations
+        totalRecommendations: data.Summary.total_recommendations,
+        activeTab: activeTab
       });
       
     } catch (error) {
@@ -258,7 +273,9 @@ export const ProcessSection: React.FC = () => {
                       <CheckCircle className="w-4 h-4 text-green-600" />
                       <span className="text-sm font-medium text-green-800">Accepted</span>
                     </div>
-                    <p className="text-2xl font-bold text-green-900">{recommendations.AcceptedRecommendations.length}</p>
+                    <p className="text-2xl font-bold text-green-900">
+                      {recommendations.AcceptedRecommendations?.length || 0}
+                    </p>
                   </div>
                   
                   <div className="bg-red-50 rounded-lg p-4">
@@ -266,7 +283,9 @@ export const ProcessSection: React.FC = () => {
                       <X className="w-4 h-4 text-red-600" />
                       <span className="text-sm font-medium text-red-800">Rejected</span>
                     </div>
-                    <p className="text-2xl font-bold text-red-900">{recommendations.Summary.total_rejected}</p>
+                    <p className="text-2xl font-bold text-red-900">
+                      {recommendations.Summary?.total_rejected || 0}
+                    </p>
                   </div>
                   
                   <div className="bg-blue-50 rounded-lg p-4">
@@ -274,7 +293,9 @@ export const ProcessSection: React.FC = () => {
                       <Clock className="w-4 h-4 text-blue-600" />
                       <span className="text-sm font-medium text-blue-800">Already Purchased</span>
                     </div>
-                    <p className="text-2xl font-bold text-blue-900">{recommendations.Summary.total_already_purchased}</p>
+                    <p className="text-2xl font-bold text-blue-900">
+                      {recommendations.Summary?.total_already_purchased || 0}
+                    </p>
                   </div>
                   
                   <div className="bg-gray-50 rounded-lg p-4">
@@ -282,7 +303,9 @@ export const ProcessSection: React.FC = () => {
                       <Plus className="w-4 h-4 text-gray-600" />
                       <span className="text-sm font-medium text-gray-800">Total</span>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">{recommendations.Summary.total_recommendations}</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {recommendations.Summary?.total_recommendations || 0}
+                    </p>
                   </div>
                 </div>
                 
@@ -290,131 +313,200 @@ export const ProcessSection: React.FC = () => {
                   <div>
                     <h3 className="font-medium text-gray-900 mb-2">Customer Information</h3>
                     <p className="text-sm text-gray-600">
-                      <strong>Name:</strong> {recommendations.CustomerInfo.CustomerName}<br/>
-                      <strong>ID:</strong> {recommendations.CustomerInfo.CustomerID}
+                      <strong>Name:</strong> {recommendations.CustomerInfo?.CustomerName || 'N/A'}<br/>
+                      <strong>ID:</strong> {recommendations.CustomerInfo?.CustomerID || 'N/A'}
                     </p>
                   </div>
                   <div>
                     <h3 className="font-medium text-gray-900 mb-2">Classification</h3>
                     <p className="text-sm text-gray-600">
-                      <strong>Type:</strong> {recommendations.CustomerClassification.CustomerType}<br/>
-                      <strong>Stores:</strong> {recommendations.CustomerClassification.NumberOfStores}<br/>
-                      <strong>Total Quantity Sold:</strong> {recommendations.CustomerClassification.TotalQuantitySold.toLocaleString()}
+                      <strong>Type:</strong> {recommendations.CustomerClassification?.CustomerType || 'N/A'}<br/>
+                      <strong>Stores:</strong> {recommendations.CustomerClassification?.NumberOfStores || 0}<br/>
+                      <strong>Total Quantity Sold:</strong> {(recommendations.CustomerClassification?.TotalQuantitySold || 0).toLocaleString()}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Accepted Recommendations */}
-              {recommendations.AcceptedRecommendations.length > 0 && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <h2 className="text-lg font-semibold text-gray-900">Accepted Cross-Sell Recommendations</h2>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {recommendations.AcceptedRecommendations.map((rec, index) => (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4">
-                        <h3 className="font-medium text-gray-900 mb-2">{rec.ProductName}</h3>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Required Quantity: {rec.QuantityRequired} | Ingredients: {rec.Ingredients.join(', ')}
-                        </p>
-                        
-                        {rec.CrossSell && rec.CrossSell.length > 0 && (
-                          <div className="space-y-3">
-                            {rec.CrossSell.map((crossSell, csIndex) => (
-                              <div key={csIndex} className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                <div className="flex items-start justify-between mb-2">
-                                  <h4 className="font-medium text-green-900">{crossSell.SuggestedProduct}</h4>
-                                  <span className="text-sm font-bold text-green-700">${crossSell.Price}</span>
-                                </div>
-                                <p className="text-sm text-green-800 mb-2">
-                                  <strong>Category:</strong> {crossSell.Category} | 
-                                  <strong> Similarity:</strong> {(crossSell.Similarity * 100).toFixed(1)}%
-                                </p>
-                                <p className="text-sm text-green-700">{crossSell.AIReasoning}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+              {/* Tabbed Recommendations Display */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                {/* Tab Navigation */}
+                <div className="border-b border-gray-200">
+                  <nav className="flex space-x-8 px-6" aria-label="Tabs">
+                    <button
+                      onClick={() => setActiveTab('accepted')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTab === 'accepted'
+                          ? 'border-green-500 text-green-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4" />
+                        Accepted ({recommendations.AcceptedRecommendations?.length || 0})
                       </div>
-                    ))}
-                  </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('rejected')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTab === 'rejected'
+                          ? 'border-red-500 text-red-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <X className="w-4 h-4" />
+                        Rejected ({recommendations.RejectedRecommendations?.length || 0})
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('purchased')}
+                      className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        activeTab === 'purchased'
+                          ? 'border-blue-500 text-blue-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Already Purchased ({recommendations.AlreadyPurchasedRecommendations?.length || 0})
+                      </div>
+                    </button>
+                  </nav>
                 </div>
-              )}
 
-              {/* Rejected Recommendations */}
-              {recommendations.RejectedRecommendations.length > 0 && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <X className="w-5 h-5 text-red-600" />
-                    <h2 className="text-lg font-semibold text-gray-900">Rejected Recommendations</h2>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {recommendations.RejectedRecommendations.map((rec, index) => (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4">
-                        <h3 className="font-medium text-gray-900 mb-2">{rec.ProductName}</h3>
-                        
-                        {rec.RejectedCrossSell && rec.RejectedCrossSell.length > 0 && (
-                          <div className="space-y-3">
-                            {rec.RejectedCrossSell.map((crossSell, csIndex) => (
-                              <div key={csIndex} className="bg-red-50 border border-red-200 rounded-lg p-3">
-                                <div className="flex items-start justify-between mb-2">
-                                  <h4 className="font-medium text-red-900">{crossSell.SuggestedProduct}</h4>
-                                  <span className="text-sm font-bold text-red-700">${crossSell.Price}</span>
-                                </div>
-                                <p className="text-sm text-red-800 mb-2">
-                                  <strong>Category:</strong> {crossSell.Category} | 
-                                  <strong> Similarity:</strong> {(crossSell.Similarity * 100).toFixed(1)}%
-                                </p>
-                                <p className="text-sm text-red-700">{crossSell.AIReasoning}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                {/* Tab Content */}
+                <div className="p-6">
+                  {activeTab === 'accepted' && (
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <h2 className="text-lg font-semibold text-gray-900">Accepted Cross-Sell Recommendations</h2>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                      
+                      {recommendations.AcceptedRecommendations && recommendations.AcceptedRecommendations.length > 0 ? (
+                        <div className="space-y-4">
+                          {recommendations.AcceptedRecommendations.map((rec, index) => (
+                            <div key={index} className="border border-gray-200 rounded-lg p-4">
+                              <h3 className="font-medium text-gray-900 mb-2">{rec.ProductName || 'Unknown Product'}</h3>
+                              <p className="text-sm text-gray-600 mb-3">
+                                Required Quantity: {rec.QuantityRequired || 0} | Ingredients: {(rec.Ingredients || []).join(', ') || 'N/A'}
+                              </p>
+                              
+                              {rec.CrossSell && rec.CrossSell.length > 0 && (
+                                <div className="space-y-3">
+                                  {rec.CrossSell.map((crossSell, csIndex) => (
+                                    <div key={csIndex} className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                      <div className="flex items-start justify-between mb-2">
+                                        <h4 className="font-medium text-green-900">{crossSell.SuggestedProduct || 'Unknown Product'}</h4>
+                                        <span className="text-sm font-bold text-green-700">${crossSell.Price || 0}</span>
+                                      </div>
+                                      <p className="text-sm text-green-800 mb-2">
+                                        <strong>Category:</strong> {crossSell.Category || 'N/A'} | 
+                                        <strong> Similarity:</strong> {((crossSell.Similarity || 0) * 100).toFixed(1)}%
+                                      </p>
+                                      <p className="text-sm text-green-700">{crossSell.AIReasoning || 'No reasoning provided'}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                          <p className="text-gray-500">No accepted recommendations available</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-              {/* Already Purchased Recommendations */}
-              {recommendations.AlreadyPurchasedRecommendations.length > 0 && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Clock className="w-5 h-5 text-blue-600" />
-                    <h2 className="text-lg font-semibold text-gray-900">Already Purchased Products</h2>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {recommendations.AlreadyPurchasedRecommendations.map((rec, index) => (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4">
-                        <h3 className="font-medium text-gray-900 mb-2">{rec.ProductName}</h3>
-                        
-                        {rec.AlreadyPurchasedCrossSell && rec.AlreadyPurchasedCrossSell.length > 0 && (
-                          <div className="space-y-3">
-                            {rec.AlreadyPurchasedCrossSell.map((crossSell, csIndex) => (
-                              <div key={csIndex} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <div className="flex items-start justify-between mb-2">
-                                  <h4 className="font-medium text-blue-900">{crossSell.SuggestedProduct}</h4>
-                                  <span className="text-sm font-bold text-blue-700">${crossSell.Price}</span>
-                                </div>
-                                <p className="text-sm text-blue-800 mb-2">
-                                  <strong>Category:</strong> {crossSell.Category} | 
-                                  <strong> Similarity:</strong> {(crossSell.Similarity * 100).toFixed(1)}%
-                                </p>
-                                <p className="text-sm text-blue-700">{crossSell.AIReasoning}</p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                  {activeTab === 'rejected' && (
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <X className="w-5 h-5 text-red-600" />
+                        <h2 className="text-lg font-semibold text-gray-900">Rejected Recommendations</h2>
                       </div>
-                    ))}
-                  </div>
+                      
+                      {recommendations.RejectedRecommendations && recommendations.RejectedRecommendations.length > 0 ? (
+                        <div className="space-y-4">
+                          {recommendations.RejectedRecommendations.map((rec, index) => (
+                            <div key={index} className="border border-gray-200 rounded-lg p-4">
+                              <h3 className="font-medium text-gray-900 mb-2">{rec.ProductName || 'Unknown Product'}</h3>
+                              
+                              {rec.RejectedCrossSell && rec.RejectedCrossSell.length > 0 && (
+                                <div className="space-y-3">
+                                  {rec.RejectedCrossSell.map((crossSell, csIndex) => (
+                                    <div key={csIndex} className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                      <div className="flex items-start justify-between mb-2">
+                                        <h4 className="font-medium text-red-900">{crossSell.SuggestedProduct || 'Unknown Product'}</h4>
+                                        <span className="text-sm font-bold text-red-700">${crossSell.Price || 0}</span>
+                                      </div>
+                                      <p className="text-sm text-red-800 mb-2">
+                                        <strong>Category:</strong> {crossSell.Category || 'N/A'} | 
+                                        <strong> Similarity:</strong> {((crossSell.Similarity || 0) * 100).toFixed(1)}%
+                                      </p>
+                                      <p className="text-sm text-red-700">{crossSell.AIReasoning || 'No reasoning provided'}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <X className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                          <p className="text-gray-500">No rejected recommendations available</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === 'purchased' && (
+                    <div>
+                      <div className="flex items-center gap-3 mb-4">
+                        <Clock className="w-5 h-5 text-blue-600" />
+                        <h2 className="text-lg font-semibold text-gray-900">Already Purchased Products</h2>
+                      </div>
+                      
+                      {recommendations.AlreadyPurchasedRecommendations && recommendations.AlreadyPurchasedRecommendations.length > 0 ? (
+                        <div className="space-y-4">
+                          {recommendations.AlreadyPurchasedRecommendations.map((rec, index) => (
+                            <div key={index} className="border border-gray-200 rounded-lg p-4">
+                              <h3 className="font-medium text-gray-900 mb-2">{rec.ProductName || 'Unknown Product'}</h3>
+                              
+                              {rec.AlreadyPurchasedCrossSell && rec.AlreadyPurchasedCrossSell.length > 0 && (
+                                <div className="space-y-3">
+                                  {rec.AlreadyPurchasedCrossSell.map((crossSell, csIndex) => (
+                                    <div key={csIndex} className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                      <div className="flex items-start justify-between mb-2">
+                                        <h4 className="font-medium text-blue-900">{crossSell.SuggestedProduct || 'Unknown Product'}</h4>
+                                        <span className="text-sm font-bold text-blue-700">${crossSell.Price || 0}</span>
+                                      </div>
+                                      <p className="text-sm text-blue-800 mb-2">
+                                        <strong>Category:</strong> {crossSell.Category || 'N/A'} | 
+                                        <strong> Similarity:</strong> {((crossSell.Similarity || 0) * 100).toFixed(1)}%
+                                      </p>
+                                      <p className="text-sm text-blue-700">{crossSell.AIReasoning || 'No reasoning provided'}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <Clock className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                          <p className="text-gray-500">No already purchased products available</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           )}
         </div>

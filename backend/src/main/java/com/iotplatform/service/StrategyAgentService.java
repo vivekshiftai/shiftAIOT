@@ -54,6 +54,11 @@ public class StrategyAgentService {
         try {
             log.info("🎯 Generating marketing intelligence recommendations for customer: {}", customerId);
 
+            // Validate input
+            if (customerId == null || customerId.trim().isEmpty()) {
+                throw new IllegalArgumentException("Customer ID cannot be null or empty");
+            }
+
             // Prepare request
             Map<String, Object> request = Map.of("customer_id", customerId);
             
@@ -72,8 +77,19 @@ public class StrategyAgentService {
             ResponseEntity<Map> response = restTemplate.postForEntity(url, requestEntity, Map.class);
             
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Map<String, Object> responseData = response.getBody();
+                
+                // Validate response data structure
+                if (!responseData.containsKey("Summary") || !responseData.containsKey("CustomerInfo")) {
+                    log.warn("⚠️ Strategy Agent API returned incomplete data for customer: {}", customerId);
+                    // Add default values for missing fields
+                    responseData.putIfAbsent("AcceptedRecommendations", new java.util.ArrayList<>());
+                    responseData.putIfAbsent("RejectedRecommendations", new java.util.ArrayList<>());
+                    responseData.putIfAbsent("AlreadyPurchasedRecommendations", new java.util.ArrayList<>());
+                }
+                
                 log.info("✅ Strategy Agent API response received successfully for customer: {}", customerId);
-                return response.getBody();
+                return responseData;
             } else {
                 log.error("❌ Strategy Agent API returned unexpected status: {} for customer: {}", 
                          response.getStatusCode(), customerId);
