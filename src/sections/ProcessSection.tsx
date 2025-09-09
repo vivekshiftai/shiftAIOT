@@ -202,15 +202,15 @@ export const ProcessSection: React.FC = () => {
           
           {/* Customer Selection Form */}
           {!recommendations && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <User className="w-5 h-5 text-green-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Select Customer</h2>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 max-w-2xl mx-auto">
+            <div className="flex items-center gap-2 mb-3">
+              <User className="w-4 h-4 text-green-600" />
+              <h2 className="text-base font-semibold text-gray-900">Select Customer</h2>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                  <label className="block text-sm text-gray-600 mb-2">
                   Choose a customer to generate marketing intelligence recommendations:
                 </label>
                   <div className="relative search-container">
@@ -224,7 +224,7 @@ export const ProcessSection: React.FC = () => {
                         onChange={handleSearchChange}
                         onFocus={() => setShowDropdown(true)}
                         placeholder="Search customers..."
-                        className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-900 font-medium shadow-sm hover:border-gray-300 transition-all duration-200"
+                        className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-900 text-sm shadow-sm hover:border-gray-300 transition-all duration-200"
                   disabled={isLoading}
                       />
                     </div>
@@ -284,17 +284,17 @@ export const ProcessSection: React.FC = () => {
                 <button
                   onClick={generateRecommendations}
                   disabled={!selectedCustomer || isLoading}
-                    className="w-full px-6 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-3 font-medium shadow-sm hover:shadow-md transform hover:-translate-y-0.5 disabled:transform-none"
+                    className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
                 >
                   {isLoading ? (
                     <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Generating Recommendations...
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Generating...
                     </>
                   ) : (
                     <>
-                        <Send className="w-5 h-5" />
-                      Generate Marketing Intelligence
+                        <Send className="w-4 h-4" />
+                      Generate Intelligence
                     </>
                   )}
                 </button>

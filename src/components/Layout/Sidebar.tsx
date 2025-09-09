@@ -52,7 +52,11 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
   return (
     <div className="bg-white border-r border-gray-200 w-64 min-h-screen p-4">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">ActiveOps Hub</h1>
+        <h1 className="text-2xl font-bold p-3 rounded-lg bg-gradient-to-r from-green-100 to-red-100">
+          <span className="bg-gradient-to-r from-green-600 via-green-700 to-red-600 bg-clip-text text-transparent">
+            ActiveOps Hub
+          </span>
+        </h1>
       </div>
       
       <nav className="space-y-2">
