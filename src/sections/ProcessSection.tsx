@@ -8,8 +8,6 @@ import {
   Search,
   FileText,
   Filter,
-  Eye,
-  Plus,
   Brain,
   Bot
 } from 'lucide-react';
@@ -376,53 +374,46 @@ export const ProcessSection: React.FC = () => {
 
           {/* Results Display - Two Column Layout */}
           {recommendations && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               
-              {/* Left Column - Customer Information */}
-              <div className="lg:col-span-1 space-y-6">
-                {/* Customer Information */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              {/* Left Column - Customer Information (25% width) */}
+              <div className="lg:col-span-1">
+                {/* Combined Customer Information and Classification */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                   <div className="flex items-center gap-3 mb-4">
                     <FileText className="w-5 h-5 text-blue-600" />
                     <h3 className="text-lg font-semibold text-gray-900">Customer Information</h3>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
+                    {/* Basic Info */}
                     <div>
                       <p className="text-sm font-medium text-gray-600">Name</p>
-                      <p className="text-lg font-semibold text-gray-900">{recommendations.CustomerInfo?.CustomerName || 'N/A'}</p>
+                      <p className="text-base font-semibold text-gray-900">{recommendations.CustomerInfo?.CustomerName || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-600">Customer ID</p>
-                      <p className="text-lg font-semibold text-gray-900">{recommendations.CustomerInfo?.CustomerID || 'N/A'}</p>
+                      <p className="text-base font-semibold text-gray-900">{recommendations.CustomerInfo?.CustomerID || 'N/A'}</p>
                     </div>
-                  </div>
-                </div>
-                
-                {/* Classification */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Plus className="w-5 h-5 text-green-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Classification</h3>
-                  </div>
-                  <div className="space-y-3">
-                    <div>
+                    
+                    {/* Classification Info */}
+                    <div className="pt-3 border-t border-gray-100">
                       <p className="text-sm font-medium text-gray-600">Type</p>
-                      <p className="text-lg font-semibold text-gray-900">{recommendations.CustomerClassification?.CustomerType || 'N/A'}</p>
+                      <p className="text-base font-semibold text-gray-900">{recommendations.CustomerClassification?.CustomerType || 'N/A'}</p>
                     </div>
-                  <div>
+                    <div>
                       <p className="text-sm font-medium text-gray-600">Stores</p>
-                      <p className="text-lg font-semibold text-gray-900">{recommendations.CustomerClassification?.NumberOfStores || 0}</p>
-                  </div>
-                  <div>
+                      <p className="text-base font-semibold text-gray-900">{recommendations.CustomerClassification?.NumberOfStores || 0}</p>
+                    </div>
+                    <div>
                       <p className="text-sm font-medium text-gray-600">Total Quantity Sold</p>
-                      <p className="text-lg font-semibold text-gray-900">{(recommendations.CustomerClassification?.TotalQuantitySold || 0).toLocaleString()}</p>
+                      <p className="text-base font-semibold text-gray-900">{(recommendations.CustomerClassification?.TotalQuantitySold || 0).toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Right Column - Product Recommendations */}
-              <div className="lg:col-span-2">
+              {/* Right Column - Product Recommendations (75% width) */}
+              <div className="lg:col-span-3">
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                   {/* Search and Filter Bar */}
                   <div className="p-4 border-b border-gray-200">
@@ -538,17 +529,6 @@ export const ProcessSection: React.FC = () => {
                                     </div>
                                   </div>
                                   
-                                  {/* Action Buttons */}
-                                  <div className="flex items-center gap-3">
-                                    <button className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm">
-                                      <Eye className="w-4 h-4" />
-                                      View Details
-                                      <Plus className="w-4 h-4" />
-                                    </button>
-                                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-                                      + Add to Proposal
-                                    </button>
-                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -599,16 +579,6 @@ export const ProcessSection: React.FC = () => {
                                     </div>
                                   </div>
                                   
-                                  <div className="flex items-center gap-3">
-                                    <button className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm">
-                                      <Eye className="w-4 h-4" />
-                                      View Details
-                                      <Plus className="w-4 h-4" />
-                                    </button>
-                                    <button className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium">
-                                      Review Required
-                                    </button>
-                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -659,16 +629,6 @@ export const ProcessSection: React.FC = () => {
                                     </div>
                   </div>
                   
-                                  <div className="flex items-center gap-3">
-                                    <button className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm">
-                                      <Eye className="w-4 h-4" />
-                                      View Details
-                                      <Plus className="w-4 h-4" />
-                                    </button>
-                                    <button className="px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed text-sm font-medium">
-                                      Already Purchased
-                                    </button>
-                                  </div>
                                 </div>
                               </div>
                             </div>
