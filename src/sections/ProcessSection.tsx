@@ -28,10 +28,12 @@ export const ProcessSection: React.FC = () => {
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
 
   // Filter customers based on search query
-  const filteredCustomers = availableCustomers.filter(customer =>
-    customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCustomers = searchQuery.length > 0 
+    ? availableCustomers.filter(customer =>
+        customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        customer.id.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : availableCustomers;
 
   // Handle customer selection
   const handleCustomerSelect = (customer: { id: string; name: string }) => {
@@ -44,10 +46,10 @@ export const ProcessSection: React.FC = () => {
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
-    setShowDropdown(query.length > 0);
+    setShowDropdown(true); // Always show dropdown when typing
     
     // Clear selection if search doesn't match selected customer
-    if (selectedCustomer) {
+    if (selectedCustomer && query.length > 0) {
       const selectedCustomerData = availableCustomers.find(c => c.id === selectedCustomer);
       if (!selectedCustomerData || !selectedCustomerData.name.toLowerCase().includes(query.toLowerCase())) {
         setSelectedCustomer('');
@@ -202,7 +204,7 @@ export const ProcessSection: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Search for a customer to generate marketing intelligence recommendations:
+                  Choose a customer to generate marketing intelligence recommendations:
                 </label>
                 <div className="relative search-container">
                   <div className="relative">
@@ -213,41 +215,58 @@ export const ProcessSection: React.FC = () => {
                       type="text"
                       value={searchQuery}
                       onChange={handleSearchChange}
-                      onFocus={() => setShowDropdown(searchQuery.length > 0)}
-                      placeholder="Type customer name or ID..."
+                      onFocus={() => setShowDropdown(true)}
+                      placeholder="Search customers..."
                       className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-900 font-medium shadow-sm hover:border-gray-300 transition-all duration-200"
                       disabled={isLoading}
                     />
                   </div>
                   
-                  {/* Dropdown Results */}
-                  {showDropdown && filteredCustomers.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-auto">
-                      {filteredCustomers.map((customer) => (
-                        <div
-                          key={customer.id}
-                          onClick={() => handleCustomerSelect(customer)}
-                          className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">{customer.name}</p>
-                              <p className="text-xs text-gray-500">ID: {customer.id}</p>
-                            </div>
-                            {selectedCustomer === customer.id && (
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            )}
+                  {/* Dropdown with Search */}
+                  {showDropdown && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-hidden">
+                      {/* Search Input inside dropdown */}
+                      <div className="p-3 border-b border-gray-100">
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search className="h-4 w-4 text-gray-400" />
                           </div>
+                          <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={handleSearchChange}
+                            placeholder="Type customer name or ID..."
+                            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-1 focus:ring-green-500 focus:border-green-500 text-sm"
+                            autoFocus
+                          />
                         </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {/* No results message */}
-                  {showDropdown && searchQuery.length > 0 && filteredCustomers.length === 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg">
-                      <div className="px-4 py-3 text-center text-gray-500 text-sm">
-                        No customers found matching "{searchQuery}"
+                      </div>
+                      
+                      {/* Customer List */}
+                      <div className="max-h-48 overflow-auto">
+                        {filteredCustomers.length > 0 ? (
+                          filteredCustomers.map((customer) => (
+                            <div
+                              key={customer.id}
+                              onClick={() => handleCustomerSelect(customer)}
+                              className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">{customer.name}</p>
+                                  <p className="text-xs text-gray-500">ID: {customer.id}</p>
+                                </div>
+                                {selectedCustomer === customer.id && (
+                                  <CheckCircle className="w-4 h-4 text-green-500" />
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-4 py-3 text-center text-gray-500 text-sm">
+                            {searchQuery.length > 0 ? `No customers found matching "${searchQuery}"` : 'No customers available'}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
