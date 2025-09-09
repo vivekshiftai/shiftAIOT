@@ -8,7 +8,8 @@ import {
   CheckCircle,
   X,
   Clock,
-  BarChart3
+  BarChart3,
+  Search
 } from 'lucide-react';
 import { logError, logInfo } from '../utils/logger';
 import { StrategyAgentService, StrategyAgentResponse } from '../services/strategyAgentService';
@@ -23,6 +24,36 @@ export const ProcessSection: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [availableCustomers, setAvailableCustomers] = useState<Array<{ id: string; name: string }>>([]);
   const [activeTab, setActiveTab] = useState<'accepted' | 'rejected' | 'purchased'>('accepted');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [showDropdown, setShowDropdown] = useState<boolean>(false);
+
+  // Filter customers based on search query
+  const filteredCustomers = availableCustomers.filter(customer =>
+    customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    customer.id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Handle customer selection
+  const handleCustomerSelect = (customer: { id: string; name: string }) => {
+    setSelectedCustomer(customer.id);
+    setSearchQuery(customer.name);
+    setShowDropdown(false);
+  };
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    setShowDropdown(query.length > 0);
+    
+    // Clear selection if search doesn't match selected customer
+    if (selectedCustomer) {
+      const selectedCustomerData = availableCustomers.find(c => c.id === selectedCustomer);
+      if (!selectedCustomerData || !selectedCustomerData.name.toLowerCase().includes(query.toLowerCase())) {
+        setSelectedCustomer('');
+      }
+    }
+  };
 
   // Load available customers on component mount
   useEffect(() => {
@@ -48,21 +79,21 @@ export const ProcessSection: React.FC = () => {
     loadCustomers();
   }, []);
 
-  const testAPIConnectivity = async () => {
-    try {
-      console.log('🔍 Testing Strategy Agent API connectivity via backend...');
-      const connectionResult = await StrategyAgentService.testConnection();
-      console.log('🔍 Connection test result:', connectionResult);
-      
-      if (connectionResult.connected) {
-        console.log('✅ Strategy Agent API is accessible via backend:', connectionResult.message);
-      } else {
-        console.error('❌ Strategy Agent API connection failed:', connectionResult.message);
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.search-container')) {
+        setShowDropdown(false);
       }
-    } catch (error) {
-      console.error('❌ Strategy Agent API connectivity test failed:', error);
-    }
-  };
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
 
   const generateRecommendations = async () => {
     if (!selectedCustomer) {
@@ -170,65 +201,81 @@ export const ProcessSection: React.FC = () => {
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Choose a customer to generate marketing intelligence recommendations:
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Search for a customer to generate marketing intelligence recommendations:
                 </label>
-                <select
-                  value={selectedCustomer}
-                  onChange={(e) => setSelectedCustomer(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  disabled={isLoading}
-                >
-                  <option value="">Select a customer...</option>
-                  {availableCustomers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name} ({customer.id})
-                    </option>
-                  ))}
-                </select>
+                <div className="relative search-container">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Search className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      onFocus={() => setShowDropdown(searchQuery.length > 0)}
+                      placeholder="Type customer name or ID..."
+                      className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-gray-900 font-medium shadow-sm hover:border-gray-300 transition-all duration-200"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  
+                  {/* Dropdown Results */}
+                  {showDropdown && filteredCustomers.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-auto">
+                      {filteredCustomers.map((customer) => (
+                        <div
+                          key={customer.id}
+                          onClick={() => handleCustomerSelect(customer)}
+                          className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{customer.name}</p>
+                              <p className="text-xs text-gray-500">ID: {customer.id}</p>
+                            </div>
+                            {selectedCustomer === customer.id && (
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* No results message */}
+                  {showDropdown && searchQuery.length > 0 && filteredCustomers.length === 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg">
+                      <div className="px-4 py-3 text-center text-gray-500 text-sm">
+                        No customers found matching "{searchQuery}"
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               
-              <div className="space-y-3">
+              <div>
                 <button
                   onClick={generateRecommendations}
                   disabled={!selectedCustomer || isLoading}
-                  className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  className="w-full px-6 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-3 font-medium shadow-sm hover:shadow-md transform hover:-translate-y-0.5 disabled:transform-none"
                 >
                   {isLoading ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       Generating Recommendations...
                     </>
                   ) : (
                     <>
-                      <Send className="w-4 h-4" />
+                      <Send className="w-5 h-5" />
                       Generate Marketing Intelligence
                     </>
                   )}
-                </button>
-                
-                <button
-                  onClick={testAPIConnectivity}
-                  className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 text-sm"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  Test API Connection
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Backend Integration Info */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              <p className="text-green-800 font-medium">Backend Integration Active</p>
-            </div>
-            <p className="text-green-700 mt-1 text-sm">
-              All API calls are now routed through the backend proxy to avoid CORS issues. 
-              Use the "Test API Connection" button to verify connectivity.
-            </p>
-          </div>
 
           {/* Error Display */}
           {error && (
