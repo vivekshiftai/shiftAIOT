@@ -1,12 +1,12 @@
 package com.iotplatform.controller;
 
 import com.iotplatform.security.CustomUserDetails;
+import com.iotplatform.service.StrategyAgentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
 
@@ -23,8 +23,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class StrategyAgentController {
 
-    private final RestTemplate restTemplate;
-    private static final String STRATEGY_AGENT_BASE_URL = "http://20.57.36.66:8001";
+    private final StrategyAgentService strategyAgentService;
 
     /**
      * Proxy endpoint for generating marketing intelligence recommendations
@@ -44,22 +43,12 @@ public class StrategyAgentController {
             log.info("🎯 Generating marketing intelligence recommendations for customer: {} by user: {}", 
                     customerId, userDetails.getUser().getEmail());
 
-            // Prepare request headers
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            // Use the Strategy Agent Service
+            Map<String, Object> response = strategyAgentService.generateRecommendations(customerId);
             
-            // Create request entity
-            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(request, headers);
+            log.info("✅ Strategy Agent recommendations generated successfully for customer: {}", customerId);
             
-            // Call Strategy Agent API
-            String url = STRATEGY_AGENT_BASE_URL + "/generate-recommendations";
-            log.info("🔍 Calling Strategy Agent API: {}", url);
-            
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, requestEntity, Map.class);
-            
-            log.info("✅ Strategy Agent API response received - Status: {}", response.getStatusCode());
-            
-            return ResponseEntity.ok(response.getBody());
+            return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             log.error("❌ Failed to generate marketing intelligence recommendations", e);
@@ -85,28 +74,19 @@ public class StrategyAgentController {
             log.info("📄 Downloading PDF report for customer: {} by user: {}", 
                     customerId, userDetails.getUser().getEmail());
 
-            // Call Strategy Agent API for PDF download
-            String url = STRATEGY_AGENT_BASE_URL + "/recommendations/" + customerId + "/download";
-            log.info("🔍 Calling Strategy Agent PDF download API: {}", url);
+            // Use the Strategy Agent Service
+            byte[] pdfData = strategyAgentService.downloadPDFReport(customerId);
             
-            ResponseEntity<byte[]> response = restTemplate.getForEntity(url, byte[].class);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", 
+                    "marketing_intelligence_report_" + customerId + ".pdf");
             
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.APPLICATION_PDF);
-                headers.setContentDispositionFormData("attachment", 
-                        "marketing_intelligence_report_" + customerId + ".pdf");
-                
-                log.info("✅ PDF report downloaded successfully for customer: {}", customerId);
-                
-                return ResponseEntity.ok()
-                        .headers(headers)
-                        .body(response.getBody());
-            } else {
-                log.error("❌ Failed to download PDF report - Status: {}", response.getStatusCode());
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(Map.of("error", "PDF report not found"));
-            }
+            log.info("✅ PDF report downloaded successfully for customer: {}", customerId);
+            
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(pdfData);
             
         } catch (Exception e) {
             log.error("❌ Failed to download PDF report for customer: {}", customerId, e);
@@ -125,16 +105,17 @@ public class StrategyAgentController {
         }
 
         try {
-            String url = STRATEGY_AGENT_BASE_URL + "/health";
-            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            // Use the Strategy Agent Service
+            Map<String, Object> healthResult = strategyAgentService.healthCheck();
             
-            log.info("✅ Strategy Agent health check successful - Status: {}", response.getStatusCode());
-            
-            return ResponseEntity.ok(Map.of(
-                    "status", "healthy",
-                    "strategy_agent_status", response.getStatusCode().value(),
-                    "message", "Strategy Agent is accessible"
-            ));
+            String status = (String) healthResult.get("status");
+            if ("healthy".equals(status)) {
+                log.info("✅ Strategy Agent health check successful");
+                return ResponseEntity.ok(healthResult);
+            } else {
+                log.warn("⚠️ Strategy Agent health check failed: {}", healthResult.get("error"));
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(healthResult);
+            }
             
         } catch (Exception e) {
             log.error("❌ Strategy Agent health check failed", e);
@@ -143,6 +124,79 @@ public class StrategyAgentController {
                             "status", "unhealthy",
                             "error", "Strategy Agent is not accessible: " + e.getMessage()
                     ));
+        }
+    }
+
+    /**
+     * Get available customers
+     */
+    @GetMapping("/customers")
+    public ResponseEntity<?> getAvailableCustomers(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            log.info("📋 Getting available customers for user: {}", userDetails.getUser().getEmail());
+            
+            Map<String, Object> customers = strategyAgentService.getAvailableCustomers();
+            
+            return ResponseEntity.ok(customers);
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to get available customers", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to get available customers: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get Strategy Agent service information
+     */
+    @GetMapping("/info")
+    public ResponseEntity<?> getServiceInfo(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            log.info("ℹ️ Getting Strategy Agent service info for user: {}", userDetails.getUser().getEmail());
+            
+            Map<String, Object> serviceInfo = strategyAgentService.getServiceInfo();
+            
+            return ResponseEntity.ok(serviceInfo);
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to get service info", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to get service info: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Test Strategy Agent connection
+     */
+    @PostMapping("/test-connection")
+    public ResponseEntity<?> testConnection(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            log.info("🧪 Testing Strategy Agent connection for user: {}", userDetails.getUser().getEmail());
+            
+            boolean isConnected = strategyAgentService.testConnection();
+            
+            return ResponseEntity.ok(Map.of(
+                "connected", isConnected,
+                "message", isConnected ? "Connection successful" : "Connection failed",
+                "timestamp", System.currentTimeMillis()
+            ));
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to test connection", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to test connection: " + e.getMessage()));
         }
     }
 }

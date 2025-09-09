@@ -141,6 +141,16 @@ pdf:
       thread-name-prefix: pdf-processing-
       keep-alive-seconds: 60
 
+# Strategy Agent Configuration
+strategy:
+  agent:
+    base-url: ${STRATEGY_AGENT_BASE_URL:http://20.57.36.66:8001}
+    timeout: ${STRATEGY_AGENT_TIMEOUT:30000}  # 30 seconds
+    max-retries: ${STRATEGY_AGENT_MAX_RETRIES:3}
+    retry-delay: ${STRATEGY_AGENT_RETRY_DELAY:1000}  # 1 second
+    connection-timeout: ${STRATEGY_AGENT_CONNECTION_TIMEOUT:10000}  # 10 seconds
+    read-timeout: ${STRATEGY_AGENT_READ_TIMEOUT:30000}  # 30 seconds
+
 # Maintenance Notification Scheduler Configuration
 maintenance:
   scheduler:

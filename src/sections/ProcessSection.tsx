@@ -11,104 +11,52 @@ import {
   BarChart3
 } from 'lucide-react';
 import { logError, logInfo } from '../utils/logger';
+import { StrategyAgentService, StrategyAgentResponse } from '../services/strategyAgentService';
 import '../styles/knowledge.css';
 
-// Strategy Agent interfaces
-interface CustomerInfo {
-  CustomerID: string;
-  CustomerName: string;
-}
-
-interface CustomerClassification {
-  CustomerType: string;
-  TotalQuantitySold: number;
-  NumberOfStores: number;
-  ClassificationCriteria: {
-    StoresGreaterThan50: boolean;
-    QuantityGreaterThan200K: boolean;
-  };
-}
-
-interface Recommendation {
-  CustomerCatalogueItemID: string;
-  ProductName: string;
-  QuantityRequired: number;
-  Ingredients: string[];
-  CrossSell?: CrossSellRecommendation[];
-  RejectedCrossSell?: CrossSellRecommendation[];
-  AlreadyPurchasedCrossSell?: CrossSellRecommendation[];
-}
-
-interface CrossSellRecommendation {
-  Ingredient: string;
-  SuggestedProduct: string;
-  ProductID: number;
-  Similarity: number;
-  Category: string;
-  Price: number;
-  AIReasoning: string;
-  Status: 'Accepted' | 'Rejected' | 'Already Purchased';
-}
-
-interface StrategyAgentResponse {
-  success: boolean;
-  message: string;
-  customer_id: string;
-  timestamp: string;
-  CustomerInfo: CustomerInfo;
-  CustomerClassification: CustomerClassification;
-  AcceptedRecommendations: Recommendation[];
-  RejectedRecommendations: Recommendation[];
-  AlreadyPurchasedRecommendations: Recommendation[];
-  Summary: {
-    total_recommendations: number;
-    total_rejected: number;
-    total_already_purchased: number;
-  };
-  files_generated: {
-    json_file: string;
-    pdf_file: string;
-  };
-}
+// Interfaces are now imported from StrategyAgentService
 
 export const ProcessSection: React.FC = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<StrategyAgentResponse | null>(null);
   const [error, setError] = useState<string>('');
-
-  // Available customers from Strategy Agent
-  const availableCustomers = [
-    { id: 'C001', name: 'Starbucks' },
-    { id: 'C002', name: 'McDonald\'s' },
-    { id: 'C003', name: 'Subway' }
-  ];
+  const [availableCustomers, setAvailableCustomers] = useState<Array<{ id: string; name: string }>>([]);
 
   // Load available customers on component mount
   useEffect(() => {
-    logInfo('Process', 'Marketing Intelligence Process section loaded', { 
-      availableCustomers: availableCustomers.length 
-    });
-    
-    // Test API connectivity
-    testAPIConnectivity();
+    const loadCustomers = async () => {
+      try {
+        logInfo('Process', 'Loading available customers from backend');
+        const customers = await StrategyAgentService.getAvailableCustomers();
+        setAvailableCustomers(customers);
+        
+        logInfo('Process', 'Marketing Intelligence Process section loaded with backend integration', { 
+          availableCustomers: customers.length 
+        });
+        
+        // Backend integration is now active - all API calls go through backend proxy
+        console.log('ℹ️ Backend integration active - API calls routed through backend proxy');
+      } catch (error) {
+        logError('Process', 'Failed to load available customers', error instanceof Error ? error : new Error('Unknown error'));
+        // Fallback to empty array - the service will handle fallback internally
+        setAvailableCustomers([]);
+      }
+    };
+
+    loadCustomers();
   }, []);
 
   const testAPIConnectivity = async () => {
     try {
-      console.log('🔍 Testing Strategy Agent API connectivity...');
-      const response = await fetch('http://20.57.36.66:8001/health', {
-        method: 'GET',
-        mode: 'cors',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      });
-      console.log('🔍 Health check response:', response.status, response.statusText);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Strategy Agent API is accessible:', data);
+      console.log('🔍 Testing Strategy Agent API connectivity via backend...');
+      const connectionResult = await StrategyAgentService.testConnection();
+      console.log('🔍 Connection test result:', connectionResult);
+      
+      if (connectionResult.connected) {
+        console.log('✅ Strategy Agent API is accessible via backend:', connectionResult.message);
+      } else {
+        console.error('❌ Strategy Agent API connection failed:', connectionResult.message);
       }
     } catch (error) {
       console.error('❌ Strategy Agent API connectivity test failed:', error);
@@ -143,30 +91,12 @@ export const ProcessSection: React.FC = () => {
 
   const generateRecommendationsViaBackend = async () => {
     try {
-      console.log('🔍 Calling Strategy Agent API directly...');
+      console.log('🔍 Calling Strategy Agent API via backend proxy...');
       
-      const response = await fetch('http://20.57.36.66:8001/generate-recommendations', {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          customer_id: selectedCustomer
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error Response:', errorText);
-        throw new Error(`Strategy Agent API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data: StrategyAgentResponse = await response.json();
+      const data = await StrategyAgentService.generateRecommendations(selectedCustomer);
       setRecommendations(data);
       
-      logInfo('Process', 'Marketing intelligence recommendations generated successfully', {
+      logInfo('Process', 'Marketing intelligence recommendations generated successfully via backend', {
         customerId: selectedCustomer,
         totalRecommendations: data.Summary.total_recommendations
       });
@@ -181,40 +111,16 @@ export const ProcessSection: React.FC = () => {
     if (!recommendations) return;
 
     try {
-      console.log('🔍 Downloading PDF report from Strategy Agent API...');
+      console.log('🔍 Downloading PDF report via backend proxy...');
       
-      // Use the PDF file path from the API response
-      const pdfUrl = `http://20.57.36.66:8001/${recommendations.files_generated.pdf_file}`;
-      
-      const response = await fetch(pdfUrl, {
-        method: 'GET',
-        mode: 'cors',
-        headers: {
-          'Accept': 'application/pdf',
-        },
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ PDF Download Error:', errorText);
-        throw new Error(`Failed to download PDF report: ${response.status} ${response.statusText}`);
-      }
+      const blob = await StrategyAgentService.downloadPDFReport(recommendations.customer_id);
+      StrategyAgentService.triggerPDFDownload(blob, recommendations.customer_id, recommendations.timestamp);
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `marketing_intelligence_report_${recommendations.customer_id}_${recommendations.timestamp}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      logInfo('Process', 'PDF report downloaded successfully', { 
+      logInfo('Process', 'PDF report downloaded successfully via backend', { 
         customerId: recommendations.customer_id 
       });
     } catch (error) {
-      logError('Process', 'Failed to download PDF report', error instanceof Error ? error : new Error('Unknown error'));
+      logError('Process', 'Failed to download PDF report via backend', error instanceof Error ? error : new Error('Unknown error'));
       setError('Failed to download PDF report');
     }
   };
@@ -267,24 +173,46 @@ export const ProcessSection: React.FC = () => {
                 </select>
               </div>
               
-              <button
-                onClick={generateRecommendations}
-                disabled={!selectedCustomer || isLoading}
-                className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Generating Recommendations...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4" />
-                    Generate Marketing Intelligence
-                  </>
-                )}
-              </button>
+              <div className="space-y-3">
+                <button
+                  onClick={generateRecommendations}
+                  disabled={!selectedCustomer || isLoading}
+                  className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Generating Recommendations...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Generate Marketing Intelligence
+                    </>
+                  )}
+                </button>
+                
+                <button
+                  onClick={testAPIConnectivity}
+                  className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 text-sm"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Test API Connection
+                </button>
+              </div>
             </div>
+          </div>
+
+          {/* Backend Integration Info */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <p className="text-green-800 font-medium">Backend Integration Active</p>
+            </div>
+            <p className="text-green-700 mt-1 text-sm">
+              All API calls are now routed through the backend proxy to avoid CORS issues. 
+              Use the "Test API Connection" button to verify connectivity.
+            </p>
           </div>
 
           {/* Error Display */}
@@ -295,6 +223,12 @@ export const ProcessSection: React.FC = () => {
                 <p className="text-red-800 font-medium">Error</p>
               </div>
               <p className="text-red-700 mt-1">{error}</p>
+              {error.includes('Backend API error') && (
+                <div className="mt-2 p-2 bg-red-100 rounded text-sm">
+                  <p className="text-red-800 font-medium">Backend API Issue Detected:</p>
+                  <p className="text-red-700">Please check the backend server connectivity and Strategy Agent service status.</p>
+                </div>
+              )}
             </div>
           )}
 
