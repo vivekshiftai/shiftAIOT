@@ -140,10 +140,9 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
             {onBack && (
               <button
                 onClick={onBack}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                className="flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back to Processes
               </button>
             )}
             <div>
