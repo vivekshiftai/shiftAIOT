@@ -18,27 +18,27 @@ interface StatsCardProps {
 
 const colorClasses = {
   blue: {
-    bg: 'bg-primary-50 dark:bg-primary-900/20',
+    bg: '',
     icon: 'text-primary-600 dark:text-primary-400',
     text: 'text-primary-600 dark:text-primary-400'
   },
   green: {
-    bg: 'bg-success-50 dark:bg-success-900/20',
+    bg: '',
     icon: 'text-success-600 dark:text-success-400',
     text: 'text-success-600 dark:text-success-400'
   },
   yellow: {
-    bg: 'bg-warning-50 dark:bg-warning-900/20',
+    bg: '',
     icon: 'text-warning-600 dark:text-warning-400',
     text: 'text-warning-600 dark:text-warning-400'
   },
   red: {
-    bg: 'bg-error-50 dark:bg-error-900/20',
+    bg: '',
     icon: 'text-error-600 dark:text-error-400',
     text: 'text-error-600 dark:text-error-400'
   },
   purple: {
-    bg: 'bg-secondary-50 dark:bg-secondary-900/20',
+    bg: '',
     icon: 'text-secondary-600 dark:text-secondary-400',
     text: 'text-secondary-600 dark:text-secondary-400'
   }
@@ -84,7 +84,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
           )}
         </div>
         
-        <div className={`${colors.bg} p-3 rounded-lg`}>
+        <div className="p-3">
           <Icon className={`w-6 h-6 ${colors.icon}`} />
         </div>
       </div>

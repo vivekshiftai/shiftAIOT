@@ -54,7 +54,7 @@ export const SettingsSection: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold gradient-text">Settings</h1>
+        <h1 className="text-3xl font-bold text-primary">Settings</h1>
         <p className="text-secondary mt-2">
           Manage your account preferences and platform settings
         </p>

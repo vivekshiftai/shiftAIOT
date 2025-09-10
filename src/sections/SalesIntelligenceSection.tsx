@@ -162,7 +162,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
           {recommendations && (
             <button
               onClick={downloadPDFReport}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
             >
               <Download className="w-4 h-4" />
               Opportunity Report
@@ -307,8 +307,8 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
               
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Bot className="w-5 h-5 text-blue-600" />
+                  <div className="p-2 bg-primary-100 rounded-lg">
+                    <Bot className="w-5 h-5 text-primary-600" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-600">Already Purchased</p>
@@ -358,8 +358,8 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                 {/* Combined Customer Information and Classification */}
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <User className="w-5 h-5 text-blue-600" />
+                    <div className="p-2 bg-primary-100 rounded-lg">
+                      <User className="w-5 h-5 text-primary-600" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900">Customer Information</h3>
                   </div>
@@ -413,7 +413,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                         <input
                           type="text"
                           placeholder="Search products or category..."
-                          className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                          className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
                         />
                       </div>
                       <button className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm">
@@ -430,7 +430,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                         onClick={() => setActiveTab('accepted')}
                         className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
                           activeTab === 'accepted'
-                            ? 'border-blue-500 text-blue-600'
+                            ? 'border-primary-500 text-primary-600'
                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                         }`}
                       >
@@ -440,7 +440,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                         onClick={() => setActiveTab('rejected')}
                         className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
                           activeTab === 'rejected'
-                            ? 'border-blue-500 text-blue-600'
+                            ? 'border-primary-500 text-primary-600'
                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                         }`}
                       >
@@ -450,7 +450,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                         onClick={() => setActiveTab('purchased')}
                         className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
                           activeTab === 'purchased'
-                            ? 'border-blue-500 text-blue-600'
+                            ? 'border-primary-500 text-primary-600'
                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                         }`}
                       >
@@ -620,7 +620,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                                   Quantity Required: {rec.QuantityRequired} | 
                                   Ingredients: {rec.Ingredients?.join(', ')}
                                 </p>
-                                <p className="text-sm font-medium text-blue-700">
+                                <p className="text-sm font-medium text-primary-700">
                                   Has {rec.AlreadyPurchasedCrossSell?.length || 0} cross-sell products already purchased:
                                 </p>
                               </div>
@@ -636,7 +636,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                                           </h5>
                                           <p className="text-xs text-gray-500 mb-2">ID: {crossSell.ProductID}</p>
                                         </div>
-                                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                                        <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs font-medium rounded-full">
                                           {crossSell.Status}
                                         </span>
                                       </div>
@@ -660,9 +660,9 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                                         </div>
                                       </div>
                                       
-                                      <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-blue-400">
+                                      <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-primary-400">
                                         <p className="text-xs text-gray-700">
-                                          <strong className="text-blue-700">AI Reasoning:</strong> {crossSell.AIReasoning}
+                                          <strong className="text-primary-700">AI Reasoning:</strong> {crossSell.AIReasoning}
                                         </p>
                                       </div>
                                     </div>

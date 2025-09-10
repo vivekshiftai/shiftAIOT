@@ -328,53 +328,54 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-neutral-200 hover:shadow-xl hover:border-primary-300 transition-all cursor-pointer group min-h-0 overflow-hidden">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className={`${statusInfo.bg} p-3 rounded-xl shadow-sm flex-shrink-0`}>
-            <StatusIcon className={`w-6 h-6 ${statusInfo.color}`} />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-2">
-              <h3 className="font-semibold text-slate-800 text-lg truncate">{device.name}</h3>
-              <span className={`text-xs font-medium px-3 py-1 rounded-full ${statusInfo.bg} ${statusInfo.color} flex-shrink-0`}>
-                {device.status}
-              </span>
+    <div className="bg-white rounded-xl shadow-sm border border-neutral-200 hover:shadow-md hover:border-primary-300 transition-all cursor-pointer group overflow-hidden">
+      {/* Card Header */}
+      <div className="p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-start gap-4 flex-1 min-w-0">
+            {/* Device Icon */}
+            <div className="p-3 rounded-lg flex-shrink-0">
+              <StatusIcon className={`w-6 h-6 ${statusInfo.color}`} />
             </div>
-            <p className="text-sm text-slate-600 mb-1 truncate">{device.location}</p>
-            <p className="text-xs text-slate-500">Updated: {formatLastSeen(device.updatedAt)}</p>
-          </div>
-        </div>
 
-        {/* Status Icon and Real-time Indicator */}
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <div className="relative">
-            <StatusIcon className={`w-5 h-5 ${statusInfo.color}`} />
-            {/* Real-time indicator dot */}
-            <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${
+            {/* Device Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="font-semibold text-neutral-800 text-lg truncate">{device.name}</h3>
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusInfo.bg} ${statusInfo.color} flex-shrink-0`}>
+                  {device.status}
+                </span>
+              </div>
+              <p className="text-sm text-neutral-600 mb-1 truncate">{device.location}</p>
+              <p className="text-xs text-neutral-500">Updated: {formatLastSeen(device.updatedAt)}</p>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Real-time indicator */}
+            <div className={`w-2 h-2 rounded-full ${
               device.status === 'ONLINE' ? 'bg-success-500 animate-pulse' :
               device.status === 'WARNING' ? 'bg-warning-500 animate-pulse' :
               device.status === 'ERROR' ? 'bg-error-500 animate-pulse' :
               'bg-neutral-400'
             }`} />
+            
+            {/* Delete Button */}
+            {onDelete && !isOnboarding && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(device.id, device.name);
+                }}
+                className="p-2 text-neutral-400 hover:text-error-600 hover:bg-error-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                title="Delete Device"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
           </div>
-          
-          {/* Delete Button - Only show if onDelete prop is provided and not onboarding */}
-          {onDelete && !isOnboarding && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(device.id, device.name);
-              }}
-              className="p-2 text-error-600 hover:text-error-700 hover:bg-error-50 rounded-lg transition-colors"
-              title="Delete Device"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
         </div>
-      </div>
 
       {/* Status Update Error */}
       {statusUpdateError && (
@@ -393,49 +394,50 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         </div>
       )}
 
-      {/* Tags */}
-      {device.tags && device.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-4">
-          {device.tags.map((tag) => (
-            <span key={tag} className="text-xs px-2 py-1 bg-primary-50 text-primary-600 rounded-full font-medium">
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Quick Status Change - Only for users with permission */}
-      {canUpdateStatus && !isOnboarding && (
-        <div className="pt-4 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-600">Quick Status:</span>
-            <select
-              value={device.status}
-              onChange={async (e) => {
-                const newStatus = e.target.value as Device['status'];
-                await handleStatusChange(newStatus);
-              }}
-              disabled={isUpdatingStatus}
-              className={`text-xs px-3 py-1 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white/80 text-neutral-900 transition-all ${
-                isUpdatingStatus 
-                  ? 'border-neutral-300 text-neutral-400 cursor-not-allowed' 
-                  : 'border-neutral-300 hover:border-primary-400'
-              }`}
-            >
-              <option value="ONLINE">🟢 Online</option>
-              <option value="OFFLINE">⚫ Offline</option>
-              <option value="WARNING">🟡 Warning</option>
-              <option value="ERROR">🔴 Error</option>
-            </select>
-            {isUpdatingStatus && (
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-xs text-neutral-500">Updating...</span>
-              </div>
-            )}
+        {/* Tags */}
+        {device.tags && device.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {device.tags.map((tag) => (
+              <span key={tag} className="text-xs px-3 py-1 bg-neutral-100 text-neutral-600 rounded-full font-medium">
+                {tag}
+              </span>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Quick Status Change - Only for users with permission */}
+        {canUpdateStatus && !isOnboarding && (
+          <div className="pt-4 border-t border-neutral-100" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-neutral-600 font-medium">Quick Status:</span>
+              <select
+                value={device.status}
+                onChange={async (e) => {
+                  const newStatus = e.target.value as Device['status'];
+                  await handleStatusChange(newStatus);
+                }}
+                disabled={isUpdatingStatus}
+                className={`text-xs px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-neutral-900 transition-all ${
+                  isUpdatingStatus 
+                    ? 'border-neutral-300 text-neutral-400 cursor-not-allowed' 
+                    : 'border-neutral-300 hover:border-primary-400'
+                }`}
+              >
+                <option value="ONLINE">🟢 Online</option>
+                <option value="OFFLINE">⚫ Offline</option>
+                <option value="WARNING">🟡 Warning</option>
+                <option value="ERROR">🔴 Error</option>
+              </select>
+              {isUpdatingStatus && (
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-xs text-neutral-500">Updating...</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
     </div>
   );

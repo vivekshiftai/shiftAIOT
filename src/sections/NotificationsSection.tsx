@@ -49,7 +49,7 @@ export const NotificationsSection: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold gradient-text">Notification Center</h1>
+          <h1 className="text-3xl font-bold text-primary">Notification Center</h1>
           <p className="text-secondary mt-2">
             Manage and view all your platform notifications
           </p>

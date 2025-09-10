@@ -546,7 +546,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             type="text"
             value={formData.deviceName}
             onChange={(e) => handleInputChange('deviceName', e.target.value)}
-            className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
+            className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
               errors.deviceName ? 'border-red-400' : ''
             }`}
             placeholder="e.g., Industrial Machine 001"
@@ -566,7 +566,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             type="text"
             value={formData.location}
             onChange={(e) => handleInputChange('location', e.target.value)}
-            className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
+            className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
               errors.location ? 'border-red-400' : ''
             }`}
             placeholder="e.g., Building A, Floor 2, Room 205"
@@ -585,7 +585,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             type="text"
             value={formData.manufacturer}
             onChange={(e) => handleInputChange('manufacturer', e.target.value)}
-            className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
+            className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
               errors.manufacturer ? 'border-red-400' : ''
             }`}
             placeholder="e.g., Siemens, Schneider Electric"
@@ -599,7 +599,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         <div className="space-y-3">
           <label className="block text-sm font-bold text-gray-700">
             Assign to User {currentUser && !formData.assignedUserId && (
-              <span className="text-xs text-blue-600 font-normal">(will auto-assign to you)</span>
+              <span className="text-xs text-primary-600 font-normal">(will auto-assign to you)</span>
             )}
           </label>
           <select
@@ -627,7 +627,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             )}
           </select>
           {currentUser && !formData.assignedUserId && (
-            <p className="text-blue-600 text-sm mt-2">
+            <p className="text-primary-600 text-sm mt-2">
               💡 Device will be automatically assigned to you ({currentUser.firstName} {currentUser.lastName})
             </p>
           )}
@@ -662,7 +662,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 onClick={() => handleInputChange('connectionType', type)}
                 className={`p-4 rounded-2xl border-2 transition-all duration-300 shadow-sm hover:shadow-md ${
                   formData.connectionType === type
-                    ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-lg'
+                    ? 'border-primary-500 bg-primary-50 text-primary-700 shadow-lg'
                     : 'border-gray-300 hover:border-gray-400 bg-white text-gray-700 hover:text-gray-900'
                 }`}
               >
@@ -690,7 +690,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 type="text"
                 value={formData.brokerUrl || ''}
                 onChange={(e) => handleInputChange('brokerUrl', e.target.value)}
-                className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
+                className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
                   errors.brokerUrl ? 'border-red-400' : ''
                 }`}
                 placeholder="e.g., mqtt://broker.example.com:1883"
@@ -708,7 +708,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 type="text"
                 value={formData.topic || ''}
                 onChange={(e) => handleInputChange('topic', e.target.value)}
-                className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
+                className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
                   errors.topic ? 'border-red-400' : ''
                 }`}
                 placeholder="e.g., device/machine001/data"
@@ -757,7 +757,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 type="text"
                 value={formData.httpEndpoint || ''}
                 onChange={(e) => handleInputChange('httpEndpoint', e.target.value)}
-                className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
+                className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
                   errors.httpEndpoint ? 'border-red-400' : ''
                 }`}
                 placeholder="e.g., https://api.example.com/device/data"
@@ -809,7 +809,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 type="text"
                 value={formData.coapHost || ''}
                 onChange={(e) => handleInputChange('coapHost', e.target.value)}
-                className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
+                className={`w-full px-5 py-4 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300 bg-white text-gray-800 placeholder-gray-500 shadow-sm hover:shadow-md ${
                   errors.coapHost ? 'border-red-400' : ''
                 }`}
                 placeholder="e.g., coap.example.com"
@@ -994,7 +994,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 step < currentStep
                   ? 'w-10 h-10 bg-green-500 border-green-500 text-white'
                   : step === currentStep
-                  ? 'w-16 h-16 bg-blue-500 border-blue-500 text-white shadow-lg'
+                  ? 'w-16 h-16 bg-primary-500 border-primary-500 text-white shadow-lg'
                   : 'w-8 h-8 border-gray-300 text-gray-400 bg-white'
               }`}>
                 {step < currentStep ? (
@@ -1060,13 +1060,13 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               <p className="text-xs text-green-600">Step 1/4</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+          <div className="flex items-center gap-3 p-3 bg-primary-50 rounded-lg border border-primary-200">
+            <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
               <FileText className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="text-sm font-medium text-blue-800">PDF Processed</p>
-              <p className="text-xs text-blue-600">Step 2/4</p>
+              <p className="text-sm font-medium text-primary-800">PDF Processed</p>
+              <p className="text-xs text-primary-600">Step 2/4</p>
             </div>
           </div>
           <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
@@ -1096,27 +1096,27 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 overflow-y-auto">
           <div className="space-y-6">
             {/* Device Info */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
-              <h4 className="text-lg font-semibold text-blue-800 mb-3 flex items-center gap-2">
+            <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-4 border border-primary-200">
+              <h4 className="text-lg font-semibold text-primary-800 mb-3 flex items-center gap-2">
                 <FileText className="w-5 h-5" />
                 Device Information
               </h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-blue-600 font-medium">Name:</span>
-                  <p className="text-blue-800 font-semibold">{formData.deviceName}</p>
+                  <span className="text-primary-600 font-medium">Name:</span>
+                  <p className="text-primary-800 font-semibold">{formData.deviceName}</p>
                 </div>
                 <div>
-                  <span className="text-blue-600 font-medium">Location:</span>
-                  <p className="text-blue-800 font-semibold">{formData.location}</p>
+                  <span className="text-primary-600 font-medium">Location:</span>
+                  <p className="text-primary-800 font-semibold">{formData.location}</p>
                 </div>
                 <div>
-                  <span className="text-blue-600 font-medium">Manufacturer:</span>
-                  <p className="text-blue-800 font-semibold">{formData.manufacturer}</p>
+                  <span className="text-primary-600 font-medium">Manufacturer:</span>
+                  <p className="text-primary-800 font-semibold">{formData.manufacturer}</p>
                 </div>
                 <div>
-                  <span className="text-blue-600 font-medium">Processing Time:</span>
-                  <p className="text-blue-800 font-semibold">{onboardingResult?.processingTime ? `${Math.round(onboardingResult.processingTime / 1000)}s` : 'N/A'}</p>
+                  <span className="text-primary-600 font-medium">Processing Time:</span>
+                  <p className="text-primary-800 font-semibold">{onboardingResult?.processingTime ? `${Math.round(onboardingResult.processingTime / 1000)}s` : 'N/A'}</p>
                 </div>
               </div>
             </div>
@@ -1139,7 +1139,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
             {/* AI Generated Content Stats */}
             <div className="grid grid-cols-3 gap-4">
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 border border-blue-200 text-center">
+              <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-3 border border-primary-200 text-center">
                 <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
                   <CheckCircle className="w-4 h-4 text-white" />
                 </div>

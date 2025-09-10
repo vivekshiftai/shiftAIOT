@@ -483,11 +483,11 @@ export const KnowledgeSection: React.FC = () => {
       <div className="knowledge-fixed-header flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-primary-500 rounded-lg">
-              <Brain className="w-6 h-6 text-white" />
+            <div className="p-2 rounded-lg">
+              <Brain className="w-6 h-6 text-primary-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Knowledge Base</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Knowledge Base</h1>
               <p className="text-sm text-gray-600">
                 AI-powered machine documentation and chat assistant
                 {selectedDevice && (
@@ -860,7 +860,7 @@ export const KnowledgeSection: React.FC = () => {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="p-2 bg-primary-100 rounded-lg flex-shrink-0">
+                        <div className="p-2 rounded-lg flex-shrink-0">
                           <FileText className="w-4 h-4 text-primary-600" />
                         </div>
                         
@@ -917,7 +917,7 @@ export const KnowledgeSection: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg max-w-lg w-full mx-4">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-primary-100 rounded-lg">
+              <div className="p-2 rounded-lg">
                 <FileText className="w-5 h-5 text-primary-600" />
               </div>
               <div>

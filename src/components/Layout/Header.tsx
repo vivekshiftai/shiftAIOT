@@ -68,14 +68,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             <header className="bg-white text-neutral-700 h-16 flex items-center justify-between px-6 shadow-sm border-b border-neutral-200 flex-shrink-0">
       <div className="flex items-center gap-4">
         {/* Sidebar Toggle */}
-        <IconButton
-          icon={<Settings className="w-5 h-5" />}
-          variant="ghost"
-          size="sm"
+        <button
           onClick={onToggleSidebar}
           aria-label="Toggle sidebar"
-          className="text-neutral-600 hover:text-neutral-700 transition-colors"
-        />
+          className="text-neutral-600 hover:text-neutral-700 transition-colors px-3 py-2 rounded-lg hover:bg-neutral-50"
+        >
+          ☰
+        </button>
 
         {/* Search Bar */}
         <form onSubmit={handleSearch} className="relative hidden md:block">

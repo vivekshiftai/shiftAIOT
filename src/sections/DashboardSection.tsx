@@ -362,7 +362,7 @@ export const DashboardSection: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-primary mb-2">
+          <h1 className="text-3xl font-bold text-primary mb-2">
             Command Center
           </h1>
           <p className="text-secondary text-lg">
@@ -468,7 +468,7 @@ export const DashboardSection: React.FC = () => {
           <div className="card p-4 animate-fade-in">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-semibold text-primary">
+                <h3 className="text-xl font-semibold text-primary">
                   Device Activity
                 </h3>
                 <p className="text-secondary text-sm">
@@ -495,8 +495,8 @@ export const DashboardSection: React.FC = () => {
             
             <div className="h-32 flex items-center justify-center">
               <div className="text-center">
-                <div className="w-12 h-12 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Activity className="w-6 h-6 text-primary-300" />
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <Activity className="w-6 h-6 text-primary-600" />
                 </div>
                 <h4 className="text-sm font-semibold text-primary mb-1">
                   Activity Monitor
@@ -624,32 +624,32 @@ export const DashboardSection: React.FC = () => {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/devices')}>
-          <div className="w-12 h-12 bg-primary-50 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-6 h-6 text-primary-300" />
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Shield className="w-6 h-6 text-primary-600" />
           </div>
           <h4 className="font-semibold text-primary mb-2">Manage Smart Assets</h4>
           <p className="text-secondary text-sm">View and configure your smart assets</p>
         </div>
 
         <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/device-care?tab=rules')}>
-          <div className="w-12 h-12 bg-warning-50 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-6 h-6 text-warning-200" />
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Shield className="w-6 h-6 text-warning-600" />
           </div>
           <h4 className="font-semibold text-primary mb-2">Automation Rules</h4>
           <p className="text-secondary text-sm">Create and manage automation workflows</p>
         </div>
 
         <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/analytics')}>
-          <div className="w-12 h-12 bg-success-50 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-6 h-6 text-success-400" />
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Shield className="w-6 h-6 text-success-600" />
           </div>
           <h4 className="font-semibold text-primary mb-2">Intelligence</h4>
           <p className="text-secondary text-sm">View detailed performance insights</p>
         </div>
 
         <div className="card p-6 text-center hover-lift cursor-pointer animate-slide-in" onClick={() => navigate('/settings')}>
-          <div className="w-12 h-12 bg-secondary-50 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Settings className="w-6 h-6 text-secondary" />
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4">
+            <Settings className="w-6 h-6 text-secondary-600" />
           </div>
           <h4 className="font-semibold text-primary mb-2">Settings</h4>
           <p className="text-secondary text-sm">Configure platform preferences</p>
