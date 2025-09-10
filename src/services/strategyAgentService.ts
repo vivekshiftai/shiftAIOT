@@ -14,6 +14,8 @@ export interface CustomerClassification {
   ClassificationCriteria: {
     StoresGreaterThan50: boolean;
     QuantityGreaterThan200K: boolean;
+    StoresBetween25And50: boolean;
+    QuantityBetween50KAnd200K: boolean;
   };
 }
 
@@ -39,8 +41,6 @@ export interface Recommendation {
 }
 
 export interface StrategyAgentResponse {
-  success: boolean;
-  message: string;
   customer_id: string;
   timestamp: string;
   CustomerInfo: CustomerInfo;
@@ -49,13 +49,11 @@ export interface StrategyAgentResponse {
   RejectedRecommendations: Recommendation[];
   AlreadyPurchasedRecommendations: Recommendation[];
   Summary: {
-    total_recommendations: number;
-    total_rejected: number;
-    total_already_purchased: number;
-  };
-  files_generated: {
-    json_file: string;
-    pdf_file: string;
+    TotalUpSell: number;
+    TotalCrossSell: number;
+    TotalRejected: number;
+    TotalAlreadyPurchased: number;
+    TotalRecommendations: number;
   };
 }
 
@@ -155,9 +153,11 @@ export class StrategyAgentService {
           }))
         })),
         Summary: {
-          total_recommendations: data.Summary.total_recommendations || 0,
-          total_rejected: data.Summary.total_rejected || 0,
-          total_already_purchased: data.Summary.total_already_purchased || 0
+          TotalUpSell: data.Summary.TotalUpSell || 0,
+          TotalCrossSell: data.Summary.TotalCrossSell || 0,
+          TotalRejected: data.Summary.TotalRejected || 0,
+          TotalAlreadyPurchased: data.Summary.TotalAlreadyPurchased || 0,
+          TotalRecommendations: data.Summary.TotalRecommendations || 0
         },
         CustomerInfo: {
           CustomerID: data.CustomerInfo?.CustomerID || 'N/A',
@@ -169,14 +169,16 @@ export class StrategyAgentService {
           NumberOfStores: data.CustomerClassification?.NumberOfStores || 0,
           ClassificationCriteria: data.CustomerClassification?.ClassificationCriteria || {
             StoresGreaterThan50: false,
-            QuantityGreaterThan200K: false
+            QuantityGreaterThan200K: false,
+            StoresBetween25And50: false,
+            QuantityBetween50KAnd200K: false
           }
         }
       };
       
       logInfo('StrategyAgent', 'Recommendations generated successfully', {
         customerId,
-        totalRecommendations: validatedData.Summary.total_recommendations,
+        totalRecommendations: validatedData.Summary.TotalRecommendations,
         accepted: validatedData.AcceptedRecommendations.length,
         rejected: validatedData.RejectedRecommendations.length,
         alreadyPurchased: validatedData.AlreadyPurchasedRecommendations.length
