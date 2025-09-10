@@ -76,62 +76,15 @@ public class SlackNotificationService {
     private String buildSlackMessage(Notification notification) {
         StringBuilder message = new StringBuilder();
         
-        // Add notification header with emoji based on category
+        // Add notification header - minimal emoji
         String emoji = getCategoryEmoji(notification.getCategory());
         message.append(emoji).append(" *").append(notification.getTitle()).append("*\n");
         
-        // Add notification message
-        message.append("📝 ").append(notification.getMessage()).append("\n");
+        // Add notification message - no extra emoji
+        message.append(notification.getMessage()).append("\n");
         
-        // Add device onboarding specific information for device assignment notifications
-        if (notification.getCategory() == Notification.NotificationCategory.DEVICE_ASSIGNMENT) {
-            message.append("\n🚀 *Device Onboarding Summary:*\n");
-            
-            // Add device information
-            if (notification.getDeviceName() != null) {
-                message.append("📱 Device: ").append(notification.getDeviceName()).append("\n");
-            }
-            if (notification.getDeviceType() != null) {
-                message.append("🔧 Type: ").append(notification.getDeviceType()).append("\n");
-            }
-            if (notification.getDeviceLocation() != null) {
-                message.append("📍 Location: ").append(notification.getDeviceLocation()).append("\n");
-            }
-            if (notification.getDeviceStatus() != null) {
-                message.append("📊 Status: ").append(notification.getDeviceStatus()).append("\n");
-            }
-            
-            // Add generated data counts
-            if (notification.getTotalRulesCount() != null && notification.getTotalRulesCount() > 0) {
-                message.append("📋 Monitoring Rules: ").append(notification.getTotalRulesCount()).append("\n");
-            }
-            if (notification.getMaintenanceRulesCount() != null && notification.getMaintenanceRulesCount() > 0) {
-                message.append("🔧 Maintenance Tasks: ").append(notification.getMaintenanceRulesCount()).append("\n");
-            }
-            if (notification.getSafetyRulesCount() != null && notification.getSafetyRulesCount() > 0) {
-                message.append("⚠️ Safety Precautions: ").append(notification.getSafetyRulesCount()).append("\n");
-            }
-            
-            message.append("\n✅ *Device is ready for monitoring and management!*\n");
-        }
-        
-        // Add additional details if available
-        if (notification.getDeviceId() != null && !notification.getDeviceId().trim().isEmpty()) {
-            message.append("🔧 Device ID: `").append(notification.getDeviceId()).append("`\n");
-        }
-        
-        if (notification.getOrganizationId() != null && !notification.getOrganizationId().trim().isEmpty()) {
-            message.append("🏢 Organization: `").append(notification.getOrganizationId()).append("`\n");
-        }
-        
-        // Add timestamp
-        if (notification.getCreatedAt() != null) {
-            message.append("⏰ Time: ").append(notification.getCreatedAt().toString()).append("\n");
-        }
-        
-        // Add status
-        String status = notification.isRead() ? "✅ Read" : "🔔 Unread";
-        message.append("📊 Status: ").append(status);
+        // For device assignment notifications, the message already contains all needed info
+        // No need to add redundant device information since it's already in the message
         
         return message.toString();
     }

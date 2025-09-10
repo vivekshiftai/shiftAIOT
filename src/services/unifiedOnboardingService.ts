@@ -247,12 +247,13 @@ export class UnifiedOnboardingService {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logError('UnifiedOnboarding', 'Failed to start progress streaming', error instanceof Error ? error : new Error('Unknown error'));
       
-      // Check if it's a network error or timeout
+      // Check if it's a network error, timeout, or streaming error that requires fallback
       if (errorMessage.includes('network error') || 
           errorMessage.includes('ERR_INCOMPLETE_CHUNKED_ENCODING') ||
           errorMessage.includes('aborted') ||
           errorMessage.includes('timeout') ||
-          errorMessage.includes('stream')) {
+          errorMessage.includes('stream') ||
+          errorMessage.includes('STREAMING_ERROR_FALLBACK_REQUIRED')) {
         logInfo('UnifiedOnboarding', 'Network/streaming error detected, falling back to regular API call');
         try {
           return await this.callDeviceOnboardAPIFallback(formData);
@@ -318,49 +319,71 @@ export class UnifiedOnboardingService {
           const lines = buffer.split('\n');
           buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
+          let currentEvent = '';
+          let currentData = '';
+          
           for (const line of lines) {
-            if (line.trim() === '') continue;
-            
-            if (line.startsWith('data: ')) {
-              const data = line.substring(6); // Remove 'data: ' prefix
-              
-              try {
-                const eventData = JSON.parse(data);
-                
-                if (eventData.stage && eventData.progress !== undefined) {
-                  // This is a progress update
-                  const progress: UnifiedOnboardingProgress = {
-                    stage: eventData.stage,
-                    progress: eventData.progress,
-                    message: eventData.message,
-                    subMessage: eventData.subMessage,
-                    stepDetails: eventData.stepDetails,
-                    error: eventData.error,
-                    retryable: eventData.retryable
-                  };
+            if (line.trim() === '') {
+              // Empty line indicates end of event, process the accumulated data
+              if (currentData) {
+                try {
+                  const eventData = JSON.parse(currentData);
                   
-                  if (onProgress) {
-                    onProgress(progress);
+                  if (currentEvent === 'progress' && eventData.stage && eventData.progress !== undefined) {
+                    // This is a progress update
+                    const progress: UnifiedOnboardingProgress = {
+                      stage: eventData.stage,
+                      progress: eventData.progress,
+                      message: eventData.message,
+                      subMessage: eventData.subMessage,
+                      stepDetails: eventData.stepDetails,
+                      error: eventData.error,
+                      retryable: eventData.retryable,
+                      timestamp: eventData.timestamp
+                    };
+                    
+                    logInfo('UnifiedOnboarding', 'Processing progress update', {
+                      event: currentEvent,
+                      stage: progress.stage,
+                      progress: progress.progress,
+                      message: progress.message
+                    });
+                    
+                    if (onProgress) {
+                      onProgress(progress);
+                    }
+                  } else if (currentEvent === 'complete' && eventData.success !== undefined) {
+                    // This is the final result
+                    clearTimeout(timeoutId);
+                    isCompleted = true;
+                    logInfo('UnifiedOnboarding', 'Received final result from SSE stream', eventData);
+                    resolve(eventData);
+                    return;
+                  } else if (currentEvent === 'error' && eventData.error) {
+                    // This is an error
+                    clearTimeout(timeoutId);
+                    isCompleted = true;
+                    logError('UnifiedOnboarding', 'Received error from SSE stream', eventData);
+                    reject(new Error(eventData.error));
+                    return;
                   }
-                } else if (eventData.success !== undefined) {
-                  // This is the final result
-                  clearTimeout(timeoutId);
-                  isCompleted = true;
-                  logInfo('UnifiedOnboarding', 'Received final result from SSE stream', eventData);
-                  resolve(eventData);
-                  return;
-                } else if (eventData.error) {
-                  // This is an error
-                  clearTimeout(timeoutId);
-                  isCompleted = true;
-                  logError('UnifiedOnboarding', 'Received error from SSE stream', eventData);
-                  reject(new Error(eventData.error));
-                  return;
+                } catch (parseError) {
+                  logError('UnifiedOnboarding', 'Failed to parse SSE data', parseError instanceof Error ? parseError : new Error('Unknown error'));
+                  // Continue processing other lines instead of failing completely
                 }
-              } catch (parseError) {
-                logError('UnifiedOnboarding', 'Failed to parse SSE data', parseError instanceof Error ? parseError : new Error('Unknown error'));
-                // Continue processing other lines instead of failing completely
               }
+              // Reset for next event
+              currentEvent = '';
+              currentData = '';
+              continue;
+            }
+            
+            if (line.startsWith('event: ')) {
+              currentEvent = line.substring(7).trim();
+              logInfo('UnifiedOnboarding', 'Received SSE event', { event: currentEvent });
+            } else if (line.startsWith('data: ')) {
+              currentData = line.substring(6); // Remove 'data: ' prefix
+              logInfo('UnifiedOnboarding', 'Received SSE data', { data: currentData.substring(0, Math.min(100, currentData.length)) + '...' });
             }
           }
 
@@ -369,8 +392,21 @@ export class UnifiedOnboardingService {
         } catch (error) {
           clearTimeout(timeoutId);
           isCompleted = true;
-          logError('UnifiedOnboarding', 'Error processing SSE chunk', error instanceof Error ? error : new Error('Unknown error'));
-          reject(error);
+          const errorObj = error instanceof Error ? error : new Error('Unknown error');
+          logError('UnifiedOnboarding', 'Error processing SSE chunk', errorObj);
+          
+          // Check if this is a network/streaming error that should trigger fallback
+          const errorMessage = errorObj.message.toLowerCase();
+          if (errorMessage.includes('network error') || 
+              errorMessage.includes('err_incomplete_chunked_encoding') ||
+              errorMessage.includes('aborted') ||
+              errorMessage.includes('timeout') ||
+              errorMessage.includes('stream')) {
+            // Reject with a specific error that will trigger fallback
+            reject(new Error('STREAMING_ERROR_FALLBACK_REQUIRED'));
+          } else {
+            reject(errorObj);
+          }
         }
       };
 
@@ -421,7 +457,15 @@ export class UnifiedOnboardingService {
           success: true
         };
 
-        logInfo('UnifiedOnboarding', 'Fallback result formatted', result);
+        logInfo('UnifiedOnboarding', 'Fallback result formatted with actual data', {
+          deviceId: result.deviceId,
+          deviceName: result.deviceName,
+          rulesGenerated: result.rulesGenerated,
+          maintenanceItems: result.maintenanceItems,
+          safetyPrecautions: result.safetyPrecautions,
+          pdfDataExists: !!response.data.pdfData,
+          rawPdfData: response.data.pdfData
+        });
         return result;
 
       } catch (error: any) {

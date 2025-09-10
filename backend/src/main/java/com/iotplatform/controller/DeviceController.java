@@ -1588,9 +1588,17 @@ public class DeviceController {
                 finalResult.put("success", true);
                 finalResult.put("deviceId", response.getId());
                 finalResult.put("deviceName", response.getName());
-                finalResult.put("rulesGenerated", response.getPdfData() != null ? response.getPdfData().getRulesGenerated() : 0);
-                finalResult.put("maintenanceItems", response.getPdfData() != null ? response.getPdfData().getMaintenanceItems() : 0);
-                finalResult.put("safetyPrecautions", response.getPdfData() != null ? response.getPdfData().getSafetyPrecautions() : 0);
+                
+                int rulesGenerated = response.getPdfData() != null ? response.getPdfData().getRulesGenerated() : 0;
+                int maintenanceItems = response.getPdfData() != null ? response.getPdfData().getMaintenanceItems() : 0;
+                int safetyPrecautions = response.getPdfData() != null ? response.getPdfData().getSafetyPrecautions() : 0;
+                
+                finalResult.put("rulesGenerated", rulesGenerated);
+                finalResult.put("maintenanceItems", maintenanceItems);
+                finalResult.put("safetyPrecautions", safetyPrecautions);
+                
+                logger.info("📊 Sending final result with actual counts - Rules: {}, Maintenance: {}, Safety: {}", 
+                           rulesGenerated, maintenanceItems, safetyPrecautions);
                 
                 emitter.send(SseEmitter.event()
                     .name("complete")

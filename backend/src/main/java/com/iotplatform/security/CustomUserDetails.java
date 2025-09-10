@@ -50,15 +50,28 @@ public class CustomUserDetails implements UserDetails {
         } else {
             // Regular user permissions
             authorities.add(new SimpleGrantedAuthority("DEVICE_READ"));
+            authorities.add(new SimpleGrantedAuthority("DEVICE_WRITE")); // Enable device write for regular users
             authorities.add(new SimpleGrantedAuthority("RULE_READ"));
+            authorities.add(new SimpleGrantedAuthority("RULE_WRITE")); // Enable rule write for regular users
             // Allow regular users to read and create/update maintenance tasks
             authorities.add(new SimpleGrantedAuthority("MAINTENANCE_READ"));
             authorities.add(new SimpleGrantedAuthority("MAINTENANCE_WRITE")); // Enable maintenance write for regular users
             authorities.add(new SimpleGrantedAuthority("NOTIFICATION_READ"));
+            authorities.add(new SimpleGrantedAuthority("NOTIFICATION_WRITE")); // Enable notification write for regular users
             authorities.add(new SimpleGrantedAuthority("KNOWLEDGE_READ"));
             // Conversation config permissions for regular users (allow them to manage their own configs)
             authorities.add(new SimpleGrantedAuthority("CONVERSATION_CONFIG_READ"));
             authorities.add(new SimpleGrantedAuthority("CONVERSATION_CONFIG_WRITE")); // Enable conversation config write for regular users
+            authorities.add(new SimpleGrantedAuthority("CONVERSATION_CONFIG_DELETE")); // Enable conversation config delete for regular users
+            // User settings permissions for regular users (allow them to manage their own settings)
+            authorities.add(new SimpleGrantedAuthority("USER_READ"));
+            authorities.add(new SimpleGrantedAuthority("USER_WRITE"));
+            // Maintenance notification permissions for regular users
+            authorities.add(new SimpleGrantedAuthority("MAINTENANCE_NOTIFICATION_READ"));
+            authorities.add(new SimpleGrantedAuthority("MAINTENANCE_NOTIFICATION_WRITE"));
+            // Push notification permissions for regular users
+            authorities.add(new SimpleGrantedAuthority("PUSH_NOTIFICATION_READ"));
+            authorities.add(new SimpleGrantedAuthority("PUSH_NOTIFICATION_WRITE"));
         }
         
         return authorities;

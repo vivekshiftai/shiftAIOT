@@ -391,13 +391,25 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
       // Set success result with processing time
       const finalProcessingTime = result.processingTime || (Date.now() - onboardingStartTime);
+      
+      // Log the actual data received from backend for debugging
+      logInfo('EnhancedDeviceOnboardingForm', 'Received actual data from backend', {
+        deviceId: result.deviceId,
+        deviceName: result.deviceName,
+        rulesGenerated: result.rulesGenerated,
+        maintenanceItems: result.maintenanceItems,
+        safetyPrecautions: result.safetyPrecautions,
+        processingTime: result.processingTime,
+        fullResult: result
+      });
+      
       setOnboardingResult({
         ...result,
         processingTime: finalProcessingTime,
-        // Add fallback values if backend doesn't return actual counts
-        rulesGenerated: result.rulesGenerated || 5,
-        maintenanceItems: result.maintenanceItems || 3,
-        safetyPrecautions: result.safetyPrecautions || 2
+        // Use actual data from backend, only use fallback if backend returns 0 or undefined
+        rulesGenerated: result.rulesGenerated || 0,
+        maintenanceItems: result.maintenanceItems || 0,
+        safetyPrecautions: result.safetyPrecautions || 0
       });
 
       logInfo('EnhancedDeviceOnboardingForm', 'Onboarding process completed successfully', {
@@ -445,12 +457,13 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       const isNetworkError = errorObj.message.toLowerCase().includes('network error') ||
                             errorObj.message.toLowerCase().includes('err_incomplete_chunked_encoding') ||
                             errorObj.message.toLowerCase().includes('stream') ||
-                            errorObj.message.toLowerCase().includes('timeout');
+                            errorObj.message.toLowerCase().includes('timeout') ||
+                            errorObj.message.toLowerCase().includes('streaming_error_fallback_required');
       
       if (isNetworkError) {
-        // For network errors, show a warning but don't treat as complete failure
-        // The device might have been created successfully despite the streaming error
-        logInfo('EnhancedDeviceOnboardingForm', 'Network error detected, checking if device was created', {
+        // For network errors, the service should have already tried fallback
+        // If we're here, it means both streaming and fallback failed
+        logInfo('EnhancedDeviceOnboardingForm', 'Network error detected, both streaming and fallback failed', {
           errorMessage: errorObj.message
         });
         

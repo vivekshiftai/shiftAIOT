@@ -185,7 +185,7 @@ public class UnifiedOnboardingService {
                 
                 // Create enhanced device assignment notification using only actual generated data
                 Notification notification = new Notification();
-                notification.setTitle("🎯 New Device Assignment");
+                notification.setTitle("New Device Assignment");
                 notification.setMessage("Device has been successfully onboarded and assigned to you. The device is now ready for monitoring and management.");
                 notification.setCategory(Notification.NotificationCategory.DEVICE_ASSIGNMENT);
                 notification.setUserId(deviceRequest.getAssignedUserId().trim());
