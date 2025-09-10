@@ -48,6 +48,14 @@ public class DeviceSafetyPrecautionService {
     public DeviceSafetyPrecaution createSafetyPrecaution(DeviceSafetyPrecaution safetyPrecaution) {
         logger.info("Creating new safety precaution for device: {}", safetyPrecaution.getDeviceId());
         
+        // Validate required fields
+        if (safetyPrecaution.getTitle() == null || safetyPrecaution.getTitle().trim().isEmpty()) {
+            throw new IllegalArgumentException("Safety precaution title cannot be null or empty");
+        }
+        if (safetyPrecaution.getDescription() == null || safetyPrecaution.getDescription().trim().isEmpty()) {
+            throw new IllegalArgumentException("Safety precaution description cannot be null or empty");
+        }
+        
         // Ensure ID is set
         if (safetyPrecaution.getId() == null || safetyPrecaution.getId().trim().isEmpty()) {
             safetyPrecaution.setId(UUID.randomUUID().toString());
@@ -57,10 +65,15 @@ public class DeviceSafetyPrecautionService {
         safetyPrecaution.setCreatedAt(LocalDateTime.now());
         safetyPrecaution.setUpdatedAt(LocalDateTime.now());
         
+        // Normalize enum values
+        safetyPrecaution.setSeverity(normalizeSeverity(safetyPrecaution.getSeverity()));
+        safetyPrecaution.setType(normalizeType(safetyPrecaution.getType()));
+        
         // Ensure precaution type is set if not provided
         if (safetyPrecaution.getPrecautionType() == null || safetyPrecaution.getPrecautionType().trim().isEmpty()) {
             safetyPrecaution.setPrecautionType(determinePrecautionType(safetyPrecaution.getTitle(), safetyPrecaution.getCategory()));
         }
+        safetyPrecaution.setPrecautionType(normalizePrecautionType(safetyPrecaution.getPrecautionType()));
         
         // Log the safety precaution details for debugging
         logger.debug("Creating safety precaution: ID={}, Title={}, Type={}, Category={}, DeviceId={}", 
@@ -86,10 +99,15 @@ public class DeviceSafetyPrecautionService {
             precaution.setCreatedAt(LocalDateTime.now());
             precaution.setUpdatedAt(LocalDateTime.now());
             
+            // Normalize enum values
+            precaution.setSeverity(normalizeSeverity(precaution.getSeverity()));
+            precaution.setType(normalizeType(precaution.getType()));
+            
             // Ensure precaution type is set if not provided
             if (precaution.getPrecautionType() == null || precaution.getPrecautionType().trim().isEmpty()) {
                 precaution.setPrecautionType(determinePrecautionType(precaution.getTitle(), precaution.getCategory()));
             }
+            precaution.setPrecautionType(normalizePrecautionType(precaution.getPrecautionType()));
             
             // Log the safety precaution details for debugging
             logger.debug("Preparing safety precaution: ID={}, Title={}, Type={}, Category={}, DeviceId={}", 
@@ -112,10 +130,12 @@ public class DeviceSafetyPrecautionService {
             
             precaution.setTitle(updatedPrecaution.getTitle());
             precaution.setDescription(updatedPrecaution.getDescription());
-            precaution.setType(updatedPrecaution.getType());
+            precaution.setType(normalizeType(updatedPrecaution.getType()));
             precaution.setCategory(updatedPrecaution.getCategory());
-            precaution.setSeverity(updatedPrecaution.getSeverity());
+            precaution.setSeverity(normalizeSeverity(updatedPrecaution.getSeverity()));
+            precaution.setPrecautionType(normalizePrecautionType(updatedPrecaution.getPrecautionType()));
             precaution.setRecommendedAction(updatedPrecaution.getRecommendedAction());
+            precaution.setMitigation(updatedPrecaution.getMitigation());
             precaution.setAboutReaction(updatedPrecaution.getAboutReaction());
             precaution.setCauses(updatedPrecaution.getCauses());
             precaution.setHowToAvoid(updatedPrecaution.getHowToAvoid());
@@ -181,6 +201,13 @@ public class DeviceSafetyPrecautionService {
                 try {
                     String safetyTitle = safetyData.getTitle();
                     
+                    // Validate that title is not null or empty
+                    if (safetyTitle == null || safetyTitle.trim().isEmpty()) {
+                        logger.warn("⚠️ Safety precaution has null/empty title for device: {}, skipping", deviceId);
+                        skippedCount++;
+                        continue;
+                    }
+                    
                     // Check if safety precaution already exists for this device (deviceId + title)
                     Optional<DeviceSafetyPrecaution> existingSafety = deviceSafetyPrecautionRepository
                         .findByDeviceIdAndTitleAndOrganizationId(deviceId, safetyTitle, organizationId);
@@ -197,16 +224,24 @@ public class DeviceSafetyPrecautionService {
                     safety.setTitle(safetyData.getTitle());
                     safety.setDescription(safetyData.getDescription());
                     safety.setCategory(safetyData.getCategory());
-                    safety.setSeverity(safetyData.getSeverity());
-                    safety.setType("PDF_GENERATED");
-                    safety.setPrecautionType(determinePrecautionType(safetyData.getTitle(), safetyData.getCategory()));
+                    safety.setSeverity(normalizeSeverity(safetyData.getSeverity()));
+                    safety.setType(normalizeType(safetyData.getType() != null ? safetyData.getType() : "PDF_GENERATED"));
+                    safety.setPrecautionType(normalizePrecautionType(determinePrecautionType(safetyData.getTitle(), safetyData.getCategory())));
+                    safety.setRecommendedAction(safetyData.getRecommendedAction());
+                    safety.setMitigation(safetyData.getMitigation());
+                    safety.setAboutReaction(safetyData.getAboutReaction());
+                    safety.setCauses(safetyData.getCauses());
+                    safety.setHowToAvoid(safetyData.getHowToAvoid());
+                    safety.setSafetyInfo(safetyData.getSafetyInfo());
                     safety.setIsActive(true);
                     safety.setCreatedBy(currentUserId);
                     safety.setCreatedAt(LocalDateTime.now());
                     safety.setUpdatedAt(LocalDateTime.now());
                     
-                    logger.debug("Creating safety precaution from PDF: ID={}, Title={}, Type={}, Category={}", 
-                        safety.getId(), safety.getTitle(), safety.getType(), safety.getCategory());
+                    logger.debug("Creating safety precaution from PDF: ID={}, Title={}, Type={}, Category={}, Severity={}", 
+                        safety.getId(), safety.getTitle(), safety.getType(), safety.getCategory(), safety.getSeverity());
+                    logger.debug("📊 Safety Data from API: Title='{}', Type='{}', Category='{}', Severity='{}', PrecautionType='{}'", 
+                        safetyData.getTitle(), safetyData.getType(), safetyData.getCategory(), safetyData.getSeverity(), safety.getPrecautionType());
                     
                     deviceSafetyPrecautionRepository.save(safety);
                     processedCount++;
@@ -305,5 +340,109 @@ public class DeviceSafetyPrecautionService {
         
         // Default to general if no specific type can be determined
         return "general";
+    }
+    
+    /**
+     * Normalize severity values to standard format (case-insensitive)
+     */
+    private String normalizeSeverity(String severity) {
+        if (severity == null || severity.trim().isEmpty()) {
+            return "MEDIUM"; // Default value
+        }
+        
+        String normalized = severity.trim().toUpperCase();
+        
+        // Validate and normalize severity values
+        switch (normalized) {
+            case "LOW":
+            case "L":
+                return "LOW";
+            case "MEDIUM":
+            case "MED":
+            case "M":
+                return "MEDIUM";
+            case "HIGH":
+            case "H":
+                return "HIGH";
+            case "CRITICAL":
+            case "CRIT":
+            case "C":
+                return "CRITICAL";
+            default:
+                logger.debug("📋 Unrecognized severity value: '{}', defaulting to MEDIUM", severity);
+                return "MEDIUM";
+        }
+    }
+    
+    /**
+     * Normalize type values to standard format (case-insensitive)
+     */
+    private String normalizeType(String type) {
+        if (type == null || type.trim().isEmpty()) {
+            return "warning"; // Default value
+        }
+        
+        String normalized = type.trim().toLowerCase();
+        
+        // Validate and normalize type values
+        switch (normalized) {
+            case "warning":
+            case "warn":
+            case "w":
+                return "warning";
+            case "procedure":
+            case "proc":
+            case "p":
+                return "procedure";
+            case "caution":
+            case "caut":
+            case "c":
+                return "caution";
+            case "note":
+            case "n":
+                return "note";
+            default:
+                logger.debug("📋 Unrecognized type value: '{}', defaulting to warning", type);
+                return "warning";
+        }
+    }
+    
+    /**
+     * Normalize precaution type values to standard format (case-insensitive)
+     */
+    private String normalizePrecautionType(String precautionType) {
+        if (precautionType == null || precautionType.trim().isEmpty()) {
+            return "general"; // Default value
+        }
+        
+        String normalized = precautionType.trim().toLowerCase();
+        
+        // Validate and normalize precaution type values
+        switch (normalized) {
+            case "electrical":
+            case "electric":
+            case "elec":
+            case "e":
+                return "electrical";
+            case "mechanical":
+            case "mech":
+            case "m":
+                return "mechanical";
+            case "chemical":
+            case "chem":
+            case "c":
+                return "chemical";
+            case "environmental":
+            case "env":
+            case "environment":
+                return "environmental";
+            case "general":
+            case "gen":
+            case "g":
+                return "general";
+            default:
+                logger.debug("📋 Unrecognized precaution type value: '{}', defaulting to general", precautionType);
+                return "general";
+        }
     }
 }

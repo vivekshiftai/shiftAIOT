@@ -337,28 +337,46 @@ public class MaintenanceNotificationScheduler {
      * @return Number of notifications sent
      */
     public int triggerMaintenanceNotifications() {
-        log.info("Manual trigger of maintenance notifications for today's tasks");
+        log.info("📢 Manual trigger of maintenance notifications for today's tasks");
+        log.info("📅 Current date: {}", LocalDate.now());
         
-        // Search by today's date and fetch ALL maintenance tasks for today
-        List<Object[]> todaysTasks = maintenanceScheduleRepository
-            .findAllTodaysMaintenanceTasksWithDetails();
+        try {
+            // Search by today's date and fetch ALL maintenance tasks for today
+            List<Object[]> todaysTasks = maintenanceScheduleRepository
+                .findAllTodaysMaintenanceTasksWithDetails();
 
-        if (todaysTasks.isEmpty()) {
-            log.info("No maintenance tasks found for today");
-            return 0;
-        }
-
-        log.info("Found {} maintenance tasks for today", todaysTasks.size());
-
-        int notificationsSent = 0;
-        for (Object[] taskData : todaysTasks) {
-            if (processMaintenanceTask(taskData)) {
-                notificationsSent++;
+            if (todaysTasks.isEmpty()) {
+                log.info("ℹ️ No maintenance tasks found for today - no notifications to send");
+                return 0;
             }
-        }
 
-        log.info("Manual maintenance notification trigger completed. Sent: {} notifications", notificationsSent);
-        return notificationsSent;
+            log.info("📋 Found {} maintenance tasks for today", todaysTasks.size());
+
+            int notificationsSent = 0;
+            int notificationsFailed = 0;
+            
+            for (Object[] taskData : todaysTasks) {
+                try {
+                    if (processMaintenanceTask(taskData)) {
+                        notificationsSent++;
+                    } else {
+                        notificationsFailed++;
+                    }
+                } catch (Exception e) {
+                    log.error("❌ Error processing maintenance task for notification: {}", e.getMessage(), e);
+                    notificationsFailed++;
+                }
+            }
+
+            log.info("✅ Manual maintenance notification trigger completed");
+            log.info("📊 Summary: {} notifications sent, {} failed", notificationsSent, notificationsFailed);
+            
+            return notificationsSent;
+            
+        } catch (Exception e) {
+            log.error("❌ Error during manual maintenance notification trigger: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to trigger maintenance notifications: " + e.getMessage(), e);
+        }
     }
 
     /**

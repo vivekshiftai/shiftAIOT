@@ -270,12 +270,14 @@ export interface DeviceSafetyPrecaution {
   precautionType: 'electrical' | 'mechanical' | 'chemical' | 'environmental' | 'general';
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   recommendedAction?: string;
+  mitigation?: string;
   aboutReaction?: string;
   causes?: string;
   howToAvoid?: string;
   safetyInfo?: string;
   isActive: boolean;
   organizationId: string;
+  createdBy?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -903,10 +903,8 @@ export const KnowledgeSection: React.FC = () => {
           <div className="knowledge-fixed-footer flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between text-sm text-gray-600">
               <div className="flex items-center gap-4">
-                <span>{devicesWithPDFs.length} machines with Device Guides</span>
-                <span>{devicesWithPDFs.filter(d => d.hasPDFs).length} AI ready</span>
-                <span className="text-blue-600 font-medium">
-                  📄 {documents.length} total Device Guides
+                <span className="text-green-500 font-medium">
+                  {devicesWithPDFs.filter(d => d.hasPDFs).length} AI ready machines
                 </span>
               </div>
             </div>

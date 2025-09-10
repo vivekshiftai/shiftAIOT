@@ -145,6 +145,7 @@ export const mapBackendStageToStep = (stage: string): string => {
     case 'complete':
       return 'safety_procedures'; // Last step is safety procedures
     default:
+      console.warn(`Unknown backend stage: ${stage}, defaulting to device_creation`);
       return 'device_creation';
   }
 };

@@ -35,8 +35,10 @@ export const SafetyForm: React.FC<SafetyFormProps> = ({
     description: string;
     type: 'warning' | 'procedure' | 'caution' | 'note';
     category: string;
+    precautionType: 'electrical' | 'mechanical' | 'chemical' | 'environmental' | 'general';
     severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     recommendedAction: string;
+    mitigation: string;
     aboutReaction: string;
     causes: string;
     howToAvoid: string;
@@ -47,8 +49,10 @@ export const SafetyForm: React.FC<SafetyFormProps> = ({
     description: safety?.description || '',
     type: safety?.type || 'warning',
     category: safety?.category || 'general',
+    precautionType: safety?.precautionType || 'general',
     severity: safety?.severity || 'MEDIUM',
     recommendedAction: safety?.recommendedAction || '',
+    mitigation: safety?.mitigation || '',
     aboutReaction: safety?.aboutReaction || '',
     causes: safety?.causes || '',
     howToAvoid: safety?.howToAvoid || '',
@@ -64,8 +68,10 @@ export const SafetyForm: React.FC<SafetyFormProps> = ({
         description: safety.description,
         type: safety.type,
         category: safety.category,
+        precautionType: safety.precautionType,
         severity: safety.severity,
         recommendedAction: safety.recommendedAction || '',
+        mitigation: safety.mitigation || '',
         aboutReaction: safety.aboutReaction || '',
         causes: safety.causes || '',
         howToAvoid: safety.howToAvoid || '',
@@ -78,8 +84,10 @@ export const SafetyForm: React.FC<SafetyFormProps> = ({
         description: '',
         type: 'warning',
         category: 'general',
+        precautionType: 'general',
         severity: 'MEDIUM',
         recommendedAction: '',
+        mitigation: '',
         aboutReaction: '',
         causes: '',
         howToAvoid: '',
@@ -146,8 +154,10 @@ export const SafetyForm: React.FC<SafetyFormProps> = ({
         description: formData.description,
         type: formData.type,
         category: formData.category,
+        precautionType: formData.precautionType,
         severity: formData.severity,
         recommendedAction: formData.recommendedAction,
+        mitigation: formData.mitigation,
         aboutReaction: formData.aboutReaction,
         causes: formData.causes,
         howToAvoid: formData.howToAvoid,
@@ -289,6 +299,25 @@ export const SafetyForm: React.FC<SafetyFormProps> = ({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
+                Precaution Type
+              </label>
+              <select
+                value={formData.precautionType}
+                onChange={(e) => setFormData({ ...formData, precautionType: e.target.value as any })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="electrical">Electrical</option>
+                <option value="mechanical">Mechanical</option>
+                <option value="chemical">Chemical</option>
+                <option value="environmental">Environmental</option>
+                <option value="general">General</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Severity
               </label>
               <select
@@ -336,6 +365,19 @@ export const SafetyForm: React.FC<SafetyFormProps> = ({
                 rows={2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="What action should be taken?"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mitigation Steps
+              </label>
+              <textarea
+                value={formData.mitigation}
+                onChange={(e) => setFormData({ ...formData, mitigation: e.target.value })}
+                rows={2}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="What steps can be taken to mitigate the risk?"
               />
             </div>
 

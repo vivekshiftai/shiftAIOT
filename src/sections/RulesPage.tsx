@@ -231,13 +231,50 @@ const RulesPage: React.FC = () => {
   const handleManualSchedulerUpdate = async () => {
     setSchedulerLoading(true);
     try {
-      await maintenanceSchedulerAPI.manualUpdate();
-      alert('Maintenance schedule update completed successfully!');
-      fetchAllData(); // Refresh data
-      fetchSchedulerStatus(); // Refresh status
+      console.log('🔄 Triggering manual maintenance schedule update...');
+      const response = await maintenanceSchedulerAPI.manualUpdate();
+      
+      // Enhanced success feedback
+      const successMessage = response.data?.message || 'Maintenance schedule update completed successfully!';
+      const executionTime = response.data?.executionTimeMs;
+      const timestamp = response.data?.timestamp;
+      
+      console.log('✅ Maintenance schedule update completed:', {
+        message: successMessage,
+        executionTime: executionTime ? `${executionTime}ms` : 'N/A',
+        timestamp: timestamp
+      });
+      
+      // Show detailed success message
+      const detailedMessage = executionTime 
+        ? `${successMessage}\n\nExecution time: ${executionTime}ms\nTimestamp: ${new Date(timestamp).toLocaleString()}`
+        : successMessage;
+      
+      alert(detailedMessage);
+      
+      // Refresh all data to show updated schedules
+      console.log('🔄 Refreshing maintenance data...');
+      await Promise.all([
+        fetchAllData(),
+        fetchSchedulerStatus()
+      ]);
+      
+      console.log('✅ Data refresh completed');
+      
     } catch (error) {
-      console.error('Error triggering scheduler update:', error);
-      alert('Failed to update maintenance schedules');
+      console.error('❌ Error triggering scheduler update:', error);
+      
+      // Enhanced error handling
+      const errorMessage = (error as any)?.response?.data?.message || (error as any)?.message || 'Failed to update maintenance schedules';
+      const errorDetails = (error as any)?.response?.data?.error || 'Unknown error';
+      
+      console.error('Error details:', {
+        message: errorMessage,
+        type: errorDetails,
+        status: (error as any)?.response?.status
+      });
+      
+      alert(`Failed to update maintenance schedules:\n\n${errorMessage}\n\nError type: ${errorDetails}`);
     } finally {
       setSchedulerLoading(false);
     }
@@ -559,10 +596,11 @@ const RulesPage: React.FC = () => {
           <Button
             onClick={handleManualSchedulerUpdate}
             disabled={schedulerLoading}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400"
+            title="Update maintenance schedules and send notifications to assigned users"
           >
-            <Clock className="w-4 h-4" />
-            {schedulerLoading ? 'Updating...' : 'Update Schedules'}
+            <Clock className={`w-4 h-4 ${schedulerLoading ? 'animate-spin' : ''}`} />
+            {schedulerLoading ? 'Updating Schedules...' : 'Update Schedules & Notify'}
           </Button>
           <Button
             onClick={() => {

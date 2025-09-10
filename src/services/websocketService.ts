@@ -15,6 +15,7 @@ class WebSocketService {
   private reconnectDelay = 1000;
   private organizationId: string | null = null;
   private isConnecting = false;
+  private connectionTimeout: NodeJS.Timeout | null = null;
 
   setCallbacks(callbacks: WebSocketCallbacks) {
     this.callbacks = callbacks;
@@ -34,14 +35,37 @@ class WebSocketService {
       const backendUrl = getApiConfig().BACKEND_BASE_URL;
       const wsUrl = backendUrl.replace('http', 'ws') + '/ws';
       
-      logInfo('WebSocket', 'Connecting to WebSocket', { wsUrl, organizationId });
+      logInfo('WebSocket', 'Attempting to connect to WebSocket', { wsUrl, organizationId });
+      
+      // Check if WebSocket is supported
+      if (!window.WebSocket) {
+        logWarn('WebSocket', 'WebSocket not supported in this browser');
+        this.isConnecting = false;
+        return;
+      }
       
       this.socket = new WebSocket(wsUrl);
+      
+      // Set connection timeout
+      this.connectionTimeout = setTimeout(() => {
+        if (this.socket && this.socket.readyState === WebSocket.CONNECTING) {
+          logWarn('WebSocket', 'Connection timeout - closing socket');
+          this.socket.close();
+          this.isConnecting = false;
+        }
+      }, 10000); // 10 second timeout
       
       this.socket.onopen = () => {
         logInfo('WebSocket', 'WebSocket connected successfully');
         this.isConnecting = false;
         this.reconnectAttempts = 0;
+        
+        // Clear connection timeout
+        if (this.connectionTimeout) {
+          clearTimeout(this.connectionTimeout);
+          this.connectionTimeout = null;
+        }
+        
         this.callbacks.onConnectionStatusChange?.(true);
         
         // Subscribe to organization-specific topics
@@ -60,6 +84,13 @@ class WebSocketService {
       this.socket.onclose = (event) => {
         logWarn('WebSocket', 'WebSocket connection closed', { code: event.code, reason: event.reason });
         this.isConnecting = false;
+        
+        // Clear connection timeout
+        if (this.connectionTimeout) {
+          clearTimeout(this.connectionTimeout);
+          this.connectionTimeout = null;
+        }
+        
         this.callbacks.onConnectionStatusChange?.(false);
         
         // Attempt to reconnect if not a normal closure
@@ -68,9 +99,28 @@ class WebSocketService {
         }
       };
 
-      this.socket.onerror = (event) => {
-        logError('WebSocket', 'WebSocket error occurred', new Error('WebSocket error'));
+      this.socket.onerror = () => {
+        logError('WebSocket', 'WebSocket connection failed', new Error('WebSocket connection error'));
+        logWarn('WebSocket', 'WebSocket connection details', {
+          wsUrl,
+          organizationId,
+          readyState: this.socket?.readyState,
+          possibleCauses: [
+            'Backend WebSocket server not running',
+            'Network/firewall blocking WebSocket connections',
+            'CORS configuration issues',
+            'Backend WebSocket endpoint not configured'
+          ]
+        });
         this.isConnecting = false;
+        
+        // Clear connection timeout
+        if (this.connectionTimeout) {
+          clearTimeout(this.connectionTimeout);
+          this.connectionTimeout = null;
+        }
+        
+        this.callbacks.onConnectionStatusChange?.(false);
       };
 
     } catch (error) {
@@ -181,6 +231,13 @@ class WebSocketService {
       this.socket.close(1000, 'User initiated disconnect');
       this.socket = null;
     }
+    
+    // Clear connection timeout
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
+    }
+    
     this.isConnecting = false;
     this.organizationId = null;
     this.callbacks.onConnectionStatusChange?.(false);
@@ -188,6 +245,27 @@ class WebSocketService {
 
   isConnected(): boolean {
     return this.socket?.readyState === WebSocket.OPEN;
+  }
+
+  /**
+   * Check if WebSocket is supported and available
+   */
+  isWebSocketSupported(): boolean {
+    return typeof window !== 'undefined' && !!window.WebSocket;
+  }
+
+  /**
+   * Get connection status information
+   */
+  getConnectionStatus() {
+    return {
+      isConnected: this.isConnected(),
+      isConnecting: this.isConnecting,
+      isSupported: this.isWebSocketSupported(),
+      reconnectAttempts: this.reconnectAttempts,
+      maxReconnectAttempts: this.maxReconnectAttempts,
+      organizationId: this.organizationId
+    };
   }
 
   sendMessage(message: any) {

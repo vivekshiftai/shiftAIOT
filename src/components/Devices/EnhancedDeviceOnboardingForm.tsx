@@ -338,31 +338,53 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           setOnboardingProgress(progress.progress);
           setOnboardingMessage(progress.message);
           
-          // Map backend progress stages to our 5-step process using shared utility
+          // Map backend progress stages to our 6-step process using shared utility
           const stepId = mapBackendStageToStep(progress.stage);
           setCurrentOnboardingStep(stepId);
           
-          // Log progress information
+          // Enhanced logging with step details
           logInfo('Onboarding', `Progress Update: ${progress.stage}`, {
             stage: progress.stage,
             progress: progress.progress,
             message: progress.message,
             subMessage: progress.subMessage,
             error: progress.error,
-            stepDetails: progress.stepDetails
+            stepDetails: progress.stepDetails,
+            mappedStepId: stepId,
+            timestamp: progress.timestamp
           });
           
-          // Log to console for debugging
+          // Enhanced console logging for debugging
           console.log('📊 Frontend Progress Update:', {
             stage: progress.stage,
             progress: progress.progress,
             message: progress.message,
-            stepDetails: progress.stepDetails
+            subMessage: progress.subMessage,
+            stepDetails: progress.stepDetails,
+            mappedStepId: stepId,
+            timestamp: progress.timestamp
           });
+          
+          // Log step details if available
+          if (progress.stepDetails) {
+            console.log('📋 Step Details:', {
+              currentStep: progress.stepDetails.currentStep,
+              totalSteps: progress.stepDetails.totalSteps,
+              stepName: progress.stepDetails.stepName,
+              status: progress.stepDetails.status,
+              startTime: progress.stepDetails.startTime,
+              duration: progress.stepDetails.duration
+            });
+          }
           
           // Handle error states
           if (progress.error) {
             logError('Onboarding', `Progress Error: ${progress.stage} - ${progress.error}`, new Error(progress.error));
+            console.error('❌ Onboarding Error:', {
+              stage: progress.stage,
+              error: progress.error,
+              retryable: progress.retryable
+            });
           }
         }
       );
@@ -419,19 +441,30 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       // Hide loader on error
       setShowOnboardingLoader(false);
       
-      // Determine if error is retryable
-      const isRetryable = errorObj.message.toLowerCase().includes('timeout') || 
-                         errorObj.message.toLowerCase().includes('network') ||
-                         errorObj.message.toLowerCase().includes('connection');
+      // Check if this is a network/streaming error that might still have succeeded
+      const isNetworkError = errorObj.message.toLowerCase().includes('network error') ||
+                            errorObj.message.toLowerCase().includes('err_incomplete_chunked_encoding') ||
+                            errorObj.message.toLowerCase().includes('stream') ||
+                            errorObj.message.toLowerCase().includes('timeout');
       
-      // Show appropriate error message to user
-      setTimeout(() => {
-        if (isRetryable) {
-          alert(`Onboarding failed due to a temporary issue: ${errorObj.message}\n\nPlease check your connection and try again.`);
-        } else {
-          alert(`Onboarding failed: ${errorObj.message}\n\nPlease check your input and try again.`);
-        }
-      }, 1000);
+      if (isNetworkError) {
+        // For network errors, show a warning but don't treat as complete failure
+        // The device might have been created successfully despite the streaming error
+        logInfo('EnhancedDeviceOnboardingForm', 'Network error detected, checking if device was created', {
+          errorMessage: errorObj.message
+        });
+        
+        setTimeout(() => {
+          alert(`⚠️ Network connection issue detected during onboarding.\n\n` +
+                `The device may have been created successfully despite the connection error.\n\n` +
+                `Please check your devices list to confirm. If the device was not created, please try again.`);
+        }, 1000);
+      } else {
+        // For other errors, show the actual error
+        setTimeout(() => {
+          alert(`❌ Onboarding failed: ${errorObj.message}\n\nPlease check your input and try again.`);
+        }, 1000);
+      }
     }
   }, [uploadedFile, formData, onboardingStartTime, currentUser]);
 

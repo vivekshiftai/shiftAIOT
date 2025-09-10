@@ -11,9 +11,14 @@ export interface UnifiedOnboardingProgress {
     currentStep: number;
     totalSteps: number;
     stepName: string;
+    status?: string;
+    startTime?: number;
+    endTime?: number;
+    duration?: number;
   };
   error?: string;
   retryable?: boolean;
+  timestamp?: string;
 }
 
 export interface UnifiedOnboardingResult {
@@ -204,57 +209,111 @@ export class UnifiedOnboardingService {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // Use fetch with streaming
-      const response = await fetch(`${this.baseUrl}/api/devices/unified-onboarding-stream`, {
-        method: 'POST',
-        headers,
-        body: formData
-      });
+      // Use fetch with streaming and timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      try {
+        const response = await fetch(`${this.baseUrl}/api/devices/unified-onboarding-stream`, {
+          method: 'POST',
+          headers,
+          body: formData,
+          signal: controller.signal
+        });
 
-      // Check if response is streaming (text/event-stream)
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('text/event-stream')) {
-        return this.handleStreamingResponse(response, onProgress);
-      } else {
-        // Fallback to regular JSON response
-        const result = await response.json();
-        return result;
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // Check if response is streaming (text/event-stream)
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/event-stream')) {
+          logInfo('UnifiedOnboarding', 'Using SSE streaming response');
+          return this.handleStreamingResponse(response, onProgress);
+        } else {
+          // Fallback to regular JSON response
+          logInfo('UnifiedOnboarding', 'Using regular JSON response');
+          const result = await response.json();
+          return result;
+        }
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        throw fetchError;
       }
 
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logError('UnifiedOnboarding', 'Failed to start progress streaming', error instanceof Error ? error : new Error('Unknown error'));
-      // Fallback to original API call
-      return this.callDeviceOnboardAPIFallback(formData);
+      
+      // Check if it's a network error or timeout
+      if (errorMessage.includes('network error') || 
+          errorMessage.includes('ERR_INCOMPLETE_CHUNKED_ENCODING') ||
+          errorMessage.includes('aborted') ||
+          errorMessage.includes('timeout') ||
+          errorMessage.includes('stream')) {
+        logInfo('UnifiedOnboarding', 'Network/streaming error detected, falling back to regular API call');
+        try {
+          return await this.callDeviceOnboardAPIFallback(formData);
+        } catch (fallbackError) {
+          logError('UnifiedOnboarding', 'Fallback API call also failed', fallbackError instanceof Error ? fallbackError : new Error('Unknown error'));
+          // Re-throw the original streaming error as it's more descriptive
+          throw error;
+        }
+      }
+      
+      // Re-throw other errors
+      throw error;
     }
   }
 
   /**
-   * Handle streaming response from Server-Sent Events
+   * Handle streaming response from Server-Sent Events with improved error handling
    */
   private async handleStreamingResponse(response: Response, onProgress?: (progress: UnifiedOnboardingProgress) => void): Promise<any> {
     return new Promise((resolve, reject) => {
       const reader = response.body?.getReader();
       if (!reader) {
+        logError('UnifiedOnboarding', 'No response body reader available');
         reject(new Error('No response body reader available'));
         return;
       }
 
       const decoder = new TextDecoder();
       let buffer = '';
+      let isCompleted = false;
+      let hasReceivedData = false;
+
+      // Set up a timeout to handle incomplete streams
+      const timeoutId = setTimeout(() => {
+        if (!isCompleted && !hasReceivedData) {
+          logError('UnifiedOnboarding', 'SSE stream timeout - no data received');
+          reader.cancel();
+          reject(new Error('Stream timeout - no data received'));
+        }
+      }, 30000); // 30 second timeout
 
       const processChunk = async () => {
         try {
           const { done, value } = await reader.read();
           
           if (done) {
+            clearTimeout(timeoutId);
+            isCompleted = true;
+            
+            if (!hasReceivedData) {
+              logError('UnifiedOnboarding', 'SSE stream completed without data');
+              reject(new Error('Stream completed without data'));
+              return;
+            }
+            
+            logInfo('UnifiedOnboarding', 'SSE stream completed successfully');
             resolve({ success: true, message: 'Streaming completed' });
             return;
           }
 
+          hasReceivedData = true;
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop() || ''; // Keep incomplete line in buffer
@@ -285,15 +344,22 @@ export class UnifiedOnboardingService {
                   }
                 } else if (eventData.success !== undefined) {
                   // This is the final result
+                  clearTimeout(timeoutId);
+                  isCompleted = true;
+                  logInfo('UnifiedOnboarding', 'Received final result from SSE stream', eventData);
                   resolve(eventData);
                   return;
                 } else if (eventData.error) {
                   // This is an error
+                  clearTimeout(timeoutId);
+                  isCompleted = true;
+                  logError('UnifiedOnboarding', 'Received error from SSE stream', eventData);
                   reject(new Error(eventData.error));
                   return;
                 }
               } catch (parseError) {
                 logError('UnifiedOnboarding', 'Failed to parse SSE data', parseError instanceof Error ? parseError : new Error('Unknown error'));
+                // Continue processing other lines instead of failing completely
               }
             }
           }
@@ -301,6 +367,9 @@ export class UnifiedOnboardingService {
           // Continue reading
           processChunk();
         } catch (error) {
+          clearTimeout(timeoutId);
+          isCompleted = true;
+          logError('UnifiedOnboarding', 'Error processing SSE chunk', error instanceof Error ? error : new Error('Unknown error'));
           reject(error);
         }
       };
@@ -315,9 +384,11 @@ export class UnifiedOnboardingService {
   private async callDeviceOnboardAPIFallback(formData: FormData): Promise<any> {
     let lastError: Error | null = null;
 
+    logInfo('UnifiedOnboarding', 'Using fallback API method (no streaming)');
+
     for (let attempt = 1; attempt <= this.RETRY_ATTEMPTS; attempt++) {
       try {
-        logInfo('UnifiedOnboarding', `Attempting device onboard API call (attempt ${attempt}/${this.RETRY_ATTEMPTS})`);
+        logInfo('UnifiedOnboarding', `Attempting fallback device onboard API call (attempt ${attempt}/${this.RETRY_ATTEMPTS})`);
 
         // Create a timeout promise
         const timeoutPromise = new Promise<never>((_, reject) => {
@@ -334,30 +405,41 @@ export class UnifiedOnboardingService {
           throw new Error('Invalid response from backend service');
         }
         
-        logInfo('UnifiedOnboarding', 'Device onboard API call successful', {
+        logInfo('UnifiedOnboarding', 'Fallback device onboard API call successful', {
           deviceId: response.data.id,
-          deviceName: response.data.name
+          deviceName: response.data.name,
+          hasPdfData: !!response.data.pdfData
         });
 
-        return response.data;
+        // Ensure we return a properly formatted result
+        const result = {
+          deviceId: response.data.id,
+          deviceName: response.data.name,
+          rulesGenerated: response.data.pdfData?.rulesGenerated || 0,
+          maintenanceItems: response.data.pdfData?.maintenanceItems || 0,
+          safetyPrecautions: response.data.pdfData?.safetyPrecautions || 0,
+          success: true
+        };
+
+        logInfo('UnifiedOnboarding', 'Fallback result formatted', result);
+        return result;
 
       } catch (error: any) {
         lastError = error instanceof Error ? error : new Error(String(error));
         
-        logError('UnifiedOnboarding', `Device onboard API call failed (attempt ${attempt}/${this.RETRY_ATTEMPTS})`, lastError);
+        logError('UnifiedOnboarding', `Fallback device onboard API call failed (attempt ${attempt}/${this.RETRY_ATTEMPTS})`, lastError);
 
         // Check if it's a retryable error
         if (!this.isRetryableError(lastError) || attempt === this.RETRY_ATTEMPTS) {
           throw lastError;
         }
 
-        // Retry logic - progress updates are handled by backend streaming
-
         // Wait before retrying
         await this.delay(this.RETRY_DELAY * attempt);
       }
     }
 
+    logError('UnifiedOnboarding', 'All fallback retry attempts failed', lastError || new Error('Unknown error'));
     throw lastError || new Error('Device onboard API call failed after all retry attempts');
   }
 

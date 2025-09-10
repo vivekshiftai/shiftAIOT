@@ -113,7 +113,7 @@ public class UnifiedOnboardingService {
         
         // Send progress update for device creation
         sendProgressUpdate(progressCallback, "device", 10, "Creating device configuration...", 
-                          "Setting up device in the system", null, 1, 5, "Device Creation");
+                          "Setting up device in the system", null, 1, 6, "Device Creation");
         
         DeviceCreateResponse deviceResponse = createDeviceTransactional(deviceRequest, organizationId, currentUserId);
         
@@ -237,8 +237,8 @@ public class UnifiedOnboardingService {
         }
         
         // Send final completion progress
-        sendProgressUpdate(progressCallback, "complete", 100, "Onboarding completed", 
-                          "Device successfully onboarded with all configurations", null, 5, 5, "Completion");
+        sendProgressUpdate(progressCallback, "complete", 100, "Onboarding completed successfully", 
+                          "Device successfully onboarded with all configurations and ready for use", null, 6, 6, "Completion");
         
         log.info("Unified onboarding workflow completed successfully for device: {}", deviceResponse.getId());
         

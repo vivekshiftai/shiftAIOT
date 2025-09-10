@@ -51,8 +51,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
 
   return (
     <div className="bg-white border-r border-gray-200 w-64 min-h-screen p-4">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold p-3 text-gray-900">
+      <div className="mb-4">
+        <h1 className="text-lg font-bold px-3 py-2 text-gray-900">
           ActiveOps Hub
         </h1>
       </div>

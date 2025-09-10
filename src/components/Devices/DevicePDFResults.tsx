@@ -41,13 +41,24 @@ interface DeviceMaintenance {
 
 interface DeviceSafetyPrecaution {
   id: string;
+  deviceId: string;
   title: string;
   description: string;
-  severity: string;
+  type: 'warning' | 'procedure' | 'caution' | 'note';
   category: string;
   precautionType: 'electrical' | 'mechanical' | 'chemical' | 'environmental' | 'general';
-  recommendedAction: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  recommendedAction?: string;
+  mitigation?: string;
+  aboutReaction?: string;
+  causes?: string;
+  howToAvoid?: string;
+  safetyInfo?: string;
   isActive: boolean;
+  organizationId: string;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface PDFResultsData {

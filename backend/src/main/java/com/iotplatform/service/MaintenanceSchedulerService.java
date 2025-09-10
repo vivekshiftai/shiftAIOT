@@ -21,6 +21,7 @@ public class MaintenanceSchedulerService {
     
     private final DeviceMaintenanceRepository deviceMaintenanceRepository;
     private final MaintenanceScheduleService maintenanceScheduleService;
+    private final MaintenanceNotificationScheduler maintenanceNotificationScheduler;
     
     /**
      * Update maintenance schedules when the application starts
@@ -49,6 +50,7 @@ public class MaintenanceSchedulerService {
     private void updateMaintenanceSchedules() {
         try {
             log.info("🔄 Starting maintenance schedule update process...");
+            log.info("📅 Current date: {}", LocalDate.now());
             
             // Get all active maintenance tasks
             List<DeviceMaintenance> activeMaintenanceTasks = deviceMaintenanceRepository.findByStatus(DeviceMaintenance.Status.ACTIVE);
@@ -56,6 +58,7 @@ public class MaintenanceSchedulerService {
             
             int updatedCount = 0;
             int overdueCount = 0;
+            int dueTodayCount = 0;
             
             LocalDate today = LocalDate.now();
             
@@ -63,7 +66,7 @@ public class MaintenanceSchedulerService {
                 try {
                     // Check if the maintenance is overdue (next maintenance date is in the past)
                     if (maintenance.getNextMaintenance() != null && maintenance.getNextMaintenance().isBefore(today)) {
-                        log.info("Maintenance task '{}' is overdue. Last due: {}, Current date: {}", 
+                        log.info("⚠️ Maintenance task '{}' is overdue. Last due: {}, Current date: {}", 
                                 maintenance.getTaskName(), maintenance.getNextMaintenance(), today);
                         
                         // Calculate the next maintenance date based on frequency
@@ -85,12 +88,12 @@ public class MaintenanceSchedulerService {
                         updatedCount++;
                         overdueCount++;
                         
-                        log.info("Updated overdue maintenance task '{}' with new next maintenance date: {}", 
+                        log.info("✅ Updated overdue maintenance task '{}' with new next maintenance date: {}", 
                                 maintenance.getTaskName(), nextMaintenance);
                     }
                     // Check if maintenance is due today and needs to be updated for next cycle
                     else if (maintenance.getNextMaintenance() != null && maintenance.getNextMaintenance().equals(today)) {
-                        log.info("Maintenance task '{}' is due today. Calculating next maintenance date...", 
+                        log.info("📅 Maintenance task '{}' is due today. Calculating next maintenance date...", 
                                 maintenance.getTaskName());
                         
                         // Calculate next maintenance date from today
@@ -106,8 +109,9 @@ public class MaintenanceSchedulerService {
                         
                         deviceMaintenanceRepository.save(maintenance);
                         updatedCount++;
+                        dueTodayCount++;
                         
-                        log.info("Updated maintenance task '{}' due today with new next maintenance date: {}", 
+                        log.info("✅ Updated maintenance task '{}' due today with new next maintenance date: {}", 
                                 maintenance.getTaskName(), nextMaintenance);
                     }
                     
@@ -116,8 +120,10 @@ public class MaintenanceSchedulerService {
                 }
             }
             
-            log.info("✅ Maintenance schedule update completed. Updated {} tasks ({} overdue tasks processed)", 
-                    updatedCount, overdueCount);
+            log.info("✅ Maintenance schedule update completed successfully!");
+            log.info("📊 Summary: Updated {} tasks total ({} overdue, {} due today)", 
+                    updatedCount, overdueCount, dueTodayCount);
+            log.info("📅 Next scheduled run: Daily at 5:50 AM");
             
         } catch (Exception e) {
             log.error("Error during maintenance schedule update: {}", e.getMessage(), e);
@@ -200,10 +206,27 @@ public class MaintenanceSchedulerService {
     
     /**
      * Manual trigger for maintenance schedule update (for testing or manual execution)
+     * This method updates schedules and triggers notifications for updated tasks
      */
     public void manualUpdateMaintenanceSchedules() {
-        log.info("Manual maintenance schedule update triggered");
-        updateMaintenanceSchedules();
+        log.info("🔄 Manual maintenance schedule update triggered");
+        log.info("📋 Starting comprehensive maintenance update process...");
+        
+        try {
+            // First, update all maintenance schedules
+            updateMaintenanceSchedules();
+            
+            // Then trigger notifications for any tasks that were updated
+            log.info("📢 Triggering maintenance notifications for updated tasks...");
+            int notificationsSent = maintenanceNotificationScheduler.triggerMaintenanceNotifications();
+            
+            log.info("✅ Manual maintenance update completed successfully");
+            log.info("📊 Summary: Notifications sent to {} users", notificationsSent);
+            
+        } catch (Exception e) {
+            log.error("❌ Error during manual maintenance schedule update: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to update maintenance schedules: " + e.getMessage(), e);
+        }
     }
     
     /**

@@ -139,6 +139,12 @@ ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS title VARCHAR(255
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS risk_level VARCHAR(50) DEFAULT 'MEDIUM';
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS mitigation_steps TEXT;
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS mitigation TEXT;
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS recommended_action TEXT;
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS about_reaction TEXT;
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS causes TEXT;
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS how_to_avoid TEXT;
+ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS safety_info TEXT;
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS required_ppe TEXT;
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS emergency_procedures TEXT;
 ALTER TABLE device_safety_precautions ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
@@ -356,17 +362,23 @@ DROP TABLE IF EXISTS pdf_documents CASCADE;
 CREATE TABLE IF NOT EXISTS device_safety_precautions (
     id VARCHAR(255) PRIMARY KEY,
     device_id VARCHAR(255) NOT NULL,
-    precaution_type VARCHAR(100) NOT NULL, -- 'electrical', 'mechanical', 'chemical', 'environmental'
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
-    risk_level VARCHAR(50) DEFAULT 'MEDIUM', -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
-    mitigation_steps TEXT,
-    required_ppe TEXT, -- Personal Protective Equipment
-    emergency_procedures TEXT,
+    type VARCHAR(50) NOT NULL, -- 'warning', 'procedure', 'caution', 'note'
+    category VARCHAR(100) NOT NULL, -- 'thermal_hazard', 'electrical_hazard', 'mechanical_hazard', 'emergency_procedures', 'ppe_requirements'
+    precaution_type VARCHAR(100) NOT NULL, -- 'electrical', 'mechanical', 'chemical', 'environmental'
+    severity VARCHAR(50) DEFAULT 'MEDIUM', -- 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'
+    recommended_action TEXT,
+    mitigation TEXT,
+    about_reaction TEXT,
+    causes TEXT,
+    how_to_avoid TEXT,
+    safety_info TEXT,
     is_active BOOLEAN DEFAULT true,
     organization_id VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(255),
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
 );

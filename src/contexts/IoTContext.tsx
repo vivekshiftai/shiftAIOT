@@ -89,10 +89,18 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         }
       });
 
-      // Connect to WebSocket
-      websocketService.connect(user.organizationId).catch(error => {
-        logError('IoT', 'Failed to connect to WebSocket', error instanceof Error ? error : new Error('Unknown error'));
-      });
+      // Connect to WebSocket with graceful fallback
+      if (websocketService.isWebSocketSupported()) {
+        websocketService.connect(user.organizationId).catch(error => {
+          logError('IoT', 'Failed to connect to WebSocket', error instanceof Error ? error : new Error('Unknown error'));
+          logWarn('IoT', 'WebSocket connection failed - continuing without real-time updates', {
+            organizationId: user.organizationId,
+            fallbackMode: 'polling'
+          });
+        });
+      } else {
+        logWarn('IoT', 'WebSocket not supported in this browser - using polling mode');
+      }
 
       // Cleanup on unmount
       return () => {

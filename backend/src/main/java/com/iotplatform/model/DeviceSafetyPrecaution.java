@@ -38,6 +38,9 @@ public class DeviceSafetyPrecaution {
     @Column(columnDefinition = "TEXT")
     private String recommendedAction;
     
+    @Column(columnDefinition = "TEXT")
+    private String mitigation;
+    
     @Column(name = "about_reaction", columnDefinition = "TEXT")
     private String aboutReaction;
     
@@ -155,6 +158,14 @@ public class DeviceSafetyPrecaution {
     
     public void setRecommendedAction(String recommendedAction) {
         this.recommendedAction = recommendedAction;
+    }
+    
+    public String getMitigation() {
+        return mitigation;
+    }
+    
+    public void setMitigation(String mitigation) {
+        this.mitigation = mitigation;
     }
     
     public String getAboutReaction() {

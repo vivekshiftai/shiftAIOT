@@ -27,20 +27,31 @@ public class MaintenanceSchedulerController {
     @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
     public ResponseEntity<?> manualUpdateMaintenanceSchedules() {
         try {
-            log.info("Manual maintenance schedule update requested");
+            log.info("🔄 Manual maintenance schedule update requested via API");
+            long startTime = System.currentTimeMillis();
+            
+            // Execute the comprehensive maintenance update
             maintenanceSchedulerService.manualUpdateMaintenanceSchedules();
             
-            Map<String, String> response = new HashMap<>();
+            long executionTime = System.currentTimeMillis() - startTime;
+            log.info("✅ Manual maintenance schedule update completed in {} ms", executionTime);
+            
+            Map<String, Object> response = new HashMap<>();
             response.put("message", "Maintenance schedule update completed successfully");
             response.put("status", "success");
+            response.put("executionTimeMs", executionTime);
+            response.put("timestamp", java.time.LocalDateTime.now().toString());
+            response.put("details", "All active maintenance tasks have been processed and notifications sent");
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Error during manual maintenance schedule update: {}", e.getMessage(), e);
+            log.error("❌ Error during manual maintenance schedule update: {}", e.getMessage(), e);
             
-            Map<String, String> response = new HashMap<>();
+            Map<String, Object> response = new HashMap<>();
             response.put("message", "Failed to update maintenance schedules: " + e.getMessage());
             response.put("status", "error");
+            response.put("timestamp", java.time.LocalDateTime.now().toString());
+            response.put("error", e.getClass().getSimpleName());
             
             return ResponseEntity.status(500).body(response);
         }

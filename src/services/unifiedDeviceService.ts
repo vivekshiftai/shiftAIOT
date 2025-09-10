@@ -56,15 +56,24 @@ export interface DeviceMaintenance {
 
 export interface DeviceSafetyPrecaution {
   id: string;
+  deviceId: string;
   title: string;
   description: string;
+  type: 'warning' | 'procedure' | 'caution' | 'note';
   category: string;
   precautionType: 'electrical' | 'mechanical' | 'chemical' | 'environmental' | 'general';
-  severity: string;
-  deviceId: string;
-  deviceName: string;
-  createdAt?: string;
-  updatedAt?: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  recommendedAction?: string;
+  mitigation?: string;
+  aboutReaction?: string;
+  causes?: string;
+  howToAvoid?: string;
+  safetyInfo?: string;
+  isActive: boolean;
+  organizationId: string;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DeviceDocumentation {

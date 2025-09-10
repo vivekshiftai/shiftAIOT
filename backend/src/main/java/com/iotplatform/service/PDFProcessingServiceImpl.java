@@ -643,25 +643,30 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                 safetyResponse.setProcessingTime((String) responseBody.get("processing_time"));
                 
                 // Convert safety precautions from external format to our format
-                List<Map<String, Object>> externalPrecautions = (List<Map<String, Object>>) responseBody.get("safety_information");
-                if (externalPrecautions != null) {
-                    log.info("Processing {} external safety precautions for device: {}", externalPrecautions.size(), deviceId);
-                    // Convert to DTO format directly without storing in database
-                    List<SafetyGenerationResponse.SafetyPrecaution> dtoPrecautions = new ArrayList<>();
-                    for (Map<String, Object> externalPrecaution : externalPrecautions) {
-                        SafetyGenerationResponse.SafetyPrecaution dtoPrecaution = new SafetyGenerationResponse.SafetyPrecaution();
-                        dtoPrecaution.setTitle((String) externalPrecaution.get("name"));
-                        dtoPrecaution.setDescription((String) externalPrecaution.get("about_reaction"));
-                        dtoPrecaution.setSeverity("HIGH"); // Default severity since not provided in response
-                        dtoPrecaution.setCategory("general"); // Set default category since not provided in response
-                        dtoPrecaution.setAboutReaction((String) externalPrecaution.get("about_reaction"));
-                        dtoPrecaution.setCauses((String) externalPrecaution.get("causes"));
-                        dtoPrecaution.setHowToAvoid((String) externalPrecaution.get("how_to_avoid"));
-                        dtoPrecaution.setSafetyInfo((String) externalPrecaution.get("safety_info"));
+                // Handle both safety_precautions and safety_information arrays
+                List<SafetyGenerationResponse.SafetyPrecaution> dtoPrecautions = new ArrayList<>();
+                
+                // Process safety_precautions array
+                List<Map<String, Object>> safetyPrecautions = (List<Map<String, Object>>) responseBody.get("safety_precautions");
+                if (safetyPrecautions != null) {
+                    log.info("Processing {} safety precautions for device: {}", safetyPrecautions.size(), deviceId);
+                    for (Map<String, Object> safetyPrecaution : safetyPrecautions) {
+                        SafetyGenerationResponse.SafetyPrecaution dtoPrecaution = convertToSafetyPrecautionDTO(safetyPrecaution, dtoPrecautions.size() + 1);
                         dtoPrecautions.add(dtoPrecaution);
                     }
-                    safetyResponse.setSafetyPrecautions(dtoPrecautions);
                 }
+                
+                // Process safety_information array
+                List<Map<String, Object>> safetyInformation = (List<Map<String, Object>>) responseBody.get("safety_information");
+                if (safetyInformation != null) {
+                    log.info("Processing {} safety information items for device: {}", safetyInformation.size(), deviceId);
+                    for (Map<String, Object> safetyInfo : safetyInformation) {
+                        SafetyGenerationResponse.SafetyPrecaution dtoPrecaution = convertToSafetyPrecautionDTO(safetyInfo, dtoPrecautions.size() + 1);
+                        dtoPrecautions.add(dtoPrecaution);
+                    }
+                }
+                
+                safetyResponse.setSafetyPrecautions(dtoPrecautions);
                 
                 log.info("Safety precautions generated successfully for device: {}, precautions count: {}", 
                     deviceId, safetyResponse.getSafetyPrecautions() != null ? safetyResponse.getSafetyPrecautions().size() : 0);
@@ -1280,6 +1285,208 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             default:
                 log.warn("Unknown frequency: {}, defaulting to daily", frequency);
                 return today.plusDays(1);
+        }
+    }
+    
+    /**
+     * Convert external API safety precaution data to our DTO format
+     */
+    private SafetyGenerationResponse.SafetyPrecaution convertToSafetyPrecautionDTO(Map<String, Object> externalData, int fallbackIndex) {
+        SafetyGenerationResponse.SafetyPrecaution dtoPrecaution = new SafetyGenerationResponse.SafetyPrecaution();
+        
+        // Handle title - use 'title' field from new API response
+        String title = (String) externalData.get("title");
+        if (title == null || title.trim().isEmpty()) {
+            // Fallback to 'name' field for backward compatibility
+            title = (String) externalData.get("name");
+            if (title == null || title.trim().isEmpty()) {
+                // Generate fallback title based on available data
+                String description = (String) externalData.get("description");
+                if (description != null && !description.trim().isEmpty()) {
+                    // Use first 50 characters of description as title
+                    title = description.length() > 50 ? description.substring(0, 50) + "..." : description;
+                } else {
+                    // Final fallback title
+                    title = "Safety Precaution " + fallbackIndex;
+                }
+                log.warn("⚠️ External API returned null/empty title for safety precaution, using fallback: '{}'", title);
+            }
+        }
+        
+        dtoPrecaution.setTitle(title);
+        dtoPrecaution.setDescription((String) externalData.get("description"));
+        dtoPrecaution.setSeverity(normalizeSeverity((String) externalData.get("severity")));
+        // Handle category mapping from API response
+        String apiCategory = (String) externalData.get("category");
+        if (apiCategory != null && !apiCategory.trim().isEmpty()) {
+            // Map API categories to our system categories
+            String mappedCategory = mapApiCategoryToSystemCategory(apiCategory);
+            dtoPrecaution.setCategory(mappedCategory);
+        } else {
+            dtoPrecaution.setCategory(null); // Will be set to default later
+        }
+        dtoPrecaution.setAboutReaction((String) externalData.get("about_reaction"));
+        dtoPrecaution.setCauses((String) externalData.get("causes"));
+        dtoPrecaution.setHowToAvoid((String) externalData.get("how_to_avoid"));
+        dtoPrecaution.setSafetyInfo((String) externalData.get("safety_info"));
+        dtoPrecaution.setRecommendedAction((String) externalData.get("recommended_action"));
+        dtoPrecaution.setMitigation((String) externalData.get("mitigation"));
+        dtoPrecaution.setType(normalizeType((String) externalData.get("type")));
+        
+        // Log the actual data received from API for debugging
+        log.debug("📊 API Response Data for Safety Precaution: Title='{}', Type='{}', Category='{}', Severity='{}'", 
+                 title, externalData.get("type"), externalData.get("category"), externalData.get("severity"));
+        
+        // Set defaults for missing fields
+        if (dtoPrecaution.getSeverity() == null || dtoPrecaution.getSeverity().trim().isEmpty()) {
+            dtoPrecaution.setSeverity("MEDIUM");
+            log.warn("⚠️ External API returned null/empty severity for safety precaution, using fallback: 'MEDIUM'");
+        }
+        if (dtoPrecaution.getCategory() == null || dtoPrecaution.getCategory().trim().isEmpty()) {
+            dtoPrecaution.setCategory("general");
+            log.warn("⚠️ External API returned null/empty category for safety precaution, using fallback: 'general'");
+        }
+        if (dtoPrecaution.getType() == null || dtoPrecaution.getType().trim().isEmpty()) {
+            dtoPrecaution.setType("warning");
+            log.warn("⚠️ External API returned null/empty type for safety precaution, using fallback: 'warning'");
+        }
+        
+        return dtoPrecaution;
+    }
+    
+    /**
+     * Map API category values to our system category values
+     */
+    private String mapApiCategoryToSystemCategory(String apiCategory) {
+        if (apiCategory == null || apiCategory.trim().isEmpty()) {
+            return null;
+        }
+        
+        String categoryLower = apiCategory.toLowerCase().trim();
+        
+        // Map API categories to our system categories
+        switch (categoryLower) {
+            case "mechanical":
+                return "mechanical_hazard";
+            case "electrical":
+                return "electrical_hazard";
+            case "thermal":
+                return "thermal_hazard";
+            case "logistics":
+            case "installation":
+                return "general";
+            case "ppe":
+            case "safety":
+                return "ppe_requirements";
+            case "emergency":
+                return "emergency_procedures";
+            default:
+                log.debug("📋 Unmapped API category: '{}', using as-is", apiCategory);
+                return categoryLower; // Use as-is if not specifically mapped
+        }
+    }
+    
+    /**
+     * Normalize severity values to standard format (case-insensitive)
+     */
+    private String normalizeSeverity(String severity) {
+        if (severity == null || severity.trim().isEmpty()) {
+            return null;
+        }
+        
+        String normalized = severity.trim().toUpperCase();
+        
+        // Validate and normalize severity values
+        switch (normalized) {
+            case "LOW":
+            case "L":
+                return "LOW";
+            case "MEDIUM":
+            case "MED":
+            case "M":
+                return "MEDIUM";
+            case "HIGH":
+            case "H":
+                return "HIGH";
+            case "CRITICAL":
+            case "CRIT":
+            case "C":
+                return "CRITICAL";
+            default:
+                log.debug("📋 Unrecognized severity value: '{}', using as-is", severity);
+                return normalized;
+        }
+    }
+    
+    /**
+     * Normalize type values to standard format (case-insensitive)
+     */
+    private String normalizeType(String type) {
+        if (type == null || type.trim().isEmpty()) {
+            return null;
+        }
+        
+        String normalized = type.trim().toLowerCase();
+        
+        // Validate and normalize type values
+        switch (normalized) {
+            case "warning":
+            case "warn":
+            case "w":
+                return "warning";
+            case "procedure":
+            case "proc":
+            case "p":
+                return "procedure";
+            case "caution":
+            case "caut":
+            case "c":
+                return "caution";
+            case "note":
+            case "n":
+                return "note";
+            default:
+                log.debug("📋 Unrecognized type value: '{}', using as-is", type);
+                return normalized;
+        }
+    }
+    
+    /**
+     * Normalize precaution type values to standard format (case-insensitive)
+     */
+    private String normalizePrecautionType(String precautionType) {
+        if (precautionType == null || precautionType.trim().isEmpty()) {
+            return null;
+        }
+        
+        String normalized = precautionType.trim().toLowerCase();
+        
+        // Validate and normalize precaution type values
+        switch (normalized) {
+            case "electrical":
+            case "electric":
+            case "elec":
+            case "e":
+                return "electrical";
+            case "mechanical":
+            case "mech":
+            case "m":
+                return "mechanical";
+            case "chemical":
+            case "chem":
+            case "c":
+                return "chemical";
+            case "environmental":
+            case "env":
+            case "environment":
+                return "environmental";
+            case "general":
+            case "gen":
+            case "g":
+                return "general";
+            default:
+                log.debug("📋 Unrecognized precaution type value: '{}', using as-is", precautionType);
+                return normalized;
         }
     }
 }
