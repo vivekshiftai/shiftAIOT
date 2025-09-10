@@ -1520,6 +1520,22 @@ public class DeviceController {
         
         SseEmitter emitter = new SseEmitter(300000L); // 5 minute timeout
         
+        // Add timeout and completion handlers
+        emitter.onTimeout(() -> {
+            logger.warn("⚠️ SSE connection timed out for user: {}", 
+                userDetails != null && userDetails.getUser() != null ? userDetails.getUser().getEmail() : "unknown");
+        });
+        
+        emitter.onCompletion(() -> {
+            logger.info("✅ SSE connection completed for user: {}", 
+                userDetails != null && userDetails.getUser() != null ? userDetails.getUser().getEmail() : "unknown");
+        });
+        
+        emitter.onError((throwable) -> {
+            logger.error("❌ SSE connection error for user: {}", 
+                userDetails != null && userDetails.getUser() != null ? userDetails.getUser().getEmail() : "unknown", throwable);
+        });
+        
         if (userDetails == null || userDetails.getUser() == null) {
             logger.error("❌ Authentication failed: userDetails is null or user is null");
             try {
@@ -1605,7 +1621,14 @@ public class DeviceController {
                     .data(objectMapper.writeValueAsString(finalResult)));
                 
                 logger.info("✅ Device onboarding completed successfully for user: {}", userDetails.getUser().getEmail());
-                emitter.complete();
+                
+                // Complete the SSE connection gracefully
+                try {
+                    emitter.complete();
+                    logger.info("✅ SSE connection completed successfully");
+                } catch (Exception e) {
+                    logger.warn("⚠️ SSE connection completion had issues, but onboarding was successful: {}", e.getMessage());
+                }
                 
             } catch (JsonProcessingException e) {
                 logger.error("❌ Failed to parse device data JSON", e);

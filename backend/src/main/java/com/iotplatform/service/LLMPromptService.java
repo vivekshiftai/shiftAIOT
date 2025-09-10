@@ -55,6 +55,12 @@ public class LLMPromptService {
     private void initializeClient() {
         if (openAIClient == null) {
             try {
+                // Check if API key is configured
+                if (apiKey == null || apiKey.trim().isEmpty()) {
+                    log.warn("⚠️ Azure OpenAI API key is not configured. Message polishing will be skipped.");
+                    return; // Don't initialize client, but don't throw exception
+                }
+                
                 openAIClient = new OpenAIClientBuilder()
                     .credential(new AzureKeyCredential(apiKey))
                     .endpoint(endpoint)
@@ -62,7 +68,8 @@ public class LLMPromptService {
                 log.info("✅ Azure OpenAI client initialized successfully");
             } catch (Exception e) {
                 log.error("❌ Failed to initialize Azure OpenAI client", e);
-                throw new RuntimeException("Failed to initialize Azure OpenAI client", e);
+                log.warn("⚠️ Message polishing will be disabled due to Azure OpenAI client initialization failure");
+                // Don't throw exception, just log and continue without polishing
             }
         }
     }
@@ -77,6 +84,13 @@ public class LLMPromptService {
     public String polishMessageForSlack(String originalMessage, String category) {
         try {
             initializeClient();
+            
+            // If client is not initialized (due to missing API key), return original message
+            if (openAIClient == null) {
+                log.info("🤖 Azure OpenAI client not available, returning original message - Category: {}, Original Length: {}", 
+                    category, originalMessage.length());
+                return originalMessage;
+            }
 
             // Create system message with instructions for polishing
             String systemPrompt = createSystemPrompt(category);
