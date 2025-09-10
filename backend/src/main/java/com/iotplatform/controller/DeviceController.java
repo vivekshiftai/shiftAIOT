@@ -419,9 +419,7 @@ public class DeviceController {
                 existingDevice.setAssignedUserId(deviceRequest.getAssignedUserId());
                 existingDevice.setAssignedBy(currentUser.getId());
                 
-                // Create notification for the newly assigned user
-                createDeviceAssignmentNotification(existingDevice, deviceRequest.getAssignedUserId(), 
-                                                  currentUser.getOrganizationId(), currentUser.getId());
+                // Notification creation removed - only create notifications after full data generation in onboarding flow
                 
                 logger.info("✅ Device assignment changed from {} to {} for device: {}", 
                            previousAssignedUserId, deviceRequest.getAssignedUserId(), id);
@@ -1732,55 +1730,5 @@ public class DeviceController {
         return value;
     }
 
-    private void createDeviceAssignmentNotification(Device device, String assignedUserId, String organizationId, String updatedBy) {
-        try {
-            // Get the assigned user
-            Optional<User> assignedUserOpt = userRepository.findById(assignedUserId);
-            if (assignedUserOpt.isPresent()) {
-                User assignedUser = assignedUserOpt.get();
-                
-                // Get the user who made the update
-                Optional<User> updatedByUserOpt = userRepository.findById(updatedBy);
-                String updatedByUserName = updatedByUserOpt.map(user -> user.getFirstName() + " " + user.getLastName()).orElse("System");
-                
-                // Create enhanced notification for device assignment
-                Notification notification = new Notification();
-                notification.setTitle("Device Assignment Updated");
-                notification.setMessage(String.format(
-                    "You have been assigned a device by %s. The device is now ready for monitoring and management.",
-                    updatedByUserName
-                ));
-                notification.setCategory(Notification.NotificationCategory.DEVICE_ASSIGNMENT);
-                notification.setType(Notification.NotificationType.INFO); // Explicitly set type for backward compatibility
-                notification.setUserId(assignedUserId);
-                notification.setDeviceId(device.getId());
-                notification.setOrganizationId(organizationId);
-                notification.setRead(false);
-                
-                // Enhance notification with comprehensive device information
-                deviceNotificationEnhancerService.enhanceNotificationWithDeviceInfo(notification, device.getId(), organizationId);
-                
-                // Build enhanced message
-                String enhancedMessage = deviceNotificationEnhancerService.buildEnhancedNotificationMessage(notification);
-                notification.setMessage(enhancedMessage);
-                
-                // Save notification using the notification service with preference check
-                Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(assignedUserId, notification);
-                
-                if (createdNotification.isPresent()) {
-                    logger.info("✅ Created enhanced device assignment notification for user: {} for device: {}", 
-                               assignedUser.getEmail(), device.getName());
-                } else {
-                    logger.info("⚠️ Device assignment notification blocked by user preferences for user: {}", 
-                               assignedUser.getEmail());
-                }
-            } else {
-                logger.warn("⚠️ Could not create notification - assigned user not found: {}", assignedUserId);
-            }
-        } catch (Exception e) {
-            logger.error("❌ Failed to create device assignment notification for user: {} device: {}", 
-                        assignedUserId, device.getId(), e);
-            // Don't fail the device update if notification fails
-        }
-    }
+    // Notification methods removed - only create notifications after full data generation in onboarding flow
 }

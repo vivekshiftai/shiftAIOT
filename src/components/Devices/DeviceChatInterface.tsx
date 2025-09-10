@@ -12,6 +12,8 @@ import { chatService, ChatMessage } from '../../services/chatService';
 import { logInfo, logError } from '../../utils/logger';
 import ChatImageDisplay from './ChatImageDisplay';
 import ChatTableDisplay from './ChatTableDisplay';
+import { formatKnowledgeBaseResponse, getUserDisplayName } from '../../utils/responseTemplates';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface DeviceChatInterfaceProps {
   deviceName: string;
@@ -28,6 +30,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
   onClose,
   onContinue
 }) => {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +49,16 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
         const history = await chatService.getDeviceChatHistory(deviceId, 20);
         
         if (history.messages.length > 0) {
-          setMessages(history.messages);
+          // Format assistant messages with personalized templates
+          const formattedMessages = history.messages.map(message => {
+            if (message.type === 'assistant' && message.content) {
+              const username = getUserDisplayName(user);
+              const formattedContent = formatKnowledgeBaseResponse(message.content, username);
+              return { ...message, content: formattedContent };
+            }
+            return message;
+          });
+          setMessages(formattedMessages);
           logInfo('DeviceChatInterface', 'Chat history loaded successfully', { 
             messageCount: history.messages.length 
           });
@@ -114,7 +126,17 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
       
       // Reload chat history to get the updated conversation from backend
       const history = await chatService.getDeviceChatHistory(deviceId, 50);
-      setMessages(history.messages);
+      
+      // Format assistant messages with personalized templates
+      const formattedMessages = history.messages.map(message => {
+        if (message.type === 'assistant' && message.content) {
+          const username = getUserDisplayName(user);
+          const formattedContent = formatKnowledgeBaseResponse(message.content, username);
+          return { ...message, content: formattedContent };
+        }
+        return message;
+      });
+      setMessages(formattedMessages);
       
       logInfo('DeviceChatInterface', 'Message sent and chat history updated', {
         deviceId,

@@ -66,6 +66,43 @@ public class DeviceNotificationEnhancerService {
     }
     
     /**
+     * Enhance a notification with comprehensive device information using provided counts
+     * This method is used when we have the actual counts from the generation process
+     */
+    public void enhanceNotificationWithDeviceInfo(Notification notification, String deviceId, String organizationId, 
+                                                 int rulesCount, int maintenanceCount, int safetyCount) {
+        try {
+            Optional<Device> deviceOpt = deviceRepository.findByIdAndOrganizationId(deviceId, organizationId);
+            if (deviceOpt.isEmpty()) {
+                logger.warn("Device not found for notification enhancement: {}", deviceId);
+                return;
+            }
+            
+            Device device = deviceOpt.get();
+            
+            // Set basic device information
+            notification.setDeviceName(device.getName());
+            notification.setDeviceType(device.getType() != null ? device.getType().toString() : null);
+            notification.setDeviceLocation(device.getLocation());
+            notification.setDeviceStatus(device.getStatus() != null ? device.getStatus().toString() : null);
+            notification.setDeviceManufacturer(device.getManufacturer());
+            notification.setDeviceModel(device.getModel());
+            
+            // Use provided counts instead of querying database
+            notification.setTotalRulesCount(rulesCount);
+            notification.setMaintenanceRulesCount(maintenanceCount);
+            notification.setSafetyRulesCount(safetyCount);
+            
+            logger.info("Enhanced notification with device info using provided counts - Device: {}, Rules: {}, Maintenance: {}, Safety: {}", 
+                       device.getName(), rulesCount, maintenanceCount, safetyCount);
+            
+        } catch (Exception e) {
+            logger.error("Failed to enhance notification with device info for device: {}", deviceId, e);
+            // Don't fail the notification creation if enhancement fails
+        }
+    }
+    
+    /**
      * Build a simple notification message with device details and counts only
      */
     public String buildEnhancedNotificationMessage(Notification notification) {

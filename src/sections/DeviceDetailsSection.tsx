@@ -43,6 +43,7 @@ import { pdfAPI } from '../services/api';
 import { pdfProcessingService, PDFListResponse } from '../services/pdfprocess';
 import { DeviceStatsService, DeviceStats } from '../services/deviceStatsService';
 import { logInfo, logError } from '../utils/logger';
+import { formatKnowledgeBaseResponse, getUserDisplayName } from '../utils/responseTemplates';
 import { validateDeviceUpdate, sanitizeDeviceData, getChangedFields } from '../utils/deviceValidation';
 import { TabLoadingScreen, DataLoadingState, LoadingSpinner } from '../components/Loading/LoadingComponents';
 import { tokenService } from '../services/tokenService';
@@ -237,7 +238,7 @@ export const DeviceDetailsSection: React.FC = () => {
   const { deviceId } = useParams<{ deviceId: string }>();
   const navigate = useNavigate();
   const { devices, updateDeviceStatus } = useIoT();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   
   const [activeTab, setActiveTab] = useState('device-info');
   const [isTabLoading, setIsTabLoading] = useState(false);
@@ -929,8 +930,9 @@ export const DeviceDetailsSection: React.FC = () => {
             tablesFound: queryResponse.tables?.length || 0
           });
           
-          // Enhance content with image/table information (NO PDF name shown to user)
-          let enhancedContent = queryResponse.response || `I found relevant information in the device documentation. ${queryResponse.chunks_used?.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 300) + '...' : 'Would you like me to search for more specific information?'}`;
+          // Format response with personalized template
+          const username = getUserDisplayName(user);
+          let enhancedContent = formatKnowledgeBaseResponse(queryResponse, username);
           
           // Add information about found images and tables
           if (queryResponse.images && queryResponse.images.length > 0) {
@@ -1355,7 +1357,7 @@ export const DeviceDetailsSection: React.FC = () => {
                           : 'bg-white text-slate-800 border border-slate-200'
                       }`}
                     >
-                      <p className="text-sm leading-relaxed">{message.content}</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                       
                       {/* Display Images - Using same implementation as Knowledge Section */}
                       {message.images && message.images.length > 0 && (

@@ -85,4 +85,14 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
     @Query("DELETE FROM MaintenanceSchedule m WHERE m.deviceId = :deviceId")
     void deleteByDeviceId(@Param("deviceId") String deviceId);
     
+    // Update maintenance status
+    @Modifying
+    @Query("UPDATE MaintenanceSchedule m SET m.status = :status, m.updatedAt = CURRENT_TIMESTAMP WHERE m.id = :id")
+    void updateMaintenanceStatus(@Param("id") String id, @Param("status") String status);
+    
+    // Update maintenance task schedule (next maintenance date and status)
+    @Modifying
+    @Query("UPDATE MaintenanceSchedule m SET m.nextMaintenance = :nextMaintenance, m.status = :status, m.updatedAt = CURRENT_TIMESTAMP WHERE m.id = :id")
+    void updateMaintenanceTaskSchedule(@Param("id") String id, @Param("nextMaintenance") java.time.LocalDate nextMaintenance, @Param("status") String status);
+    
 }

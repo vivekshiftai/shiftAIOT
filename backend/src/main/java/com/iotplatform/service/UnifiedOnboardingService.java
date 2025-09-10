@@ -183,7 +183,7 @@ public class UnifiedOnboardingService {
                 log.info("📝 Creating device assignment notification for user: {} for device: {} after onboarding completion", 
                        deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
                 
-                // Create enhanced device assignment notification
+                // Create enhanced device assignment notification using only actual generated data
                 Notification notification = new Notification();
                 notification.setTitle("🎯 New Device Assignment");
                 notification.setMessage("Device has been successfully onboarded and assigned to you. The device is now ready for monitoring and management.");
@@ -193,9 +193,23 @@ public class UnifiedOnboardingService {
                 notification.setOrganizationId(organizationId);
                 notification.setRead(false);
                 
-                // Enhance notification with device information and counts
+                // Get actual counts from PDF processing results instead of querying database
+                int rulesCount = 0;
+                int maintenanceCount = 0;
+                int safetyCount = 0;
+                
+                if (deviceResponse.getPdfData() != null) {
+                    rulesCount = deviceResponse.getPdfData().getRulesGenerated() != null ? deviceResponse.getPdfData().getRulesGenerated() : 0;
+                    maintenanceCount = deviceResponse.getPdfData().getMaintenanceItems() != null ? deviceResponse.getPdfData().getMaintenanceItems() : 0;
+                    safetyCount = deviceResponse.getPdfData().getSafetyPrecautions() != null ? deviceResponse.getPdfData().getSafetyPrecautions() : 0;
+                }
+                
+                log.info("📊 Using actual generated counts for notification - Rules: {}, Maintenance: {}, Safety: {}", 
+                       rulesCount, maintenanceCount, safetyCount);
+                
+                // Enhance notification with device information using actual counts
                 deviceNotificationEnhancerService.enhanceNotificationWithDeviceInfo(
-                    notification, deviceResponse.getId(), organizationId);
+                    notification, deviceResponse.getId(), organizationId, rulesCount, maintenanceCount, safetyCount);
                 
                 // Build enhanced message with counts
                 String enhancedMessage = deviceNotificationEnhancerService.buildEnhancedNotificationMessage(notification);
@@ -206,8 +220,10 @@ public class UnifiedOnboardingService {
                     deviceRequest.getAssignedUserId().trim(), notification);
                 
                 if (createdNotification.isPresent()) {
-                    log.info("✅ Device assignment notification sent to user: {} for device: {} after onboarding completion", 
-                           deviceRequest.getAssignedUserId().trim(), deviceRequest.getName());
+                    log.info("✅ Device assignment notification sent to user: {} for device: {} after onboarding completion with counts - Rules: {}, Maintenance: {}, Safety: {}", 
+                           deviceRequest.getAssignedUserId().trim(), deviceRequest.getName(), rulesCount, maintenanceCount, safetyCount);
+                    log.info("📱 Slack notification automatically sent via MCP server with actual generated data - Rules: {}, Maintenance: {}, Safety: {}", 
+                           rulesCount, maintenanceCount, safetyCount);
                 } else {
                     log.info("⚠️ Device assignment notification blocked by user preferences for user: {}", 
                            deviceRequest.getAssignedUserId().trim());

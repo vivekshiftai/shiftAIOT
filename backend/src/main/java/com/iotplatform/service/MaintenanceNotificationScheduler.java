@@ -30,6 +30,7 @@ public class MaintenanceNotificationScheduler {
     private final MaintenanceScheduleRepository maintenanceScheduleRepository;
     private final ConversationNotificationService conversationNotificationService;
     private final NotificationService notificationService;
+    private final MaintenanceScheduleService maintenanceScheduleService;
     private final ExecutorService executorService = Executors.newFixedThreadPool(5);
 
     @Value("${maintenance.scheduler.enabled:true}")
@@ -39,9 +40,110 @@ public class MaintenanceNotificationScheduler {
     private String defaultOrganizationId;
 
     /**
+     * Update overdue maintenance tasks status.
+     * Runs every day at 5:50 AM to mark overdue tasks before sending notifications.
+     */
+    @Scheduled(cron = "${maintenance.overdue.cron:0 50 5 * * ?}")
+    public void updateOverdueMaintenanceTasks() {
+        if (!schedulerEnabled) {
+            log.info("Maintenance scheduler is disabled, skipping overdue update");
+            return;
+        }
+
+        log.info("Starting overdue maintenance tasks update for date: {}", LocalDate.now());
+
+        try {
+            // Get all overdue tasks (past due date but still ACTIVE)
+            List<Object[]> overdueTasks = maintenanceScheduleRepository
+                .findAllTodaysMaintenanceTasksWithDetails();
+
+            int overdueCount = 0;
+            for (Object[] taskData : overdueTasks) {
+                try {
+                    String taskId = (String) taskData[0];
+                    String nextMaintenance = taskData[5] != null ? taskData[5].toString() : null;
+                    String status = (String) taskData[6];
+                    
+                    // Check if task is overdue (past due date and still ACTIVE)
+                    if (nextMaintenance != null && status != null && 
+                        LocalDate.parse(nextMaintenance).isBefore(LocalDate.now()) && 
+                        "ACTIVE".equals(status)) {
+                        
+                        // Update status to OVERDUE
+                        maintenanceScheduleRepository.updateMaintenanceStatus(taskId, "OVERDUE");
+                        overdueCount++;
+                        log.info("✅ Marked maintenance task as overdue: {}", taskData[1]);
+                    }
+                } catch (Exception e) {
+                    log.error("Error updating overdue status for task: {}", e.getMessage(), e);
+                }
+            }
+
+            log.info("Overdue maintenance tasks update completed. Updated {} tasks to OVERDUE status", overdueCount);
+
+        } catch (Exception e) {
+            log.error("Error in overdue maintenance tasks update: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Auto-update overdue maintenance tasks to next maintenance date.
+     * Runs every day at 6:00 AM to automatically reschedule overdue tasks.
+     */
+    @Scheduled(cron = "${maintenance.auto-update.cron:0 0 6 * * ?}")
+    public void autoUpdateOverdueMaintenanceTasks() {
+        if (!schedulerEnabled) {
+            log.info("Maintenance scheduler is disabled, skipping auto-update");
+            return;
+        }
+
+        log.info("Starting automatic overdue maintenance tasks update for date: {}", LocalDate.now());
+
+        try {
+            // Get all overdue tasks
+            List<Object[]> overdueTasks = maintenanceScheduleRepository
+                .findAllTodaysMaintenanceTasksWithDetails();
+
+            int updatedCount = 0;
+            for (Object[] taskData : overdueTasks) {
+                try {
+                    String taskId = (String) taskData[0];
+                    String taskName = (String) taskData[1];
+                    String nextMaintenance = taskData[5] != null ? taskData[5].toString() : null;
+                    String status = (String) taskData[6];
+                    String frequency = (String) taskData[7];
+                    
+                    // Check if task is overdue (past due date and OVERDUE status)
+                    if (nextMaintenance != null && status != null && frequency != null &&
+                        LocalDate.parse(nextMaintenance).isBefore(LocalDate.now()) && 
+                        "OVERDUE".equals(status)) {
+                        
+                        // Calculate next maintenance date based on frequency
+                        LocalDate newNextMaintenance = maintenanceScheduleService.calculateNextMaintenanceDate(frequency);
+                        
+                        // Update the task with new next maintenance date and reset to ACTIVE
+                        maintenanceScheduleRepository.updateMaintenanceTaskSchedule(taskId, newNextMaintenance, "ACTIVE");
+                        updatedCount++;
+                        
+                        log.info("✅ Auto-updated overdue maintenance task '{}' to next date: {} (frequency: {})", 
+                                taskName, newNextMaintenance, frequency);
+                    }
+                } catch (Exception e) {
+                    log.error("Error auto-updating overdue task: {}", e.getMessage(), e);
+                }
+            }
+
+            log.info("Automatic overdue maintenance tasks update completed. Updated {} tasks to next maintenance date", updatedCount);
+
+        } catch (Exception e) {
+            log.error("Error in automatic overdue maintenance tasks update: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
      * Daily maintenance notification scheduler.
      * Runs every day at 5:55 AM to send notifications for today's maintenance tasks.
-     * This runs 5 minutes before the MaintenanceSchedulerService to ensure tasks are still due today.
+     * This runs 5 minutes after the overdue update to ensure tasks are properly marked.
      */
     @Scheduled(cron = "${maintenance.scheduler.cron:0 55 5 * * ?}")
     public void sendDailyMaintenanceNotifications() {

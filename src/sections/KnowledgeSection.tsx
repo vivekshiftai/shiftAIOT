@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { pdfProcessingService, PDFImage } from '../services/pdfprocess';
 import { logError, logInfo } from '../utils/logger';
+import { formatKnowledgeBaseResponse, getUserDisplayName } from '../utils/responseTemplates';
+import { useAuth } from '../contexts/AuthContext';
 import '../styles/knowledge.css';
 import { knowledgeAPI } from '../services/api';
 
@@ -60,6 +62,7 @@ interface ChatMessage {
 }
 
 export const KnowledgeSection: React.FC = () => {
+  const { user } = useAuth();
   const [documents, setDocuments] = useState<UnifiedPDF[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [devices] = useState<Device[]>([]);
@@ -69,7 +72,7 @@ export const KnowledgeSection: React.FC = () => {
     {
       id: '1',
       type: 'assistant',
-      content: 'Hello! I\'m your AI assistant for machine documentation.\n\n**How to use:**\n1. Select a machine from the "AI Ready Machines" panel on the right\n2. Ask questions about that machine\'s documentation\n\n\n**Available machines with Device Guides will appear on the right. Select one to get started!**',
+      content: 'Hello! I\'m your AI assistant for machines.\n\n**How to use:**\n1. Select a machine from the "AI Ready Machines" panel on the right\n2. Ask questions about that machine\n\n\n**Available machines with Device Guides will appear on the right. Select one to get started!**',
       timestamp: new Date()
     }
   ]);
@@ -250,10 +253,14 @@ export const KnowledgeSection: React.FC = () => {
             
             const queryResponse = await pdfProcessingService.queryPDF(queryRequest);
             
+            // Format response with personalized template
+            const username = getUserDisplayName(user);
+            const formattedContent = formatKnowledgeBaseResponse(queryResponse, username);
+            
             const assistantMessage: ChatMessage = {
               id: (Date.now() + 1).toString(),
               type: 'assistant',
-              content: queryResponse.response || `I found relevant results for device "${selectedDevice.name}". ${queryResponse.chunks_used?.length > 0 ? 'Here\'s what I found: ' + queryResponse.response.substring(0, 200) + '...' : 'Would you like me to search for more specific information?'}`,
+              content: formattedContent,
               timestamp: new Date(),
               images: queryResponse.images || [],
               tables: queryResponse.tables || [],

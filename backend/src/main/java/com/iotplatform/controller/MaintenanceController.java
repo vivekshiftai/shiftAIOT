@@ -148,38 +148,7 @@ public class MaintenanceController {
             maintenance.setOrganizationId(userDetails.getUser().getOrganizationId());
             DeviceMaintenance createdMaintenance = maintenanceScheduleService.createMaintenance(maintenance);
 
-            // Send notification to assigned user
-            if (maintenance.getAssignedTo() != null && !maintenance.getAssignedTo().trim().isEmpty()) {
-                try {
-                    Notification notification = new Notification();
-                    notification.setUserId(maintenance.getAssignedTo());
-                    notification.setTitle("New Maintenance Task Assigned");
-                    notification.setMessage(String.format(
-                        "You have been assigned maintenance task '%s' for device '%s'. " +
-                        "Priority: %s. Please review and schedule accordingly.",
-                        maintenance.getTaskName(), 
-                        maintenance.getDeviceName() != null ? maintenance.getDeviceName() : "Unknown Device",
-                        maintenance.getPriority() != null ? maintenance.getPriority().toString() : "Medium"
-                    ));
-                    notification.setCategory(Notification.NotificationCategory.MAINTENANCE_ASSIGNMENT);
-                    notification.setOrganizationId(userDetails.getUser().getOrganizationId());
-                    notification.setDeviceId(maintenance.getDeviceId());
-                    notification.setRead(false);
-                    
-                    Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(maintenance.getAssignedTo(), notification);
-                    if (createdNotification.isPresent()) {
-                        log.info("✅ Created maintenance task notification for user: {} for task: {}", 
-                               maintenance.getAssignedTo(), maintenance.getTaskName());
-                    } else {
-                        log.info("⚠️ Maintenance task notification blocked by user preferences for user: {}", 
-                               maintenance.getAssignedTo());
-                    }
-                } catch (Exception e) {
-                    log.error("❌ Failed to create maintenance task notification for user: {} task: {}", 
-                             maintenance.getAssignedTo(), maintenance.getTaskName(), e);
-                    // Don't fail the maintenance creation if notification fails
-                }
-            }
+            // Notification creation removed - only create notifications after full data generation in onboarding flow
 
             log.info("Successfully created maintenance task: {} for device: {}", createdMaintenance.getId(), createdMaintenance.getDevice() != null ? createdMaintenance.getDevice().getId() : "null");
 
@@ -618,29 +587,7 @@ public class MaintenanceController {
             
             DeviceMaintenance assignedTask = maintenanceScheduleService.assignMaintenanceTask(id, assigneeId, user.getId());
             
-            // Send notification to assignee
-            Notification notification = new Notification();
-            notification.setUserId(assigneeId);
-            notification.setTitle("Maintenance Task Assigned");
-            notification.setMessage(String.format(
-                "You have been assigned maintenance task '%s' for device '%s'. " +
-                "Priority: %s. Please review and schedule accordingly.",
-                assignedTask.getTaskName(),
-                assignedTask.getDeviceName() != null ? assignedTask.getDeviceName() : "Unknown Device",
-                assignedTask.getPriority() != null ? assignedTask.getPriority().toString() : "Medium"
-            ));
-            notification.setCategory(Notification.NotificationCategory.MAINTENANCE_ASSIGNMENT);
-            notification.setOrganizationId(user.getOrganizationId());
-            notification.setDeviceId(assignedTask.getDeviceId());
-            notification.setRead(false);
-            
-            Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(assigneeId, notification);
-            if (createdNotification.isPresent()) {
-                log.info("✅ Created maintenance assignment notification for user: {} for task: {}", 
-                       assigneeId, assignedTask.getTaskName());
-            } else {
-                log.warn("⚠️ Maintenance assignment notification blocked by user preferences for user: {}", assigneeId);
-            }
+            // Notification creation removed - only create notifications after full data generation in onboarding flow
             
             log.info("Maintenance task assigned successfully: {} to user: {}", id, assigneeId);
             return ResponseEntity.ok(assignedTask);

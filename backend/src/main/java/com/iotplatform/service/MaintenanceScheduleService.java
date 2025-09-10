@@ -199,16 +199,30 @@ public class MaintenanceScheduleService {
      */
     public List<DeviceMaintenance> getUpcomingMaintenanceByOrganization(String organizationId) {
         log.info("Fetching upcoming maintenance tasks for organization: {}", organizationId);
-        // Get all maintenance for organization and filter for upcoming ones (next 30 days)
+        // Get all maintenance for organization and filter for upcoming ones (next 90 days for debugging)
         List<DeviceMaintenance> allMaintenance = deviceMaintenanceRepository.findByOrganizationId(organizationId);
         LocalDate today = LocalDate.now();
-        LocalDate thirtyDaysFromNow = today.plusDays(30);
-        return allMaintenance.stream()
-                .filter(maintenance -> maintenance.getNextMaintenance() != null && 
-                        !maintenance.getNextMaintenance().isBefore(today) && 
-                        !maintenance.getNextMaintenance().isAfter(thirtyDaysFromNow) && 
-                        maintenance.getStatus() == DeviceMaintenance.Status.ACTIVE)
+        LocalDate thirtyDaysFromNow = today.plusDays(90); // Extended to 90 days for debugging
+        
+        log.info("Found {} total maintenance tasks for organization: {}", allMaintenance.size(), organizationId);
+        log.info("Filtering for upcoming tasks between {} and {} (90-day window for debugging)", today, thirtyDaysFromNow);
+        
+        List<DeviceMaintenance> upcomingMaintenance = allMaintenance.stream()
+                .filter(maintenance -> {
+                    boolean hasNextMaintenance = maintenance.getNextMaintenance() != null;
+                    boolean isNotBeforeToday = hasNextMaintenance && !maintenance.getNextMaintenance().isBefore(today);
+                    boolean isNotAfterThirtyDays = hasNextMaintenance && !maintenance.getNextMaintenance().isAfter(thirtyDaysFromNow);
+                    boolean isActive = maintenance.getStatus() == DeviceMaintenance.Status.ACTIVE;
+                    
+                    log.debug("Maintenance task '{}': nextMaintenance={}, hasNextMaintenance={}, isNotBeforeToday={}, isNotAfterThirtyDays={}, isActive={}", 
+                             maintenance.getTaskName(), maintenance.getNextMaintenance(), hasNextMaintenance, isNotBeforeToday, isNotAfterThirtyDays, isActive);
+                    
+                    return hasNextMaintenance && isNotBeforeToday && isNotAfterThirtyDays && isActive;
+                })
                 .collect(java.util.stream.Collectors.toList());
+        
+        log.info("Found {} upcoming maintenance tasks for organization: {}", upcomingMaintenance.size(), organizationId);
+        return upcomingMaintenance;
     }
     
     /**

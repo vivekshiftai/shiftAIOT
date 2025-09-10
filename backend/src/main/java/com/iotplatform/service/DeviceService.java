@@ -243,9 +243,7 @@ public class DeviceService {
         try {
             String creatorId = device.getAssignedBy() != null ? device.getAssignedBy() : device.getAssignedUserId();
             if (creatorId != null && !creatorId.trim().isEmpty()) {
-                logger.info("📝 Creating device creation notification for creator: {} for device: {}", 
-                           creatorId, savedDevice.getName());
-                createDeviceCreationNotification(savedDevice, creatorId, organizationId);
+                // Notification creation removed - only create notifications after full data generation in onboarding flow
             }
         } catch (Exception e) {
             logger.error("❌ Failed to create device creation notification for device: {}", savedDevice.getId(), e);
@@ -351,9 +349,7 @@ public class DeviceService {
             try {
                 logger.info("📝 Creating device assignment notification for user: {} for device: {}", 
                            request.getAssignedUserId().trim(), savedDevice.getName());
-                logger.info("📝 Device details - ID: {}, Name: {}, Organization: {}", 
-                           savedDevice.getId(), savedDevice.getName(), organizationId);
-                createDeviceAssignmentNotification(savedDevice, request.getAssignedUserId().trim(), organizationId);
+                // Notification creation removed - only create notifications after full data generation in onboarding flow
             } catch (Exception e) {
                 logger.error("❌ Failed to create device assignment notification for device: {}", savedDevice.getId(), e);
                 // Don't fail device creation if notification fails
@@ -1138,144 +1134,7 @@ public class DeviceService {
         return new DeviceStatsResponse(total, online, offline, warning, error);
     }
 
-    private void createDeviceAssignmentNotification(Device device, String assignedUserId, String organizationId) {
-        try {
-            // Get the assigned user
-            Optional<User> assignedUserOpt = userRepository.findById(assignedUserId);
-            if (assignedUserOpt.isPresent()) {
-                User assignedUser = assignedUserOpt.get();
-                
-                // Create enhanced notification with device information
-                Notification notification = new Notification();
-                notification.setTitle("🎯 New Device Assignment");
-                notification.setMessage("You have been assigned a new device. The device is ready for monitoring and management.");
-                notification.setCategory(Notification.NotificationCategory.DEVICE_ASSIGNMENT);
-                notification.setUserId(assignedUserId);
-                notification.setDeviceId(device.getId());
-                notification.setOrganizationId(organizationId);
-                notification.setRead(false);
-                
-                // Enhance notification with device information and counts
-                deviceNotificationEnhancerService.enhanceNotificationWithDeviceInfo(notification, device.getId(), organizationId);
-                
-                // Build enhanced message with counts
-                String enhancedMessage = deviceNotificationEnhancerService.buildEnhancedNotificationMessage(notification);
-                notification.setMessage(enhancedMessage);
-                
-                // Save notification using the notification service with preference check
-                Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(assignedUserId, notification);
-                
-                if (createdNotification.isPresent()) {
-                    logger.info("Created enhanced device assignment notification for user: {} for device: {}", 
-                               assignedUser.getEmail(), device.getName());
-                } else {
-                    logger.info("Device assignment notification blocked by user preferences for user: {}", 
-                               assignedUser.getEmail());
-                }
-            } else {
-                logger.warn("Could not create notification - assigned user not found: {}", assignedUserId);
-            }
-        } catch (Exception e) {
-            logger.error("Failed to create device assignment notification for user: {} device: {}", 
-                        assignedUserId, device.getId(), e);
-            // Don't fail the device creation if notification fails
-        }
-    }
+    // Notification methods removed - only create notifications after full data generation in onboarding flow
 
-    private void createDeviceUpdateNotification(Device device, String assignedUserId, String organizationId, String updatedBy) {
-        try {
-            // Get the assigned user
-            Optional<User> assignedUserOpt = userRepository.findById(assignedUserId);
-            if (assignedUserOpt.isPresent()) {
-                User assignedUser = assignedUserOpt.get();
-                
-                // Get the user who made the update
-                Optional<User> updatedByUserOpt = userRepository.findById(updatedBy);
-                String updatedByUserName = updatedByUserOpt.map(user -> user.getFirstName() + " " + user.getLastName()).orElse("System");
-                
-                // Create notification for device update
-                Notification notification = new Notification();
-                notification.setTitle("Device Assignment Updated");
-                notification.setMessage(String.format(
-                    "Your device assignment has been updated by %s. " +
-                    "Device: %s (%s) at location: %s is now assigned to you.",
-                    updatedByUserName,
-                    device.getName(),
-                    device.getType(),
-                    device.getLocation()
-                ));
-                notification.setCategory(Notification.NotificationCategory.DEVICE_UPDATE);
-                notification.setUserId(assignedUserId);
-                notification.setDeviceId(device.getId());
-                notification.setOrganizationId(organizationId);
-                notification.setRead(false);
-                
-                // Save notification using the notification service with preference check
-                Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(assignedUserId, notification);
-                
-                if (createdNotification.isPresent()) {
-                    logger.info("✅ Created device update notification for user: {} for device: {}", 
-                               assignedUser.getEmail(), device.getName());
-                } else {
-                    logger.info("⚠️ Device update notification blocked by user preferences for user: {}", 
-                               assignedUser.getEmail());
-                }
-            } else {
-                logger.warn("⚠️ Could not create update notification - assigned user not found: {}", assignedUserId);
-            }
-        } catch (Exception e) {
-            logger.error("❌ Failed to create device update notification for user: {} device: {}", 
-                        assignedUserId, device.getId(), e);
-            // Don't fail the device update if notification fails
-        }
-    }
 
-    private void createDeviceCreationNotification(Device device, String creatorId, String organizationId) {
-        try {
-            // Get the creator user
-            Optional<User> creatorUserOpt = userRepository.findById(creatorId);
-            if (creatorUserOpt.isPresent()) {
-                User creatorUser = creatorUserOpt.get();
-                
-                // Create enhanced notification with device information
-                Notification notification = new Notification();
-                notification.setTitle("🎯 New Device Created");
-                notification.setMessage(String.format(
-                    "A new device has been created. Device: %s (%s) at location: %s is assigned to you.",
-                    device.getName(),
-                    device.getType(),
-                    device.getLocation()
-                ));
-                notification.setCategory(Notification.NotificationCategory.DEVICE_CREATION);
-                notification.setUserId(creatorId);
-                notification.setDeviceId(device.getId());
-                notification.setOrganizationId(organizationId);
-                notification.setRead(false);
-                
-                // Enhance notification with device information and counts
-                deviceNotificationEnhancerService.enhanceNotificationWithDeviceInfo(notification, device.getId(), organizationId);
-                
-                // Build enhanced message with counts
-                String enhancedMessage = deviceNotificationEnhancerService.buildEnhancedNotificationMessage(notification);
-                notification.setMessage(enhancedMessage);
-                
-                // Save notification using the notification service with preference check
-                Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(creatorId, notification);
-                
-                if (createdNotification.isPresent()) {
-                    logger.info("✅ Created device creation notification for user: {} for device: {}", 
-                               creatorUser.getEmail(), device.getName());
-                } else {
-                    logger.info("⚠️ Device creation notification blocked by user preferences for user: {}", 
-                               creatorUser.getEmail());
-                }
-            } else {
-                logger.warn("Could not create notification - creator user not found: {}", creatorId);
-            }
-        } catch (Exception e) {
-            logger.error("Failed to create device creation notification for user: {} device: {}", 
-                        creatorId, device.getId(), e);
-            // Don't fail the device creation if notification fails
-        }
-    }
 }

@@ -98,6 +98,14 @@ export const DashboardSection: React.FC = () => {
           upcomingMaintenanceData: upcomingMaintenanceResponse.data
         });
         
+        // Debug: Log the structure of upcoming maintenance response
+        console.log('🔍 DEBUG: Upcoming maintenance response structure:', {
+          status: upcomingMaintenanceResponse.status,
+          data: upcomingMaintenanceResponse.data,
+          upcomingMaintenance: upcomingMaintenanceResponse.data?.upcomingMaintenance,
+          totalCount: upcomingMaintenanceResponse.data?.totalCount
+        });
+        
         
         // Check if any maintenance tasks have missing device names and update them
         const allMaintenanceData = allMaintenanceResponse.data || [];
@@ -116,7 +124,7 @@ export const DashboardSection: React.FC = () => {
             const updatedTodayMaintenanceResponse = await maintenanceAPI.getToday();
             
             setMaintenanceCount(updatedAllMaintenanceResponse.data?.length || 0);
-            setUpcomingMaintenance(updatedUpcomingMaintenanceResponse.data || []);
+            setUpcomingMaintenance(updatedUpcomingMaintenanceResponse.data?.upcomingMaintenance || []);
             setTodayMaintenance(updatedTodayMaintenanceResponse.data || []);
             
             logInfo('Dashboard', 'Maintenance data refreshed with updated device names');
@@ -133,6 +141,18 @@ export const DashboardSection: React.FC = () => {
         // Set upcoming maintenance for the upcoming section
         const upcomingTasks = upcomingMaintenanceResponse.data?.upcomingMaintenance || [];
         setUpcomingMaintenance(upcomingTasks);
+        
+        // Debug: Log upcoming tasks details
+        console.log('🔍 DEBUG: Upcoming maintenance tasks:', {
+          count: upcomingTasks.length,
+          tasks: upcomingTasks.map((task: any) => ({
+            id: task.id,
+            taskName: task.taskName,
+            nextMaintenance: task.nextMaintenance,
+            status: task.status,
+            deviceName: task.deviceName
+          }))
+        });
         
         // Set today's maintenance tasks
         const todayTasks = todayMaintenanceResponse.data || [];
