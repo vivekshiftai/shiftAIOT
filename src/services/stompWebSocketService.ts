@@ -53,9 +53,21 @@ class StompWebSocketService {
       
       // Create STOMP client with SockJS
       this.client = new Client({
-        webSocketFactory: () => new SockJS(wsUrl, null, {
-          transports: ['websocket', 'xhr-streaming', 'xhr-polling']
-        }),
+        webSocketFactory: () => {
+          try {
+            // Ensure global is available for SockJS
+            if (typeof global === 'undefined') {
+              (window as any).global = globalThis;
+            }
+            
+            return new SockJS(wsUrl, null, {
+              transports: ['websocket', 'xhr-streaming', 'xhr-polling']
+            });
+          } catch (error) {
+            logError('StompWebSocket', 'Failed to create SockJS connection', error);
+            throw error;
+          }
+        },
         debug: (str) => {
           logInfo('StompWebSocket', 'STOMP Debug', { message: str });
         },

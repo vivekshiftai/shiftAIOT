@@ -1,101 +1,114 @@
-/* Sophisticated Maroon/Plum Color Palette for ActiveOps Hub Application */
+/* White-Themed Dashboard Color Palette for ActiveOps Hub Application */
 /* Import Inter font for modern typography */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
   /* Light Theme Colors */
-  --bg-primary: #FFFFFF;
-  --bg-secondary: #F8F8F8;
-  --bg-tertiary: #F3F4F6;
-  --bg-card: #FDFDFD;
+  --bg-primary: #ffffff; /* White */
+  --bg-secondary: #f9fafb; /* Very light gray */
+  --bg-tertiary: #f3f4f6; /* Light gray */
+  --bg-card: #f5f3ed; /* Marble Beige */
   --bg-overlay: rgba(0, 0, 0, 0.1);
 
   /* Text Colors - Deep and Readable */
-  --text-primary: #333333;
-  --text-secondary: #666666;
-  --text-tertiary: #888888;
-  --text-inverse: #FFFFFF;
+  --text-primary: #374151; /* Primary dark text */
+  --text-secondary: #6b7280; /* Muted text */
+  --text-tertiary: #9ca3af; /* Secondary text */
+  --text-inverse: #ffffff; /* White */
 
   /* Border Colors - Soft and Subtle */
-  --border-light: #DDDDDD;
-  --border-medium: #CCCCCC;
-  --border-dark: #AAAAAA;
+  --border-light: #e5e7eb; /* Border colors */
+  --border-medium: #d1d5db; /* Subtle borders */
+  --border-dark: #9ca3af; /* Secondary text */
 
-  /* Primary Colors - Deep Plum/Maroon */
-  --primary-50: #FDF2F8;
-  --primary-100: #FCE7F3;
-  --primary-200: #FBCFE8;
-  --primary-300: #F9A8D4;
-  --primary-400: #F472B6;
-  --primary-500: #8B2E5B; /* Main Primary - Deep Plum/Maroon */
-  --primary-600: #7C1D4A;
-  --primary-700: #6D1A3F;
-  --primary-800: #5C213F;
-  --primary-900: #4A1A32;
-  --primary-950: #2D0F1E;
+  /* Primary Colors - Magenta Purple */
+  --primary-50: #fdf2f8;
+  --primary-100: #fce7f3;
+  --primary-200: #fbcfe8;
+  --primary-300: #f9a8d4;
+  --primary-400: #f472b6;
+  --primary-500: #8d3165; /* Main Primary - Magenta Purple */
+  --primary-600: #6d2450; /* Dark Magenta */
+  --primary-700: #5c1a3f;
+  --primary-800: #4a1532;
+  --primary-900: #3d1129;
+  --primary-950: #2d0f1e;
 
-  /* Secondary Colors - Dark Maroon/Brown */
-  --secondary-50: #FDF2F8;
-  --secondary-100: #FCE7F3;
-  --secondary-200: #FBCFE8;
-  --secondary-300: #F9A8D4;
-  --secondary-400: #F472B6;
-  --secondary-500: #5C213F; /* Main Secondary - Dark Maroon/Brown */
-  --secondary-600: #4A1A32;
-  --secondary-700: #3D1529;
-  --secondary-800: #2D0F1E;
-  --secondary-900: #1F0A14;
-  --secondary-950: #0F050A;
+  /* Secondary Colors - Wine/Burgundy */
+  --secondary-50: #fef2f2;
+  --secondary-100: #fee2e2;
+  --secondary-200: #fecaca;
+  --secondary-300: #fca5a5;
+  --secondary-400: #f87171;
+  --secondary-500: #722f37; /* Main Secondary - Wine/Burgundy */
+  --secondary-600: #8b3a42; /* Light Wine */
+  --secondary-700: #991b1b; /* Dark red text */
+  --secondary-800: #7f1d1d;
+  --secondary-900: #6b1a1a;
+  --secondary-950: #450a0a;
 
-  /* Success Colors - Green */
-  --success-50: #F0FDF4;
-  --success-100: #DCFCE7;
-  --success-200: #BBF7D0;
-  --success-300: #86EFAC;
-  --success-400: #4ADE80;
-  --success-500: #22C55E; /* Green */
-  --success-600: #16A34A;
-  --success-700: #15803D;
-  --success-800: #166534;
-  --success-900: #14532D;
-  --success-950: #052E16;
+  /* Success Colors - Green (Online/Success) */
+  --success-50: #d1fae5; /* Light green backgrounds */
+  --success-100: #dcfce7;
+  --success-200: #bbf7d0;
+  --success-300: #86efac;
+  --success-400: #4ade80;
+  --success-500: #10b981; /* Success states */
+  --success-600: #059669;
+  --success-700: #047857;
+  --success-800: #065f46; /* Dark green text */
+  --success-900: #064e3b;
+  --success-950: #022c22;
 
   /* Warning Colors - Amber */
-  --warning-50: #FFFBEB;
-  --warning-100: #FEF3C7;
-  --warning-200: #FDE68A;
-  --warning-300: #FCD34D;
-  --warning-400: #FBBF24;
-  --warning-500: #F59E0B; /* Amber */
-  --warning-600: #D97706;
-  --warning-700: #B45309;
-  --warning-800: #92400E;
-  --warning-900: #78350F;
-  --warning-950: #451A03;
+  --warning-50: #fffbeb;
+  --warning-100: #fef3c7;
+  --warning-200: #fde68a;
+  --warning-300: #fcd34d;
+  --warning-400: #fbbf24;
+  --warning-500: #f59e0b; /* Amber */
+  --warning-600: #d97706;
+  --warning-700: #b45309;
+  --warning-800: #92400e;
+  --warning-900: #78350f;
+  --warning-950: #451a03;
 
-  /* Error Colors - Red */
-  --error-50: #FEF2F2;
-  --error-100: #FEE2E2;
-  --error-200: #FECACA;
-  --error-300: #FCA5A5;
-  --error-400: #F87171;
-  --error-500: #EF4444; /* Red */
-  --error-600: #DC2626;
-  --error-700: #B91C1C;
-  --error-800: #991B1B;
-  --error-900: #7F1D1D;
-  --error-950: #450A0A;
+  /* Error Colors - Red (Offline/Error) */
+  --error-50: #fee2e2; /* Light red backgrounds */
+  --error-100: #fee2e2;
+  --error-200: #fecaca;
+  --error-300: #fca5a5;
+  --error-400: #f87171;
+  --error-500: #ef4444; /* Error states */
+  --error-600: #dc2626;
+  --error-700: #b91c1c;
+  --error-800: #991b1b; /* Dark red text */
+  --error-900: #7f1d1d;
+  --error-950: #450a0a;
 
-  /* Neutral Colors - Soft Grays */
-  --neutral-50: #F8F8F8;
-  --neutral-100: #F3F4F6;
-  --neutral-200: #E0E0E0;
-  --neutral-300: #CCCCCC;
-  --neutral-400: #AAAAAA;
-  --neutral-500: #888888;
-  --neutral-600: #666666;
-  --neutral-700: #333333;
-  --neutral-800: #1F2937;
+  /* Information Colors - Blue */
+  --info-50: #dbeafe; /* Light blue backgrounds */
+  --info-100: #dbeafe;
+  --info-200: #bfdbfe;
+  --info-300: #93c5fd;
+  --info-400: #60a5fa;
+  --info-500: #3b82f6; /* Information states */
+  --info-600: #2563eb;
+  --info-700: #1d4ed8;
+  --info-800: #1e40af; /* Dark blue text */
+  --info-900: #1e3a8a;
+  --info-950: #172554;
+
+  /* Neutral Colors - Gray Shades */
+  --neutral-50: #f9fafb; /* Very light gray backgrounds */
+  --neutral-100: #f3f4f6; /* Light gray backgrounds */
+  --neutral-200: #e5e7eb; /* Border colors */
+  --neutral-300: #d1d5db; /* Subtle borders */
+  --neutral-400: #9ca3af; /* Secondary text */
+  --neutral-500: #6b7280; /* Muted text */
+  --neutral-600: #4b5563; /* Dark gray text */
+  --neutral-700: #374151; /* Primary dark text */
+  --neutral-800: #1f2937;
   --neutral-900: #111827;
   --neutral-950: #030712;
 
@@ -251,7 +264,7 @@
 
 .futuristic-input:focus {
   border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px rgba(139, 46, 91, 0.1);
+  box-shadow: 0 0 0 3px rgba(141, 49, 101, 0.1);
   outline: none;
 }
 
@@ -284,24 +297,28 @@
 .text-success-500 { color: var(--success-500); }
 .text-warning-500 { color: var(--warning-500); }
 .text-error-500 { color: var(--error-500); }
+.text-info-500 { color: var(--info-500); }
 
 .bg-primary-500 { background-color: var(--primary-500); }
 .bg-secondary-500 { background-color: var(--secondary-500); }
 .bg-success-500 { background-color: var(--success-500); }
 .bg-warning-500 { background-color: var(--warning-500); }
 .bg-error-500 { background-color: var(--error-500); }
+.bg-info-500 { background-color: var(--info-500); }
 
 /* Opacity variants */
-.bg-primary-500\/10 { background-color: rgba(139, 46, 91, 0.1); }
-.bg-primary-500\/20 { background-color: rgba(139, 46, 91, 0.2); }
-.bg-secondary-500\/10 { background-color: rgba(92, 33, 63, 0.1); }
-.bg-secondary-500\/20 { background-color: rgba(92, 33, 63, 0.2); }
-.bg-success-500\/10 { background-color: rgba(34, 197, 94, 0.1); }
-.bg-success-500\/20 { background-color: rgba(34, 197, 94, 0.2); }
+of the .bg-primary-500\/10 { background-color: rgba(141, 49, 101, 0.1); }
+.bg-primary-500\/20 { background-color: rgba(141, 49, 101, 0.2); }
+.bg-secondary-500\/10 { background-color: rgba(114, 47, 55, 0.1); }
+.bg-secondary-500\/20 { background-color: rgba(114, 47, 55, 0.2); }
+.bg-success-500\/10 { background-color: rgba(16, 185, 129, 0.1); }
+.bg-success-500\/20 { background-color: rgba(16, 185, 129, 0.2); }
 .bg-warning-500\/10 { background-color: rgba(245, 158, 11, 0.1); }
 .bg-warning-500\/20 { background-color: rgba(245, 158, 11, 0.2); }
 .bg-error-500\/10 { background-color: rgba(239, 68, 68, 0.1); }
 .bg-error-500\/20 { background-color: rgba(239, 68, 68, 0.2); }
+.bg-info-500\/10 { background-color: rgba(59, 130, 246, 0.1); }
+.bg-info-500\/20 { background-color: rgba(59, 130, 246, 0.2); }
 
 .text-primary-300 { color: var(--primary-300); }
 .text-primary-400 { color: var(--primary-400); }
@@ -313,5 +330,7 @@
 .text-warning-400 { color: var(--warning-400); }
 .text-error-300 { color: var(--error-300); }
 .text-error-400 { color: var(--error-400); }
+.text-info-300 { color: var(--info-300); }
+.text-info-400 { color: var(--info-400); }
 
 

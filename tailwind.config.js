@@ -5,80 +5,93 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#FDF2F8',
-          100: '#FCE7F3',
-          200: '#FBCFE8',
-          300: '#F9A8D4',
-          400: '#F472B6',
-          500: '#8B2E5B', // Main Primary - Deep Plum/Maroon
-          600: '#7C1D4A',
-          700: '#6D1A3F',
-          800: '#5C213F',
-          900: '#4A1A32',
-          950: '#2D0F1E',
+          50: '#fdf2f8',
+          100: '#fce7f3',
+          200: '#fbcfe8',
+          300: '#f9a8d4',
+          400: '#f472b6',
+          500: '#8d3165', // Main Primary - Magenta Purple
+          600: '#6d2450', // Dark Magenta
+          700: '#5c1a3f',
+          800: '#4a1532',
+          900: '#3d1129',
+          950: '#2d0f1e',
         },
         secondary: {
-          50: '#FDF2F8',
-          100: '#FCE7F3',
-          200: '#FBCFE8',
-          300: '#F9A8D4',
-          400: '#F472B6',
-          500: '#5C213F', // Main Secondary - Dark Maroon/Brown
-          600: '#4A1A32',
-          700: '#3D1529',
-          800: '#2D0F1E',
-          900: '#1F0A14',
-          950: '#0F050A',
+          50: '#fef2f2',
+          100: '#fee2e2',
+          200: '#fecaca',
+          300: '#fca5a5',
+          400: '#f87171',
+          500: '#722f37', // Main Secondary - Wine/Burgundy
+          600: '#8b3a42', // Light Wine
+          700: '#991b1b', // Dark red text
+          800: '#7f1d1d',
+          900: '#6b1a1a',
+          950: '#450a0a',
         },
         success: {
-          50: '#F0FDF4',
-          100: '#DCFCE7',
-          200: '#BBF7D0',
-          300: '#86EFAC',
-          400: '#4ADE80',
-          500: '#22C55E', // Green
-          600: '#16A34A',
-          700: '#15803D',
-          800: '#166534',
-          900: '#14532D',
-          950: '#052E16',
+          50: '#d1fae5', // Light green backgrounds
+          100: '#dcfce7',
+          200: '#bbf7d0',
+          300: '#86efac',
+          400: '#4ade80',
+          500: '#10b981', // Success states
+          600: '#059669',
+          700: '#047857',
+          800: '#065f46', // Dark green text
+          900: '#064e3b',
+          950: '#022c22',
         },
         warning: {
-          50: '#FFFBEB',
-          100: '#FEF3C7',
-          200: '#FDE68A',
-          300: '#FCD34D',
-          400: '#FBBF24',
-          500: '#F59E0B', // Amber
-          600: '#D97706',
-          700: '#B45309',
-          800: '#92400E',
-          900: '#78350F',
-          950: '#451A03',
+          50: '#fffbeb',
+          100: '#fef3c7',
+          200: '#fde68a',
+          300: '#fcd34d',
+          400: '#fbbf24',
+          500: '#f59e0b', // Amber
+          600: '#d97706',
+          700: '#b45309',
+          800: '#92400e',
+          900: '#78350f',
+          950: '#451a03',
         },
         error: {
-          50: '#FEF2F2',
-          100: '#FEE2E2',
-          200: '#FECACA',
-          300: '#FCA5A5',
-          400: '#F87171',
-          500: '#EF4444', // Red
-          600: '#DC2626',
-          700: '#B91C1C',
-          800: '#991B1B',
-          900: '#7F1D1D',
-          950: '#450A0A',
+          50: '#fee2e2', // Light red backgrounds
+          100: '#fee2e2',
+          200: '#fecaca',
+          300: '#fca5a5',
+          400: '#f87171',
+          500: '#ef4444', // Error states
+          600: '#dc2626',
+          700: '#b91c1c',
+          800: '#991b1b', // Dark red text
+          900: '#7f1d1d',
+          950: '#450a0a',
+        },
+        info: {
+          50: '#dbeafe', // Light blue backgrounds
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6', // Information states
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af', // Dark blue text
+          900: '#1e3a8a',
+          950: '#172554',
         },
         neutral: {
-          50: '#F8F8F8',
-          100: '#F3F4F6',
-          200: '#E0E0E0',
-          300: '#CCCCCC',
-          400: '#AAAAAA',
-          500: '#888888',
-          600: '#666666',
-          700: '#333333',
-          800: '#1F2937',
+          50: '#f9fafb', // Very light gray backgrounds
+          100: '#f3f4f6', // Light gray backgrounds
+          200: '#e5e7eb', // Border colors
+          300: '#d1d5db', // Subtle borders
+          400: '#9ca3af', // Secondary text
+          500: '#6b7280', // Muted text
+          600: '#4b5563', // Dark gray text
+          700: '#374151', // Primary dark text
+          800: '#1f2937',
           900: '#111827',
           950: '#030712',
         },
