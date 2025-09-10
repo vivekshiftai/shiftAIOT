@@ -19,26 +19,26 @@ interface DeviceCardProps {
 const statusConfig = {
   ONLINE: { 
     icon: CheckCircle, 
-    color: 'text-green-600', 
-    bg: 'bg-green-50',
+    color: 'text-success-600', 
+    bg: 'bg-success-50',
     label: 'Online'
   },
   OFFLINE: { 
     icon: Clock, 
-    color: 'text-slate-600', 
-    bg: 'bg-slate-50',
+    color: 'text-neutral-600', 
+    bg: 'bg-neutral-50',
     label: 'Offline'
   },
   WARNING: { 
     icon: AlertTriangle, 
-    color: 'text-yellow-600', 
-    bg: 'bg-yellow-50',
+    color: 'text-warning-600', 
+    bg: 'bg-warning-50',
     label: 'Warning'
   },
   ERROR: { 
     icon: AlertTriangle, 
-    color: 'text-red-600', 
-    bg: 'bg-red-50',
+    color: 'text-error-600', 
+    bg: 'bg-error-50',
     label: 'Error'
   }
 };
@@ -64,7 +64,7 @@ const pdfProcessingStages: PDFProcessingStage[] = [
     id: 'uploading',
     title: 'Uploading PDF',
     icon: <FileText className="w-4 h-4" />,
-    color: 'text-blue-600',
+    color: 'text-primary-600',
     description: 'Uploading device documentation'
   },
   {
@@ -85,7 +85,7 @@ const pdfProcessingStages: PDFProcessingStage[] = [
     id: 'generating_rules',
     title: 'Generating Rules',
     icon: <CheckCircle className="w-4 h-4" />,
-    color: 'text-green-600',
+    color: 'text-success-600',
     description: 'Creating monitoring rules'
   },
   {
@@ -230,27 +230,27 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
       return (
         <div className="space-y-4">
           {/* PDF Processing Progress */}
-          <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+          <div className="bg-primary-50 rounded-xl p-4 border border-primary-200">
             <div className="flex items-center gap-3 mb-3">
-              <FileText className="w-5 h-5 text-blue-600" />
+              <FileText className="w-5 h-5 text-primary-600" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-blue-900 truncate">
+                <p className="text-sm font-medium text-primary-900 truncate">
                   {pdfFileName || 'Device Documentation'}
                 </p>
-                <p className="text-xs text-blue-700">
+                <p className="text-xs text-primary-700">
                   {pdfProcessingStages[0]?.description || 'Processing...'} {/* Assuming the first stage is always active */}
                 </p>
               </div>
             </div>
             
             {/* Progress Bar */}
-            <div className="w-full bg-blue-200 rounded-full h-2 mb-2">
+            <div className="w-full bg-primary-200 rounded-full h-2 mb-2">
               <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                className="bg-primary-600 h-2 rounded-full transition-all duration-500"
                 style={{ width: `${Math.min(50, 100)}%` }} // Simulate 50% progress for now
               />
             </div>
-            <p className="text-xs text-blue-700 text-right">
+            <p className="text-xs text-primary-700 text-right">
               {Math.round(50)}%
             </p>
           </div>
@@ -265,19 +265,19 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
               return (
                 <div key={stage.id} className="flex items-center gap-3">
                   <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                    isCompleted ? 'bg-green-100' : isCurrent ? 'bg-blue-100' : 'bg-slate-100'
+                    isCompleted ? 'bg-success-100' : isCurrent ? 'bg-primary-100' : 'bg-neutral-100'
                   }`}>
                     {isCompleted ? (
-                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <CheckCircle className="w-4 h-4 text-success-600" />
                     ) : isCurrent ? (
-                      <Clock className="w-4 h-4 text-blue-600 animate-spin" />
+                      <Clock className="w-4 h-4 text-primary-600 animate-spin" />
                     ) : (
                       <div className={`w-4 h-4 ${stage.color.replace('text-', 'bg-')} rounded-full opacity-30`} />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`text-xs font-medium truncate ${
-                      isCompleted ? 'text-green-700' : isCurrent ? 'text-blue-700' : 'text-slate-500'
+                      isCompleted ? 'text-success-700' : isCurrent ? 'text-primary-700' : 'text-neutral-500'
                     }`}>
                       {stage.title}
                     </p>
@@ -294,12 +294,12 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
       return (
         <div className="space-y-4">
           {/* Success Message */}
-          <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+          <div className="bg-success-50 rounded-xl p-4 border border-success-200">
             <div className="flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+              <CheckCircle className="w-5 h-5 text-success-600" />
               <div>
-                <p className="text-sm font-medium text-green-900">PDF Processing Complete</p>
-                <p className="text-xs text-green-700">Device is ready for monitoring</p>
+                <p className="text-sm font-medium text-success-900">PDF Processing Complete</p>
+                <p className="text-xs text-success-700">Device is ready for monitoring</p>
               </div>
             </div>
           </div>
@@ -312,12 +312,12 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 
     if (pdfProcessingStatus === 'error') {
       return (
-        <div className="bg-red-50 rounded-xl p-4 border border-red-200">
+        <div className="bg-error-50 rounded-xl p-4 border border-error-200">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
+            <AlertTriangle className="w-5 h-5 text-error-600" />
             <div>
-              <p className="text-sm font-medium text-red-900">PDF Processing Failed</p>
-              <p className="text-xs text-red-700">Please try uploading the document again</p>
+              <p className="text-sm font-medium text-error-900">PDF Processing Failed</p>
+              <p className="text-xs text-error-700">Please try uploading the document again</p>
             </div>
           </div>
         </div>
@@ -328,7 +328,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-slate-200 hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer group min-h-0 overflow-hidden">
+    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-neutral-200 hover:shadow-xl hover:border-primary-300 transition-all cursor-pointer group min-h-0 overflow-hidden">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className={`${statusInfo.bg} p-3 rounded-xl shadow-sm flex-shrink-0`}>
@@ -353,10 +353,10 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             <StatusIcon className={`w-5 h-5 ${statusInfo.color}`} />
             {/* Real-time indicator dot */}
             <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${
-              device.status === 'ONLINE' ? 'bg-green-500 animate-pulse' :
-              device.status === 'WARNING' ? 'bg-yellow-500 animate-pulse' :
-              device.status === 'ERROR' ? 'bg-red-500 animate-pulse' :
-              'bg-slate-400'
+              device.status === 'ONLINE' ? 'bg-success-500 animate-pulse' :
+              device.status === 'WARNING' ? 'bg-warning-500 animate-pulse' :
+              device.status === 'ERROR' ? 'bg-error-500 animate-pulse' :
+              'bg-neutral-400'
             }`} />
           </div>
           
@@ -367,7 +367,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 e.stopPropagation();
                 onDelete(device.id, device.name);
               }}
-              className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-2 text-error-600 hover:text-error-700 hover:bg-error-50 rounded-lg transition-colors"
               title="Delete Device"
             >
               <Trash2 className="w-4 h-4" />
@@ -378,10 +378,10 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 
       {/* Status Update Error */}
       {statusUpdateError && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <div className="mb-4 p-3 bg-error-50 border border-error-200 rounded-lg">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-600" />
-            <p className="text-sm text-red-700">{statusUpdateError}</p>
+            <AlertTriangle className="w-4 h-4 text-error-600" />
+            <p className="text-sm text-error-700">{statusUpdateError}</p>
           </div>
         </div>
       )}
@@ -397,7 +397,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
       {device.tags && device.tags.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-4">
           {device.tags.map((tag) => (
-            <span key={tag} className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded-full font-medium">
+            <span key={tag} className="text-xs px-2 py-1 bg-primary-50 text-primary-600 rounded-full font-medium">
               {tag}
             </span>
           ))}
@@ -416,10 +416,10 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                 await handleStatusChange(newStatus);
               }}
               disabled={isUpdatingStatus}
-              className={`text-xs px-3 py-1 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 text-slate-900 transition-all ${
+              className={`text-xs px-3 py-1 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white/80 text-neutral-900 transition-all ${
                 isUpdatingStatus 
-                  ? 'border-slate-300 text-slate-400 cursor-not-allowed' 
-                  : 'border-slate-300 hover:border-blue-400'
+                  ? 'border-neutral-300 text-neutral-400 cursor-not-allowed' 
+                  : 'border-neutral-300 hover:border-primary-400'
               }`}
             >
               <option value="ONLINE">🟢 Online</option>
@@ -429,8 +429,8 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
             </select>
             {isUpdatingStatus && (
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                <span className="text-xs text-slate-500">Updating...</span>
+                <div className="w-3 h-3 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-xs text-neutral-500">Updating...</span>
               </div>
             )}
           </div>

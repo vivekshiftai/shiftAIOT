@@ -14,22 +14,23 @@ import {
 } from 'lucide-react';
 import { unifiedDeviceService, DeviceRules, DeviceMaintenance, DeviceSafetyPrecaution } from '../../services/unifiedDeviceService';
 import { logError, logInfo } from '../../utils/logger';
+import { Device } from '../../types';
 
-interface Device {
-  id: string;
-  name: string;
-  type: string;
-  location: string;
-  status: string;
-  manufacturer?: string;
-  model?: string;
-  serialNumber?: string;
-  description?: string;
-  tags?: string[];
-  config?: any;
-  createdAt?: string;
-  updatedAt?: string;
-}
+// interface Device {
+//   id: string;
+//   name: string;
+//   type: string;
+//   location: string;
+//   status: string;
+//   manufacturer?: string;
+//   model?: string;
+//   serialNumber?: string;
+//   description?: string;
+//   tags?: string[];
+//   config?: any;
+//   createdAt?: string;
+//   updatedAt?: string;
+// }
 
 interface DeviceDetailsProps {
   device: Device;

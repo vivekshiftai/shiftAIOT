@@ -341,24 +341,24 @@ public class MaintenanceNotificationScheduler {
         log.info("📅 Current date: {}", LocalDate.now());
         
         try {
-            // Search by today's date and fetch ALL maintenance tasks for today
-            List<Object[]> todaysTasks = maintenanceScheduleRepository
-                .findAllTodaysMaintenanceTasksWithDetails();
+        // Search by today's date and fetch ALL maintenance tasks for today
+        List<Object[]> todaysTasks = maintenanceScheduleRepository
+            .findAllTodaysMaintenanceTasksWithDetails();
 
-            if (todaysTasks.isEmpty()) {
+        if (todaysTasks.isEmpty()) {
                 log.info("ℹ️ No maintenance tasks found for today - no notifications to send");
-                return 0;
-            }
+            return 0;
+        }
 
             log.info("📋 Found {} maintenance tasks for today", todaysTasks.size());
 
-            int notificationsSent = 0;
+        int notificationsSent = 0;
             int notificationsFailed = 0;
             
-            for (Object[] taskData : todaysTasks) {
+        for (Object[] taskData : todaysTasks) {
                 try {
-                    if (processMaintenanceTask(taskData)) {
-                        notificationsSent++;
+            if (processMaintenanceTask(taskData)) {
+                notificationsSent++;
                     } else {
                         notificationsFailed++;
                     }
@@ -371,7 +371,7 @@ public class MaintenanceNotificationScheduler {
             log.info("✅ Manual maintenance notification trigger completed");
             log.info("📊 Summary: {} notifications sent, {} failed", notificationsSent, notificationsFailed);
             
-            return notificationsSent;
+        return notificationsSent;
             
         } catch (Exception e) {
             log.error("❌ Error during manual maintenance notification trigger: {}", e.getMessage(), e);

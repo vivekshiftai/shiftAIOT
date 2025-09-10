@@ -6,7 +6,8 @@ import { logInfo, logError, logWarn } from '../utils/logger';
 import { Device, Rule, Notification, TelemetryData, Status } from '../types';
 import { tokenService } from '../services/tokenService';
 import { NotificationService } from '../services/notificationService';
-import { websocketService } from '../services/websocketService';
+import { stompWebSocketService } from '../services/stompWebSocketService';
+import { pollingService } from '../services/pollingService';
 import { useAuth } from './AuthContext';
 
 interface IoTContextType {
@@ -61,53 +62,58 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   const { user, isLoading: authLoading } = useAuth();
   const notificationService = user ? NotificationService.getInstance() : null;
 
-  // WebSocket connection management
-  useEffect(() => {
-    if (user?.organizationId) {
-      // Set up WebSocket callbacks
-      websocketService.setCallbacks({
-        onDeviceStatusUpdate: (deviceId: string, status: string, deviceName: string) => {
-          logInfo('IoT', 'WebSocket: Device status update received', { deviceId, status, deviceName });
-          setDevices((prev: Device[]) => 
-            prev.map((device: Device) => 
-              device.id === deviceId 
-                ? { ...device, status: status as Status }
-                : device
-            )
-          );
-        },
-        onDeviceCreated: (device: Device) => {
-          logInfo('IoT', 'WebSocket: Device created', { deviceId: device.id, deviceName: device.name });
-          setDevices((prev: Device[]) => [...prev, device]);
-        },
-        onDeviceDeleted: (deviceId: string, deviceName: string) => {
-          logInfo('IoT', 'WebSocket: Device deleted', { deviceId, deviceName });
-          setDevices((prev: Device[]) => prev.filter((device: Device) => device.id !== deviceId));
-        },
-        onConnectionStatusChange: (connected: boolean) => {
-          logInfo('IoT', 'WebSocket connection status changed', { connected });
-        }
-      });
+        // Real-time connection management (STOMP WebSocket with polling fallback)
+        useEffect(() => {
+          if (user?.organizationId) {
+            // Common callbacks for both STOMP WebSocket and polling
+            const deviceCallbacks = {
+              onDeviceStatusUpdate: (deviceId: string, status: string, deviceName: string) => {
+                logInfo('IoT', 'Device status update received', { deviceId, status, deviceName });
+                setDevices((prev: Device[]) => 
+                  prev.map((device: Device) => 
+                    device.id === deviceId 
+                      ? { ...device, status: status as Status }
+                      : device
+                  )
+                );
+              },
+              onDeviceCreated: (device: Device) => {
+                logInfo('IoT', 'Device created', { deviceId: device.id, deviceName: device.name });
+                setDevices((prev: Device[]) => [...prev, device]);
+              },
+              onDeviceDeleted: (deviceId: string, deviceName: string) => {
+                logInfo('IoT', 'Device deleted', { deviceId, deviceName });
+                setDevices((prev: Device[]) => prev.filter((device: Device) => device.id !== deviceId));
+              },
+              onConnectionStatusChange: (connected: boolean) => {
+                logInfo('IoT', 'Real-time connection status changed', { connected });
+              }
+            };
 
-      // Connect to WebSocket with graceful fallback
-      if (websocketService.isWebSocketSupported()) {
-        websocketService.connect(user.organizationId).catch(error => {
-          logError('IoT', 'Failed to connect to WebSocket', error instanceof Error ? error : new Error('Unknown error'));
-          logWarn('IoT', 'WebSocket connection failed - continuing without real-time updates', {
-            organizationId: user.organizationId,
-            fallbackMode: 'polling'
-          });
-        });
-      } else {
-        logWarn('IoT', 'WebSocket not supported in this browser - using polling mode');
-      }
+            // Set up STOMP WebSocket callbacks
+            stompWebSocketService.setCallbacks(deviceCallbacks);
 
-      // Cleanup on unmount
-      return () => {
-        websocketService.disconnect();
-      };
-    }
-  }, [user?.organizationId]);
+            // Set up polling service callbacks as fallback
+            pollingService.setCallbacks(deviceCallbacks);
+
+            // Try STOMP WebSocket first, fallback to polling
+            logInfo('IoT', 'Attempting STOMP WebSocket connection', { organizationId: user.organizationId });
+            stompWebSocketService.connect(user.organizationId).catch(error => {
+              logError('IoT', 'STOMP WebSocket connection failed, falling back to polling', error instanceof Error ? error : new Error('Unknown error'));
+              
+              // Start polling service as fallback
+              pollingService.start(user.organizationId).catch(pollingError => {
+                logError('IoT', 'Polling service also failed', pollingError instanceof Error ? pollingError : new Error('Unknown error'));
+              });
+            });
+
+            // Cleanup on unmount
+            return () => {
+              stompWebSocketService.disconnect();
+              pollingService.stop();
+            };
+          }
+        }, [user?.organizationId]);
 
   // Load notifications from database and subscribe to updates
   useEffect(() => {
@@ -345,8 +351,10 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       
       
       
-      // The WebSocket will handle the real-time broadcast to other clients
-      // No need to manually update again as the WebSocket callback will handle it
+      // Trigger polling to ensure immediate updates (in case STOMP WebSocket is not connected)
+      if (!stompWebSocketService.isWebSocketConnected()) {
+        pollingService.triggerPoll();
+      }
       
       return response;
       
@@ -475,6 +483,11 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       logInfo('IoT', 'Device created successfully', { deviceId: response.data?.id });
       await refreshDevices();
       
+      // Trigger polling to ensure immediate updates (in case STOMP WebSocket is not connected)
+      if (!stompWebSocketService.isWebSocketConnected()) {
+        pollingService.triggerPoll();
+      }
+      
       // Create notification for device creation
       try {
         const { notificationService } = await import('../services/notificationService');
@@ -510,6 +523,11 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       await deviceAPI.update(deviceId, { assignedUserId: userId });
       logInfo('IoT', 'Device assigned successfully', { deviceId, userId });
       await refreshDevices();
+      
+      // Trigger polling to ensure immediate updates (in case STOMP WebSocket is not connected)
+      if (!stompWebSocketService.isWebSocketConnected()) {
+        pollingService.triggerPoll();
+      }
     } catch (error) {
       logError('IoT', 'Failed to assign device to user', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
@@ -549,6 +567,11 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       await deviceAPI.delete(deviceId);
       logInfo('IoT', 'Device deleted successfully', { deviceId });
       await refreshDevices();
+      
+      // Trigger polling to ensure immediate updates (in case STOMP WebSocket is not connected)
+      if (!stompWebSocketService.isWebSocketConnected()) {
+        pollingService.triggerPoll();
+      }
     } catch (error) {
       console.error('❌ IoTContext: Device deletion failed:', error);
       

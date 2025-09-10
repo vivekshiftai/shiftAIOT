@@ -472,9 +472,25 @@ export class UnifiedOnboardingService {
         lastError = error instanceof Error ? error : new Error(String(error));
         
         logError('UnifiedOnboarding', `Fallback device onboard API call failed (attempt ${attempt}/${this.RETRY_ATTEMPTS})`, lastError);
+        logInfo('UnifiedOnboarding', 'Fallback error details', {
+          errorMessage: lastError.message,
+          stack: lastError.stack,
+          errorType: error.constructor.name,
+          response: error.response ? {
+            status: error.response.status,
+            statusText: error.response.statusText,
+            data: error.response.data
+          } : 'No response data'
+        });
 
         // Check if it's a retryable error
         if (!this.isRetryableError(lastError) || attempt === this.RETRY_ATTEMPTS) {
+          logError('UnifiedOnboarding', 'Fallback device onboard API call failed after all retries', lastError);
+          logInfo('UnifiedOnboarding', 'Fallback retry details', {
+            finalErrorMessage: lastError.message,
+            attempts: attempt,
+            isRetryable: this.isRetryableError(lastError)
+          });
           throw lastError;
         }
 

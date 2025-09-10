@@ -50,9 +50,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
   const isDeviceCareActive = currentPage === 'device-care';
 
   return (
-    <div className="bg-white border-r border-gray-200 w-64 min-h-screen p-4">
+    <div className="bg-white border-r border-neutral-200 w-64 min-h-screen p-4">
       <div className="mb-4">
-        <h1 className="text-lg font-bold px-3 py-2 text-gray-900">
+        <h1 className="text-lg font-bold px-3 py-2 text-neutral-700">
           ActiveOps Hub
         </h1>
       </div>
@@ -68,8 +68,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
               to={item.path}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                  : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                  ? 'bg-primary-500 text-white'
+                  : 'text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900'
               }`}
             >
               <Icon className="w-5 h-5" />
@@ -84,8 +84,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
             to="/device-care"
             className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               isDeviceCareActive
-                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                ? 'bg-primary-500 text-white'
+                : 'text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900'
             }`}
           >
             <Zap className="w-5 h-5" />
@@ -99,8 +99,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
             to="/settings"
             className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               currentPage === 'settings'
-                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                ? 'bg-primary-500 text-white'
+                : 'text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900'
             }`}
           >
             <Settings className="w-5 h-5" />

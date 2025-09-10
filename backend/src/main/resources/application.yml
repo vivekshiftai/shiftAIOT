@@ -52,7 +52,7 @@ spring:
   
     
   datasource:
-    url: jdbc:postgresql://localhost:5432/iotplatform
+    url: jdbc:postgresql://20.57.36.66:5432/iotplatform
     driver-class-name: org.postgresql.Driver
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:123}
@@ -105,7 +105,7 @@ jwt:
 
 # MQTT Configuration
 mqtt:
-  broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}
+  broker-url: ${MQTT_BROKER_URL:tcp://20.57.36.66:1883}
   client-id: iot-platform-backend
   username: ${MQTT_USERNAME:}
   password: ${MQTT_PASSWORD:}
@@ -166,7 +166,7 @@ maintenance:
 # Conversation API Configuration
 conversation:
   api:
-    base-url: "http://localhost:8100/api/chat"
+    base-url: "http://20.57.36.66:8100/api/chat"
     max-retries: 3
     retry-delay: 1000  # 1 second
 

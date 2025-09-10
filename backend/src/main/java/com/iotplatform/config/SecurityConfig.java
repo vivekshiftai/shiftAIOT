@@ -95,7 +95,7 @@ public class SecurityConfig {
 
                 // Documentation and monitoring
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                .requestMatchers("/websocket/**").permitAll()
+                .requestMatchers("/websocket/**", "/ws/**").permitAll()
                 .requestMatchers("/health/**", "/actuator/health/**").permitAll()
                 .requestMatchers("/api/health/**").permitAll()
                 
@@ -138,12 +138,13 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        logger.info("Configuring CORS for PostgreSQL backend");
+        logger.info("Configuring CORS for PostgreSQL backend with WebSocket support");
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(false); // Set to false to allow wildcard origins
+        configuration.setAllowCredentials(false); // Set to false when using wildcard origins
+        configuration.setExposedHeaders(Arrays.asList("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

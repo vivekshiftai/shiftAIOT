@@ -26,19 +26,19 @@ const Button: React.FC<ButtonProps> = ({
     
     switch (variant) {
       case 'primary':
-        return `${baseClasses} bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md hover:shadow-lg hover:shadow-blue-500/25 focus:ring-blue-500`;
+        return `${baseClasses} bg-primary-500 text-white shadow-md hover:shadow-lg hover:shadow-primary-500/25 focus:ring-primary-500 hover:bg-primary-600`;
       case 'secondary':
-        return `${baseClasses} bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border border-slate-300 hover:from-slate-200 hover:to-slate-300 focus:ring-slate-500 shadow-sm hover:shadow-md`;
+        return `${baseClasses} bg-neutral-100 text-neutral-700 border border-neutral-300 hover:bg-neutral-200 focus:ring-neutral-500 shadow-sm hover:shadow-md`;
       case 'success':
-        return `${baseClasses} bg-gradient-to-r from-emerald-400 to-green-500 text-white shadow-md hover:shadow-lg hover:shadow-emerald-500/25 focus:ring-emerald-500`;
+        return `${baseClasses} bg-success-500 text-white shadow-md hover:shadow-lg hover:shadow-success-500/25 focus:ring-success-500 hover:bg-success-600`;
       case 'warning':
-        return `${baseClasses} bg-gradient-to-r from-orange-400 to-yellow-500 text-white shadow-md hover:shadow-lg hover:shadow-orange-500/25 focus:ring-orange-500`;
+        return `${baseClasses} bg-warning-500 text-white shadow-md hover:shadow-lg hover:shadow-warning-500/25 focus:ring-warning-500 hover:bg-warning-600`;
       case 'danger':
-        return `${baseClasses} bg-gradient-to-r from-red-400 to-pink-500 text-white shadow-md hover:shadow-lg hover:shadow-red-500/25 focus:ring-red-500`;
+        return `${baseClasses} bg-error-500 text-white shadow-md hover:shadow-lg hover:shadow-error-500/25 focus:ring-error-500 hover:bg-error-600`;
       case 'ghost':
-        return `${baseClasses} bg-transparent text-slate-600 hover:bg-slate-100/80 focus:ring-slate-500 hover:shadow-sm`;
+        return `${baseClasses} bg-transparent text-neutral-600 hover:bg-neutral-100/80 focus:ring-neutral-500 hover:shadow-sm`;
       case 'outline':
-        return `${baseClasses} bg-transparent text-blue-600 border-2 border-blue-600 hover:bg-blue-50 focus:ring-blue-500 hover:shadow-sm`;
+        return `${baseClasses} bg-transparent text-primary-500 border-2 border-primary-500 hover:bg-primary-50 focus:ring-primary-500 hover:shadow-sm`;
       default:
         return baseClasses;
     }

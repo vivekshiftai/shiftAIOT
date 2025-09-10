@@ -483,7 +483,7 @@ export const KnowledgeSection: React.FC = () => {
       <div className="knowledge-fixed-header flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-2 bg-blue-500 rounded-lg">
+            <div className="p-2 bg-primary-500 rounded-lg">
               <Brain className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -491,7 +491,7 @@ export const KnowledgeSection: React.FC = () => {
               <p className="text-sm text-gray-600">
                 AI-powered machine documentation and chat assistant
                 {selectedDevice && (
-                  <span className="ml-2 text-blue-600 font-medium">
+                  <span className="ml-2 text-primary-600 font-medium">
                     • Active: {selectedDevice.name}
                   </span>
                 )}
@@ -518,8 +518,8 @@ export const KnowledgeSection: React.FC = () => {
                 <div className="flex items-start gap-3 max-w-2xl">
                   <div className={`p-2 rounded-full flex-shrink-0 ${
                     message.type === 'user'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-100 text-gray-600'
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-neutral-100 text-neutral-600'
                   }`}>
                     {message.type === 'user' ? (
                       <User className="w-4 h-4" />
@@ -531,19 +531,19 @@ export const KnowledgeSection: React.FC = () => {
                   <div
                     className={`px-4 py-3 rounded-2xl shadow-sm ${
                       message.type === 'user'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-50 text-gray-900 border border-gray-200'
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-neutral-50 text-neutral-900 border border-neutral-200'
                     }`}
                   >
                     {/* Query Type Indicator */}
                     {message.type === 'assistant' && message.queryType && (
                       <div className="flex items-center gap-2 mb-2">
                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          message.queryType === 'DATABASE' ? 'bg-blue-100 text-blue-700' :
-                          message.queryType === 'PDF' ? 'bg-green-100 text-green-700' :
-                          message.queryType === 'MIXED' ? 'bg-purple-100 text-purple-700' :
-                          message.queryType === 'LLM_ANSWER' ? 'bg-orange-100 text-orange-700' :
-                          'bg-gray-100 text-gray-700'
+                          message.queryType === 'DATABASE' ? 'bg-primary-100 text-primary-700' :
+                          message.queryType === 'PDF' ? 'bg-success-100 text-success-700' :
+                          message.queryType === 'MIXED' ? 'bg-secondary-100 text-secondary-700' :
+                          message.queryType === 'LLM_ANSWER' ? 'bg-warning-100 text-warning-700' :
+                          'bg-neutral-100 text-neutral-700'
                         }`}>
                           {message.queryType === 'PDF' ? '📄' : message.queryType === 'DATABASE' ? '📊' : '🤖'} {message.queryType}
                         </span>
@@ -667,9 +667,9 @@ export const KnowledgeSection: React.FC = () => {
                         <p className="text-xs font-medium text-gray-500 mb-2">📄 Sources Used:</p>
                         <div className="space-y-2">
                           {message.chunks_used.map((chunk, index) => (
-                            <div key={index} className="text-xs bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg">
-                              <span className="text-blue-600 font-medium">Source {index + 1}:</span>
-                              <span className="text-gray-700 ml-2">{chunk}</span>
+                            <div key={index} className="text-xs bg-primary-50 border border-primary-200 px-3 py-2 rounded-lg">
+                              <span className="text-primary-600 font-medium">Source {index + 1}:</span>
+                              <span className="text-neutral-700 ml-2">{chunk}</span>
                             </div>
                           ))}
                         </div>
@@ -684,7 +684,7 @@ export const KnowledgeSection: React.FC = () => {
                     )}
                     
                     <p className={`text-xs mt-2 ${
-                      message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
+                      message.type === 'user' ? 'text-primary-100' : 'text-neutral-500'
                     }`}>
                       {message.timestamp.toLocaleTimeString()}
                     </p>
@@ -747,7 +747,7 @@ export const KnowledgeSection: React.FC = () => {
                     onFocus={handleInputFocus}
                     onBlur={handleInputBlur}
                     placeholder={selectedDevice ? `Ask about "${selectedDevice.name}"...` : "Ask about your machines, documents, or troubleshooting..."}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 shadow-sm"
+                    className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-neutral-900 shadow-sm"
                   />
                   
                   {/* Query Suggestions */}
@@ -760,7 +760,7 @@ export const KnowledgeSection: React.FC = () => {
                         <button
                           key={index}
                           onClick={() => handleSuggestionClick(suggestion)}
-                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                          className="w-full text-left px-3 py-2 text-sm text-neutral-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
                         >
                           {suggestion}
                         </button>
@@ -771,7 +771,7 @@ export const KnowledgeSection: React.FC = () => {
                 <button
                   onClick={sendMessage}
                   disabled={!newMessage.trim() || isTyping}
-                  className="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+                  className="px-6 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
                 >
                   <Send className="w-4 h-4" />
                   Send
@@ -796,13 +796,13 @@ export const KnowledgeSection: React.FC = () => {
                     className="hidden"
                     disabled={uploading}
                   />
-                  <div className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all shadow-sm">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all shadow-sm">
                     {uploading ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                     ) : (
                       <Plus className="w-4 h-4" />
                     )}
-                    {uploading ? 'Uploading...' : 'Upload Device Guide'}
+                    {uploading ? 'Uploading...' : 'Upload Guide'}
                   </div>
                 </label>
               </div>
@@ -817,7 +817,7 @@ export const KnowledgeSection: React.FC = () => {
                   placeholder="Search machines..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 shadow-sm"
+                  className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-neutral-900 shadow-sm"
                 />
               </div>
             </div>
@@ -830,8 +830,8 @@ export const KnowledgeSection: React.FC = () => {
           >
             {loading ? (
               <div className="p-4 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                <p className="text-gray-500 mt-2 text-sm">Loading machines...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto"></div>
+                <p className="text-neutral-500 mt-2 text-sm">Loading machines...</p>
               </div>
             ) : filteredDevices.length === 0 ? (
               <div className="p-4 text-center text-gray-500 text-sm">
@@ -842,8 +842,8 @@ export const KnowledgeSection: React.FC = () => {
                 {filteredDevices.map((device) => (
                   <div
                     key={device.id}
-                    className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                      selectedDevice?.id === device.id ? 'bg-blue-50 border-r-4 border-blue-500' : ''
+                    className={`p-4 hover:bg-neutral-50 cursor-pointer transition-colors ${
+                      selectedDevice?.id === device.id ? 'bg-primary-50 border-r-4 border-primary-500' : ''
                     }`}
                     onClick={() => {
                       setSelectedDevice(device);
@@ -860,8 +860,8 @@ export const KnowledgeSection: React.FC = () => {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
-                          <FileText className="w-4 h-4 text-blue-600" />
+                        <div className="p-2 bg-primary-100 rounded-lg flex-shrink-0">
+                          <FileText className="w-4 h-4 text-primary-600" />
                         </div>
                         
                         <div className="flex-1 min-w-0">
@@ -871,13 +871,13 @@ export const KnowledgeSection: React.FC = () => {
                           <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
                             <span>{device.type}</span>
                             <span>•</span>
-                            <span className="text-green-600 font-medium">AI Ready</span>
+                            <span className="text-success-600 font-medium">AI Ready</span>
                           </div>
                           <div className="flex items-center gap-1 mt-1">
                             <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                              device.status === 'online' ? 'bg-green-100 text-green-700' :
-                              device.status === 'offline' ? 'bg-red-100 text-red-700' :
-                              'bg-gray-100 text-gray-700'
+                              device.status === 'online' ? 'bg-success-100 text-success-700' :
+                              device.status === 'offline' ? 'bg-error-100 text-error-700' :
+                              'bg-neutral-100 text-neutral-700'
                             }`}>
                               {device.status === 'online' ? '🟢 Online' :
                                device.status === 'offline' ? '🔴 Offline' :
@@ -889,7 +889,7 @@ export const KnowledgeSection: React.FC = () => {
                       
                       <div className="flex items-center gap-2 ml-2">
                         {device.hasPDFs && (
-                          <Brain className="w-4 h-4 text-green-500" />
+                          <Brain className="w-4 h-4 text-success-500" />
                         )}
                       </div>
                     </div>
@@ -903,7 +903,7 @@ export const KnowledgeSection: React.FC = () => {
           <div className="knowledge-fixed-footer flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between text-sm text-gray-600">
               <div className="flex items-center gap-4">
-                <span className="text-green-500 font-medium">
+                <span className="text-success-500 font-medium">
                   {devicesWithPDFs.filter(d => d.hasPDFs).length} AI ready machines
                 </span>
               </div>
@@ -917,8 +917,8 @@ export const KnowledgeSection: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl shadow-lg max-w-lg w-full mx-4">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <FileText className="w-5 h-5 text-blue-600" />
+              <div className="p-2 bg-primary-100 rounded-lg">
+                <FileText className="w-5 h-5 text-primary-600" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Upload Device Guide</h3>
@@ -947,7 +947,7 @@ export const KnowledgeSection: React.FC = () => {
               <select
                 value={selectedDeviceForUpload}
                 onChange={(e) => setSelectedDeviceForUpload(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full p-3 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">📄 No machine association (General document)</option>
                 {devices.map((device) => (
@@ -984,7 +984,7 @@ export const KnowledgeSection: React.FC = () => {
                   }
                   setShowDeviceSelector(false);
                 }}
-                className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                className="flex-1 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium"
               >
                 {uploading ? (
                   <div className="flex items-center gap-2">

@@ -31,7 +31,7 @@ public class ConversationNotificationService {
 
     private final RestTemplate restTemplate;
 
-    @Value("${conversation.api.base-url:http://localhost:8100/api/chat}")
+    @Value("${conversation.api.base-url:http://20.57.36.66:8100/api/chat}")
     private String conversationApiBaseUrl;
 
     @Value("${conversation.api.max-retries:3}")

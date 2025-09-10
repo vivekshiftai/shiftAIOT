@@ -21,6 +21,12 @@ class WebSocketService {
     this.callbacks = callbacks;
   }
 
+  /**
+   * Connect to WebSocket server
+   * 
+   * NOTE: This service uses raw WebSocket, but the backend is configured for STOMP over WebSocket.
+   * This will cause connection failures. The polling service is used as a fallback for real-time updates.
+   */
   async connect(organizationId: string) {
     if (this.isConnecting || this.socket?.readyState === WebSocket.OPEN) {
       return;
@@ -99,18 +105,22 @@ class WebSocketService {
         }
       };
 
-      this.socket.onerror = () => {
+      this.socket.onerror = (error) => {
         logError('WebSocket', 'WebSocket connection failed', new Error('WebSocket connection error'));
         logWarn('WebSocket', 'WebSocket connection details', {
           wsUrl,
           organizationId,
           readyState: this.socket?.readyState,
+          error: error,
+          protocolMismatch: 'Backend uses STOMP over WebSocket, frontend uses raw WebSocket',
           possibleCauses: [
+            'Protocol mismatch: Backend expects STOMP over WebSocket, frontend uses raw WebSocket',
             'Backend WebSocket server not running',
             'Network/firewall blocking WebSocket connections',
             'CORS configuration issues',
             'Backend WebSocket endpoint not configured'
-          ]
+          ],
+          solution: 'Polling service will handle real-time updates instead'
         });
         this.isConnecting = false;
         
@@ -121,6 +131,9 @@ class WebSocketService {
         }
         
         this.callbacks.onConnectionStatusChange?.(false);
+        
+        // Don't attempt reconnection for WebSocket errors - let polling service handle it
+        logWarn('WebSocket', 'WebSocket connection failed due to protocol mismatch - polling service will handle real-time updates');
       };
 
     } catch (error) {

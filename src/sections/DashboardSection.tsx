@@ -433,16 +433,16 @@ export const DashboardSection: React.FC = () => {
 
       {/* Today's Maintenance Alert */}
       {todayMaintenance.length > 0 && (
-        <div className="card p-6 border-l-4 border-l-yellow-400 bg-yellow-50">
+        <div className="card p-6 border-l-4 border-l-warning-400 bg-warning-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-              <Clock className="w-5 h-5 text-yellow-600" />
+            <div className="w-10 h-10 bg-warning-100 rounded-full flex items-center justify-center">
+              <Clock className="w-5 h-5 text-warning-600" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-yellow-800">
+              <h3 className="text-lg font-semibold text-warning-800">
                 {todayMaintenance.length} Maintenance Task{todayMaintenance.length > 1 ? 's' : ''} Due Today
               </h3>
-              <p className="text-yellow-700 text-sm">
+              <p className="text-warning-700 text-sm">
                 {todayMaintenance.length > 1 ? 'Tasks' : 'Task'} scheduled for completion today
                 {currentUser && todayMaintenance.some(task => task.assignedTo === currentUser.id) && (
                   <span className="ml-2 font-medium">• You have {todayMaintenance.filter(task => task.assignedTo === currentUser.id).length} task{todayMaintenance.filter(task => task.assignedTo === currentUser.id).length > 1 ? 's' : ''} assigned</span>
@@ -453,7 +453,7 @@ export const DashboardSection: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={handleMaintenanceClick}
-              className="border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+              className="border-warning-300 text-warning-700 hover:bg-warning-100"
             >
               View Tasks
             </Button>
@@ -571,12 +571,12 @@ export const DashboardSection: React.FC = () => {
                           </td>
                           <td className="py-3 px-4">
                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              item.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                              item.status === 'ACTIVE' ? 'bg-blue-100 text-blue-700' :
-                              item.status === 'OVERDUE' ? 'bg-red-100 text-red-700' :
-                              item.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
-                              item.status === 'CANCELLED' ? 'bg-gray-100 text-gray-700' :
-                              'bg-gray-100 text-gray-700'
+                              item.status === 'COMPLETED' ? 'bg-success-100 text-success-700' :
+                              item.status === 'ACTIVE' ? 'bg-primary-100 text-primary-700' :
+                              item.status === 'OVERDUE' ? 'bg-error-100 text-error-700' :
+                              item.status === 'PENDING' ? 'bg-warning-100 text-warning-700' :
+                              item.status === 'CANCELLED' ? 'bg-neutral-100 text-neutral-700' :
+                              'bg-neutral-100 text-neutral-700'
                             }`}>
                               {item.status === 'COMPLETED' ? 'Done' : 
                                item.status === 'ACTIVE' ? 'Active' :

@@ -4,14 +4,17 @@ import {
   Search, 
   Filter, 
   Eye,
-  Trash2
+  Trash2,
+  RotateCcw,
+  Grid3x3,
+  List
 } from 'lucide-react';
 import { Device } from '../../types';
 import { DeviceCard } from './DeviceCard';
 import { EnhancedDeviceOnboardingForm } from './EnhancedDeviceOnboardingForm';
 import { DeviceDetails } from './DeviceDetails';
-import { pdfProcessingService } from '../../services/pdfprocess';
-import { websocketService } from '../../services/websocketService';
+// import { pdfProcessingService } from '../../services/pdfprocess';
+import { stompWebSocketService } from '../../services/stompWebSocketService';
 
 interface DeviceListProps {
   devices: Device[];
@@ -24,7 +27,7 @@ interface DeviceListProps {
 
 type ViewMode = 'grid' | 'list';
 type FilterType = 'all' | 'ONLINE' | 'OFFLINE' | 'WARNING' | 'ERROR';
-type DeviceType = 'all' | 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER';
+// type DeviceType = 'all' | 'SENSOR' | 'ACTUATOR' | 'GATEWAY' | 'CONTROLLER';
 
 interface OnboardingDevice {
   device: Device;
@@ -166,7 +169,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
   // Monitor WebSocket connection status
   useEffect(() => {
     const checkConnection = () => {
-      setWsConnected(websocketService.isConnected());
+      setWsConnected(stompWebSocketService.isWebSocketConnected());
     };
 
     // Check initial connection status
@@ -219,7 +222,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
             disabled={loading}
             className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+            <RotateCcw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           
           <button
@@ -240,7 +243,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
               }`}
               title="Grid View"
             >
-              <Grid3X3 className="w-4 h-4" />
+              <Grid3x3 className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('list')}
@@ -391,7 +394,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({
         <DeviceDetails
           device={selectedDevice}
           onClose={() => setSelectedDevice(null)}
-          onStatusChange={onStatusChange}
         />
       )}
     </div>
