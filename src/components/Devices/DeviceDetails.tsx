@@ -128,7 +128,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
       case 'ONLINE':
-        return 'text-green-600 bg-green-100';
+        return 'text-success-600 bg-success-100';
       case 'OFFLINE':
         return 'text-red-600 bg-red-100';
       case 'WARNING':
@@ -227,7 +227,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
 
                     <div className="bg-white p-6 rounded-lg border border-gray-200">
                       <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 rounded-lg bg-green-100 text-green-600">
+                        <div className="p-2 rounded-lg bg-success-100 text-success-600">
                           <Eye className="w-4 h-4" />
                         </div>
                         <div>
@@ -284,7 +284,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
                       {documentation.map((doc) => (
                         <div key={doc.id} className="bg-white p-4 rounded-lg border border-gray-200">
                           <div className="flex items-center gap-3 mb-3">
-                            <FileText className="w-5 h-5 text-blue-600" />
+                            <FileText className="w-5 h-5 text-primary-600" />
                             <div className="flex-1">
                               <h4 className="font-medium text-gray-800">{doc.fileName}</h4>
                               <p className="text-sm text-gray-600">{doc.type}</p>
@@ -292,7 +292,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
                           </div>
                           <button
                             onClick={() => downloadDocumentation(doc)}
-                            className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            className="w-full px-3 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                           >
                             <Download className="w-4 h-4 inline mr-2" />
                             Download
@@ -333,7 +333,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
                                       ? 'bg-red-100 text-red-800'
                                       : rule.priority === 'MEDIUM'
                                       ? 'bg-yellow-100 text-yellow-800'
-                                      : 'bg-green-100 text-green-800'
+                                      : 'bg-success-100 text-success-800'
                                   }`}>
                                     {rule.priority || 'MEDIUM'}
                                   </span>
@@ -341,7 +341,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
                                 <td className="px-4 py-3 text-sm">
                                   <span className={`px-2 py-1 rounded-full text-xs ${
                                     rule.status === 'ACTIVE' 
-                                      ? 'bg-green-100 text-green-800' 
+                                      ? 'bg-success-100 text-success-800' 
                                       : 'bg-gray-100 text-gray-800'
                                   }`}>
                                     {rule.status}
@@ -425,9 +425,9 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
                                 <td className="px-4 py-3 text-sm">
                                   <span className={`px-2 py-1 rounded-full text-xs ${
                                     item.status === 'ACTIVE' || item.status === 'scheduled'
-                                      ? 'bg-green-100 text-green-800' 
+                                      ? 'bg-success-100 text-success-800' 
                                       : item.status === 'in_progress'
-                                      ? 'bg-blue-100 text-blue-800'
+                                      ? 'bg-primary-100 text-primary-800'
                                       : item.status === 'completed'
                                       ? 'bg-gray-100 text-gray-800'
                                       : 'bg-yellow-100 text-yellow-800'
@@ -532,7 +532,7 @@ export const DeviceDetails: React.FC<DeviceDetailsProps> = ({ device, onClose })
                                       ? 'bg-red-100 text-red-800'
                                       : precaution.severity === 'MEDIUM'
                                       ? 'bg-yellow-100 text-yellow-800'
-                                      : 'bg-green-100 text-green-800'
+                                      : 'bg-success-100 text-success-800'
                                   }`}>
                                     {precaution.severity || 'LOW'}
                                   </span>

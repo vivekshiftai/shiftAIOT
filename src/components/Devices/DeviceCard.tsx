@@ -417,16 +417,16 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                   await handleStatusChange(newStatus);
                 }}
                 disabled={isUpdatingStatus}
-                className={`text-xs px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-neutral-900 transition-all ${
+                className={`text-sm px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-neutral-900 transition-all shadow-sm ${
                   isUpdatingStatus 
                     ? 'border-neutral-300 text-neutral-400 cursor-not-allowed' 
-                    : 'border-neutral-300 hover:border-primary-400'
+                    : 'border-neutral-300 hover:border-primary-400 hover:shadow-md'
                 }`}
               >
-                <option value="ONLINE">🟢 Online</option>
-                <option value="OFFLINE">⚫ Offline</option>
-                <option value="WARNING">🟡 Warning</option>
-                <option value="ERROR">🔴 Error</option>
+                <option value="ONLINE">● Online</option>
+                <option value="OFFLINE">● Offline</option>
+                <option value="WARNING">● Warning</option>
+                <option value="ERROR">● Error</option>
               </select>
               {isUpdatingStatus && (
                 <div className="flex items-center gap-2">

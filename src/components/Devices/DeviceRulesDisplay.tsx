@@ -114,7 +114,7 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
       case 'MEDIUM':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'LOW':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-success-100 text-success-800 border-success-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -123,7 +123,7 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ACTIVE':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-success-100 text-success-800 border-success-200';
       case 'INACTIVE':
         return 'bg-gray-100 text-gray-600 border-gray-200';
       default:
@@ -218,7 +218,7 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
       </div>
     );
   }
@@ -368,7 +368,7 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
                             }}
                             className={`p-1 rounded ${
                               rule.status === 'ACTIVE' 
-                                ? 'text-green-600 hover:bg-green-100' 
+                                ? 'text-success-600 hover:bg-success-100' 
                                 : 'text-gray-400 hover:bg-gray-100'
                             }`}
                             title={rule.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
@@ -384,7 +384,7 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
                               e.stopPropagation();
                               handleEditRule(rule);
                             }}
-                            className="p-1 text-blue-600 hover:bg-blue-100 rounded"
+                            className="p-1 text-primary-600 hover:bg-primary-100 rounded"
                             title="Edit"
                           >
                             <Edit className="w-4 h-4" />

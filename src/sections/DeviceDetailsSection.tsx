@@ -117,9 +117,9 @@ const MaintenanceCard: React.FC<{ task: MaintenanceTask }> = ({ task }) => {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'in_progress':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-primary-100 text-primary-800';
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-success-100 text-success-800';
       case 'overdue':
         return 'bg-red-100 text-red-800';
       default:
@@ -135,7 +135,7 @@ const MaintenanceCard: React.FC<{ task: MaintenanceTask }> = ({ task }) => {
       case 'medium':
         return 'bg-yellow-100 text-yellow-800';
       case 'low':
-        return 'bg-green-100 text-green-800';
+        return 'bg-success-100 text-success-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -669,7 +669,7 @@ export const DeviceDetailsSection: React.FC = () => {
           </p>
           <button
             onClick={() => navigate('/devices')}
-            className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all"
+            className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-all"
           >
             Back to Devices
           </button>
@@ -680,8 +680,8 @@ export const DeviceDetailsSection: React.FC = () => {
 
   const statusConfig = {
     ONLINE: { 
-      color: 'text-green-600', 
-      bg: 'bg-green-50',
+      color: 'text-success-600', 
+      bg: 'bg-success-50',
       label: 'Online'
     },
     OFFLINE: { 
@@ -1048,7 +1048,7 @@ export const DeviceDetailsSection: React.FC = () => {
               {!isEditing ? (
                 <button
                   onClick={handleEditClick}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
                 >
                   <Edit className="w-4 h-4" />
                   Edit Device
@@ -1058,7 +1058,7 @@ export const DeviceDetailsSection: React.FC = () => {
                   <button
                     onClick={handleSaveEdit}
                     disabled={isSaving}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-success-500 text-white rounded-lg hover:bg-success-600 transition-colors disabled:opacity-50"
                   >
                     {isSaving ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -1092,7 +1092,7 @@ export const DeviceDetailsSection: React.FC = () => {
                         type="text"
                         value={editedDevice?.name || ''}
                         onChange={(e) => handleInputChange('name', e.target.value)}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-primary-500 focus:border-primary-500 ${
                           validationErrors.name ? 'border-red-500' : 'border-slate-300'
                         }`}
                       />
@@ -1111,7 +1111,7 @@ export const DeviceDetailsSection: React.FC = () => {
                       type="text"
                       value={editedDevice?.location || ''}
                       onChange={(e) => handleInputChange('location', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
                     />
                   ) : (
                     <p className="text-slate-800">{device.location}</p>
@@ -1124,7 +1124,7 @@ export const DeviceDetailsSection: React.FC = () => {
                       type="text"
                       value={editedDevice?.manufacturer || ''}
                       onChange={(e) => handleInputChange('manufacturer', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
                       placeholder="Enter manufacturer"
                     />
                   ) : (
@@ -1138,7 +1138,7 @@ export const DeviceDetailsSection: React.FC = () => {
                       type="text"
                       value={editedDevice?.model || ''}
                       onChange={(e) => handleInputChange('model', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
                       placeholder="Enter model"
                     />
                   ) : (
@@ -1151,7 +1151,7 @@ export const DeviceDetailsSection: React.FC = () => {
                     <textarea
                       value={editedDevice?.description || ''}
                       onChange={(e) => handleInputChange('description', e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500"
                       rows={3}
                       placeholder="Enter device description"
                     />
@@ -1190,7 +1190,7 @@ export const DeviceDetailsSection: React.FC = () => {
                   {device.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm font-medium"
+                      className="px-3 py-1 bg-primary-50 text-primary-600 rounded-full text-sm font-medium"
                     >
                       {tag}
                     </span>
@@ -1206,10 +1206,10 @@ export const DeviceDetailsSection: React.FC = () => {
           <div className="space-y-6">
             {/* Real-time Status */}
             {isRealTimeLoading && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="bg-primary-50 border border-primary-200 rounded-xl p-4">
                 <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span className="text-blue-800 font-medium">Updating maintenance data...</span>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
+                  <span className="text-primary-800 font-medium">Updating maintenance data...</span>
                 </div>
               </div>
             )}
@@ -1229,10 +1229,10 @@ export const DeviceDetailsSection: React.FC = () => {
           <div className="space-y-6">
             {/* Real-time Status */}
             {isRealTimeLoading && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="bg-primary-50 border border-primary-200 rounded-xl p-4">
                 <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span className="text-blue-800 font-medium">Updating rules data...</span>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
+                  <span className="text-primary-800 font-medium">Updating rules data...</span>
                 </div>
               </div>
             )}
@@ -1249,10 +1249,10 @@ export const DeviceDetailsSection: React.FC = () => {
           <div className="space-y-6">
             {/* Real-time Status */}
             {isRealTimeLoading && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="bg-primary-50 border border-primary-200 rounded-xl p-4">
                 <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span className="text-blue-800 font-medium">Updating real-time safety data...</span>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
+                  <span className="text-primary-800 font-medium">Updating real-time safety data...</span>
                 </div>
               </div>
             )}
@@ -1297,10 +1297,10 @@ export const DeviceDetailsSection: React.FC = () => {
             
             {/* AI Chat Ready Banner - Simple and Clean */}
             {devicePDFs.length > 0 && (
-              <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+              <div className="mb-4 p-3 bg-success-50 rounded-lg border border-success-200">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-green-600" />
-                  <span className="text-sm font-medium text-green-800">AI Chat Ready</span>
+                  <FileText className="w-5 h-5 text-success-600" />
+                  <span className="text-sm font-medium text-success-800">AI Chat Ready</span>
                 </div>
               </div>
             )}
@@ -1345,7 +1345,7 @@ export const DeviceDetailsSection: React.FC = () => {
                   <div className="flex items-start gap-3 w-1/2">
                     <div className={`p-2 rounded-full flex-shrink-0 shadow-sm ${
                       message.type === 'user'
-                        ? 'bg-blue-500 text-white'
+                        ? 'bg-primary-500 text-white'
                         : 'bg-white text-slate-600 border border-slate-200'
                     }`}>
                       {message.type === 'user' ? (<User className="w-4 h-4" />) : (<Bot className="w-4 h-4" />)}
@@ -1353,7 +1353,7 @@ export const DeviceDetailsSection: React.FC = () => {
                     <div
                       className={`px-4 py-2 rounded-lg flex-1 ${
                         message.type === 'user'
-                          ? 'bg-blue-500 text-white'
+                          ? 'bg-primary-500 text-white'
                           : 'bg-white text-slate-800 border border-slate-200'
                       }`}
                     >
@@ -1416,8 +1416,8 @@ export const DeviceDetailsSection: React.FC = () => {
                           <p className="text-xs font-medium text-gray-500 mb-2">📄 Sources Used:</p>
                           <div className="space-y-2">
                             {message.chunks_used.map((chunk, index) => (
-                              <div key={index} className="text-xs bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg">
-                                <span className="text-blue-600 font-medium">Source {index + 1}:</span>
+                              <div key={index} className="text-xs bg-primary-50 border border-primary-200 px-3 py-2 rounded-lg">
+                                <span className="text-primary-600 font-medium">Source {index + 1}:</span>
                                 <span className="text-gray-700 ml-2">{chunk}</span>
                               </div>
                             ))}
@@ -1433,7 +1433,7 @@ export const DeviceDetailsSection: React.FC = () => {
                       )}
                       
                       <p className={`text-xs mt-1 ${
-                        message.type === 'user' ? 'text-blue-100' : 'text-slate-500'
+                        message.type === 'user' ? 'text-primary-100' : 'text-slate-500'
                       }`}>
                         {message.timestamp.toLocaleTimeString()}
                       </p>
@@ -1468,12 +1468,12 @@ export const DeviceDetailsSection: React.FC = () => {
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                 placeholder="Ask about this device..."
-                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
               <button
                 onClick={sendMessage}
                 disabled={!newMessage.trim() || isTyping}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <Send className="w-4 h-4" />
                 Send
@@ -1587,16 +1587,16 @@ export const DeviceDetailsSection: React.FC = () => {
               role="tab"
               aria-selected={activeTab === tab.id}
               aria-controls={`tabpanel-${tab.id}`}
-              className={`flex items-center gap-3 px-6 py-4 border-b-2 font-medium whitespace-nowrap transition-all duration-300 hover:bg-slate-50 relative focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              className={`flex items-center gap-3 px-6 py-4 border-b-2 font-medium whitespace-nowrap transition-all duration-300 hover:bg-slate-50 relative focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
                 activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600 bg-blue-50 shadow-sm'
+                  ? 'border-primary-500 text-primary-600 bg-primary-50 shadow-sm'
                   : 'border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300'
               }`}
             >
-              <tab.icon className={`w-5 h-5 transition-colors duration-200 ${activeTab === tab.id ? 'text-blue-600' : 'text-slate-500'}`} />
+              <tab.icon className={`w-5 h-5 transition-colors duration-200 ${activeTab === tab.id ? 'text-primary-600' : 'text-slate-500'}`} />
               <span className="font-semibold">{tab.label}</span>
               {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-blue-500 rounded-t-full"></div>
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-primary-500 rounded-t-full"></div>
               )}
             </button>
           ))}
@@ -1614,7 +1614,7 @@ export const DeviceDetailsSection: React.FC = () => {
           {isTabLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-6 h-6 border-2 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
                 <span className="text-slate-600 font-medium">Loading...</span>
               </div>
             </div>

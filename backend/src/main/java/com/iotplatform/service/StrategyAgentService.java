@@ -59,8 +59,24 @@ public class StrategyAgentService {
                 throw new IllegalArgumentException("Customer ID cannot be null or empty");
             }
 
-            // Prepare request
-            Map<String, Object> request = Map.of("customer_id", customerId);
+            // Get customer details first
+            Map<String, Object> customerDetails = getCustomerDetails(customerId);
+            
+            // Prepare request with customer details
+            Map<String, Object> request = new java.util.HashMap<>();
+            request.put("customer_id", customerId);
+            
+            // Add customer details if available
+            if (customerDetails != null) {
+                request.put("customer_name", customerDetails.get("customer_name"));
+                request.put("customer_type", customerDetails.get("customer_type"));
+                request.put("country", customerDetails.get("country"));
+                request.put("region", customerDetails.get("region"));
+                request.put("total_stores", customerDetails.get("total_stores"));
+                log.info("📋 Including customer details in recommendation request: {}", customerDetails.get("customer_name"));
+            } else {
+                log.warn("⚠️ Customer details not found for ID: {}, proceeding with basic request", customerId);
+            }
             
             // Prepare headers
             HttpHeaders headers = new HttpHeaders();
@@ -189,22 +205,100 @@ public class StrategyAgentService {
     }
 
     /**
-     * Get available customers (static list for now)
-     * TODO: This could be made dynamic by adding a backend endpoint
+     * Get available customers from external Strategy Agent API
      * 
      * @return Map containing available customers
      */
     public Map<String, Object> getAvailableCustomers() {
-        log.info("📋 Getting available customers list");
+        log.info("📋 Getting available customers from external API");
         
+        try {
+            // Prepare headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Accept", "application/json");
+            
+            // Create request entity (no body needed for GET request)
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+            
+            // Call external Strategy Agent API
+            String url = strategyAgentBaseUrl + "/customers";
+            log.info("🔍 Calling external Strategy Agent API: {}", url);
+            
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, Map.class);
+            
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Map<String, Object> responseBody = response.getBody();
+                log.info("✅ Successfully retrieved customers from external API");
+                
+                // Transform the response to match our expected format
+                return Map.of(
+                    "customers", responseBody.get("customers"),
+                    "total", responseBody.get("total_customers"),
+                    "timestamp", System.currentTimeMillis(),
+                    "source", "external_api"
+                );
+            } else {
+                log.warn("⚠️ External API returned non-OK status: {}", response.getStatusCode());
+                return getFallbackCustomers();
+            }
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to get customers from external API: {}", e.getMessage());
+            log.info("🔄 Falling back to static customer list");
+            return getFallbackCustomers();
+        }
+    }
+    
+    /**
+     * Get customer details by ID from external API
+     * 
+     * @param customerId The customer ID to get details for
+     * @return Map containing customer details
+     */
+    public Map<String, Object> getCustomerDetails(String customerId) {
+        log.info("📋 Getting customer details for ID: {}", customerId);
+        
+        try {
+            // First try to get from external API
+            Map<String, Object> allCustomers = getAvailableCustomers();
+            Object[] customers = (Object[]) allCustomers.get("customers");
+            
+            // Find the specific customer
+            for (Object customerObj : customers) {
+                Map<String, Object> customer = (Map<String, Object>) customerObj;
+                String id = (String) customer.get("customer_id");
+                if (customerId.equals(id)) {
+                    log.info("✅ Found customer details for ID: {}", customerId);
+                    return customer;
+                }
+            }
+            
+            log.warn("⚠️ Customer not found in external API, returning null");
+            return null;
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to get customer details for ID {}: {}", customerId, e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Fallback method to return static customer list when external API fails
+     * 
+     * @return Map containing static customer list
+     */
+    private Map<String, Object> getFallbackCustomers() {
+        log.warn("🔄 Using fallback customer list - external API not available");
         return Map.of(
             "customers", new Object[]{
-                Map.of("id", "C001", "name", "Starbucks"),
-                Map.of("id", "C002", "name", "McDonald's"),
-                Map.of("id", "C003", "name", "Subway")
+                Map.of("customer_id", "C001", "customer_name", "Starbucks", "customer_type", "Licensed", "country", "International", "region", "Middle East", "total_stores", 99),
+                Map.of("customer_id", "C002", "customer_name", "McDonald's", "customer_type", "Corporate", "country", "United States", "region", "National", "total_stores", 4),
+                Map.of("customer_id", "C003", "customer_name", "Walmart", "customer_type", "Corporate", "country", "United States", "region", "National", "total_stores", 99)
             },
             "total", 3,
-            "timestamp", System.currentTimeMillis()
+            "timestamp", System.currentTimeMillis(),
+            "source", "fallback"
         );
     }
 

@@ -195,13 +195,13 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'preventive':
-        return <Clock className="w-5 h-5 text-blue-500" />;
+        return <Clock className="w-5 h-5 text-primary-500" />;
       case 'corrective':
         return <Wrench className="w-5 h-5 text-orange-500" />;
       case 'emergency':
         return <AlertTriangle className="w-5 h-5 text-red-500" />;
       case 'routine':
-        return <Clock className="w-5 h-5 text-green-500" />;
+        return <Clock className="w-5 h-5 text-success-500" />;
       default:
         return <Wrench className="w-5 h-5 text-gray-500" />;
     }
@@ -210,9 +210,9 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-success-100 text-success-800 border-success-200';
       case 'in_progress':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return 'bg-primary-100 text-primary-800 border-primary-200';
       case 'scheduled':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'overdue':
@@ -231,7 +231,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
       case 'MEDIUM':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'LOW':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return 'bg-success-100 text-success-800 border-success-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -370,7 +370,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"></div>
           <p className="text-slate-600">Loading maintenance tasks...</p>
         </div>
       </div>
@@ -523,7 +523,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
                               e.stopPropagation();
                               handleEditTask(task);
                             }}
-                            className="p-1 text-blue-600 hover:bg-blue-100 rounded"
+                            className="p-1 text-primary-600 hover:bg-primary-100 rounded"
                             title="Edit"
                           >
                             <Edit className="w-4 h-4" />

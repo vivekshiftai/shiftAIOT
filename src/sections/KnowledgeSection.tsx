@@ -873,17 +873,6 @@ export const KnowledgeSection: React.FC = () => {
                             <span>•</span>
                             <span className="text-success-600 font-medium">AI Ready</span>
                           </div>
-                          <div className="flex items-center gap-1 mt-1">
-                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                              device.status === 'online' ? 'bg-success-100 text-success-700' :
-                              device.status === 'offline' ? 'bg-error-100 text-error-700' :
-                              'bg-neutral-100 text-neutral-700'
-                            }`}>
-                              {device.status === 'online' ? '🟢 Online' :
-                               device.status === 'offline' ? '🔴 Offline' :
-                               '⚪ Unknown'}
-                            </span>
-                          </div>
                         </div>
                       </div>
                       

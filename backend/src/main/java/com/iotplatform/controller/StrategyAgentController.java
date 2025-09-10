@@ -151,6 +151,34 @@ public class StrategyAgentController {
     }
 
     /**
+     * Get customer details by ID
+     */
+    @GetMapping("/customers/{customerId}")
+    public ResponseEntity<?> getCustomerDetails(@PathVariable String customerId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            log.info("📋 Getting customer details for ID: {} by user: {}", customerId, userDetails.getUser().getEmail());
+            
+            Map<String, Object> customerDetails = strategyAgentService.getCustomerDetails(customerId);
+            
+            if (customerDetails != null) {
+                return ResponseEntity.ok(customerDetails);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("error", "Customer not found: " + customerId));
+            }
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to get customer details for ID: {}", customerId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to get customer details: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Get Strategy Agent service information
      */
     @GetMapping("/info")

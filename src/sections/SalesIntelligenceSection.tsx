@@ -23,7 +23,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
   const [isLoading, setIsLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<StrategyAgentResponse | null>(null);
   const [error, setError] = useState<string>('');
-  const [availableCustomers, setAvailableCustomers] = useState<Array<{ id: string; name: string }>>([]);
+  const [availableCustomers, setAvailableCustomers] = useState<Array<{ id: string; name: string; type?: string; country?: string; region?: string; totalStores?: number }>>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'accepted' | 'rejected' | 'purchased'>('accepted');
@@ -37,7 +37,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
     : availableCustomers;
 
   // Handle customer selection
-  const handleCustomerSelect = (customer: { id: string; name: string }) => {
+  const handleCustomerSelect = (customer: { id: string; name: string; type?: string; country?: string; region?: string; totalStores?: number }) => {
     setSelectedCustomer(customer.id);
     setSearchQuery(customer.name);
     setShowDropdown(false);
@@ -234,9 +234,15 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                                 className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
                               >
                                 <div className="flex items-center justify-between">
-                                  <div>
+                                  <div className="flex-1">
                                     <p className="text-sm font-medium text-gray-900">{customer.name}</p>
                                     <p className="text-xs text-gray-500">ID: {customer.id}</p>
+                                    {customer.type && (
+                                      <p className="text-xs text-gray-400">
+                                        {customer.type} • {customer.country} • {customer.region}
+                                        {customer.totalStores && ` • ${customer.totalStores} stores`}
+                                      </p>
+                                    )}
                                   </div>
                                   {selectedCustomer === customer.id && (
                                     <CheckCircle className="w-4 h-4 text-green-500" />

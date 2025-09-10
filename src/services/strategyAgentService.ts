@@ -290,7 +290,7 @@ export class StrategyAgentService {
   /**
    * Get available customers from backend
    */
-  static async getAvailableCustomers(): Promise<Array<{ id: string; name: string }>> {
+  static async getAvailableCustomers(): Promise<Array<{ id: string; name: string; type?: string; country?: string; region?: string; totalStores?: number }>> {
     try {
       logInfo('StrategyAgent', 'Getting available customers from backend');
       
@@ -303,11 +303,22 @@ export class StrategyAgentService {
       const data = response.data;
       const customers = data.customers || [];
       
+      // Transform the customer data to match our expected format
+      const transformedCustomers = customers.map((customer: any) => ({
+        id: customer.customer_id || customer.id,
+        name: customer.customer_name || customer.name,
+        type: customer.customer_type,
+        country: customer.country,
+        region: customer.region,
+        totalStores: customer.total_stores
+      }));
+      
       logInfo('StrategyAgent', 'Available customers retrieved successfully', { 
-        totalCustomers: customers.length 
+        totalCustomers: transformedCustomers.length,
+        source: data.source || 'unknown'
       });
       
-      return customers;
+      return transformedCustomers;
       
     } catch (error: any) {
       logError('StrategyAgent', 'Failed to get available customers', error);
@@ -315,13 +326,41 @@ export class StrategyAgentService {
       // Fallback to static list if backend fails
       logInfo('StrategyAgent', 'Falling back to static customer list');
       return [
-        { id: 'C001', name: 'Starbucks' },
-        { id: 'C002', name: 'McDonald\'s' },
-        { id: 'C003', name: 'Walmart' }
+        { id: 'C001', name: 'Starbucks', type: 'Licensed', country: 'International', region: 'Middle East', totalStores: 99 },
+        { id: 'C002', name: 'McDonald\'s', type: 'Corporate', country: 'United States', region: 'National', totalStores: 4 },
+        { id: 'C003', name: 'Walmart', type: 'Corporate', country: 'United States', region: 'National', totalStores: 99 }
       ];
     }
   }
   
+  /**
+   * Get customer details by ID from backend
+   */
+  static async getCustomerDetails(customerId: string): Promise<any> {
+    try {
+      logInfo('StrategyAgent', `Getting customer details for ID: ${customerId}`);
+      
+      const response = await api.get(`/api/strategy-agent/customers/${customerId}`);
+      
+      if (response.status !== 200) {
+        throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const customerDetails = response.data;
+      
+      logInfo('StrategyAgent', 'Customer details retrieved successfully', { 
+        customerId,
+        customerName: customerDetails.customer_name
+      });
+      
+      return customerDetails;
+      
+    } catch (error: any) {
+      logError('StrategyAgent', `Failed to get customer details for ID: ${customerId}`, error);
+      throw error;
+    }
+  }
+
   /**
    * Get Strategy Agent service information
    */

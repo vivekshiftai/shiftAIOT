@@ -65,7 +65,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 "/upload-pdf",
                 "/query",
                 "/pdfs/",
-                "/knowledge/suggestions" // Temporarily make suggestions public for testing
+                "/knowledge/suggestions", // Temporarily make suggestions public for testing
+                "/ws/", // WebSocket endpoints
+                "/websocket/" // WebSocket endpoints
             };
             
             for (String endpoint : publicEndpoints) {

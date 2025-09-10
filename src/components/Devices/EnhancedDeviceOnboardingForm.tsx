@@ -1140,7 +1140,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
             {/* AI Generated Content Stats */}
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-3 border border-primary-200 text-center">
-                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
+                <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center mx-auto mb-2">
                   <CheckCircle className="w-4 h-4 text-white" />
                 </div>
                 <div className="text-lg font-bold text-blue-800 mb-1">
@@ -1451,7 +1451,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                     <button
                       onClick={currentStep === 3 ? handleSubmit : nextStep}
                       disabled={isSubmitting || (currentStep === 3 && !uploadedFile)}
-                      className="flex items-center gap-2 px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-medium shadow-sm hover:shadow-md"
+                      className="flex items-center gap-2 px-8 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-medium shadow-sm hover:shadow-md"
                     >
                       {currentStep === 3 ? 'Complete Onboarding' : 'Next'}
                       <ArrowRight className="w-4 h-4" />
