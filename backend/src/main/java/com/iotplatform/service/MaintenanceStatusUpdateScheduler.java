@@ -25,9 +25,9 @@ public class MaintenanceStatusUpdateScheduler {
 
     /**
      * Daily maintenance status update scheduler.
-     * Runs every day at 2:00 AM to update maintenance task statuses.
+     * Runs every day at 1:00 AM to update maintenance task statuses.
      */
-    @Scheduled(cron = "${maintenance.status-updater.cron:0 0 2 * * ?}")
+    @Scheduled(cron = "${maintenance.status-updater.cron:0 0 1 * * ?}")
     public void updateMaintenanceStatuses() {
         if (!statusUpdaterEnabled) {
             log.info("Maintenance status updater is disabled");

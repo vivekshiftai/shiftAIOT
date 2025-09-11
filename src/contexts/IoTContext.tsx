@@ -78,7 +78,17 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
               },
               onDeviceCreated: (device: Device) => {
                 logInfo('IoT', 'Device created', { deviceId: device.id, deviceName: device.name });
-                setDevices((prev: Device[]) => [...prev, device]);
+                setDevices((prev: Device[]) => {
+                  // Check if device already exists to prevent duplicates
+                  const deviceExists = prev.some(existingDevice => existingDevice.id === device.id);
+                  if (deviceExists) {
+                    logInfo('IoT', 'Device already exists, updating instead of adding', { deviceId: device.id });
+                    return prev.map(existingDevice => 
+                      existingDevice.id === device.id ? device : existingDevice
+                    );
+                  }
+                  return [...prev, device];
+                });
               },
               onDeviceDeleted: (deviceId: string, deviceName: string) => {
                 logInfo('IoT', 'Device deleted', { deviceId, deviceName });
@@ -231,7 +241,12 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         
         if (devicesRes.data) {
           logInfo('IoT', 'Setting devices', devicesRes.data);
-          setDevices(devicesRes.data);
+          // Deduplicate devices by ID to prevent duplicates
+          const uniqueDevices = devicesRes.data.filter((device: Device, index: number, self: Device[]) => 
+            index === self.findIndex(d => d.id === device.id)
+          );
+          logInfo('IoT', 'Deduplicated devices', { original: devicesRes.data.length, unique: uniqueDevices.length });
+          setDevices(uniqueDevices);
         } else {
           logInfo('IoT', 'No devices data in response');
           setDevices([]);

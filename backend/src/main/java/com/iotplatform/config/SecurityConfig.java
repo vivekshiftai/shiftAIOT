@@ -103,6 +103,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/system/**").hasRole("ADMIN")
                 
+                // SSE endpoints need special handling - allow them but they'll handle auth internally
+                .requestMatchers("/api/devices/*/unified-onboarding-stream").permitAll()
                 // Protected endpoints (authentication required)
                 .requestMatchers("/api/devices/**").authenticated()
                 .requestMatchers("/api/notifications/**").authenticated()

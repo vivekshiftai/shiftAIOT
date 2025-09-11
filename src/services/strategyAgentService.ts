@@ -102,6 +102,12 @@ export class StrategyAgentService {
         throw new Error('Invalid response data received from backend');
       }
       
+      // Remove PerformanceStats if present (as requested)
+      if (data.PerformanceStats) {
+        delete data.PerformanceStats;
+        logInfo('StrategyAgent', 'Removed PerformanceStats from response as requested');
+      }
+      
       // Validate required fields
       if (!data.Summary || !data.CustomerInfo || !data.CustomerClassification) {
         throw new Error('Incomplete response data - missing required fields');
@@ -312,6 +318,8 @@ export class StrategyAgentService {
       
       logInfo('StrategyAgent', 'Available customers retrieved successfully', { 
         totalCustomers: transformedCustomers.length,
+        totalCustomersFromAPI: data.total_customers || data.total,
+        success: data.success,
         source: data.source || 'unknown'
       });
       
@@ -442,6 +450,188 @@ export class StrategyAgentService {
   }
 
   /**
+   * Get recommendations for all customers
+   */
+  static async getAllCustomerRecommendations(): Promise<{
+    success: boolean;
+    message: string;
+    total_customers: number;
+    recommendations: StrategyAgentResponse[];
+  }> {
+    try {
+      logInfo('StrategyAgent', 'Getting recommendations for all customers from backend');
+      
+      const response = await api.get('/api/strategy-agent/recommendations/all');
+      
+      if (response.status !== 200) {
+        throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = response.data;
+      
+      // Validate response data structure
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response data received from backend');
+      }
+      
+      // Remove PerformanceStats if present (as requested)
+      if (data.recommendations && Array.isArray(data.recommendations)) {
+        data.recommendations.forEach((rec: any) => {
+          if (rec.PerformanceStats) {
+            delete rec.PerformanceStats;
+          }
+        });
+        logInfo('StrategyAgent', 'Removed PerformanceStats from all customer recommendations');
+      }
+      
+      // Validate required fields
+      if (!data.recommendations || !Array.isArray(data.recommendations)) {
+        throw new Error('Incomplete response data - missing recommendations array');
+      }
+      
+      // Transform and validate each recommendation
+      const validatedRecommendations = data.recommendations.map((rec: any) => {
+        // Ensure arrays exist and validate structure
+        return {
+          ...rec,
+          AcceptedRecommendations: (rec.AcceptedRecommendations || []).map((item: any) => ({
+            ...item,
+            ProductName: item.ProductName || 'Unknown Product',
+            QuantityRequired: item.QuantityRequired || 0,
+            Ingredients: item.Ingredients || [],
+            CrossSell: (item.CrossSell || []).map((cs: any) => ({
+              ...cs,
+              SuggestedProduct: cs.SuggestedProduct || 'Unknown Product',
+              Price: cs.Price || 0,
+              Category: cs.Category || 'N/A',
+              Similarity: cs.Similarity || 0,
+              AIReasoning: cs.AIReasoning || 'No reasoning provided'
+            }))
+          })),
+          RejectedRecommendations: (rec.RejectedRecommendations || []).map((item: any) => ({
+            ...item,
+            ProductName: item.ProductName || 'Unknown Product',
+            QuantityRequired: item.QuantityRequired || 0,
+            Ingredients: item.Ingredients || [],
+            RejectedCrossSell: (item.RejectedCrossSell || []).map((cs: any) => ({
+              ...cs,
+              SuggestedProduct: cs.SuggestedProduct || 'Unknown Product',
+              Price: cs.Price || 0,
+              Category: cs.Category || 'N/A',
+              Similarity: cs.Similarity || 0,
+              AIReasoning: cs.AIReasoning || 'No reasoning provided'
+            }))
+          })),
+          AlreadyPurchasedRecommendations: (rec.AlreadyPurchasedRecommendations || []).map((item: any) => ({
+            ...item,
+            ProductName: item.ProductName || 'Unknown Product',
+            QuantityRequired: item.QuantityRequired || 0,
+            Ingredients: item.Ingredients || [],
+            AlreadyPurchasedCrossSell: (item.AlreadyPurchasedCrossSell || []).map((cs: any) => ({
+              ...cs,
+              SuggestedProduct: cs.SuggestedProduct || 'Unknown Product',
+              Price: cs.Price || 0,
+              Category: cs.Category || 'N/A',
+              Similarity: cs.Similarity || 0,
+              AIReasoning: cs.AIReasoning || 'No reasoning provided'
+            }))
+          })),
+          Summary: {
+            TotalUpSell: rec.Summary?.TotalUpSell || 0,
+            TotalCrossSell: rec.Summary?.TotalCrossSell || 0,
+            TotalRejected: rec.Summary?.TotalRejected || 0,
+            TotalAlreadyPurchased: rec.Summary?.TotalAlreadyPurchased || 0,
+            TotalRecommendations: rec.Summary?.TotalRecommendations || 0
+          },
+          CustomerInfo: {
+            CustomerID: rec.CustomerInfo?.CustomerID || 'N/A',
+            CustomerName: rec.CustomerInfo?.CustomerName || 'N/A'
+          },
+          CustomerClassification: rec.CustomerClassification || {
+            CustomerType: 'N/A',
+            TotalQuantitySold: 0,
+            NumberOfStores: 0,
+            ClassificationCriteria: {
+              StoresGreaterThan50: false,
+              QuantityGreaterThan200K: false,
+              StoresBetween25And50: false,
+              QuantityBetween50KAnd200K: false
+            }
+          }
+        };
+      });
+      
+      logInfo('StrategyAgent', 'All customer recommendations retrieved successfully', { 
+        totalCustomers: data.total_customers,
+        success: data.success,
+        message: data.message,
+        source: data.source
+      });
+      
+      return {
+        success: data.success || true,
+        message: data.message || 'Successfully loaded customer recommendations',
+        total_customers: data.total_customers || validatedRecommendations.length,
+        recommendations: validatedRecommendations
+      };
+      
+    } catch (error: any) {
+      logError('StrategyAgent', 'Failed to get all customer recommendations', error);
+      
+      if (error.response) {
+        logError('StrategyAgent', 'Backend response error', error, { status: error.response.status, data: error.response.data });
+        throw new Error(`Backend error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`);
+      } else if (error.request) {
+        logError('StrategyAgent', 'No response received from backend', error, { request: error.request });
+        throw new Error('No response from backend - check if backend is running');
+      } else {
+        logError('StrategyAgent', 'Request setup error', error, { message: error.message });
+        throw new Error(`Request failed: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Download PDF report for all customers
+   */
+  static async downloadAllCustomersPDFReport(): Promise<Blob> {
+    try {
+      logInfo('StrategyAgent', 'Downloading PDF report for all customers from backend');
+      
+      const response = await api.get('/api/strategy-agent/recommendations/download/all', {
+        responseType: 'blob'
+      });
+      
+      if (response.status !== 200) {
+        throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      
+      logInfo('StrategyAgent', 'PDF report for all customers downloaded successfully', { 
+        size: blob.size,
+        type: blob.type 
+      });
+      
+      return blob;
+      
+    } catch (error: any) {
+      logError('StrategyAgent', 'Failed to download PDF report for all customers', error);
+      
+      if (error.response) {
+        logError('StrategyAgent', 'Backend response error', error, { status: error.response.status, data: error.response.data });
+        throw new Error(`Backend error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`);
+      } else if (error.request) {
+        logError('StrategyAgent', 'No response received from backend', error, { request: error.request });
+        throw new Error('No response from backend - check if backend is running');
+      } else {
+        logError('StrategyAgent', 'Request setup error', error, { message: error.message });
+        throw new Error(`Request failed: ${error.message}`);
+      }
+    }
+  }
+
+  /**
    * Helper method to trigger PDF download in browser
    */
   static triggerPDFDownload(blob: Blob, customerId: string, timestamp: string): void {
@@ -459,6 +649,148 @@ export class StrategyAgentService {
     } catch (error) {
       logError('StrategyAgent', 'Failed to trigger PDF download', error instanceof Error ? error : new Error('Unknown error'));
       throw new Error('Failed to trigger PDF download');
+    }
+  }
+
+  /**
+   * Regenerate recommendations for a specific customer
+   */
+  static async regenerateCustomerRecommendations(customerId: string, forceRegenerate: boolean = true): Promise<{
+    success: boolean;
+    message: string;
+    customer_id: string;
+    force_regenerate: boolean;
+    timestamp: number;
+    source: string;
+  }> {
+    try {
+      logInfo('StrategyAgent', 'Regenerating recommendations for customer from backend', { customerId, forceRegenerate });
+      
+      const response = await api.post(`/api/strategy-agent/regenerate-recommendations/${customerId}`, {
+        force_regenerate: forceRegenerate
+      });
+      
+      if (response.status !== 200) {
+        throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = response.data;
+      
+      // Validate response data structure
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response data received from backend');
+      }
+      
+      logInfo('StrategyAgent', 'Customer recommendations regeneration triggered successfully', { 
+        customerId,
+        success: data.success,
+        message: data.message,
+        force_regenerate: data.force_regenerate,
+        source: data.source
+      });
+      
+      return {
+        success: data.success || false,
+        message: data.message || 'Regeneration process started',
+        customer_id: data.customer_id || customerId,
+        force_regenerate: data.force_regenerate || forceRegenerate,
+        timestamp: data.timestamp || Date.now(),
+        source: data.source || 'backend'
+      };
+      
+    } catch (error: any) {
+      logError('StrategyAgent', 'Failed to regenerate recommendations for customer', error, { customerId });
+      
+      if (error.response) {
+        logError('StrategyAgent', 'Backend response error', error, { status: error.response.status, data: error.response.data });
+        throw new Error(`Backend error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`);
+      } else if (error.request) {
+        logError('StrategyAgent', 'No response received from backend', error, { request: error.request });
+        throw new Error('No response from backend - check if backend is running');
+      } else {
+        logError('StrategyAgent', 'Request setup error', error, { message: error.message });
+        throw new Error(`Request failed: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Regenerate recommendations for all customers
+   */
+  static async regenerateAllRecommendations(forceRegenerate: boolean = true): Promise<{
+    success: boolean;
+    message: string;
+    force_regenerate: boolean;
+    timestamp: number;
+    source: string;
+  }> {
+    try {
+      logInfo('StrategyAgent', 'Regenerating recommendations for all customers from backend', { forceRegenerate });
+      
+      const response = await api.post('/api/strategy-agent/regenerate-recommendations', {
+        force_regenerate: forceRegenerate
+      });
+      
+      if (response.status !== 200) {
+        throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = response.data;
+      
+      // Validate response data structure
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response data received from backend');
+      }
+      
+      logInfo('StrategyAgent', 'Recommendations regeneration triggered successfully', { 
+        success: data.success,
+        message: data.message,
+        force_regenerate: data.force_regenerate,
+        source: data.source
+      });
+      
+      return {
+        success: data.success || false,
+        message: data.message || 'Regeneration process started',
+        force_regenerate: data.force_regenerate || forceRegenerate,
+        timestamp: data.timestamp || Date.now(),
+        source: data.source || 'backend'
+      };
+      
+    } catch (error: any) {
+      logError('StrategyAgent', 'Failed to regenerate recommendations for all customers', error);
+      
+      if (error.response) {
+        logError('StrategyAgent', 'Backend response error', error, { status: error.response.status, data: error.response.data });
+        throw new Error(`Backend error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`);
+      } else if (error.request) {
+        logError('StrategyAgent', 'No response received from backend', error, { request: error.request });
+        throw new Error('No response from backend - check if backend is running');
+      } else {
+        logError('StrategyAgent', 'Request setup error', error, { message: error.message });
+        throw new Error(`Request failed: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Helper method to trigger PDF download for all customers in browser
+   */
+  static triggerAllCustomersPDFDownload(blob: Blob, timestamp: string): void {
+    try {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `all_customers_recommendations_report_${timestamp}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      logInfo('StrategyAgent', 'All customers PDF download triggered successfully');
+    } catch (error) {
+      logError('StrategyAgent', 'Failed to trigger all customers PDF download', error instanceof Error ? error : new Error('Unknown error'));
+      throw new Error('Failed to trigger all customers PDF download');
     }
   }
 }

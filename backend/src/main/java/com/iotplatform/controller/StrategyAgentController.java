@@ -202,6 +202,133 @@ public class StrategyAgentController {
     }
 
     /**
+     * Get recommendations for all customers
+     */
+    @GetMapping("/recommendations/all")
+    public ResponseEntity<?> getAllCustomerRecommendations(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            log.info("📋 Getting recommendations for all customers for user: {}", userDetails.getUser().getEmail());
+            
+            Map<String, Object> allRecommendations = strategyAgentService.getAllCustomerRecommendations();
+            
+            return ResponseEntity.ok(allRecommendations);
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to get all customer recommendations", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to get all customer recommendations: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Download PDF report for all customers
+     */
+    @GetMapping("/recommendations/download/all")
+    public ResponseEntity<?> downloadAllCustomersPDFReport(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            log.info("📄 Downloading PDF report for all customers for user: {}", userDetails.getUser().getEmail());
+            
+            byte[] pdfData = strategyAgentService.downloadAllCustomersPDFReport();
+            
+            // Set response headers for PDF download
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "all-customers-recommendations-report.pdf");
+            headers.setContentLength(pdfData.length);
+            
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(pdfData);
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to download PDF report for all customers", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to download PDF report for all customers: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Regenerate recommendations for a specific customer
+     */
+    @PostMapping("/regenerate-recommendations/{customerId}")
+    public ResponseEntity<?> regenerateCustomerRecommendations(
+            @PathVariable String customerId,
+            @RequestBody(required = false) Map<String, Object> requestBody,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            log.info("🔄 Regenerating recommendations for customer {} for user: {}", customerId, userDetails.getUser().getEmail());
+            
+            // Extract force_regenerate parameter from request body, default to true
+            boolean forceRegenerate = true;
+            if (requestBody != null && requestBody.containsKey("force_regenerate")) {
+                Object forceValue = requestBody.get("force_regenerate");
+                if (forceValue instanceof Boolean) {
+                    forceRegenerate = (Boolean) forceValue;
+                } else if (forceValue instanceof String) {
+                    forceRegenerate = Boolean.parseBoolean((String) forceValue);
+                }
+            }
+            
+            Map<String, Object> result = strategyAgentService.regenerateCustomerRecommendations(customerId, forceRegenerate);
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to regenerate recommendations for customer {}", customerId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to regenerate recommendations for customer " + customerId + ": " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Regenerate recommendations for all customers
+     */
+    @PostMapping("/regenerate-recommendations")
+    public ResponseEntity<?> regenerateAllRecommendations(
+            @RequestBody(required = false) Map<String, Object> requestBody,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            log.info("🔄 Regenerating recommendations for all customers for user: {}", userDetails.getUser().getEmail());
+            
+            // Extract force_regenerate parameter from request body, default to true
+            boolean forceRegenerate = true;
+            if (requestBody != null && requestBody.containsKey("force_regenerate")) {
+                Object forceValue = requestBody.get("force_regenerate");
+                if (forceValue instanceof Boolean) {
+                    forceRegenerate = (Boolean) forceValue;
+                } else if (forceValue instanceof String) {
+                    forceRegenerate = Boolean.parseBoolean((String) forceValue);
+                }
+            }
+            
+            Map<String, Object> result = strategyAgentService.regenerateAllRecommendations(forceRegenerate);
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to regenerate recommendations for all customers", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to regenerate recommendations for all customers: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Test Strategy Agent connection
      */
     @PostMapping("/test-connection")

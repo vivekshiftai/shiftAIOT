@@ -3,6 +3,7 @@ package com.iotplatform.service;
 import com.iotplatform.dto.MaintenanceNotificationRequest;
 import com.iotplatform.model.Notification;
 import com.iotplatform.repository.MaintenanceScheduleRepository;
+import com.iotplatform.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,8 +12,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,6 +32,7 @@ public class MaintenanceNotificationScheduler {
     
     private static final Logger log = LoggerFactory.getLogger(MaintenanceNotificationScheduler.class);
     private final MaintenanceScheduleRepository maintenanceScheduleRepository;
+    private final NotificationRepository notificationRepository;
     private final ConversationNotificationService conversationNotificationService;
     private final NotificationService notificationService;
     private final MaintenanceScheduleService maintenanceScheduleService;
@@ -41,9 +46,9 @@ public class MaintenanceNotificationScheduler {
 
     /**
      * Update overdue maintenance tasks status.
-     * Runs every day at 10:35 AM to mark overdue tasks before sending notifications.
+     * Runs every day at 2:00 AM to mark overdue tasks before sending notifications.
      */
-    @Scheduled(cron = "${maintenance.overdue.cron:0 35 10 * * ?}")
+    @Scheduled(cron = "${maintenance.overdue.cron:0 0 2 * * ?}")
     public void updateOverdueMaintenanceTasks() {
         if (!schedulerEnabled) {
             log.info("Maintenance scheduler is disabled, skipping overdue update");
@@ -88,9 +93,9 @@ public class MaintenanceNotificationScheduler {
 
     /**
      * Auto-update overdue maintenance tasks to next maintenance date.
-     * Runs every day at 10:35 AM to automatically reschedule overdue tasks.
+     * Runs every day at 3:00 AM to automatically reschedule overdue tasks.
      */
-    @Scheduled(cron = "${maintenance.auto-update.cron:0 35 10 * * ?}")
+    @Scheduled(cron = "${maintenance.auto-update.cron:0 0 3 * * ?}")
     public void autoUpdateOverdueMaintenanceTasks() {
         if (!schedulerEnabled) {
             log.info("Maintenance scheduler is disabled, skipping auto-update");
@@ -141,11 +146,66 @@ public class MaintenanceNotificationScheduler {
     }
 
     /**
-     * Daily maintenance notification scheduler.
-     * Runs every day at 10:35 AM to send notifications for today's maintenance tasks.
-     * This runs at the same time as the overdue update for testing purposes.
+     * Maintenance reminder scheduler.
+     * Runs every 2 hours to send maintenance reminders for overdue and due tasks.
+     * Sends up to 3 reminders per task per day.
      */
-    @Scheduled(cron = "${maintenance.scheduler.cron:0 35 10 * * ?}")
+    @Scheduled(cron = "${maintenance.reminder.cron:0 0 */2 * * ?}")
+    public void sendMaintenanceReminders() {
+        if (!schedulerEnabled) {
+            log.info("Maintenance reminder scheduler is disabled");
+            return;
+        }
+
+        log.info("Starting maintenance reminder process for date: {} at hour: {}", 
+                LocalDate.now(), LocalDateTime.now().getHour());
+
+        try {
+            // Get maintenance tasks that need reminders (due today or overdue)
+            List<Object[]> reminderTasks = maintenanceScheduleRepository
+                .findMaintenanceTasksNeedingReminders();
+
+            if (reminderTasks.isEmpty()) {
+                log.info("No maintenance tasks need reminders at this time");
+                return;
+            }
+
+            log.info("Found {} maintenance tasks needing reminders", reminderTasks.size());
+
+            int totalRemindersSent = 0;
+            int totalRemindersFailed = 0;
+
+            // Process each maintenance task
+            for (Object[] taskData : reminderTasks) {
+                try {
+                    boolean sent = processMaintenanceReminder(taskData);
+                    if (sent) {
+                        totalRemindersSent++;
+                    } else {
+                        totalRemindersFailed++;
+                    }
+                } catch (Exception e) {
+                    log.error("Error processing maintenance reminder: {}", e.getMessage(), e);
+                    totalRemindersFailed++;
+                }
+            }
+
+            log.info("Maintenance reminder process completed. " +
+                    "Sent: {}, Failed: {}, Total: {}", 
+                    totalRemindersSent, totalRemindersFailed, 
+                    totalRemindersSent + totalRemindersFailed);
+
+        } catch (Exception e) {
+            log.error("Error in maintenance reminder scheduler: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Daily maintenance notification scheduler.
+     * Runs every day at 4:00 AM to send notifications for today's maintenance tasks.
+     * This runs at 4:00 AM to send daily maintenance notifications.
+     */
+    @Scheduled(cron = "${maintenance.scheduler.cron:0 0 4 * * ?}")
     public void sendDailyMaintenanceNotifications() {
         if (!schedulerEnabled) {
             log.info("Maintenance notification scheduler is disabled");
@@ -195,6 +255,67 @@ public class MaintenanceNotificationScheduler {
 
         } catch (Exception e) {
             log.error("Error in daily maintenance notification scheduler: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Process a single maintenance reminder and send notification.
+     * Checks if the task has already received 3 reminders today.
+     * 
+     * @param taskData The maintenance task data from database
+     * @return true if notification was sent successfully, false otherwise
+     */
+    private boolean processMaintenanceReminder(Object[] taskData) {
+        try {
+            // Extract data from the Object array
+            String taskId = (String) taskData[0]; // id
+            String taskName = (String) taskData[2]; // task_name
+            String deviceId = (String) taskData[1]; // device_id
+            String organizationId = (String) taskData[21]; // organization_id
+            String assignedUserId = (String) taskData[25]; // assigned_user_id from devices table
+            String deviceName = (String) taskData[24]; // device_name from devices table
+            String firstName = (String) taskData[26]; // first_name from users table
+            String lastName = (String) taskData[27]; // last_name from users table
+            String email = (String) taskData[28]; // email from users table
+
+            // Skip if no assigned user
+            if (assignedUserId == null || assignedUserId.trim().isEmpty()) {
+                log.warn("Skipping maintenance reminder - no assigned user for device: {}", deviceName);
+                return false;
+            }
+
+            // Skip if user details are missing
+            if (firstName == null || lastName == null || email == null) {
+                log.warn("Skipping maintenance reminder - missing user details for user: {}", assignedUserId);
+                return false;
+            }
+
+            String assignedUserName = firstName + " " + lastName;
+
+            // Check if this task has already received 3 reminders today
+            long reminderCountToday = notificationRepository.countMaintenanceRemindersToday(taskId, LocalDate.now());
+            if (reminderCountToday >= 3) {
+                log.info("Task {} has already received 3 reminders today, skipping", taskName);
+                return false;
+            }
+
+            // Create and send reminder notification
+            boolean notificationSent = createAndSendReminderNotification(taskData, assignedUserId, assignedUserName, 
+                    deviceName, organizationId, taskName, deviceId, reminderCountToday + 1);
+            
+            if (notificationSent) {
+                log.info("✅ Maintenance reminder #{} sent successfully for user: {}, device: {}, task: {}", 
+                        reminderCountToday + 1, assignedUserName, deviceName, taskName);
+                return true;
+            } else {
+                log.error("❌ Failed to send maintenance reminder for user: {}, device: {}, task: {}", 
+                        assignedUserName, deviceName, taskName);
+                return false;
+            }
+
+        } catch (Exception e) {
+            log.error("Error processing maintenance reminder: {}", e.getMessage(), e);
+            return false;
         }
     }
 
@@ -252,6 +373,97 @@ public class MaintenanceNotificationScheduler {
 
         } catch (Exception e) {
             log.error("Error processing maintenance task: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Create and send reminder notification for maintenance task.
+     * 
+     * @param taskData The maintenance task data
+     * @param assignedUserId The assigned user ID
+     * @param assignedUserName The assigned user name
+     * @param deviceName The device name
+     * @param organizationId The organization ID
+     * @param taskName The task name
+     * @param deviceId The device ID
+     * @param reminderNumber The reminder number (1, 2, or 3)
+     * @return true if notification was created and sent successfully
+     */
+    private boolean createAndSendReminderNotification(Object[] taskData, String assignedUserId, String assignedUserName, 
+                                                    String deviceName, String organizationId, String taskName, 
+                                                    String deviceId, long reminderNumber) {
+        try {
+            // Extract additional data from taskData
+            String priority = (String) taskData[9]; // priority
+            String description = (String) taskData[3]; // description
+            String maintenanceType = (String) taskData[5]; // maintenance_type
+            String nextMaintenance = taskData[8] != null ? taskData[8].toString() : null; // next_maintenance
+
+            // Create maintenance reminder notification
+            Notification notification = new Notification();
+            notification.setId(java.util.UUID.randomUUID().toString());
+            notification.setUserId(assignedUserId);
+            notification.setTitle(String.format("🔔 Maintenance Reminder #%d - %s", reminderNumber, deviceName));
+            notification.setMessage(String.format(
+                "This is reminder #%d for your maintenance task:\n\n" +
+                "📱 Device: %s\n" +
+                "🔧 Task: %s\n" +
+                "📅 Due Date: %s\n" +
+                "🎯 Priority: %s\n" +
+                "📝 Description: %s\n" +
+                "🔧 Type: %s\n\n" +
+                "Please complete the maintenance task as soon as possible.\n" +
+                "You will receive up to 3 reminders every 2 hours until completed.",
+                reminderNumber,
+                deviceName,
+                taskName,
+                java.time.LocalDate.now().toString(),
+                priority != null ? priority.toUpperCase() : "MEDIUM",
+                description != null ? description : "No description provided",
+                maintenanceType != null ? maintenanceType : "General Maintenance"
+            ));
+            notification.setCategory(Notification.NotificationCategory.MAINTENANCE_REMINDER);
+            notification.setOrganizationId(organizationId);
+            notification.setDeviceId(deviceId);
+            notification.setRead(false);
+            notification.setCreatedAt(java.time.LocalDateTime.now());
+            
+            // Add metadata to track reminder number
+            Map<String, String> metadata = new HashMap<>();
+            metadata.put("reminderNumber", String.valueOf(reminderNumber));
+            metadata.put("taskId", (String) taskData[0]);
+            metadata.put("reminderType", "MAINTENANCE_REMINDER");
+            notification.setMetadata(metadata);
+            
+            // Create notification with preference check
+            Optional<Notification> createdNotification = notificationService.createNotificationWithPreferenceCheck(
+                assignedUserId, notification);
+            
+            if (createdNotification.isPresent()) {
+                log.info("✅ Created maintenance reminder #{} notification for user: {} for task: {}", 
+                       reminderNumber, assignedUserName, taskName);
+                
+                // Also try to send conversation notification if configured
+                try {
+                    MaintenanceNotificationRequest conversationNotification = conversationNotificationService
+                        .createNotificationRequest(taskData, deviceName, assignedUserId, assignedUserName, organizationId);
+                    conversationNotificationService.sendMaintenanceNotification(conversationNotification);
+                    log.info("✅ Conversation reminder notification sent for user: {} for task: {}", assignedUserName, taskName);
+                } catch (Exception e) {
+                    log.warn("⚠️ Conversation reminder notification failed for user: {} for task: {} - {}", 
+                           assignedUserName, taskName, e.getMessage());
+                }
+                
+                return true;
+            } else {
+                log.warn("⚠️ Maintenance reminder notification blocked by user preferences for user: {}", 
+                       assignedUserName);
+                return false;
+            }
+            
+        } catch (Exception e) {
+            log.error("Error creating and sending reminder notification for maintenance task: {}", e.getMessage(), e);
             return false;
         }
     }

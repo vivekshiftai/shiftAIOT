@@ -95,4 +95,17 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
     @Query("UPDATE MaintenanceSchedule m SET m.nextMaintenance = :nextMaintenance, m.status = :status, m.updatedAt = CURRENT_TIMESTAMP WHERE m.id = :id")
     void updateMaintenanceTaskSchedule(@Param("id") String id, @Param("nextMaintenance") java.time.LocalDate nextMaintenance, @Param("status") String status);
     
+    // Find maintenance tasks that need reminders (due today or overdue, not completed)
+    @Query(value = """
+        SELECT m.*, d.name as device_name, d.assigned_user_id, u.first_name, u.last_name, u.email 
+        FROM device_maintenance m 
+        LEFT JOIN devices d ON m.device_id = d.id 
+        LEFT JOIN users u ON d.assigned_user_id = u.id 
+        WHERE m.next_maintenance <= CURRENT_DATE 
+        AND m.status IN ('ACTIVE', 'PENDING', 'OVERDUE')
+        AND d.assigned_user_id IS NOT NULL
+        AND u.id IS NOT NULL
+        """, nativeQuery = true)
+    List<Object[]> findMaintenanceTasksNeedingReminders();
+    
 }

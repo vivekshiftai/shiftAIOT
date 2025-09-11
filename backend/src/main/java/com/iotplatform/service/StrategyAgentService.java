@@ -25,7 +25,7 @@ public class StrategyAgentService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    @Value("${strategy.agent.base-url:http://20.57.36.66:8001}")
+    @Value("${strategy.agent.base-url:http://20.57.36.66:8002}")
     private String strategyAgentBaseUrl;
 
     @Value("${strategy.agent.timeout:30000}")
@@ -62,46 +62,36 @@ public class StrategyAgentService {
             // Get customer details first
             Map<String, Object> customerDetails = getCustomerDetails(customerId);
             
-            // Prepare request with customer details
-            Map<String, Object> request = new java.util.HashMap<>();
-            request.put("customer_id", customerId);
-            
-            // Add customer details if available
-            if (customerDetails != null) {
-                request.put("customer_name", customerDetails.get("customer_name"));
-                request.put("customer_type", customerDetails.get("customer_type"));
-                request.put("country", customerDetails.get("country"));
-                request.put("region", customerDetails.get("region"));
-                request.put("total_stores", customerDetails.get("total_stores"));
-                log.info("📋 Including customer details in recommendation request: {}", customerDetails.get("customer_name"));
-            } else {
-                log.warn("⚠️ Customer details not found for ID: {}, proceeding with basic request", customerId);
-            }
-            
-            // Prepare headers
+            // Prepare headers for GET request
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.set("Accept", "application/json");
             
-            // Create request entity
-            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(request, headers);
+            // Create request entity (no body needed for GET request)
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
             
-            // Call Strategy Agent API
-            String url = strategyAgentBaseUrl + "/generate-recommendations";
+            // Call Strategy Agent API using the new endpoint
+            String url = strategyAgentBaseUrl + "/recommendations/" + customerId + "/json";
             log.info("🔍 Calling Strategy Agent API: {}", url);
             
-            ResponseEntity<Map> response = restTemplate.postForEntity(url, requestEntity, Map.class);
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, Map.class);
             
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> responseData = response.getBody();
                 
-                // Validate response data structure
+                // Validate response data structure for new format
                 if (!responseData.containsKey("Summary") || !responseData.containsKey("CustomerInfo")) {
                     log.warn("⚠️ Strategy Agent API returned incomplete data for customer: {}", customerId);
                     // Add default values for missing fields
                     responseData.putIfAbsent("AcceptedRecommendations", new java.util.ArrayList<>());
                     responseData.putIfAbsent("RejectedRecommendations", new java.util.ArrayList<>());
                     responseData.putIfAbsent("AlreadyPurchasedRecommendations", new java.util.ArrayList<>());
+                }
+                
+                // Remove PerformanceStats if present (as requested)
+                if (responseData.containsKey("PerformanceStats")) {
+                    responseData.remove("PerformanceStats");
+                    log.info("📊 Removed PerformanceStats from response as requested");
                 }
                 
                 log.info("✅ Strategy Agent API response received successfully for customer: {}", customerId);
@@ -129,7 +119,7 @@ public class StrategyAgentService {
         try {
             log.info("📄 Downloading PDF report for customer: {}", customerId);
 
-            // Call Strategy Agent API for PDF download
+            // Call Strategy Agent API for PDF download using new endpoint
             String url = strategyAgentBaseUrl + "/recommendations/" + customerId + "/download";
             log.info("🔍 Calling Strategy Agent PDF download API: {}", url);
             
@@ -231,13 +221,26 @@ public class StrategyAgentService {
                 Map<String, Object> responseBody = response.getBody();
                 log.info("✅ Successfully retrieved customers from external API");
                 
-                // Transform the response to match our expected format
-                return Map.of(
-                    "customers", responseBody.get("customers"),
-                    "total", responseBody.get("total_customers"),
-                    "timestamp", System.currentTimeMillis(),
-                    "source", "external_api"
-                );
+                // Handle the new response format from http://20.57.36.66:8002/customers
+                Object customers = responseBody.get("customers");
+                Object totalCustomers = responseBody.get("total_customers");
+                Boolean success = (Boolean) responseBody.get("success");
+                
+                if (success != null && success && customers != null) {
+                    log.info("📊 Retrieved {} customers from new endpoint", totalCustomers);
+                    
+                    // Transform the response to match our expected format
+                    return Map.of(
+                        "customers", customers,
+                        "total", totalCustomers != null ? totalCustomers : 0,
+                        "success", true,
+                        "timestamp", System.currentTimeMillis(),
+                        "source", "external_api_v2"
+                    );
+                } else {
+                    log.warn("⚠️ External API returned unsuccessful response: {}", responseBody);
+                    return getFallbackCustomers();
+                }
             } else {
                 log.warn("⚠️ External API returned non-OK status: {}", response.getStatusCode());
                 return getFallbackCustomers();
@@ -297,6 +300,8 @@ public class StrategyAgentService {
                 Map.of("customer_id", "C003", "customer_name", "Walmart", "customer_type", "Corporate", "country", "United States", "region", "National", "total_stores", 99)
             },
             "total", 3,
+            "total_customers", 3,
+            "success", true,
             "timestamp", System.currentTimeMillis(),
             "source", "fallback"
         );
@@ -325,6 +330,285 @@ public class StrategyAgentService {
         } catch (Exception e) {
             log.error("❌ Strategy Agent API connection test failed", e);
             return false;
+        }
+    }
+
+    /**
+     * Get recommendations for all customers from external Strategy Agent API
+     * 
+     * @return Map containing all customer recommendations
+     */
+    public Map<String, Object> getAllCustomerRecommendations() {
+        log.info("📋 Getting recommendations for all customers from external API");
+        
+        try {
+            // Prepare headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Accept", "application/json");
+            
+            // Create request entity (no body needed for GET request)
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+            
+            // Call external Strategy Agent API
+            String url = strategyAgentBaseUrl + "/recommendations/all";
+            log.info("🔍 Calling external Strategy Agent API: {}", url);
+            
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, Map.class);
+            
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Map<String, Object> responseBody = response.getBody();
+                log.info("✅ Successfully retrieved all customer recommendations from external API");
+                
+                // Handle the new response format from /recommendations/all
+                Object recommendations = responseBody.get("recommendations");
+                Object totalCustomers = responseBody.get("total_customers");
+                Boolean success = (Boolean) responseBody.get("success");
+                String message = (String) responseBody.get("message");
+                
+                if (success != null && success && recommendations != null) {
+                    log.info("📊 Retrieved recommendations for {} customers from new endpoint", totalCustomers);
+                    
+                    // Remove PerformanceStats from each customer's recommendations if present
+                    if (recommendations instanceof java.util.List) {
+                        java.util.List<?> recommendationsList = (java.util.List<?>) recommendations;
+                        for (Object recObj : recommendationsList) {
+                            if (recObj instanceof Map) {
+                                Map<String, Object> rec = (Map<String, Object>) recObj;
+                                if (rec.containsKey("PerformanceStats")) {
+                                    rec.remove("PerformanceStats");
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Transform the response to match our expected format
+                    return Map.of(
+                        "recommendations", recommendations,
+                        "total_customers", totalCustomers != null ? totalCustomers : 0,
+                        "success", true,
+                        "message", message != null ? message : "Successfully loaded customer recommendations",
+                        "timestamp", System.currentTimeMillis(),
+                        "source", "external_api_all"
+                    );
+                } else {
+                    log.warn("⚠️ External API returned unsuccessful response: {}", responseBody);
+                    return getFallbackAllRecommendations();
+                }
+            } else {
+                log.warn("⚠️ External API returned non-OK status: {}", response.getStatusCode());
+                return getFallbackAllRecommendations();
+            }
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to get all customer recommendations from external API: {}", e.getMessage());
+            log.info("🔄 Falling back to static recommendations list");
+            return getFallbackAllRecommendations();
+        }
+    }
+    
+    /**
+     * Fallback method to return static recommendations list when external API fails
+     * 
+     * @return Map containing static recommendations list
+     */
+    private Map<String, Object> getFallbackAllRecommendations() {
+        log.warn("🔄 Using fallback recommendations list - external API not available");
+        return Map.of(
+            "recommendations", new Object[]{
+                Map.of(
+                    "customer_id", "C001",
+                    "CustomerInfo", Map.of("CustomerID", "C001", "CustomerName", "Starbucks"),
+                    "Summary", Map.of("TotalRecommendations", 0, "TotalCrossSell", 0, "TotalRejected", 0, "TotalAlreadyPurchased", 0),
+                    "AcceptedRecommendations", new Object[]{},
+                    "RejectedRecommendations", new Object[]{},
+                    "AlreadyPurchasedRecommendations", new Object[]{}
+                ),
+                Map.of(
+                    "customer_id", "C002", 
+                    "CustomerInfo", Map.of("CustomerID", "C002", "CustomerName", "McDonald's"),
+                    "Summary", Map.of("TotalRecommendations", 0, "TotalCrossSell", 0, "TotalRejected", 0, "TotalAlreadyPurchased", 0),
+                    "AcceptedRecommendations", new Object[]{},
+                    "RejectedRecommendations", new Object[]{},
+                    "AlreadyPurchasedRecommendations", new Object[]{}
+                ),
+                Map.of(
+                    "customer_id", "C003",
+                    "CustomerInfo", Map.of("CustomerID", "C003", "CustomerName", "Walmart"),
+                    "Summary", Map.of("TotalRecommendations", 0, "TotalCrossSell", 0, "TotalRejected", 0, "TotalAlreadyPurchased", 0),
+                    "AcceptedRecommendations", new Object[]{},
+                    "RejectedRecommendations", new Object[]{},
+                    "AlreadyPurchasedRecommendations", new Object[]{}
+                )
+            },
+            "total_customers", 3,
+            "success", true,
+            "message", "Fallback recommendations loaded",
+            "timestamp", System.currentTimeMillis(),
+            "source", "fallback"
+        );
+    }
+
+    /**
+     * Download PDF report for all customers from external Strategy Agent API
+     * 
+     * @return byte array containing PDF data
+     */
+    public byte[] downloadAllCustomersPDFReport() {
+        log.info("📄 Downloading PDF report for all customers from external API");
+        
+        try {
+            // Prepare headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Accept", "application/pdf");
+            
+            // Create request entity (no body needed for GET request)
+            HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
+            
+            // Call external Strategy Agent API
+            String url = strategyAgentBaseUrl + "/recommendations/download/all";
+            log.info("🔍 Calling external Strategy Agent API: {}", url);
+            
+            ResponseEntity<byte[]> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, byte[].class);
+            
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                log.info("✅ Successfully downloaded PDF report for all customers from external API");
+                return response.getBody();
+            } else {
+                log.warn("⚠️ External API returned non-OK status: {}", response.getStatusCode());
+                throw new RuntimeException("Failed to download PDF report for all customers");
+            }
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to download PDF report for all customers from external API: {}", e.getMessage());
+            throw new RuntimeException("Failed to download PDF report for all customers: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Regenerate recommendations for a specific customer from external Strategy Agent API
+     * 
+     * @param customerId The customer ID to regenerate recommendations for
+     * @param forceRegenerate Whether to force regeneration (default: true)
+     * @return Map containing regeneration response
+     */
+    public Map<String, Object> regenerateCustomerRecommendations(String customerId, boolean forceRegenerate) {
+        log.info("🔄 Regenerating recommendations for customer {} from external API (force: {})", customerId, forceRegenerate);
+        
+        try {
+            // Prepare headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Accept", "application/json");
+            
+            // Prepare request body
+            Map<String, Object> requestBody = Map.of(
+                "force_regenerate", forceRegenerate
+            );
+            
+            // Create request entity with body
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+            
+            // Call external Strategy Agent API
+            String url = strategyAgentBaseUrl + "/regenerate_recommendations/" + customerId;
+            log.info("🔍 Calling external Strategy Agent API: {}", url);
+            
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, Map.class);
+            
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Map<String, Object> responseBody = response.getBody();
+                log.info("✅ Successfully triggered regeneration for customer {} from external API", customerId);
+                
+                return Map.of(
+                    "success", true,
+                    "message", "Regeneration process started successfully for customer " + customerId,
+                    "customer_id", customerId,
+                    "force_regenerate", forceRegenerate,
+                    "timestamp", System.currentTimeMillis(),
+                    "source", "external_api_regenerate_customer"
+                );
+            } else {
+                log.warn("⚠️ External API returned non-OK status: {}", response.getStatusCode());
+                return Map.of(
+                    "success", false,
+                    "message", "Failed to start regeneration process for customer " + customerId,
+                    "customer_id", customerId,
+                    "error", "External API returned status: " + response.getStatusCode(),
+                    "timestamp", System.currentTimeMillis()
+                );
+            }
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to regenerate recommendations for customer {} from external API: {}", customerId, e.getMessage());
+            return Map.of(
+                "success", false,
+                "message", "Failed to start regeneration process for customer " + customerId,
+                "customer_id", customerId,
+                "error", e.getMessage(),
+                "timestamp", System.currentTimeMillis()
+            );
+        }
+    }
+
+    /**
+     * Regenerate recommendations for all customers from external Strategy Agent API
+     * 
+     * @param forceRegenerate Whether to force regeneration (default: true)
+     * @return Map containing regeneration response
+     */
+    public Map<String, Object> regenerateAllRecommendations(boolean forceRegenerate) {
+        log.info("🔄 Regenerating recommendations for all customers from external API (force: {})", forceRegenerate);
+        
+        try {
+            // Prepare headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Accept", "application/json");
+            
+            // Prepare request body
+            Map<String, Object> requestBody = Map.of(
+                "force_regenerate", forceRegenerate
+            );
+            
+            // Create request entity with body
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+            
+            // Call external Strategy Agent API
+            String url = strategyAgentBaseUrl + "/regenerate_recommendations";
+            log.info("🔍 Calling external Strategy Agent API: {}", url);
+            
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, Map.class);
+            
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Map<String, Object> responseBody = response.getBody();
+                log.info("✅ Successfully triggered regeneration for all customers from external API");
+                
+                return Map.of(
+                    "success", true,
+                    "message", "Regeneration process started successfully",
+                    "force_regenerate", forceRegenerate,
+                    "timestamp", System.currentTimeMillis(),
+                    "source", "external_api_regenerate"
+                );
+            } else {
+                log.warn("⚠️ External API returned non-OK status: {}", response.getStatusCode());
+                return Map.of(
+                    "success", false,
+                    "message", "Failed to start regeneration process",
+                    "error", "External API returned status: " + response.getStatusCode(),
+                    "timestamp", System.currentTimeMillis()
+                );
+            }
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to regenerate recommendations for all customers from external API: {}", e.getMessage());
+            return Map.of(
+                "success", false,
+                "message", "Failed to start regeneration process",
+                "error", e.getMessage(),
+                "timestamp", System.currentTimeMillis()
+            );
         }
     }
 

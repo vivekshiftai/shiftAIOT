@@ -460,10 +460,10 @@ export const DashboardSection: React.FC = () => {
       )}
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Device Activity - Smaller */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Device Activity - 50% */}
         <div className="lg:col-span-1">
-          <div className="card p-4 animate-fade-in">
+          <div className="card p-6 animate-fade-in">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-xl font-semibold text-primary">
@@ -507,8 +507,8 @@ export const DashboardSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Upcoming Maintenance - Wider */}
-        <div className="lg:col-span-3">
+        {/* Upcoming Maintenance - 50% */}
+        <div className="lg:col-span-1">
           <div className="card p-6 h-full">
             <div className="flex items-center justify-between mb-6">
               <div>

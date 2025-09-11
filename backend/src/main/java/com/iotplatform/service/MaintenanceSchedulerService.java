@@ -35,11 +35,11 @@ public class MaintenanceSchedulerService {
     }
     
     /**
-     * Update maintenance schedules daily at 5:50 AM (before notifications at 5:55 AM)
+     * Update maintenance schedules daily at 5:00 AM
      */
-    @Scheduled(cron = "0 50 5 * * ?") // Every day at 5:50 AM
+    @Scheduled(cron = "0 0 5 * * ?") // Every day at 5:00 AM
     public void updateMaintenanceSchedulesDaily() {
-        log.info("⏰ Daily maintenance schedule update triggered at 5:50 AM");
+        log.info("⏰ Daily maintenance schedule update triggered at 5:00 AM");
         log.info("📋 Processing all active maintenance tasks...");
         updateMaintenanceSchedules();
     }

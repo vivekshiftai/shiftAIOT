@@ -29,4 +29,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Stri
     List<Notification> findByDeviceId(@Param("deviceId") String deviceId);
     
     void deleteByDeviceId(String deviceId);
+    
+    // Count maintenance reminders sent today for a specific task
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.metadata['taskId'] = :taskId " +
+           "AND n.category = 'MAINTENANCE_REMINDER' " +
+           "AND DATE(n.createdAt) = :date")
+    long countMaintenanceRemindersToday(@Param("taskId") String taskId, @Param("date") java.time.LocalDate date);
 }

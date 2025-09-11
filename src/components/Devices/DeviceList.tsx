@@ -179,10 +179,13 @@ export const DeviceList: React.FC<DeviceListProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Combine regular devices with onboarding devices
+  // Combine regular devices with onboarding devices, ensuring no duplicates
+  const onboardingDevicesList = Array.from(onboardingDevices.values()).map(onboarding => onboarding.device);
   const allDevices = [
     ...filteredDevices,
-    ...Array.from(onboardingDevices.values()).map(onboarding => onboarding.device)
+    ...onboardingDevicesList.filter(onboardingDevice => 
+      !filteredDevices.some(regularDevice => regularDevice.id === onboardingDevice.id)
+    )
   ];
 
   return (

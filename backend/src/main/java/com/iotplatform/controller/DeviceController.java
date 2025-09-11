@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -56,6 +57,7 @@ import com.iotplatform.model.DeviceSafetyPrecaution;
 import com.iotplatform.model.RuleCondition;
 import com.iotplatform.service.PDFProcessingService;
 import com.iotplatform.security.CustomUserDetails;
+import com.iotplatform.security.JwtTokenProvider;
 import com.iotplatform.repository.RuleRepository;
 import com.iotplatform.repository.RuleConditionRepository;
 import com.iotplatform.repository.DeviceMaintenanceRepository;
@@ -102,8 +104,10 @@ public class DeviceController {
     private final MaintenanceScheduleService maintenanceScheduleService;
     private final DeviceNotificationEnhancerService deviceNotificationEnhancerService;
     private final UnifiedPDFService unifiedPDFService;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final UserDetailsService userDetailsService;
 
-    public DeviceController(ObjectMapper objectMapper, DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService, MaintenanceScheduleService maintenanceScheduleService, DeviceNotificationEnhancerService deviceNotificationEnhancerService, UnifiedPDFService unifiedPDFService) {
+    public DeviceController(ObjectMapper objectMapper, DeviceService deviceService, TelemetryService telemetryService, FileStorageService fileStorageService, PDFProcessingService pdfProcessingService, UnifiedOnboardingService unifiedOnboardingService, DeviceSafetyPrecautionService deviceSafetyPrecautionService, RuleRepository ruleRepository, RuleConditionRepository ruleConditionRepository, DeviceMaintenanceRepository deviceMaintenanceRepository, DeviceSafetyPrecautionRepository deviceSafetyPrecautionRepository, DeviceRepository deviceRepository, UserRepository userRepository, NotificationService notificationService, DeviceWebSocketService deviceWebSocketService, MaintenanceScheduleService maintenanceScheduleService, DeviceNotificationEnhancerService deviceNotificationEnhancerService, UnifiedPDFService unifiedPDFService, JwtTokenProvider jwtTokenProvider, UserDetailsService userDetailsService) {
         this.objectMapper = objectMapper;
         this.deviceService = deviceService;
         this.telemetryService = telemetryService;
@@ -122,6 +126,8 @@ public class DeviceController {
         this.maintenanceScheduleService = maintenanceScheduleService;
         this.deviceNotificationEnhancerService = deviceNotificationEnhancerService;
         this.unifiedPDFService = unifiedPDFService;
+        this.jwtTokenProvider = jwtTokenProvider;
+        this.userDetailsService = userDetailsService;
     }
 
     @GetMapping
@@ -1516,32 +1522,59 @@ public class DeviceController {
             @RequestParam(value = "manualFile", required = false) MultipartFile manualFile,
             @RequestParam(value = "datasheetFile", required = false) MultipartFile datasheetFile,
             @RequestParam(value = "certificateFile", required = false) MultipartFile certificateFile,
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
+            @RequestParam(value = "token", required = false) String token,
+            HttpServletRequest request) {
         
         SseEmitter emitter = new SseEmitter(300000L); // 5 minute timeout
+        
+        // Manual authentication for SSE endpoint
+        CustomUserDetails userDetails = null;
+        try {
+            // Try to get token from request parameter or Authorization header
+            String authToken = token;
+            if (authToken == null) {
+                String authHeader = request.getHeader("Authorization");
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    authToken = authHeader.substring(7);
+                }
+            }
+            
+            if (authToken != null) {
+                // Validate token and get user details
+                if (jwtTokenProvider.validateToken(authToken)) {
+                    String username = jwtTokenProvider.getUsernameFromToken(authToken);
+                    userDetails = (CustomUserDetails) userDetailsService.loadUserByUsername(username);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("❌ Token validation failed: {}", e.getMessage());
+        }
+        
+        // Create final reference for lambda expressions
+        final CustomUserDetails finalUserDetails = userDetails;
         
         // Add timeout and completion handlers
         emitter.onTimeout(() -> {
             logger.warn("⚠️ SSE connection timed out for user: {}", 
-                userDetails != null && userDetails.getUser() != null ? userDetails.getUser().getEmail() : "unknown");
+                finalUserDetails != null && finalUserDetails.getUser() != null ? finalUserDetails.getUser().getEmail() : "unknown");
         });
         
         emitter.onCompletion(() -> {
             logger.info("✅ SSE connection completed for user: {}", 
-                userDetails != null && userDetails.getUser() != null ? userDetails.getUser().getEmail() : "unknown");
+                finalUserDetails != null && finalUserDetails.getUser() != null ? finalUserDetails.getUser().getEmail() : "unknown");
         });
         
         emitter.onError((throwable) -> {
             logger.error("❌ SSE connection error for user: {}", 
-                userDetails != null && userDetails.getUser() != null ? userDetails.getUser().getEmail() : "unknown", throwable);
+                finalUserDetails != null && finalUserDetails.getUser() != null ? finalUserDetails.getUser().getEmail() : "unknown", throwable);
         });
         
         if (userDetails == null || userDetails.getUser() == null) {
-            logger.error("❌ Authentication failed: userDetails is null or user is null");
+            logger.error("❌ Authentication failed: Invalid or missing token");
             try {
                 emitter.send(SseEmitter.event()
                     .name("error")
-                    .data("Authentication failed"));
+                    .data("{\"error\":\"Authentication failed\",\"message\":\"Invalid or missing authentication token\"}"));
                 emitter.complete();
             } catch (Exception e) {
                 logger.error("❌ Failed to send error event", e);
@@ -1552,7 +1585,7 @@ public class DeviceController {
         // Run onboarding in a separate thread to avoid blocking
         new Thread(() -> {
             try {
-                logger.info("✅ User {} starting device onboarding with progress streaming", userDetails.getUser().getEmail());
+                logger.info("✅ User {} starting device onboarding with progress streaming", finalUserDetails.getUser().getEmail());
                 
                 // Send initial progress
                 emitter.send(SseEmitter.event()
@@ -1577,8 +1610,8 @@ public class DeviceController {
                 }
                 
                 // Get organization ID from authenticated user
-                String organizationId = userDetails.getUser().getOrganizationId();
-                String currentUserId = userDetails.getUser().getId();
+                String organizationId = finalUserDetails.getUser().getOrganizationId();
+                String currentUserId = finalUserDetails.getUser().getId();
                 logger.info("🏢 Using organization ID: {}", organizationId);
                 
                 // Create progress callback that sends SSE events
@@ -1620,7 +1653,7 @@ public class DeviceController {
                     .name("complete")
                     .data(objectMapper.writeValueAsString(finalResult)));
                 
-                logger.info("✅ Device onboarding completed successfully for user: {}", userDetails.getUser().getEmail());
+                logger.info("✅ Device onboarding completed successfully for user: {}", finalUserDetails.getUser().getEmail());
                 
                 // Complete the SSE connection gracefully
                 try {
