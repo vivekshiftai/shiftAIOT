@@ -82,36 +82,72 @@ public class RulesGenerationResponse {
             return name;
         }
         
+        public void setName(String name) {
+            this.name = name;
+        }
+        
         public String getDescription() {
             return description;
+        }
+        
+        public void setDescription(String description) {
+            this.description = description;
         }
         
         public String getMetric() {
             return metric;
         }
         
+        public void setMetric(String metric) {
+            this.metric = metric;
+        }
+        
         public String getMetricValue() {
             return metricValue;
+        }
+        
+        public void setMetricValue(String metricValue) {
+            this.metricValue = metricValue;
         }
         
         public String getThreshold() {
             return threshold;
         }
         
+        public void setThreshold(String threshold) {
+            this.threshold = threshold;
+        }
+        
         public String getConsequence() {
             return consequence;
+        }
+        
+        public void setConsequence(String consequence) {
+            this.consequence = consequence;
         }
         
         public String getCondition() {
             return condition;
         }
         
+        public void setCondition(String condition) {
+            this.condition = condition;
+        }
+        
         public String getAction() {
             return action;
         }
         
+        public void setAction(String action) {
+            this.action = action;
+        }
+        
         public String getPriority() {
             return priority;
+        }
+        
+        public void setPriority(String priority) {
+            this.priority = priority;
         }
     }
 }

@@ -316,8 +316,11 @@ public class RuleService {
         // Debug: Log first rule data to see what we're getting
         if (!rules.isEmpty()) {
             RulesGenerationResponse.Rule firstRule = rules.get(0);
-            log.debug("🔍 Debug - First rule data: name='{}', description='{}', metric='{}'", 
+            log.info("🔍 RuleService - First rule data: name='{}', description='{}', metric='{}'", 
                      firstRule.getName(), firstRule.getDescription(), firstRule.getMetric());
+            log.info("🔍 RuleService - First rule full data: {}", firstRule);
+        } else {
+            log.warn("🔍 RuleService - No rules received from PDFProcessingService");
         }
         
         int processedCount = 0;
@@ -348,14 +351,14 @@ public class RuleService {
                 Rule rule = new Rule();
                 rule.setId(UUID.randomUUID().toString());
                 rule.setName(ruleName); // Use the validated ruleName
-                rule.setDescription(ruleData.getDescription() != null ? ruleData.getDescription() : "");
-                rule.setMetric(ruleData.getMetric() != null ? ruleData.getMetric() : "");
-                rule.setMetricValue(ruleData.getMetricValue() != null ? ruleData.getMetricValue() : "");
-                rule.setThreshold(ruleData.getThreshold() != null ? ruleData.getThreshold() : "");
-                rule.setConsequence(ruleData.getConsequence() != null ? ruleData.getConsequence() : "");
-                rule.setCondition(ruleData.getCondition() != null ? ruleData.getCondition() : "");
-                rule.setAction(ruleData.getAction() != null ? ruleData.getAction() : "SEND_ALERT");
-                rule.setPriority(ruleData.getPriority() != null ? ruleData.getPriority() : "MEDIUM");
+                rule.setDescription(ruleData.getDescription());
+                rule.setMetric(ruleData.getMetric());
+                rule.setMetricValue(ruleData.getMetricValue());
+                rule.setThreshold(ruleData.getThreshold());
+                rule.setConsequence(ruleData.getConsequence());
+                rule.setCondition(ruleData.getCondition());
+                rule.setAction(ruleData.getAction());
+                rule.setPriority(ruleData.getPriority());
                 rule.setActive(true);
                 rule.setDeviceId(deviceId);
                 rule.setOrganizationId(organizationId);

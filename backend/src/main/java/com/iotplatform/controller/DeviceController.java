@@ -1635,6 +1635,8 @@ public class DeviceController {
                 // Send final success event
                 Map<String, Object> finalResult = new HashMap<>();
                 finalResult.put("success", true);
+                finalResult.put("id", response.getId());
+                finalResult.put("name", response.getName());
                 finalResult.put("deviceId", response.getId());
                 finalResult.put("deviceName", response.getName());
                 
@@ -1645,6 +1647,20 @@ public class DeviceController {
                 finalResult.put("rulesGenerated", rulesGenerated);
                 finalResult.put("maintenanceItems", maintenanceItems);
                 finalResult.put("safetyPrecautions", safetyPrecautions);
+                
+                // Include full pdfData structure for frontend compatibility
+                if (response.getPdfData() != null) {
+                    Map<String, Object> pdfData = new HashMap<>();
+                    pdfData.put("pdfName", response.getPdfData().getPdfName());
+                    pdfData.put("originalFileName", response.getPdfData().getOriginalFileName());
+                    pdfData.put("fileSize", response.getPdfData().getFileSize());
+                    pdfData.put("documentType", response.getPdfData().getDocumentType());
+                    pdfData.put("rulesGenerated", response.getPdfData().getRulesGenerated());
+                    pdfData.put("maintenanceItems", response.getPdfData().getMaintenanceItems());
+                    pdfData.put("safetyPrecautions", response.getPdfData().getSafetyPrecautions());
+                    pdfData.put("processingTime", response.getPdfData().getProcessingTime());
+                    finalResult.put("pdfData", pdfData);
+                }
                 
                 logger.info("📊 Sending final result with actual counts - Rules: {}, Maintenance: {}, Safety: {}", 
                            rulesGenerated, maintenanceItems, safetyPrecautions);

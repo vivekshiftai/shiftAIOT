@@ -155,14 +155,15 @@ public class UnifiedOnboardingService {
                 pdfData.setOriginalFileName(pdfResult.originalFileName);
                 pdfData.setFileSize(pdfResult.fileSize);
                 pdfData.setDocumentType(pdfResult.documentType);
-                pdfData.setRulesGenerated(pdfResult.rulesGenerated);
-                pdfData.setMaintenanceItems(pdfResult.maintenanceItems);
-                pdfData.setSafetyPrecautions(pdfResult.safetyPrecautions);
-                pdfResult.processingTime = pdfResult.processingTime;
+                pdfData.setRulesGenerated(pdfResult.rulesGenerated != null ? pdfResult.rulesGenerated : 0);
+                pdfData.setMaintenanceItems(pdfResult.maintenanceItems != null ? pdfResult.maintenanceItems : 0);
+                pdfData.setSafetyPrecautions(pdfResult.safetyPrecautions != null ? pdfResult.safetyPrecautions : 0);
+                pdfData.setProcessingTime(pdfResult.processingTime != null ? pdfResult.processingTime : System.currentTimeMillis());
                 
                 deviceResponse.setPdfData(pdfData);
                 
-                log.info("✅ PDF data populated in device response: {}", pdfResult.pdfName);
+                log.info("✅ PDF data populated in device response: {} - Rules: {}, Maintenance: {}, Safety: {}", 
+                        pdfResult.pdfName, pdfData.getRulesGenerated(), pdfData.getMaintenanceItems(), pdfData.getSafetyPrecautions());
             }
             
         } catch (Exception e) {

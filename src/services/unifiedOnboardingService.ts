@@ -111,7 +111,8 @@ export class UnifiedOnboardingService {
         maintenanceItems: deviceResponse.pdfData?.maintenanceItems || 0,
         safetyPrecautions: deviceResponse.pdfData?.safetyPrecautions || 0,
         pdfDataExists: !!deviceResponse.pdfData,
-        pdfDataKeys: deviceResponse.pdfData ? Object.keys(deviceResponse.pdfData) : 'no pdfData'
+        pdfDataKeys: deviceResponse.pdfData ? Object.keys(deviceResponse.pdfData) : 'no pdfData',
+        fullDeviceResponse: deviceResponse
       });
 
       return {
@@ -357,7 +358,25 @@ export class UnifiedOnboardingService {
                     clearTimeout(timeoutId);
                     isCompleted = true;
                     logInfo('UnifiedOnboarding', 'Received final result from SSE stream', eventData);
-                    resolve(eventData);
+                    
+                    // Ensure the response has the expected structure
+                    const formattedResponse = {
+                      id: eventData.deviceId || eventData.id,
+                      name: eventData.deviceName || eventData.name,
+                      pdfData: eventData.pdfData || {
+                        rulesGenerated: eventData.rulesGenerated || 0,
+                        maintenanceItems: eventData.maintenanceItems || 0,
+                        safetyPrecautions: eventData.safetyPrecautions || 0,
+                        pdfName: eventData.pdfData?.pdfName || 'unknown.pdf',
+                        originalFileName: eventData.pdfData?.originalFileName || 'unknown.pdf',
+                        fileSize: eventData.pdfData?.fileSize || 0,
+                        documentType: eventData.pdfData?.documentType || 'PDF',
+                        processingTime: eventData.pdfData?.processingTime || Date.now()
+                      }
+                    };
+                    
+                    logInfo('UnifiedOnboarding', 'Formatted final result for frontend', formattedResponse);
+                    resolve(formattedResponse);
                     return;
                   } else if (currentEvent === 'error' && eventData.error) {
                     // This is an error
