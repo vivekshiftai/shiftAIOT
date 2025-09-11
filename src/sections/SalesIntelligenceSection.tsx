@@ -28,8 +28,6 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
   const [isAllCustomers, setIsAllCustomers] = useState<boolean>(false);
   const [regenerateMessage] = useState<string>('');
-  const [regeneratingCustomers, setRegeneratingCustomers] = useState<Set<string>>(new Set());
-  const [customerRegenerateMessages, setCustomerRegenerateMessages] = useState<Record<string, string>>({});
   const [activeCustomerTab, setActiveCustomerTab] = useState<string>('');
   const [isRegeneratingData, setIsRegeneratingData] = useState<boolean>(false);
   const [regenerationMessage, setRegenerationMessage] = useState<string>('');
@@ -273,50 +271,6 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
     }
   };
 
-  const regenerateCustomerRecommendations = async (customerId: string) => {
-    setRegeneratingCustomers(prev => new Set(prev).add(customerId));
-    setCustomerRegenerateMessages(prev => ({ ...prev, [customerId]: '' }));
-    setError('');
-
-    try {
-      logInfo('Process', 'Starting regeneration for customer', { customerId });
-      setCustomerRegenerateMessages(prev => ({ 
-        ...prev, 
-        [customerId]: '🔄 Regeneration process started... This will take some time. Please wait.' 
-      }));
-      
-      const result = await StrategyAgentService.regenerateCustomerRecommendations(customerId, true);
-      
-      if (result.success) {
-        setCustomerRegenerateMessages(prev => ({ 
-          ...prev, 
-          [customerId]: '✅ Regeneration process started successfully! The system is now regenerating recommendations for this customer. This process may take several minutes to complete.' 
-        }));
-        logInfo('Process', 'Customer regeneration triggered successfully', result);
-        
-        // Clear existing recommendations for this customer since they're being regenerated
-        if (selectedCustomer === customerId) {
-          setRecommendations(null);
-        }
-        if (allRecommendations) {
-          setAllRecommendations(prev => prev?.filter(rec => rec.customer_id !== customerId) || null);
-        }
-      } else {
-        setError(result.message || `Failed to start regeneration process for customer ${customerId}`);
-        setCustomerRegenerateMessages(prev => ({ ...prev, [customerId]: '' }));
-      }
-    } catch (error) {
-      logError('Process', 'Failed to regenerate customer recommendations', error instanceof Error ? error : new Error('Unknown error'), { customerId });
-      setError(`Failed to regenerate recommendations for customer ${customerId}. Please try again.`);
-      setCustomerRegenerateMessages(prev => ({ ...prev, [customerId]: '' }));
-    } finally {
-      setRegeneratingCustomers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(customerId);
-        return newSet;
-      });
-    }
-  };
 
   return (
     <div className="process-section flex flex-col bg-gray-50 h-full">
@@ -364,7 +318,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                 className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
               >
                 <Download className="w-4 h-4" />
-                {isAllCustomers ? 'Download All Customers Report' : 'Download Opportunity Report'}
+                {isAllCustomers ? 'Download All Customers Intelligence Report' : 'Download Intelligence Report'}
               </button>
             )}
           </div>
@@ -477,7 +431,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                   </div>
               </div>
               
-                {/* Get Sales Report Button */}
+                {/* Generate Intelligence Report Button */}
                 <div className="flex justify-center">
                   <button
                     onClick={handleGetSalesReport}
@@ -492,7 +446,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                     ) : (
                       <>
                         <Download className="w-4 h-4" />
-                        Generate Report
+                        Generate Intelligence Report
                       </>
                     )}
                   </button>
@@ -539,10 +493,6 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
           {recommendations && (
             <CustomerRecommendationsDisplay
               customerRec={recommendations}
-              onRegenerate={regenerateCustomerRecommendations}
-              isRegenerating={regeneratingCustomers.has(selectedCustomer)}
-              regenerateMessage={customerRegenerateMessages[selectedCustomer]}
-              showRegenerateButton={true}
             />
           )}
 
@@ -629,10 +579,6 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                   <CustomerRecommendationsDisplay
                     key={customerRec.customer_id || customerIndex}
                     customerRec={customerRec}
-                    onRegenerate={regenerateCustomerRecommendations}
-                    isRegenerating={regeneratingCustomers.has(customerRec.customer_id)}
-                    regenerateMessage={customerRegenerateMessages[customerRec.customer_id]}
-                    showRegenerateButton={true}
                   />
                 );
               })}

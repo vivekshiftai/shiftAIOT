@@ -3,24 +3,17 @@ import {
   CheckCircle,
   X,
   User,
-  Brain
+  Brain,
+  Search
 } from 'lucide-react';
 import { StrategyAgentResponse } from '../../services/strategyAgentService';
 
 interface CustomerRecommendationsDisplayProps {
   customerRec: StrategyAgentResponse;
-  onRegenerate?: (customerId: string) => void;
-  isRegenerating?: boolean;
-  regenerateMessage?: string;
-  showRegenerateButton?: boolean;
 }
 
 export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDisplayProps> = ({
-  customerRec,
-  onRegenerate,
-  isRegenerating = false,
-  regenerateMessage = '',
-  showRegenerateButton = true
+  customerRec
 }) => {
   const [activeTab, setActiveTab] = useState<'accepted' | 'rejected' | 'purchased'>('accepted');
 
@@ -96,40 +89,7 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
             )}
           </div>
           
-          {/* Regenerate Button */}
-          {showRegenerateButton && onRegenerate && (
-            <div className="flex flex-col items-end gap-2">
-              <button
-                onClick={() => onRegenerate(customerRec.customer_id)}
-                disabled={isRegenerating}
-                className="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-orange-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
-              >
-                {isRegenerating ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Regenerating...
-                  </>
-                ) : (
-                  <>
-                    <Brain className="w-4 h-4" />
-                    Regenerate
-                  </>
-                )}
-              </button>
-            </div>
-          )}
         </div>
-        
-        {/* Regeneration Status Message */}
-        {regenerateMessage && (
-          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <Brain className="w-4 h-4 text-blue-600" />
-              <p className="text-blue-800 font-medium text-sm">Regeneration Status</p>
-            </div>
-            <p className="text-blue-700 text-sm mt-1">{regenerateMessage}</p>
-          </div>
-        )}
       </div>
 
       {/* Summary Cards */}
@@ -187,51 +147,69 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
         </div>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Recommendations Section */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        {/* Search and Filter Bar */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search products or category..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+              />
+            </div>
+            <button className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm">
+              <Search className="w-4 h-4" />
+              Filters
+            </button>
+          </div>
+        </div>
+
+        {/* Recommendation Tabs */}
         <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6">
+          <nav className="flex space-x-8 px-4">
             <button
               onClick={() => handleTabChange('accepted')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
+              className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'accepted'
-                  ? 'border-green-500 text-green-600'
+                  ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <CheckCircle className="w-4 h-4" />
-              Accepted Recommendations ({customerRec.Summary?.TotalCrossSell || 0})
+              Top Matches ({customerRec.Summary?.TotalCrossSell || 0})
             </button>
             <button
               onClick={() => handleTabChange('rejected')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
+              className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'rejected'
-                  ? 'border-red-500 text-red-600'
+                  ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <X className="w-4 h-4" />
-              Rejected Recommendations ({customerRec.Summary?.TotalRejected || 0})
+              Needs Review ({customerRec.Summary?.TotalRejected || 0})
             </button>
             <button
               onClick={() => handleTabChange('purchased')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
+              className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'purchased'
-                  ? 'border-blue-500 text-blue-600'
+                  ? 'border-primary-500 text-primary-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <User className="w-4 h-4" />
               Already Purchased ({customerRec.Summary?.TotalAlreadyPurchased || 0})
             </button>
           </nav>
         </div>
 
         {/* Tab Content */}
-        <div className="p-6">
+        <div className="p-4">
           <div className="space-y-6">
             {getRecommendationsForTab().length === 0 ? (
-              <div className="text-center py-12">
+              <div className="text-center py-8 bg-gray-50 rounded-lg">
                 <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full ${getTabColor()}`}>
                   {getTabIcon()}
                 </div>
@@ -243,22 +221,18 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
             ) : (
               <div className="space-y-6">
                 {getRecommendationsForTab().map((recommendation, index) => (
-                  <div key={index} className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                  <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="mb-4">
                       <h4 className="text-lg font-semibold text-gray-900 mb-2">
                         {recommendation.ProductName} (ID: {recommendation.CustomerCatalogueItemID})
                       </h4>
                       <p className="text-sm text-gray-600 mb-2">
-                        Quantity Required: {recommendation.QuantityRequired}
+                        Quantity Required: {recommendation.QuantityRequired} | 
+                        Ingredients: {recommendation.Ingredients?.join(', ')}
                       </p>
-                      <div className="flex items-center gap-4 text-sm">
-                        <span className="px-3 py-1 bg-white rounded-full text-gray-700 border">
-                          <strong>Product ID:</strong> {recommendation.CustomerCatalogueItemID}
-                        </span>
-                        <span className="px-3 py-1 bg-white rounded-full text-gray-700 border">
-                          <strong>Quantity:</strong> {recommendation.QuantityRequired}
-                        </span>
-                      </div>
+                      <p className="text-sm font-medium text-green-700">
+                        Presents {recommendation.CrossSell?.length || 0} cross-sell opportunities:
+                      </p>
                     </div>
                     
                     {recommendation.Ingredients && recommendation.Ingredients.length > 0 && (
@@ -274,17 +248,27 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
                       </div>
                     )}
                     
-                    {recommendation.AlreadyPurchasedCrossSell && recommendation.AlreadyPurchasedCrossSell.length > 0 && (
+                    {recommendation.CrossSell && recommendation.CrossSell.length > 0 && (
                       <div>
-                        <p className="text-sm font-medium text-gray-700 mb-3">Already Purchased Cross-Sell Opportunities:</p>
+                        <p className="text-sm font-medium text-gray-700 mb-3">
+                          Presents {recommendation.CrossSell.length} cross-sell opportunities:
+                        </p>
                         <div className="space-y-3">
-                          {recommendation.AlreadyPurchasedCrossSell.map((crossSell, csIndex) => (
-                            <div key={csIndex} className="bg-white rounded-lg p-4 border border-blue-200">
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-                                <div className="flex flex-col">
-                                  <span className="text-xs text-gray-500">Suggested Product</span>
-                                  <span className="text-sm font-medium text-gray-900">{crossSell.SuggestedProduct}</span>
+                          {recommendation.CrossSell.map((crossSell, csIndex) => (
+                            <div key={csIndex} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <h5 className="font-semibold text-gray-900 mb-2 text-sm">
+                                    {crossSell.SuggestedProduct}
+                                  </h5>
+                                  <p className="text-xs text-gray-500 mb-2">ID: {crossSell.ProductID}</p>
                                 </div>
+                                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                  {crossSell.Status}
+                                </span>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
                                 <div className="flex flex-col">
                                   <span className="text-xs text-gray-500">Category</span>
                                   <span className="text-sm font-medium text-gray-900">{crossSell.Category}</span>
@@ -295,11 +279,7 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
                                 </div>
                                 <div className="flex flex-col">
                                   <span className="text-xs text-gray-500">Similarity</span>
-                                  <span className="text-sm font-medium text-gray-900">{(crossSell.Similarity * 100).toFixed(1)}%</span>
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="text-xs text-gray-500">Product ID</span>
-                                  <span className="text-sm font-medium text-gray-900">{crossSell.ProductID}</span>
+                                  <span className="text-sm font-medium text-gray-900">{Math.round((crossSell.Similarity || 0) * 100)}%</span>
                                 </div>
                                 <div className="flex flex-col">
                                   <span className="text-xs text-gray-500">Ingredient</span>
@@ -307,9 +287,109 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
                                 </div>
                               </div>
                               
-                              <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-blue-400">
+                              <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-green-400">
                                 <p className="text-xs text-gray-700">
-                                  <strong>Cross-sell opportunity:</strong> This product is similar to what the customer has already purchased and could be a good cross-sell opportunity.
+                                  <strong className="text-green-700">AI Reasoning:</strong> {crossSell.AIReasoning}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {recommendation.RejectedCrossSell && recommendation.RejectedCrossSell.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 mb-3">
+                          Had {recommendation.RejectedCrossSell.length} potential cross-sell opportunities that were rejected:
+                        </p>
+                        <div className="space-y-3">
+                          {recommendation.RejectedCrossSell.map((crossSell, csIndex) => (
+                            <div key={csIndex} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <h5 className="font-semibold text-gray-900 mb-2 text-sm">
+                                    {crossSell.SuggestedProduct}
+                                  </h5>
+                                  <p className="text-xs text-gray-500 mb-2">ID: {crossSell.ProductID}</p>
+                                </div>
+                                <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
+                                  {crossSell.Status}
+                                </span>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-gray-500">Category</span>
+                                  <span className="text-sm font-medium text-gray-900">{crossSell.Category}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-gray-500">Price</span>
+                                  <span className="text-sm font-medium text-gray-900">${crossSell.Price}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-gray-500">Similarity</span>
+                                  <span className="text-sm font-medium text-gray-900">{Math.round((crossSell.Similarity || 0) * 100)}%</span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-gray-500">Ingredient</span>
+                                  <span className="text-sm font-medium text-gray-900">{crossSell.Ingredient}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="bg-red-50 rounded-lg p-3 border-l-4 border-red-400">
+                                <p className="text-xs text-red-700">
+                                  <strong className="text-red-800">Rejection Reason:</strong> {crossSell.AIReasoning}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {recommendation.AlreadyPurchasedCrossSell && recommendation.AlreadyPurchasedCrossSell.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 mb-3">
+                          Has {recommendation.AlreadyPurchasedCrossSell.length} cross-sell products already purchased:
+                        </p>
+                        <div className="space-y-3">
+                          {recommendation.AlreadyPurchasedCrossSell.map((crossSell, csIndex) => (
+                            <div key={csIndex} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <h5 className="font-semibold text-gray-900 mb-2 text-sm">
+                                    {crossSell.SuggestedProduct}
+                                  </h5>
+                                  <p className="text-xs text-gray-500 mb-2">ID: {crossSell.ProductID}</p>
+                                </div>
+                                <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs font-medium rounded-full">
+                                  {crossSell.Status}
+                                </span>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-gray-500">Category</span>
+                                  <span className="text-sm font-medium text-gray-900">{crossSell.Category}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-gray-500">Price</span>
+                                  <span className="text-sm font-medium text-gray-900">${crossSell.Price}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-gray-500">Similarity</span>
+                                  <span className="text-sm font-medium text-gray-900">{Math.round((crossSell.Similarity || 0) * 100)}%</span>
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-gray-500">Ingredient</span>
+                                  <span className="text-sm font-medium text-gray-900">{crossSell.Ingredient}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-primary-400">
+                                <p className="text-xs text-gray-700">
+                                  <strong className="text-primary-700">AI Reasoning:</strong> {crossSell.AIReasoning}
                                 </p>
                               </div>
                             </div>
