@@ -355,7 +355,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           });
           
           // Enhanced console logging for debugging
-          console.log('📊 Frontend Progress Update:', {
+          logInfo('Onboarding', 'Frontend Progress Update', {
             stage: progress.stage,
             progress: progress.progress,
             message: progress.message,
@@ -367,7 +367,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           
           // Log step details if available
           if (progress.stepDetails) {
-            console.log('📋 Step Details:', {
+            logInfo('Onboarding', 'Step Details', {
               currentStep: progress.stepDetails.currentStep,
               totalSteps: progress.stepDetails.totalSteps,
               stepName: progress.stepDetails.stepName,
@@ -379,8 +379,7 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           
           // Handle error states
           if (progress.error) {
-            logError('Onboarding', `Progress Error: ${progress.stage} - ${progress.error}`, new Error(progress.error));
-            console.error('❌ Onboarding Error:', {
+            logError('Onboarding', `Progress Error: ${progress.stage} - ${progress.error}`, new Error(progress.error), {
               stage: progress.stage,
               error: progress.error,
               retryable: progress.retryable

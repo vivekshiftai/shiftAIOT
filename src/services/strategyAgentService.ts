@@ -190,14 +190,13 @@ export class StrategyAgentService {
       logError('StrategyAgent', 'Failed to generate recommendations', error);
       
       if (error.response) {
-        console.error('Backend response status:', error.response.status);
-        console.error('Backend response data:', error.response.data);
+        logError('StrategyAgent', 'Backend response error', error, { status: error.response.status, data: error.response.data });
         throw new Error(`Backend error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`);
       } else if (error.request) {
-        console.error('No response received:', error.request);
+        logError('StrategyAgent', 'No response received from backend', error, { request: error.request });
         throw new Error('No response from backend - check if backend is running');
       } else {
-        console.error('Request setup error:', error.message);
+        logError('StrategyAgent', 'Request setup error', error, { message: error.message });
         throw new Error(`Request failed: ${error.message}`);
       }
     }
@@ -226,14 +225,13 @@ export class StrategyAgentService {
       logError('StrategyAgent', 'Failed to download PDF report', error);
       
       if (error.response) {
-        console.error('PDF download response status:', error.response.status);
-        console.error('PDF download response data:', error.response.data);
+        logError('StrategyAgent', 'PDF download response error', error, { status: error.response.status, data: error.response.data });
         throw new Error(`PDF download error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`);
       } else if (error.request) {
-        console.error('No response received for PDF download:', error.request);
+        logError('StrategyAgent', 'No response received for PDF download', error, { request: error.request });
         throw new Error('No response from backend - check if backend is running');
       } else {
-        console.error('PDF download request setup error:', error.message);
+        logError('StrategyAgent', 'PDF download request setup error', error, { message: error.message });
         throw new Error(`PDF download request failed: ${error.message}`);
       }
     }
@@ -265,20 +263,19 @@ export class StrategyAgentService {
       logError('StrategyAgent', 'Health check failed', error);
       
       if (error.response) {
-        console.error('Health check response status:', error.response.status);
-        console.error('Health check response data:', error.response.data);
+        logError('StrategyAgent', 'Health check response error', error, { status: error.response.status, data: error.response.data });
         return {
           status: 'unhealthy',
           error: `Backend error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`
         };
       } else if (error.request) {
-        console.error('No response received for health check:', error.request);
+        logError('StrategyAgent', 'No response received for health check', error, { request: error.request });
         return {
           status: 'unhealthy',
           error: 'No response from backend - check if backend is running'
         };
       } else {
-        console.error('Health check request setup error:', error.message);
+        logError('StrategyAgent', 'Health check request setup error', error, { message: error.message });
         return {
           status: 'unhealthy',
           error: `Request failed: ${error.message}`
@@ -382,14 +379,13 @@ export class StrategyAgentService {
       logError('StrategyAgent', 'Failed to get service information', error);
       
       if (error.response) {
-        console.error('Service info response status:', error.response.status);
-        console.error('Service info response data:', error.response.data);
+        logError('StrategyAgent', 'Service info response error', error, { status: error.response.status, data: error.response.data });
         throw new Error(`Backend error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`);
       } else if (error.request) {
-        console.error('No response received for service info:', error.request);
+        logError('StrategyAgent', 'No response received for service info', error, { request: error.request });
         throw new Error('No response from backend - check if backend is running');
       } else {
-        console.error('Service info request setup error:', error.message);
+        logError('StrategyAgent', 'Service info request setup error', error, { message: error.message });
         throw new Error(`Request failed: ${error.message}`);
       }
     }
@@ -424,20 +420,19 @@ export class StrategyAgentService {
       logError('StrategyAgent', 'Connection test failed', error);
       
       if (error.response) {
-        console.error('Connection test response status:', error.response.status);
-        console.error('Connection test response data:', error.response.data);
+        logError('StrategyAgent', 'Connection test response error', error, { status: error.response.status, data: error.response.data });
         return {
           connected: false,
           message: `Backend error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`
         };
       } else if (error.request) {
-        console.error('No response received for connection test:', error.request);
+        logError('StrategyAgent', 'No response received for connection test', error, { request: error.request });
         return {
           connected: false,
           message: 'No response from backend - check if backend is running'
         };
       } else {
-        console.error('Connection test request setup error:', error.message);
+        logError('StrategyAgent', 'Connection test request setup error', error, { message: error.message });
         return {
           connected: false,
           message: `Request failed: ${error.message}`

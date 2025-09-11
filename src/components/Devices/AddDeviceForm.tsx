@@ -357,8 +357,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
       setOnboardingState(false); // Resume background updates
 
     } catch (error) {
-      logError('AddDeviceForm', 'Error processing PDF with unified service', error instanceof Error ? error : new Error('Unknown error'));
-      console.error('Error processing PDF with external API:', error);
+      logError('AddDeviceForm', 'Error processing PDF with external API', error instanceof Error ? error : new Error('Unknown error'));
       setOnboardingState(false); // Resume background updates
       
       // Fallback to mock rules if API fails
@@ -531,7 +530,7 @@ export const AddDeviceForm: React.FC<AddDeviceFormProps> = ({ onSubmit, onCancel
       }, 3000);
       
     } catch (error) {
-      console.error('Error submitting device:', error);
+      logError('AddDeviceForm', 'Error submitting device', error instanceof Error ? error : new Error('Unknown error'));
     } finally {
       setIsSubmitting(false);
     }

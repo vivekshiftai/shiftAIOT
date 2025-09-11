@@ -36,17 +36,17 @@ class NotificationService {
   async createNotification(event: NotificationEvent): Promise<Notification | null> {
     // Validate required fields
     if (!event) {
-      console.error('Notification event is required');
+      logError('Notification', 'Notification event is required');
       return null;
     }
 
     if (!event.type) {
-      console.error('Notification event type is required');
+      logError('Notification', 'Notification event type is required');
       return null;
     }
 
     if (!event.userId) {
-      console.error('User ID is required for notification');
+      logError('Notification', 'User ID is required for notification');
       return null;
     }
 
@@ -81,11 +81,11 @@ class NotificationService {
         this.notifyListeners();
         return createdNotification;
       } else {
-        console.error('Failed to create notification:', response.statusText);
+        logError('Notification', 'Failed to create notification', new Error(response.statusText));
         return null;
       }
     } catch (error) {
-      console.error('Error creating notification:', error);
+      logError('Notification', 'Error creating notification', error instanceof Error ? error : new Error('Unknown error'));
       return null;
     }
   }
@@ -252,14 +252,14 @@ class NotificationService {
       if (organizationId && userId) {
         const cachedNotifications = notificationCacheService.getCachedNotifications(organizationId, userId);
         if (cachedNotifications) {
-          console.log('📦 Using cached notifications');
+          logInfo('Notification', 'Using cached notifications');
           this.notifications = cachedNotifications;
           this.notifyListeners();
           return;
         }
       }
 
-      console.log('🌐 Fetching notifications from API...');
+      logInfo('Notification', 'Fetching notifications from API');
       const response = await notificationAPI.getAll();
       
       // Validate and sanitize response data
@@ -267,7 +267,7 @@ class NotificationService {
         const validationResult = validateNotifications(response.data);
         
         if (validationResult.invalid.length > 0) {
-          console.warn('⚠️ Found invalid notifications:', validationResult.invalid);
+          logWarn('Notification', 'Found invalid notifications', validationResult.invalid);
         }
         
         // Use only valid notifications and sanitize them
@@ -280,9 +280,9 @@ class NotificationService {
           notificationCacheService.setCachedNotifications(organizationId, userId, this.notifications);
         }
         
-        console.log(`✅ Loaded ${this.notifications.length} valid notifications`);
+        logInfo('Notification', `Loaded ${this.notifications.length} valid notifications`);
       } else {
-        console.warn('❌ Invalid notification data received from server');
+        logWarn('Notification', 'Invalid notification data received from server');
         this.notifications = [];
       }
       

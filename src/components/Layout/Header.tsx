@@ -52,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
       success('Logged out successfully', 'You have been logged out of your account');
       navigate('/login');
     } catch (error) {
-      console.error('Logout error:', error);
+      logError('Header', 'Logout error', error instanceof Error ? error : new Error('Unknown error'));
     }
   };
 
@@ -61,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     // Implement search functionality
-    console.log('Searching for:', searchQuery);
+    logInfo('Header', 'Searching for', { searchQuery });
   };
 
   return (

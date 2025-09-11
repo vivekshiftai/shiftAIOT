@@ -126,10 +126,11 @@ export const KnowledgeSection: React.FC = () => {
       const knowledgeResponse = await knowledgeAPI.getDocuments();
       
       // Debug: Log the actual response
-      console.log('🔍 Knowledge API Response:', knowledgeResponse);
-      console.log('🔍 Documents array:', knowledgeResponse.data?.documents);
-      console.log('🔍 Response status:', knowledgeResponse.status);
-      console.log('🔍 Response headers:', knowledgeResponse.headers);
+      logInfo('Knowledge', 'Knowledge API Response', {
+        status: knowledgeResponse.status,
+        headers: knowledgeResponse.headers,
+        documentsCount: knowledgeResponse.data?.documents?.length || 0
+      });
       
       if (knowledgeResponse.data.documents) {
         const knowledgeDocuments: UnifiedPDF[] = knowledgeResponse.data.documents.map((doc: any) => ({
@@ -154,16 +155,20 @@ export const KnowledgeSection: React.FC = () => {
         setDocuments(knowledgeDocuments);
         
         // Debug: Log document details
-        console.log('🔍 Processed documents:', knowledgeDocuments);
-        console.log('🔍 Documents with device info:', knowledgeDocuments.filter(doc => doc.deviceId && doc.deviceName));
+        logInfo('Knowledge', 'Processed documents', {
+          totalDocuments: knowledgeDocuments.length,
+          documentsWithDeviceInfo: knowledgeDocuments.filter(doc => doc.deviceId && doc.deviceName).length
+        });
         
         logInfo('Knowledge', 'Devices loaded successfully', { 
           totalDocuments: knowledgeDocuments.length,
           devicesWithPDFs: knowledgeDocuments.filter(doc => doc.deviceId && doc.deviceName).length
         });
       } else {
-        console.log('🔍 No documents found - response data:', knowledgeResponse.data);
-        console.log('🔍 Response structure:', Object.keys(knowledgeResponse.data || {}));
+        logInfo('Knowledge', 'No documents found', {
+          responseData: knowledgeResponse.data,
+          responseStructure: Object.keys(knowledgeResponse.data || {})
+        });
         logInfo('Knowledge', 'No documents found in unified PDFs table');
         setDocuments([]);
       }
@@ -192,10 +197,10 @@ export const KnowledgeSection: React.FC = () => {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            console.log('🔍 Knowledge section is now visible, checking if data needs refresh...');
+            logInfo('Knowledge', 'Knowledge section is now visible, checking if data needs refresh');
             // Only refresh if we don't have any documents loaded
             if (documents.length === 0) {
-              console.log('🔍 No documents loaded, refreshing data...');
+              logInfo('Knowledge', 'No documents loaded, refreshing data');
               loadData();
             }
           }
@@ -438,11 +443,11 @@ export const KnowledgeSection: React.FC = () => {
 
   // Get devices from unified PDFs table (devices that have PDFs) - memoized to prevent unnecessary recalculations
   const devicesWithPDFs = useMemo(() => {
-    console.log('🔍 Calculating devicesWithPDFs from documents:', documents);
+    logInfo('Knowledge', 'Calculating devicesWithPDFs from documents', { documentsCount: documents.length });
     
     // Remove all filters - show ALL devices with PDFs regardless of processing status
     const filteredDocs = documents.filter(doc => doc.deviceName); // Only filter by deviceName
-    console.log('🔍 Filtered documents (with deviceName only):', filteredDocs);
+    logInfo('Knowledge', 'Filtered documents (with deviceName only)', { filteredDocsCount: filteredDocs.length });
     
     const devices = filteredDocs.reduce((acc, doc) => {
       // Group by device name instead of device ID
@@ -464,7 +469,7 @@ export const KnowledgeSection: React.FC = () => {
       return acc;
     }, [] as Array<Device & { pdfs: UnifiedPDF[]; pdfCount: number; hasPDFs: boolean }>);
     
-    console.log('🔍 Final devices array:', devices);
+    logInfo('Knowledge', 'Final devices array', { devicesCount: devices.length });
     return devices;
   }, [documents]); // Only recalculate when documents change
 

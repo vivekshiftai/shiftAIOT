@@ -10,6 +10,7 @@ import {
   FileText
 } from 'lucide-react';
 import { DeviceStatsService, DeviceStats } from '../../services/deviceStatsService';
+import { logError } from '../../utils/logger';
 
 interface OnboardingResult {
   deviceId: string;
@@ -69,7 +70,7 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
         const stats = await DeviceStatsService.getDeviceStats(result.deviceId);
         setDeviceStats(stats);
       } catch (error) {
-        console.error('Failed to load device stats:', error);
+        logError('OnboardingSuccess', 'Failed to load device stats', error instanceof Error ? error : new Error('Unknown error'));
         // Use fallback data from result
         setDeviceStats({
           deviceId: result.deviceId,

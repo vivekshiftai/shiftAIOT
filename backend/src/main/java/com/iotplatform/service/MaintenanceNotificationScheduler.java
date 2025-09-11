@@ -41,9 +41,9 @@ public class MaintenanceNotificationScheduler {
 
     /**
      * Update overdue maintenance tasks status.
-     * Runs every day at 5:50 AM to mark overdue tasks before sending notifications.
+     * Runs every day at 10:35 AM to mark overdue tasks before sending notifications.
      */
-    @Scheduled(cron = "${maintenance.overdue.cron:0 50 5 * * ?}")
+    @Scheduled(cron = "${maintenance.overdue.cron:0 35 10 * * ?}")
     public void updateOverdueMaintenanceTasks() {
         if (!schedulerEnabled) {
             log.info("Maintenance scheduler is disabled, skipping overdue update");
@@ -61,8 +61,8 @@ public class MaintenanceNotificationScheduler {
             for (Object[] taskData : overdueTasks) {
                 try {
                     String taskId = (String) taskData[0];
-                    String nextMaintenance = taskData[5] != null ? taskData[5].toString() : null;
-                    String status = (String) taskData[6];
+                    String nextMaintenance = taskData[8] != null ? taskData[8].toString() : null;
+                    String status = (String) taskData[10];
                     
                     // Check if task is overdue (past due date and still ACTIVE)
                     if (nextMaintenance != null && status != null && 
@@ -88,9 +88,9 @@ public class MaintenanceNotificationScheduler {
 
     /**
      * Auto-update overdue maintenance tasks to next maintenance date.
-     * Runs every day at 6:00 AM to automatically reschedule overdue tasks.
+     * Runs every day at 10:35 AM to automatically reschedule overdue tasks.
      */
-    @Scheduled(cron = "${maintenance.auto-update.cron:0 0 6 * * ?}")
+    @Scheduled(cron = "${maintenance.auto-update.cron:0 35 10 * * ?}")
     public void autoUpdateOverdueMaintenanceTasks() {
         if (!schedulerEnabled) {
             log.info("Maintenance scheduler is disabled, skipping auto-update");
@@ -108,10 +108,10 @@ public class MaintenanceNotificationScheduler {
             for (Object[] taskData : overdueTasks) {
                 try {
                     String taskId = (String) taskData[0];
-                    String taskName = (String) taskData[1];
-                    String nextMaintenance = taskData[5] != null ? taskData[5].toString() : null;
-                    String status = (String) taskData[6];
-                    String frequency = (String) taskData[7];
+                    String taskName = (String) taskData[2];
+                    String nextMaintenance = taskData[8] != null ? taskData[8].toString() : null;
+                    String status = (String) taskData[10];
+                    String frequency = (String) taskData[6];
                     
                     // Check if task is overdue (past due date and OVERDUE status)
                     if (nextMaintenance != null && status != null && frequency != null &&
@@ -142,10 +142,10 @@ public class MaintenanceNotificationScheduler {
 
     /**
      * Daily maintenance notification scheduler.
-     * Runs every day at 5:55 AM to send notifications for today's maintenance tasks.
-     * This runs 5 minutes after the overdue update to ensure tasks are properly marked.
+     * Runs every day at 10:35 AM to send notifications for today's maintenance tasks.
+     * This runs at the same time as the overdue update for testing purposes.
      */
-    @Scheduled(cron = "${maintenance.scheduler.cron:0 55 5 * * ?}")
+    @Scheduled(cron = "${maintenance.scheduler.cron:0 35 10 * * ?}")
     public void sendDailyMaintenanceNotifications() {
         if (!schedulerEnabled) {
             log.info("Maintenance notification scheduler is disabled");
@@ -208,19 +208,19 @@ public class MaintenanceNotificationScheduler {
         try {
             // Extract data from the Object array
             String taskId = (String) taskData[0]; // id
-            String taskName = (String) taskData[1]; // task_name
-            String deviceId = (String) taskData[2]; // device_id
-            String organizationId = (String) taskData[3]; // organization_id
-            String maintenanceType = (String) taskData[4]; // maintenance_type
-            String nextMaintenance = taskData[5] != null ? taskData[5].toString() : null; // next_maintenance
-            String status = (String) taskData[6]; // status
+            String taskName = (String) taskData[2]; // task_name
+            String deviceId = (String) taskData[1]; // device_id
+            String organizationId = (String) taskData[21]; // organization_id
+            String maintenanceType = (String) taskData[5]; // maintenance_type
+            String nextMaintenance = taskData[8] != null ? taskData[8].toString() : null; // next_maintenance
+            String status = (String) taskData[10]; // status
             String priority = (String) taskData[9]; // priority
-            String description = (String) taskData[8]; // description
-            String assignedUserId = (String) taskData[12]; // assigned_user_id from devices table
-            String deviceName = (String) taskData[13]; // device_name from devices table
-            String firstName = (String) taskData[14]; // first_name from users table
-            String lastName = (String) taskData[15]; // last_name from users table
-            String email = (String) taskData[16]; // email from users table
+            String description = (String) taskData[3]; // description
+            String assignedUserId = (String) taskData[25]; // assigned_user_id from devices table
+            String deviceName = (String) taskData[24]; // device_name from devices table
+            String firstName = (String) taskData[26]; // first_name from users table
+            String lastName = (String) taskData[27]; // last_name from users table
+            String email = (String) taskData[28]; // email from users table
 
             // Skip if no assigned user
             if (assignedUserId == null || assignedUserId.trim().isEmpty()) {
@@ -409,7 +409,7 @@ public class MaintenanceNotificationScheduler {
                 for (int i = 0; i < count; i++) {
                     Object[] task = allTasks.get(i);
                     log.info("📋 Task {}: ID={}, Name={}, Device={}, Status={}, NextMaintenance={}", 
-                        i+1, task[0], task[1], task[2], task[6], task[5]);
+                        i+1, task[0], task[2], task[1], task[10], task[8]);
                 }
             }
             

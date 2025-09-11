@@ -1,4 +1,5 @@
 import React from 'react';
+import { logWarn } from './logger';
 import { 
   Settings,
   User,
@@ -145,7 +146,7 @@ export const mapBackendStageToStep = (stage: string): string => {
     case 'complete':
       return 'safety_procedures'; // Complete stage shows the final step (safety procedures)
     default:
-      console.warn(`Unknown backend stage: ${stage}, defaulting to device_creation`);
+      logWarn('OnboardingSteps', `Unknown backend stage: ${stage}, defaulting to device_creation`);
       return 'device_creation';
   }
 };

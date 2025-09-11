@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useIoT } from '../contexts/IoTContext';
 import { ruleAPI, maintenanceAPI, deviceSafetyPrecautionsAPI, maintenanceSchedulerAPI } from '../services/api';
 import { handleAuthError } from '../utils/authUtils';
+import { logInfo, logError, logWarn } from '../utils/logger';
 import { 
   Plus, 
   Edit, 
@@ -134,7 +135,7 @@ const RulesPage: React.FC = () => {
   // Fetch all data
   const fetchAllData = async () => {
     if (!user) {
-      console.warn('No user authenticated, skipping data fetch');
+      logWarn('RulesPage', 'No user authenticated, skipping data fetch');
       return;
     }
 
@@ -144,9 +145,9 @@ const RulesPage: React.FC = () => {
         const rulesResponse = await ruleAPI.getAll();
         const rulesData = rulesResponse.data || [];
         setRules(rulesData);
-        console.log('Total rules loaded:', rulesData.length);
+        logInfo('RulesPage', 'Total rules loaded', { count: rulesData.length });
       } catch (err) {
-        console.error('Error fetching rules:', err);
+        logError('RulesPage', 'Error fetching rules', err instanceof Error ? err : new Error('Unknown error'));
         setRulesError('Failed to fetch rules');
       }
 
@@ -155,8 +156,8 @@ const RulesPage: React.FC = () => {
         const maintenanceResponse = await maintenanceAPI.getAll();
         const maintenanceData = maintenanceResponse.data || [];
         setMaintenanceTasks(maintenanceData);
-        console.log('Total maintenance tasks loaded:', maintenanceData.length);
-        console.log('Sample maintenance task data:', maintenanceData[0] ? {
+        logInfo('RulesPage', 'Total maintenance tasks loaded', { count: maintenanceData.length });
+        logInfo('RulesPage', 'Sample maintenance task data', maintenanceData[0] ? {
           id: maintenanceData[0].id,
           taskName: maintenanceData[0].taskName,
           deviceName: maintenanceData[0].deviceName,
@@ -170,22 +171,22 @@ const RulesPage: React.FC = () => {
         );
         
         if (hasMissingDeviceNames) {
-          console.log('Found maintenance tasks with missing device names, updating...');
+          logInfo('RulesPage', 'Found maintenance tasks with missing device names, updating');
           try {
             await maintenanceAPI.updateDeviceNames();
-            console.log('Device names updated successfully');
+            logInfo('RulesPage', 'Device names updated successfully');
             // Refetch maintenance data to get updated device names
             const updatedMaintenanceResponse = await maintenanceAPI.getAll();
             const updatedMaintenanceData = updatedMaintenanceResponse.data || [];
             setMaintenanceTasks(updatedMaintenanceData);
-            console.log('Maintenance data refreshed with updated device names');
+            logInfo('RulesPage', 'Maintenance data refreshed with updated device names');
           } catch (updateErr) {
-            console.warn('Failed to update device names:', updateErr);
+            logWarn('RulesPage', 'Failed to update device names', updateErr instanceof Error ? updateErr : new Error('Unknown error'));
             // Don't fail the entire data fetch if device name update fails
           }
         }
       } catch (err) {
-        console.error('Error fetching maintenance:', err);
+        logError('RulesPage', 'Error fetching maintenance', err instanceof Error ? err : new Error('Unknown error'));
         setMaintenanceError('Failed to fetch maintenance');
       }
 
@@ -194,14 +195,14 @@ const RulesPage: React.FC = () => {
         const safetyResponse = await deviceSafetyPrecautionsAPI.getAll();
         const safetyData = safetyResponse.data || [];
         setSafetyPrecautions(safetyData);
-        console.log('Total safety precautions loaded:', safetyData.length);
+        logInfo('RulesPage', 'Total safety precautions loaded', { count: safetyData.length });
       } catch (err) {
-        console.error('Error fetching safety precautions:', err);
+        logError('RulesPage', 'Error fetching safety precautions', err instanceof Error ? err : new Error('Unknown error'));
         setSafetyError('Failed to fetch safety precautions');
       }
 
     } catch (err: any) {
-      console.error('Error fetching data:', err);
+      logError('RulesPage', 'Error fetching data', err instanceof Error ? err : new Error('Unknown error'));
       setRulesError('Failed to fetch rules');
       setMaintenanceError('Failed to fetch maintenance');
       setSafetyError('Failed to fetch safety precautions');
@@ -223,7 +224,7 @@ const RulesPage: React.FC = () => {
       const response = await maintenanceSchedulerAPI.getStatus();
       setSchedulerStatus(response.data);
     } catch (error) {
-      console.error('Error fetching scheduler status:', error);
+      logError('RulesPage', 'Error fetching scheduler status', error instanceof Error ? error : new Error('Unknown error'));
     }
   };
   
@@ -231,7 +232,7 @@ const RulesPage: React.FC = () => {
   const handleManualSchedulerUpdate = async () => {
     setSchedulerLoading(true);
     try {
-      console.log('🔄 Triggering manual maintenance schedule update...');
+      logInfo('RulesPage', 'Triggering manual maintenance schedule update');
       const response = await maintenanceSchedulerAPI.manualUpdate();
       
       // Enhanced success feedback
@@ -239,7 +240,7 @@ const RulesPage: React.FC = () => {
       const executionTime = response.data?.executionTimeMs;
       const timestamp = response.data?.timestamp;
       
-      console.log('✅ Maintenance schedule update completed:', {
+      logInfo('RulesPage', 'Maintenance schedule update completed', {
         message: successMessage,
         executionTime: executionTime ? `${executionTime}ms` : 'N/A',
         timestamp: timestamp
@@ -253,22 +254,22 @@ const RulesPage: React.FC = () => {
       alert(detailedMessage);
       
       // Refresh all data to show updated schedules
-      console.log('🔄 Refreshing maintenance data...');
+      logInfo('RulesPage', 'Refreshing maintenance data');
       await Promise.all([
         fetchAllData(),
         fetchSchedulerStatus()
       ]);
       
-      console.log('✅ Data refresh completed');
+      logInfo('RulesPage', 'Data refresh completed');
       
     } catch (error) {
-      console.error('❌ Error triggering scheduler update:', error);
+      logError('RulesPage', 'Error triggering scheduler update', error instanceof Error ? error : new Error('Unknown error'));
       
       // Enhanced error handling
       const errorMessage = (error as any)?.response?.data?.message || (error as any)?.message || 'Failed to update maintenance schedules';
       const errorDetails = (error as any)?.response?.data?.error || 'Unknown error';
       
-      console.error('Error details:', {
+      logError('RulesPage', 'Error details', error instanceof Error ? error : new Error('Unknown error'), {
         message: errorMessage,
         type: errorDetails,
         status: (error as any)?.response?.status
@@ -321,7 +322,7 @@ const RulesPage: React.FC = () => {
       await ruleAPI.delete(ruleId);
       fetchAllData();
     } catch (err: any) {
-      console.error('Error deleting rule:', err);
+      logError('RulesPage', 'Error deleting rule', err instanceof Error ? err : new Error('Unknown error'));
     }
   };
 

@@ -21,7 +21,7 @@ export const MaintenanceForm: React.FC<MaintenanceFormProps> = ({
   onSubmit
 }) => {
   // Debug logging
-  console.log('MaintenanceForm received data:', {
+  logInfo('MaintenanceForm', 'MaintenanceForm received data', {
     isOpen,
     maintenance: maintenance ? {
       id: maintenance.id,

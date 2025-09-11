@@ -64,7 +64,6 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
     try {
       setLoading(true);
       logInfo('DeviceRulesDisplay', 'Loading rules for device', { deviceId });
-      console.log('🔧 DeviceRulesDisplay: Loading rules for device', deviceId);
       
       // Use rule API to get rules for this specific device
       const rulesResponse = await ruleAPI.getByDevice(deviceId);
@@ -96,10 +95,9 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
         deviceId, 
         rulesCount: transformedRules.length 
       });
-      console.log(`🔧 DeviceRulesDisplay: Loaded ${transformedRules.length} rules for device ${deviceId}`);
+      logInfo('DeviceRulesDisplay', `Loaded ${transformedRules.length} rules for device ${deviceId}`);
     } catch (err) {
       logError('DeviceRulesDisplay', 'Error loading rules', err instanceof Error ? err : new Error('Unknown error'));
-      console.error('Error loading rules:', err);
       setError('Failed to load IoT rules');
       setRules([]);
     } finally {
@@ -167,7 +165,6 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
       await loadRules();
     } catch (err) {
       logError('DeviceRulesDisplay', 'Error deleting rule', err instanceof Error ? err : new Error('Unknown error'));
-      console.error('Error deleting rule:', err);
       alert('Failed to delete rule');
     }
   };
@@ -183,7 +180,6 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
       await loadRules();
     } catch (err) {
       logError('DeviceRulesDisplay', 'Error updating rule status', err instanceof Error ? err : new Error('Unknown error'));
-      console.error('Error updating rule:', err);
       setError('Failed to update rule');
     }
   };
@@ -210,7 +206,6 @@ const DeviceRulesDisplay: React.FC<DeviceRulesDisplayProps> = ({ deviceId }) => 
       await loadRules();
     } catch (err) {
       logError('DeviceRulesDisplay', 'Error saving rule', err instanceof Error ? err : new Error('Unknown error'));
-      console.error('Error saving rule:', err);
       setError('Failed to save rule');
     }
   };

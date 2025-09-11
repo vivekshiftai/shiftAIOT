@@ -29,7 +29,7 @@ export const DevicesSection: React.FC = () => {
   
   // Additional loading state debugging
   useEffect(() => {
-    console.log('🔄 DevicesSection loading state changed:', { loading, devicesCount: devices?.length || 0 });
+    logInfo('DevicesSection', 'Loading state changed', { loading, devicesCount: devices?.length || 0 });
   }, [loading, devices]);
 
   // Load data only when component mounts
@@ -93,15 +93,14 @@ export const DevicesSection: React.FC = () => {
   const handleDeleteDevice = useCallback(async (deviceId: string, deviceName: string) => {
     if (window.confirm(`Are you sure you want to delete the device "${deviceName}"? This will permanently remove the device and all its associated data including rules, maintenance schedules, safety precautions, and PDF documents.`)) {
       try {
-        console.log('DevicesSection: Deleting device:', { deviceId, deviceName });
+        logInfo('DevicesSection', 'Deleting device', { deviceId, deviceName });
         
         await deleteDevice(deviceId);
-        console.log('DevicesSection: Device deleted successfully:', { deviceId, deviceName });
+        logInfo('DevicesSection', 'Device deleted successfully', { deviceId, deviceName });
         setSuccessMessage(`Device "${deviceName}" has been successfully deleted!`);
         setTimeout(() => setSuccessMessage(''), 5000);
       } catch (error) {
-        console.error('DevicesSection: Failed to delete device:', error);
-        console.error('DevicesSection: Error details:', {
+        logError('DevicesSection', 'Failed to delete device', error instanceof Error ? error : new Error('Unknown error'), {
           deviceId,
           deviceName,
           error: error instanceof Error ? error.message : 'Unknown error',
@@ -155,7 +154,7 @@ export const DevicesSection: React.FC = () => {
         setTimeout(() => setErrorMessage(''), 10000);
         
         // Log the categorized error
-        console.error('DevicesSection: Categorized error:', {
+        logError('DevicesSection', 'Categorized error', error instanceof Error ? error : new Error('Unknown error'), {
           errorType,
           errorMessage,
           originalError: error
@@ -166,7 +165,7 @@ export const DevicesSection: React.FC = () => {
 
   // Show loading screen while data is being fetched
   if (loading) {
-    console.log('🔄 Showing loading screen for Assets section');
+    logInfo('DevicesSection', 'Showing loading screen for Assets section');
     return <DevicesLoading />;
   }
 

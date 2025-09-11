@@ -2,6 +2,8 @@
  * Utility functions for formatting knowledge base responses with personalized templates
  */
 
+import { logError } from './logger';
+
 export interface ResponseTemplate {
   id: string;
   template: string;
@@ -97,7 +99,7 @@ export function formatKnowledgeBaseResponse(
     return `${personalizedGreeting}\n\n${cleanResponse}`;
     
   } catch (error) {
-    console.error('Error formatting knowledge base response:', error);
+    logError('ResponseTemplates', 'Error formatting knowledge base response', error instanceof Error ? error : new Error('Unknown error'));
     
     // Fallback to simple template
     const fallbackTemplate = RESPONSE_TEMPLATES[0];
@@ -142,7 +144,7 @@ export function extractCleanResponse(rawResponse: any): string {
     return cleanResponse;
     
   } catch (error) {
-    console.error('Error extracting clean response:', error);
+    logError('ResponseTemplates', 'Error extracting clean response', error instanceof Error ? error : new Error('Unknown error'));
     return String(rawResponse || 'No response available');
   }
 }

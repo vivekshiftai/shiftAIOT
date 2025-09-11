@@ -3,6 +3,7 @@ import { Bell, Filter, Search, CheckCircle } from 'lucide-react';
 import { useIoT } from '../contexts/IoTContext';
 import { Notification } from '../types';
 import { CleanNotificationItem } from '../components/Layout/CleanNotificationItem';
+import { logInfo } from '../utils/logger';
 
 export const NotificationsSection: React.FC = () => {
   const { notifications, markAllNotificationsAsRead } = useIoT();
@@ -39,7 +40,7 @@ export const NotificationsSection: React.FC = () => {
 
   const handleNotificationClick = (notification: Notification) => {
     // Handle notification click - could navigate to device details
-    console.log('Notification clicked:', notification);
+    logInfo('NotificationsSection', 'Notification clicked', { notificationId: notification.id, type: notification.type });
   };
 
 

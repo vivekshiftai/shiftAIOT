@@ -99,7 +99,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
 
   useEffect(() => {
     logComponentMount('DeviceMaintenanceDisplay', { deviceId });
-    console.log('🔧 DeviceMaintenanceDisplay: Loading maintenance data for device', deviceId);
+    logInfo('DeviceMaintenanceDisplay', 'Loading maintenance data for device', { deviceId });
     loadMaintenanceTasks();
     loadUsers();
   }, [deviceId]);
@@ -123,15 +123,14 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
     try {
       setLoading(true);
       logInfo('DeviceMaintenanceDisplay', 'Loading maintenance tasks for device', { deviceId });
-      console.log('🔧 DeviceMaintenanceDisplay: Loading maintenance tasks for device', deviceId);
       
       // Use maintenance API to get maintenance tasks for this specific device
       const maintenanceResponse = await maintenanceAPI.getByDevice(deviceId);
-      console.log('🔧 DeviceMaintenanceDisplay: Raw maintenance response:', maintenanceResponse);
+      logInfo('DeviceMaintenanceDisplay', 'Raw maintenance response received', maintenanceResponse);
       
       // The backend returns a complex object with maintenanceTasks field
       const maintenanceData = maintenanceResponse.data?.maintenanceTasks || maintenanceResponse.data || [];
-      console.log('🔧 DeviceMaintenanceDisplay: Maintenance data:', maintenanceData);
+      logInfo('DeviceMaintenanceDisplay', 'Maintenance data processed', maintenanceData);
       
       // Transform the data to match the expected format
       const transformedTasks: DeviceMaintenance[] = maintenanceData.map((task: any) => ({
@@ -163,10 +162,9 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
         deviceId, 
         tasksCount: transformedTasks.length 
       });
-      console.log(`🔧 DeviceMaintenanceDisplay: Loaded ${transformedTasks.length} maintenance tasks for device ${deviceId}`);
+      logInfo('DeviceMaintenanceDisplay', `Loaded ${transformedTasks.length} maintenance tasks for device ${deviceId}`);
     } catch (err) {
       logError('DeviceMaintenanceDisplay', 'Error loading maintenance tasks', err instanceof Error ? err : new Error('Unknown error'));
-      console.error('Error loading maintenance tasks:', err);
       setError('Failed to load maintenance tasks');
       setMaintenanceTasks([]);
     } finally {
@@ -250,7 +248,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
   useEffect(() => {
     const filteredCount = filteredTasks.length;
     const totalCount = maintenanceTasks.length;
-    console.log(`🔧 DeviceMaintenanceDisplay: Filtered ${filteredCount} of ${totalCount} maintenance tasks for device ${deviceId}`);
+    logInfo('DeviceMaintenanceDisplay', `Filtered ${filteredCount} of ${totalCount} maintenance tasks for device ${deviceId}`);
   }, [filteredTasks.length, maintenanceTasks.length, deviceId]);
 
   const handleAddTask = () => {

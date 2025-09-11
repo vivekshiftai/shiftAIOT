@@ -133,7 +133,7 @@ export const SafetyForm: React.FC<SafetyFormProps> = ({
     }
 
     if (!onSubmit) {
-      console.warn('No onSubmit handler provided');
+      logWarn('SafetyForm', 'No onSubmit handler provided');
       return;
     }
 

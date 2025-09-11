@@ -170,7 +170,7 @@ class WebSocketService {
     try {
       switch (message.type) {
         case 'DEVICE_STATUS_UPDATE':
-          console.log(`🔄 WebSocket: Device status update received`, {
+          logInfo('WebSocket', 'Device status update received', {
             deviceId: message.deviceId,
             status: message.status,
             deviceName: message.deviceName,
@@ -185,7 +185,7 @@ class WebSocketService {
           break;
 
         case 'DEVICE_CREATED':
-          console.log(`🆕 WebSocket: Device created`, {
+          logInfo('WebSocket', 'Device created', {
             deviceId: message.device?.id,
             deviceName: message.device?.name
           });
@@ -194,7 +194,7 @@ class WebSocketService {
           break;
 
         case 'DEVICE_DELETED':
-          console.log(`🗑️ WebSocket: Device deleted`, {
+          logInfo('WebSocket', 'Device deleted', {
             deviceId: message.deviceId,
             deviceName: message.deviceName
           });
@@ -206,14 +206,12 @@ class WebSocketService {
           break;
 
         case 'DEVICE_STATS_UPDATE':
-          console.log(`📊 WebSocket: Device stats update received`, message.stats);
-          // Handle device stats updates if needed
           logInfo('WebSocket', 'Device stats update received', message.stats);
+          // Handle device stats updates if needed
           break;
 
 
         default:
-          console.warn(`⚠️ WebSocket: Unknown message type received`, { type: message.type });
           logWarn('WebSocket', 'Unknown message type received', { type: message.type });
       }
     } catch (error) {

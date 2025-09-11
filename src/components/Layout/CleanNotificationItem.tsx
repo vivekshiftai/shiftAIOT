@@ -3,6 +3,7 @@ import { AlertTriangle, Info, CheckCircle, Bell, Settings, Wrench, Zap, Clock } 
 import { Notification } from '../../types';
 import { formatRelativeTime } from '../../utils/dateUtils';
 import { deviceAPI, ruleAPI, maintenanceAPI } from '../../services/api';
+import { logError } from '../../utils/logger';
 
 interface CleanNotificationItemProps {
   notification: Notification;
@@ -219,7 +220,7 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
         setDetails(details);
         setLoadingDetails(false);
       } catch (error) {
-        console.error('Failed to load notification details:', error);
+        logError('CleanNotificationItem', 'Failed to load notification details', error instanceof Error ? error : new Error('Unknown error'));
         setLoadingDetails(false);
         // Set fallback data if API calls fail
         setDetails({

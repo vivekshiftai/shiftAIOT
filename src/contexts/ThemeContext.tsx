@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { logInfo } from '../utils/logger';
 
 type Theme = 'light';
 
@@ -41,7 +42,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     }
 
     // Log theme context updates
-    console.log('ThemeContext updated:', {
+    logInfo('Theme', 'ThemeContext updated', {
       darkModeRemoved: true,
       lightModeOnly: true,
       themeToggleRemoved: true,

@@ -2,6 +2,8 @@
  * Utility functions for date formatting and validation
  */
 
+import { logWarn, logError } from './logger';
+
 /**
  * Safely formats a timestamp string to a readable date
  * Handles various timestamp formats and provides fallbacks for invalid dates
@@ -31,7 +33,7 @@ export const formatTimestamp = (timestamp: string | null | undefined): { relativ
 
     // Check if the date is valid
     if (isNaN(date.getTime())) {
-      console.warn('Invalid timestamp received:', timestamp);
+      logWarn('DateUtils', 'Invalid timestamp received', { timestamp });
       return {
         relative: 'Invalid Date',
         full: 'Invalid Date'
@@ -65,7 +67,7 @@ export const formatTimestamp = (timestamp: string | null | undefined): { relativ
 
     return { relative, full };
   } catch (error) {
-    console.error('Error formatting timestamp:', timestamp, error);
+    logError('DateUtils', 'Error formatting timestamp', error instanceof Error ? error : new Error('Unknown error'), { timestamp });
     return {
       relative: 'Invalid Date',
       full: 'Invalid Date'

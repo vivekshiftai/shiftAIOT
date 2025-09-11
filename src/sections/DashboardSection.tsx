@@ -99,7 +99,7 @@ export const DashboardSection: React.FC = () => {
         });
         
         // Debug: Log the structure of upcoming maintenance response
-        console.log('🔍 DEBUG: Upcoming maintenance response structure:', {
+        logInfo('Dashboard', 'Upcoming maintenance response structure', {
           status: upcomingMaintenanceResponse.status,
           data: upcomingMaintenanceResponse.data,
           upcomingMaintenance: upcomingMaintenanceResponse.data?.upcomingMaintenance,
@@ -143,7 +143,7 @@ export const DashboardSection: React.FC = () => {
         setUpcomingMaintenance(upcomingTasks);
         
         // Debug: Log upcoming tasks details
-        console.log('🔍 DEBUG: Upcoming maintenance tasks:', {
+        logInfo('Dashboard', 'Upcoming maintenance tasks', {
           count: upcomingTasks.length,
           tasks: upcomingTasks.map((task: any) => ({
             id: task.id,
@@ -203,9 +203,7 @@ export const DashboardSection: React.FC = () => {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         const errorDetails = error instanceof Error ? error.stack : 'No stack trace';
         
-        logError('Dashboard', 'Failed to fetch upcoming maintenance', new Error(errorMessage));
-        
-        console.error('Maintenance API Error Details:', {
+        logError('Dashboard', 'Failed to fetch upcoming maintenance', error instanceof Error ? error : new Error('Unknown error'), {
           message: errorMessage,
           details: errorDetails,
           error: error,

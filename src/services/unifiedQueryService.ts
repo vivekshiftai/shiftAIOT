@@ -48,7 +48,7 @@ export class UnifiedQueryService {
       return response.data as UnifiedQueryResponse;
       
     } catch (error: any) {
-      console.error('❌ Unified query failed:', error);
+      logError('UnifiedQuery', 'Unified query failed', error instanceof Error ? error : new Error('Unknown error'));
       
       // Provide more detailed error information
       if (error.response) {
@@ -56,10 +56,10 @@ export class UnifiedQueryService {
         console.error('Backend response data:', error.response.data);
         throw new Error(`Backend error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`);
       } else if (error.request) {
-        console.error('No response received:', error.request);
+        logError('UnifiedQuery', 'No response received from backend', error, { request: error.request });
         throw new Error('No response from backend - check if backend is running');
       } else {
-        console.error('Request setup error:', error.message);
+        logError('UnifiedQuery', 'Request setup error', error, { message: error.message });
         throw new Error(`Request failed: ${error.message}`);
       }
     }
@@ -71,30 +71,32 @@ export class UnifiedQueryService {
    */
   static async getQuerySuggestions(context?: string): Promise<QuerySuggestionsResponse> {
     try {
-      console.log('🔍 Getting query suggestions with context:', context);
+      logInfo('UnifiedQuery', 'Getting query suggestions with context', { context });
       
       // Check if we have a valid token before making the request
       const token = localStorage.getItem('token');
-      console.log('🔍 Token check for query suggestions:', token ? 'exists' : 'not found');
+      logInfo('UnifiedQuery', 'Token check for query suggestions', { tokenExists: !!token });
       
       const params = context ? { context } : {};
       const response = await api.get('/knowledge/suggestions', { params });
       
-      console.log('✅ Query suggestions response:', response.data);
+      logInfo('UnifiedQuery', 'Query suggestions response received', response.data);
       return response.data as QuerySuggestionsResponse;
       
     } catch (error: any) {
-      console.error('❌ Failed to get query suggestions:', error);
+      logError('UnifiedQuery', 'Failed to get query suggestions', error instanceof Error ? error : new Error('Unknown error'));
       
       // Provide more detailed error information
       if (error.response) {
-        console.error('Backend response status:', error.response.status);
-        console.error('Backend response data:', error.response.data);
-        console.error('Backend response headers:', error.response.headers);
+        logError('UnifiedQuery', 'Backend response error', error, { 
+          status: error.response.status, 
+          data: error.response.data,
+          headers: error.response.headers 
+        });
         
         // Check if it's an authentication error
         if (error.response.status === 401) {
-          console.error('🔐 Authentication error - checking token validity');
+          logError('UnifiedQuery', 'Authentication error - checking token validity', error);
           const token = localStorage.getItem('token');
           if (!token) {
             throw new Error('No authentication token found. Please log in again.');
@@ -105,10 +107,10 @@ export class UnifiedQueryService {
         
         throw new Error(`Backend error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`);
       } else if (error.request) {
-        console.error('No response received:', error.request);
+        logError('UnifiedQuery', 'No response received from backend', error, { request: error.request });
         throw new Error('No response from backend - check if backend is running');
       } else {
-        console.error('Request setup error:', error.message);
+        logError('UnifiedQuery', 'Request setup error', error, { message: error.message });
         throw new Error(`Request failed: ${error.message}`);
       }
     }

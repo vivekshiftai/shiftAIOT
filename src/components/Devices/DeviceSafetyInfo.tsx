@@ -111,7 +111,6 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
       });
     } catch (err) {
       logError('DeviceSafetyInfo', 'Error loading safety precautions', err instanceof Error ? err : new Error('Unknown error'));
-      console.error('Error loading safety precautions:', err);
       setError('Failed to load safety precautions');
       setSafetyPrecautions([]);
     } finally {
@@ -185,7 +184,7 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
         await deviceSafetyPrecautionsAPI.delete(id);
         await loadSafetyPrecautions();
       } catch (err) {
-        console.error('Error deleting safety precaution:', err);
+        logError('DeviceSafetyInfo', 'Error deleting safety precaution', err instanceof Error ? err : new Error('Unknown error'));
         setError('Failed to delete safety precaution');
       }
     }
@@ -425,7 +424,7 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
               await loadSafetyPrecautions();
               setShowAddForm(false);
             } catch (err) {
-              console.error('Error creating safety precaution:', err);
+              logError('DeviceSafetyInfo', 'Error creating safety precaution', err instanceof Error ? err : new Error('Unknown error'));
               setError('Failed to create safety precaution');
             }
           }}
@@ -444,7 +443,7 @@ const DeviceSafetyInfo: React.FC<DeviceSafetyInfoProps> = ({ deviceId }) => {
               await loadSafetyPrecautions();
               setEditingPrecaution(null);
             } catch (err) {
-              console.error('Error updating safety precaution:', err);
+              logError('DeviceSafetyInfo', 'Error updating safety precaution', err instanceof Error ? err : new Error('Unknown error'));
               setError('Failed to update safety precaution');
             }
           }}

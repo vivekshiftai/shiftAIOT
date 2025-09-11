@@ -114,7 +114,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 
   // Add additional safety checks
   if (!device) {
-    console.error('DeviceCard: device prop is undefined or null');
+    logError('DeviceCard', 'device prop is undefined or null');
     return null;
   }
   
@@ -173,7 +173,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         'ERROR': '🔴'
       }[newStatus] || '⚪';
       
-      console.log(`🔄 Updating device status: ${device.name} (${device.id}) from ${oldStatus} to ${newStatus}`);
+      logInfo('DeviceCard', `Updating device status: ${device.name} (${device.id}) from ${oldStatus} to ${newStatus}`);
       
       // Call the status update function
       await onStatusChange(device.id, newStatus);
@@ -185,8 +185,8 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         newStatus
       });
       
-      console.log(`✅ Device status updated successfully: ${device.name} is now ${newStatus}`);
-      console.log(`${statusEmoji} ${device.name} status changed to ${newStatus.toLowerCase()}`);
+      logInfo('DeviceCard', `Device status updated successfully: ${device.name} is now ${newStatus}`);
+      logInfo('DeviceCard', `${statusEmoji} ${device.name} status changed to ${newStatus.toLowerCase()}`);
       
       // Show success feedback
       // You could add a toast notification here
@@ -194,9 +194,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       
-      logError('DeviceCard', 'Failed to update device status', error instanceof Error ? error : new Error('Unknown error'));
-      console.error('❌ Failed to update device status:', error);
-      console.error(`Failed to update ${device.name} status to ${newStatus}`);
+      logError('DeviceCard', `Failed to update device status: ${device.name} to ${newStatus}`, error instanceof Error ? error : new Error('Unknown error'));
       
       setStatusUpdateError(errorMessage);
       

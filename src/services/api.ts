@@ -43,12 +43,12 @@ api.interceptors.request.use(
       const token = tokenService.getToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log(`🔐 Adding auth header for protected endpoint: ${config.url}`);
+        logInfo('API', `Adding auth header for protected endpoint: ${config.url}`);
       } else {
-        console.warn(`⚠️ No token found for protected endpoint: ${config.url}`);
+        logWarn('API', `No token found for protected endpoint: ${config.url}`);
       }
     } else {
-      console.log(`🌐 Public endpoint, no auth header needed: ${config.url}`);
+      logInfo('API', `Public endpoint, no auth header needed: ${config.url}`);
     }
 
     // Set Content-Type for JSON requests only
@@ -97,7 +97,6 @@ api.interceptors.response.use(
           return api(originalRequest);
         } else {
           // Token refresh failed
-          console.warn('❌ Token refresh failed');
           logWarn('API', 'Token refresh failed');
           
           // Create a more user-friendly error for auth failures
@@ -105,8 +104,7 @@ api.interceptors.response.use(
           return Promise.reject(authError);
         }
       } catch (refreshErr: any) {
-        console.error('❌ Token refresh error:', refreshErr);
-        logWarn('API', 'Token refresh failed', undefined, refreshErr);
+        logError('API', 'Token refresh error', refreshErr instanceof Error ? refreshErr : new Error('Unknown error'));
         
         // Create a more user-friendly error for auth failures
         const authError = new AuthenticationError('Authentication failed. Please log in again.', status);
@@ -507,7 +505,7 @@ export const pdfAPI = {
       const endTime = Date.now();
       const duration = endTime - startTime;
       
-      console.error(`❌ [API] PDF deletion failed: "${pdfName}"`, {
+      logError('API', `PDF deletion failed: "${pdfName}"`, error instanceof Error ? error : new Error('Unknown error'), {
         duration: `${duration}ms`,
         error: error
       });

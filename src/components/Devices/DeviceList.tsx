@@ -15,6 +15,7 @@ import { EnhancedDeviceOnboardingForm } from './EnhancedDeviceOnboardingForm';
 import { DeviceDetails } from './DeviceDetails';
 // import { pdfProcessingService } from '../../services/pdfprocess';
 import { stompWebSocketService } from '../../services/stompWebSocketService';
+import { logError } from '../../utils/logger';
 
 interface DeviceListProps {
   devices: Device[];
@@ -127,11 +128,11 @@ export const DeviceList: React.FC<DeviceListProps> = ({
         }, 5000); // Show completion for 5 seconds
         
       } catch (error: any) {
-        console.error('Failed to add device to backend:', error);
+        logError('DeviceList', 'Failed to add device to backend', error instanceof Error ? error : new Error('Unknown error'));
         
         // Check if it's a network/connection error
         if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error') || error.message?.includes('Connection')) {
-          console.error('Backend server not available');
+          logError('DeviceList', 'Backend server not available');
           throw new Error('Backend server is not available. Please ensure the backend server is running and try again.');
         } else {
           // Update the onboarding device to error status
@@ -153,7 +154,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
       }
       
     } catch (error) {
-      console.error('Error during device onboarding:', error);
+      logError('DeviceList', 'Error during device onboarding', error instanceof Error ? error : new Error('Unknown error'));
       
       // Show user-friendly error message
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

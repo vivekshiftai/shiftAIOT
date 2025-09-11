@@ -3,6 +3,7 @@ import { Settings, Plus, Trash2, Eye, EyeOff, CheckCircle, Clock, AlertTriangle 
 import { DeviceConnection } from '../../types';
 import { deviceConnectionAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { logError } from '../../utils/logger';
 
 interface DeviceConnectionManagerProps {
   deviceId: string;
@@ -37,7 +38,7 @@ export const DeviceConnectionManager: React.FC<DeviceConnectionManagerProps> = (
       const deviceConnections = response.data.filter((conn: DeviceConnection) => conn.deviceId === deviceId);
       setConnections(deviceConnections);
     } catch (error) {
-      console.error('Failed to load connections:', error);
+      logError('DeviceConnectionManager', 'Failed to load connections', error instanceof Error ? error : new Error('Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -70,7 +71,7 @@ export const DeviceConnectionManager: React.FC<DeviceConnectionManagerProps> = (
       });
       loadConnections();
     } catch (error) {
-      console.error('Failed to add connection:', error);
+      logError('DeviceConnectionManager', 'Failed to add connection', error instanceof Error ? error : new Error('Unknown error'));
       alert('Failed to add connection');
     }
   };
@@ -85,7 +86,7 @@ export const DeviceConnectionManager: React.FC<DeviceConnectionManagerProps> = (
       await deviceConnectionAPI.connect(deviceId);
       loadConnections();
     } catch (error) {
-      console.error('Failed to connect device:', error);
+      logError('DeviceConnectionManager', 'Failed to connect device', error instanceof Error ? error : new Error('Unknown error'));
       alert('Failed to connect device');
     }
   };
@@ -100,7 +101,7 @@ export const DeviceConnectionManager: React.FC<DeviceConnectionManagerProps> = (
       await deviceConnectionAPI.disconnect(deviceId);
       loadConnections();
     } catch (error) {
-      console.error('Failed to disconnect device:', error);
+      logError('DeviceConnectionManager', 'Failed to disconnect device', error instanceof Error ? error : new Error('Unknown error'));
       alert('Failed to disconnect device');
     }
   };
@@ -116,7 +117,7 @@ export const DeviceConnectionManager: React.FC<DeviceConnectionManagerProps> = (
         await deviceConnectionAPI.delete(deviceId);
         loadConnections();
       } catch (error) {
-        console.error('Failed to delete connection:', error);
+        logError('DeviceConnectionManager', 'Failed to delete connection', error instanceof Error ? error : new Error('Unknown error'));
         alert('Failed to delete connection');
       }
     }

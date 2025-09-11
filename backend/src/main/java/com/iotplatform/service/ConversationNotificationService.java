@@ -146,10 +146,10 @@ public class ConversationNotificationService {
             String organizationId) {
         
         // Extract data from the Object array (based on the query result)
-        String taskName = (String) maintenanceData[1]; // task_name
+        String taskName = (String) maintenanceData[2]; // task_name
         String priority = (String) maintenanceData[9]; // priority
-        String maintenanceType = (String) maintenanceData[4]; // maintenance_type
-        String description = (String) maintenanceData[8]; // description
+        String maintenanceType = (String) maintenanceData[5]; // maintenance_type
+        String description = (String) maintenanceData[3]; // description
         
         // Default due time to 9:00 AM if not specified
         LocalTime dueTime = LocalTime.of(9, 0);

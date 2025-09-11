@@ -306,7 +306,7 @@ export const DeviceDetailsSection: React.FC = () => {
         // Device stats loaded successfully
         setDeviceStats(stats);
       } catch (error) {
-        console.warn('⚠️ Failed to fetch device stats:', error);
+        logWarn('DeviceDetails', 'Failed to fetch device stats', { error: error instanceof Error ? error.message : 'Unknown error' });
         setDeviceStats(null);
       }
       
@@ -566,7 +566,6 @@ export const DeviceDetailsSection: React.FC = () => {
       setDocumentationInfo(response.data);
               // Documentation info loaded successfully
     } catch (error) {
-      console.error('❌ Failed to fetch documentation info:', error);
       logError('DeviceDetails', 'Failed to fetch documentation info', error instanceof Error ? error : new Error('Unknown error'));
       // Set empty documentation info on error
       setDocumentationInfo(null);
@@ -591,7 +590,7 @@ export const DeviceDetailsSection: React.FC = () => {
       
       // Add timeout to prevent infinite loading
       const timeoutId = setTimeout(() => {
-        console.warn('⚠️ Data loading timeout, forcing completion');
+        logWarn('DeviceDetails', 'Data loading timeout, forcing completion');
         setIsInitialLoading(false);
       }, 15000); // 15 second timeout
       
@@ -603,7 +602,7 @@ export const DeviceDetailsSection: React.FC = () => {
         // Data loading results processed
         results.forEach((result, index) => {
           if (result.status === 'rejected') {
-            console.error(`❌ Data loading failed for index ${index}:`, result.reason);
+            logError('DeviceDetails', `Data loading failed for index ${index}`, result.reason instanceof Error ? result.reason : new Error('Unknown error'));
           }
         });
       }).finally(() => {
