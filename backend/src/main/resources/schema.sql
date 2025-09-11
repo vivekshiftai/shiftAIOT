@@ -392,6 +392,9 @@ CREATE TABLE IF NOT EXISTS rules (
     metric_value VARCHAR(100),
     threshold VARCHAR(200),
     consequence TEXT,
+    condition TEXT,
+    action VARCHAR(100),
+    priority VARCHAR(50),
     device_id VARCHAR(255),
     active BOOLEAN DEFAULT true,
     organization_id VARCHAR(255) NOT NULL,
@@ -403,6 +406,11 @@ CREATE TABLE IF NOT EXISTS rules (
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
 );
+
+-- Add missing columns to rules table if they don't exist
+ALTER TABLE rules ADD COLUMN IF NOT EXISTS condition TEXT;
+ALTER TABLE rules ADD COLUMN IF NOT EXISTS action VARCHAR(100);
+ALTER TABLE rules ADD COLUMN IF NOT EXISTS priority VARCHAR(50);
 
 -- Rule Conditions table - Updated to match new model
 CREATE TABLE IF NOT EXISTS rule_conditions (

@@ -407,6 +407,15 @@ public class UnifiedOnboardingService {
             ruleService.createRulesFromPDF(rulesResponse.getRules(), deviceId, organizationId, currentUserId);
             log.info("✅ Stored {} rules in database for device: {}", pdfResult.rulesGenerated, deviceId);
             
+            // Verify rules were actually stored
+            List<Rule> storedRules = ruleService.getRulesByDeviceId(deviceId);
+            log.info("🔍 Verification: Found {} rules in database for device: {} after storage", storedRules.size(), deviceId);
+            
+            if (storedRules.size() != pdfResult.rulesGenerated) {
+                log.error("🚨 MISMATCH: Expected {} rules but found {} in database for device: {}", 
+                         pdfResult.rulesGenerated, storedRules.size(), deviceId);
+            }
+            
             // Send progress update for rules completion
             sendProgressUpdate(progressCallback, "rules", 80, "Rules generated successfully", 
                               pdfResult.rulesGenerated + " monitoring rules created and configured", null, 4, 6, "Rules Generation");

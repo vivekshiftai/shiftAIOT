@@ -20,7 +20,7 @@ interface SalesIntelligenceSectionProps {
 
 export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> = ({ onBack }) => {
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
-  const [isLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<StrategyAgentResponse | null>(null);
   const [allRecommendations, setAllRecommendations] = useState<StrategyAgentResponse[] | null>(null);
   const [error, setError] = useState<string>('');
@@ -29,8 +29,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'accepted' | 'rejected' | 'purchased'>('accepted');
   const [isAllCustomers, setIsAllCustomers] = useState<boolean>(false);
-  const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
-  const [regenerateMessage, setRegenerateMessage] = useState<string>('');
+  const [regenerateMessage] = useState<string>('');
   const [regeneratingCustomers, setRegeneratingCustomers] = useState<Set<string>>(new Set());
   const [customerRegenerateMessages, setCustomerRegenerateMessages] = useState<Record<string, string>>({});
   const [activeCustomerTab, setActiveCustomerTab] = useState<string>('');
@@ -154,36 +153,6 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
     }
   };
 
-  const regenerateAllRecommendations = async () => {
-    setIsRegenerating(true);
-    setRegenerateMessage('');
-    setError('');
-
-    try {
-      logInfo('Process', 'Starting regeneration of all customer recommendations');
-      setRegenerateMessage('🔄 Regeneration process started... This will take some time. Please wait.');
-      
-      const result = await StrategyAgentService.regenerateAllRecommendations(true);
-      
-      if (result.success) {
-        setRegenerateMessage('✅ Regeneration process started successfully! The system is now regenerating recommendations for all customers. This process may take several minutes to complete.');
-        logInfo('Process', 'Regeneration triggered successfully', result);
-        
-        // Clear existing recommendations since they're being regenerated
-        setRecommendations(null);
-        setAllRecommendations(null);
-      } else {
-        setError(result.message || 'Failed to start regeneration process');
-        setRegenerateMessage('');
-      }
-    } catch (error) {
-      logError('Process', 'Failed to regenerate recommendations', error instanceof Error ? error : new Error('Unknown error'));
-      setError('Failed to regenerate recommendations. Please try again.');
-      setRegenerateMessage('');
-    } finally {
-      setIsRegenerating(false);
-    }
-  };
 
   // Handle regeneration for selected customer or all customers
   const handleRegenerateData = async () => {
@@ -244,28 +213,30 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
     }
   };
 
-  // Handle getting sales report
+  // Handle getting sales report - first generate the report, then show it
   const handleGetSalesReport = async () => {
+    setIsLoading(true);
+    setError('');
+
     try {
       if (selectedCustomer === 'all') {
-        // Download PDF for all customers
-        const pdfBlob = await StrategyAgentService.downloadAllCustomersPDFReport();
-        
-        // Create download link and trigger download
-        const url = window.URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `all-customers-sales-report-${new Date().toISOString().split('T')[0]}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        logInfo('Process', 'Generating sales report for all customers');
+        const response = await StrategyAgentService.getAllCustomerRecommendations();
+        setAllRecommendations(response.recommendations);
+        setIsAllCustomers(true);
+        logInfo('Process', `Sales report generated successfully for ${response.total_customers} customers`);
       } else {
-        await downloadPDFReport();
+        logInfo('Process', `Generating sales report for customer: ${selectedCustomer}`);
+        const response = await StrategyAgentService.generateRecommendations(selectedCustomer);
+        setRecommendations(response);
+        setIsAllCustomers(false);
+        logInfo('Process', 'Sales report generated successfully');
       }
     } catch (error) {
-      logError('Process', 'Failed to download sales report', error instanceof Error ? error : new Error('Unknown error'));
-      setError('Failed to download sales report. Please try again.');
+      logError('Process', 'Failed to generate sales report', error instanceof Error ? error : new Error('Unknown error'));
+      setError('Failed to generate sales report. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -334,25 +305,6 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {/* Regenerate Button */}
-            <button
-              onClick={regenerateAllRecommendations}
-              disabled={isRegenerating}
-              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-orange-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
-            >
-              {isRegenerating ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Regenerating...
-                </>
-              ) : (
-                <>
-                  <Brain className="w-4 h-4" />
-                  Regenerate All Data
-                </>
-              )}
-            </button>
-
             {/* Download Button */}
             {(recommendations || allRecommendations) && (
               <button
@@ -473,12 +425,12 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                   </div>
               </div>
               
-                <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   {/* Regenerate Button */}
                   <button
                     onClick={handleRegenerateData}
                     disabled={!selectedCustomer || isRegeneratingData}
-                    className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
+                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
                   >
                     {isRegeneratingData ? (
                       <>
@@ -497,7 +449,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                   <button
                     onClick={handleGetSalesReport}
                     disabled={!selectedCustomer || isLoading}
-                    className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
                   >
                     {isLoading ? (
                       <>
@@ -507,7 +459,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                     ) : (
                       <>
                         <Download className="w-4 h-4" />
-                        Get Sales Report
+                        Generate Report
                       </>
                     )}
                   </button>

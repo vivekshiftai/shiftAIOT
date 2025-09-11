@@ -59,6 +59,18 @@ public class Rule {
     @Column(name = "consequence")
     private String consequence;
 
+    @Size(max = 500)
+    @Column(name = "condition")
+    private String condition;
+
+    @Size(max = 100)
+    @Column(name = "action")
+    private String action;
+
+    @Size(max = 50)
+    @Column(name = "priority")
+    private String priority;
+
     @Column(name = "device_id")
     private String deviceId;
 
@@ -125,6 +137,15 @@ public class Rule {
 
     public String getConsequence() { return consequence; }
     public void setConsequence(String consequence) { this.consequence = consequence; }
+
+    public String getCondition() { return condition; }
+    public void setCondition(String condition) { this.condition = condition; }
+
+    public String getAction() { return action; }
+    public void setAction(String action) { this.action = action; }
+
+    public String getPriority() { return priority; }
+    public void setPriority(String priority) { this.priority = priority; }
 
     public String getDeviceId() { return deviceId; }
     public void setDeviceId(String deviceId) { this.deviceId = deviceId; }

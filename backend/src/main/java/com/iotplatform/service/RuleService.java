@@ -9,6 +9,9 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.iotplatform.controller.RuleController;
 import com.iotplatform.dto.TelemetryDataRequest;
@@ -23,6 +26,8 @@ import com.iotplatform.repository.RuleRepository;
 
 @Service
 public class RuleService {
+
+    private static final Logger log = LoggerFactory.getLogger(RuleService.class);
 
     @Autowired
     private RuleRepository ruleRepository;
@@ -298,20 +303,29 @@ public class RuleService {
         return ruleRepository.findByDeviceId(deviceId);
     }
     
+    @Transactional
     public void createRulesFromPDF(List<RulesGenerationResponse.Rule> rules, String deviceId, String organizationId, String currentUserId) {
-        System.out.println("Creating rules from PDF for device: " + deviceId);
+        log.info("🔧 Creating rules from PDF for device: {} in organization: {}", deviceId, organizationId);
+        log.info("📋 Total rules to process: {}", rules != null ? rules.size() : 0);
+        
+        if (rules == null || rules.isEmpty()) {
+            log.warn("⚠️ No rules provided for device: {}", deviceId);
+            return;
+        }
         
         int processedCount = 0;
         int skippedCount = 0;
+        int errorCount = 0;
         
         for (RulesGenerationResponse.Rule ruleData : rules) {
             try {
                 String ruleName = ruleData.getName();
+                log.debug("🔄 Processing rule: {} for device: {}", ruleName, deviceId);
                 
                 // Check if rule already exists for this device (deviceId + name)
                 Optional<Rule> existingRule = ruleRepository.findByDeviceIdAndNameAndOrganizationId(deviceId, ruleName, organizationId);
                 if (existingRule.isPresent()) {
-                    System.out.println("⚠️ Rule '" + ruleName + "' already exists for device: " + deviceId + ", skipping");
+                    log.warn("⚠️ Rule '{}' already exists for device: {}, skipping", ruleName, deviceId);
                     skippedCount++;
                     continue;
                 }
@@ -324,6 +338,9 @@ public class RuleService {
                 rule.setMetricValue(ruleData.getMetricValue());
                 rule.setThreshold(ruleData.getThreshold());
                 rule.setConsequence(ruleData.getConsequence());
+                rule.setCondition(ruleData.getCondition());
+                rule.setAction(ruleData.getAction());
+                rule.setPriority(ruleData.getPriority());
                 rule.setActive(true);
                 rule.setDeviceId(deviceId);
                 rule.setOrganizationId(organizationId);
@@ -331,16 +348,33 @@ public class RuleService {
                 rule.setCreatedAt(LocalDateTime.now());
                 rule.setUpdatedAt(LocalDateTime.now());
                 
-                ruleRepository.save(rule);
-                processedCount++;
+                log.debug("💾 Saving rule to database: {} for device: {}", ruleName, deviceId);
+                Rule savedRule = ruleRepository.save(rule);
                 
-                System.out.println("✅ Created rule: " + ruleName + " for device: " + deviceId);
+                if (savedRule != null && savedRule.getId() != null) {
+                    processedCount++;
+                    log.info("✅ Successfully created rule: {} (ID: {}) for device: {}", ruleName, savedRule.getId(), deviceId);
+                } else {
+                    log.error("❌ Rule save returned null for rule: {} device: {}", ruleName, deviceId);
+                    errorCount++;
+                }
                 
             } catch (Exception e) {
-                System.out.println("❌ Failed to create rule: " + ruleData.getName() + " for device: " + deviceId + " - " + e.getMessage());
+                log.error("❌ Failed to create rule: {} for device: {} - Error: {}", 
+                         ruleData.getName(), deviceId, e.getMessage(), e);
+                errorCount++;
             }
         }
         
-        System.out.println("Rules processing completed for device: " + deviceId + " - Processed: " + processedCount + ", Skipped: " + skippedCount);
+        log.info("📊 Rules processing completed for device: {} - Processed: {}, Skipped: {}, Errors: {}", 
+                deviceId, processedCount, skippedCount, errorCount);
+        
+        // Verify rules were actually saved
+        List<Rule> savedRules = ruleRepository.findByDeviceId(deviceId);
+        log.info("🔍 Verification: Found {} rules in database for device: {}", savedRules.size(), deviceId);
+        
+        if (processedCount > 0 && savedRules.size() == 0) {
+            log.error("🚨 CRITICAL: Rules were processed but none found in database for device: {}", deviceId);
+        }
     }
 }
