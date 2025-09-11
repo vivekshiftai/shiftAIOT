@@ -2,6 +2,7 @@ import { notificationAPI } from './api';
 import { Notification, NotificationEvent } from '../types';
 import { validateNotifications, sanitizeNotificationForDisplay } from '../utils/notificationValidation';
 import { notificationCacheService } from './notificationCacheService';
+import { logInfo, logWarn, logError } from '../utils/logger';
 
 class NotificationService {
   private static instance: NotificationService;

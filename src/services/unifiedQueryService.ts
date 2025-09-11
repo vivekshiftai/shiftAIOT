@@ -1,4 +1,5 @@
 import { api } from './api';
+import { logInfo, logError } from '../utils/logger';
 
 export interface UnifiedQueryRequest {
   query: string;

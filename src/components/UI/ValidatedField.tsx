@@ -200,8 +200,8 @@ export const ValidatedField: React.FC<ValidatedFieldProps> = ({
       
       {/* Loading indicator */}
       {isValidating && (
-        <div className="flex items-center gap-1 text-sm text-blue-600">
-          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="flex items-center gap-1 text-sm text-pink-600">
+          <div className="w-4 h-4 border-2 border-pink-600 border-t-transparent rounded-full animate-spin"></div>
           <span>Validating...</span>
         </div>
       )}

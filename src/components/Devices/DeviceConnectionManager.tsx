@@ -130,7 +130,7 @@ export const DeviceConnectionManager: React.FC<DeviceConnectionManagerProps> = (
       case 'DISCONNECTED':
         return <Clock className="w-4 h-4 text-slate-400" />;
       case 'CONNECTING':
-        return <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />;
+        return <div className="w-4 h-4 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />;
       case 'ERROR':
         return <AlertTriangle className="w-4 h-4 text-red-500" />;
       default:
@@ -145,7 +145,7 @@ export const DeviceConnectionManager: React.FC<DeviceConnectionManagerProps> = (
       case 'DISCONNECTED':
         return 'text-slate-600 bg-slate-50';
       case 'CONNECTING':
-        return 'text-blue-600 bg-blue-50';
+        return 'text-pink-600 bg-pink-50';
       case 'ERROR':
         return 'text-red-600 bg-red-50';
       default:
@@ -158,7 +158,7 @@ export const DeviceConnectionManager: React.FC<DeviceConnectionManagerProps> = (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
         <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6">
           <div className="flex items-center justify-center py-8">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         </div>
       </div>

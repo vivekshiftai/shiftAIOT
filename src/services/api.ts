@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getApiConfig } from '../config/api';
 import { tokenService } from './tokenService';
-import { logWarn } from '../utils/logger';
+import { logInfo, logWarn, logError } from '../utils/logger';
 import { NotificationTemplateRequest } from '../types';
 
 // Custom error class for authentication errors

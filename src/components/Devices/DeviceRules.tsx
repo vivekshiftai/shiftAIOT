@@ -162,7 +162,7 @@ export const DeviceRules: React.FC<DeviceRulesProps> = ({ device, onClose }) => 
           <div className="space-y-4">
             {loading ? (
               <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600 mx-auto"></div>
                 <p className="text-slate-600 mt-2">Loading rules...</p>
               </div>
             ) : deviceRules.length === 0 ? (

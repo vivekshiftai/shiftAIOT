@@ -4,17 +4,13 @@ import {
   Search, 
   Filter, 
   Eye,
-  Trash2,
-  RotateCcw,
-  Grid3x3,
-  List
+  Trash2
 } from 'lucide-react';
 import { Device } from '../../types';
 import { DeviceCard } from './DeviceCard';
 import { EnhancedDeviceOnboardingForm } from './EnhancedDeviceOnboardingForm';
 import { DeviceDetails } from './DeviceDetails';
 // import { pdfProcessingService } from '../../services/pdfprocess';
-import { stompWebSocketService } from '../../services/stompWebSocketService';
 import { logError } from '../../utils/logger';
 
 interface DeviceListProps {
@@ -167,10 +163,11 @@ export const DeviceList: React.FC<DeviceListProps> = ({
   };
 
 
-  // Monitor WebSocket connection status
+  // Monitor polling service connection status
   useEffect(() => {
     const checkConnection = () => {
-      setWsConnected(stompWebSocketService.isWebSocketConnected());
+      // Polling service is always "connected" when running
+      setWsConnected(true);
     };
 
     // Check initial connection status
@@ -223,7 +220,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
             disabled={loading}
             className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
           >
-            <RotateCcw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+            <div className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`}>⟲</div>
           </button>
           
           <button
@@ -244,7 +241,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
               }`}
               title="Grid View"
             >
-              <Grid3x3 className="w-4 h-4" />
+              <div className="w-4 h-4">⊞</div>
             </button>
             <button
               onClick={() => setViewMode('list')}
@@ -255,7 +252,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
               }`}
               title="List View"
             >
-              <List className="w-4 h-4" />
+              <div className="w-4 h-4">☰</div>
             </button>
           </div>
           
@@ -308,7 +305,7 @@ export const DeviceList: React.FC<DeviceListProps> = ({
       {/* Device Grid/List */}
       {loading ? (
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-500 mx-auto"></div>
           <p className="text-slate-600 mt-4">Loading assets...</p>
         </div>
       ) : allDevices.length === 0 ? (

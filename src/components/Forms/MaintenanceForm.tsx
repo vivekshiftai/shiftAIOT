@@ -148,7 +148,8 @@ export const MaintenanceForm: React.FC<MaintenanceFormProps> = ({
       const maintenanceData = {
         ...formData,
         deviceId: deviceId || maintenance?.deviceId,
-        organizationId: organizationId
+        organizationId: organizationId,
+        updatedAt: new Date().toISOString()
       };
 
       logInfo('MaintenanceForm', 'Submitting maintenance data', maintenanceData);
@@ -236,8 +237,8 @@ export const MaintenanceForm: React.FC<MaintenanceFormProps> = ({
                 Type
               </label>
               <select
-                value={formData.type}
-                onChange={(e) => handleInputChange('type', e.target.value)}
+                value={formData.maintenanceType}
+                onChange={(e) => handleInputChange('maintenanceType', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="preventive">Preventive</option>
@@ -274,14 +275,14 @@ export const MaintenanceForm: React.FC<MaintenanceFormProps> = ({
               </label>
               <input
                 type="datetime-local"
-                value={formData.scheduledDate}
-                onChange={(e) => handleInputChange('scheduledDate', e.target.value)}
+                value={formData.nextMaintenance}
+                onChange={(e) => handleInputChange('nextMaintenance', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  fieldErrors.scheduledDate ? 'border-red-300' : 'border-gray-300'
+                  fieldErrors.nextMaintenance ? 'border-red-300' : 'border-gray-300'
                 }`}
               />
-              {fieldErrors.scheduledDate && (
-                <p className="text-red-600 text-sm mt-1">{fieldErrors.scheduledDate}</p>
+              {fieldErrors.nextMaintenance && (
+                <p className="text-red-600 text-sm mt-1">{fieldErrors.nextMaintenance}</p>
               )}
             </div>
 
@@ -366,8 +367,8 @@ export const MaintenanceForm: React.FC<MaintenanceFormProps> = ({
               Notes
             </label>
             <textarea
-              value={formData.notes}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
+              value={formData.safetyNotes}
+              onChange={(e) => handleInputChange('safetyNotes', e.target.value)}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Additional notes or instructions"

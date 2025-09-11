@@ -3,9 +3,9 @@ import { Cpu, Bell, BarChart3, Settings, User, AlertTriangle } from 'lucide-reac
 
 // Main Application Loading Screen
 export const AppLoadingScreen: React.FC = () => (
-  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-pink-50 to-purple-50 flex items-center justify-center">
     <div className="text-center">
-      <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+      <div className="w-16 h-16 border-4 border-pink-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
       <h2 className="text-2xl font-bold text-slate-800 mb-2">Loading ActiveOps Hub</h2>
       <p className="text-slate-600">Initializing your command center...</p>
     </div>
@@ -14,9 +14,9 @@ export const AppLoadingScreen: React.FC = () => (
 
 // Tab/Section Loading Screen
 export const TabLoadingScreen: React.FC = () => (
-  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+  <div className="min-h-screen bg-gradient-to-br from-slate-50 via-pink-50 to-purple-50 flex items-center justify-center">
     <div className="text-center">
-      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <div className="w-12 h-12 border-4 border-pink-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
       <p className="text-slate-600 text-lg font-medium">Loading section...</p>
     </div>
   </div>
@@ -25,7 +25,7 @@ export const TabLoadingScreen: React.FC = () => (
 // Simple Loading Spinner
 export const LoadingSpinner: React.FC<{ size?: 'sm' | 'md' | 'lg'; color?: string }> = ({ 
   size = 'md', 
-  color = 'text-blue-600' 
+  color = 'text-pink-600' 
 }) => {
   const sizeClasses = {
     sm: 'w-4 h-4',
@@ -146,7 +146,7 @@ export const ModalLoadingScreen: React.FC = () => (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
     <div className="bg-white rounded-2xl p-8 shadow-2xl max-w-md w-full mx-4">
       <div className="text-center">
-        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <div className="w-12 h-12 border-4 border-pink-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
         <h3 className="text-lg font-semibold text-slate-800 mb-2">Processing...</h3>
         <p className="text-slate-600">Please wait while we process your request.</p>
       </div>

@@ -48,7 +48,7 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
           <div className={`w-6 h-6 ${step.color}`}>
             {step.icon}
           </div>
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-pink-500 rounded-full animate-pulse"></div>
         </div>
       );
     } else {
@@ -62,14 +62,14 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+        <div className="bg-gradient-to-r from-pink-600 to-purple-600 text-white p-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
               <Cpu className="w-6 h-6" />
             </div>
             <div>
               <h2 className="text-2xl font-bold">AI Device Onboarding</h2>
-              <p className="text-blue-100">Setting up {deviceName} with intelligent AI capabilities</p>
+              <p className="text-pink-100">Setting up {deviceName} with intelligent AI capabilities</p>
             </div>
           </div>
         </div>
@@ -100,14 +100,14 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
                   {/* Current Step Details */}
                   {isCurrent && (
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-blue-600">
+                      <div className="flex items-center gap-2 text-sm text-pink-600">
                         <Clock className="w-4 h-4 animate-pulse" />
                         <span>Processing...</span>
                       </div>
                       <div className="space-y-1">
                         {step.details.map((detail, detailIndex) => (
                           <div key={detailIndex} className="flex items-center gap-2 text-xs text-gray-600">
-                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></div>
+                            <div className="w-1.5 h-1.5 bg-pink-400 rounded-full animate-pulse"></div>
                             <span>{detail}</span>
                           </div>
                         ))}
@@ -147,7 +147,7 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out"
+                  className="bg-gradient-to-r from-pink-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out"
                   style={{ width: `${progress}%` }}
                 />
               </div>

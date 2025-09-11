@@ -42,7 +42,7 @@ import { deviceAPI, knowledgeAPI } from '../services/api';
 import { pdfAPI } from '../services/api';
 import { pdfProcessingService, PDFListResponse } from '../services/pdfprocess';
 import { DeviceStatsService, DeviceStats } from '../services/deviceStatsService';
-import { logInfo, logError } from '../utils/logger';
+import { logInfo, logError, logWarn } from '../utils/logger';
 import { formatKnowledgeBaseResponse, getUserDisplayName } from '../utils/responseTemplates';
 import { validateDeviceUpdate, sanitizeDeviceData, getChangedFields } from '../utils/deviceValidation';
 import { TabLoadingScreen, DataLoadingState, LoadingSpinner } from '../components/Loading/LoadingComponents';

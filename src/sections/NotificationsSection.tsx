@@ -40,7 +40,7 @@ export const NotificationsSection: React.FC = () => {
 
   const handleNotificationClick = (notification: Notification) => {
     // Handle notification click - could navigate to device details
-    logInfo('NotificationsSection', 'Notification clicked', { notificationId: notification.id, type: notification.type });
+    logInfo('NotificationsSection', 'Notification clicked', { notificationId: notification.id, category: notification.category });
   };
 
 

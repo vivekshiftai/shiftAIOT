@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle, Shield } from 'lucide-react';
 import Button from '../UI/Button';
 import { LoadingSpinner } from '../Loading/LoadingComponents';
-import { logInfo, logError } from '../../utils/logger';
+import { logInfo, logError, logWarn } from '../../utils/logger';
 import { DeviceSafetyPrecaution } from '../../types';
 
 interface SafetyFormProps {
