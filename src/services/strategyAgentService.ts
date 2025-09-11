@@ -715,6 +715,77 @@ export class StrategyAgentService {
   }
 
   /**
+   * Check regeneration status for all customers
+   */
+  static async checkRegenerationStatus(): Promise<{
+    success: boolean;
+    message: string;
+    is_completed: boolean;
+    progress?: number;
+    timestamp: number;
+  }> {
+    try {
+      logInfo('StrategyAgent', 'Checking regeneration status from backend');
+      
+      const response = await api.get('/api/strategy-agent/regeneration-status');
+      
+      if (response.status !== 200) {
+        throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = response.data;
+      
+      // Validate response data structure
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response data received from backend');
+      }
+      
+      logInfo('StrategyAgent', 'Regeneration status checked', { 
+        success: data.success,
+        is_completed: data.is_completed,
+        progress: data.progress
+      });
+      
+      return {
+        success: data.success || false,
+        message: data.message || 'Status check completed',
+        is_completed: data.is_completed || false,
+        progress: data.progress,
+        timestamp: data.timestamp || Date.now()
+      };
+      
+    } catch (error: any) {
+      logError('StrategyAgent', 'Failed to check regeneration status', error);
+      
+      if (error.response) {
+        logError('StrategyAgent', 'Regeneration status check response error', error, { status: error.response.status, data: error.response.data });
+        return {
+          success: false,
+          message: `Backend error (${error.response.status}): ${error.response.data?.error || error.response.data?.message || 'Unknown error'}`,
+          is_completed: false,
+          timestamp: Date.now()
+        };
+      } else if (error.request) {
+        logError('StrategyAgent', 'No response received for regeneration status check', error, { request: error.request });
+        return {
+          success: false,
+          message: 'No response from backend - check if backend is running',
+          is_completed: false,
+          timestamp: Date.now()
+        };
+      } else {
+        logError('StrategyAgent', 'Regeneration status check request setup error', error, { message: error.message });
+        return {
+          success: false,
+          message: `Request failed: ${error.message}`,
+          is_completed: false,
+          timestamp: Date.now()
+        };
+      }
+    }
+  }
+
+  /**
    * Regenerate recommendations for all customers
    */
   static async regenerateAllRecommendations(forceRegenerate: boolean = true): Promise<{

@@ -6,7 +6,6 @@ import {
   X,
   Search,
   Brain,
-  Bot,
   ArrowLeft
 } from 'lucide-react';
 import { logError, logInfo } from '../utils/logger';
@@ -27,7 +26,6 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
   const [availableCustomers, setAvailableCustomers] = useState<Array<{ id: string; name: string; type?: string; country?: string; region?: string; totalStores?: number }>>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'accepted' | 'rejected' | 'purchased'>('accepted');
   const [isAllCustomers, setIsAllCustomers] = useState<boolean>(false);
   const [regenerateMessage] = useState<string>('');
   const [regeneratingCustomers, setRegeneratingCustomers] = useState<Set<string>>(new Set());
@@ -154,7 +152,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
   };
 
 
-  // Handle regeneration for selected customer or all customers
+  // Handle regeneration for all customers (Refresh Intelligence)
   const handleRegenerateData = async () => {
     setIsRegeneratingData(true);
     setRegenerationMessage('');
@@ -162,55 +160,90 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
     setError('');
 
     try {
-      if (selectedCustomer === 'all') {
-        logInfo('Process', 'Starting regeneration for all customers');
-        setRegenerationMessage('🔄 Regeneration process started for all customers... This will take some time. Please wait.');
+      logInfo('Process', 'Starting regeneration for all customers via Refresh Intelligence');
+      setRegenerationMessage('🔄 Sales Intelligence refresh process started for all customers... This will take some time. Please wait.');
+      
+      const result = await StrategyAgentService.regenerateAllRecommendations(true);
+      
+      if (result.success) {
+        setRegenerationMessage('🔄 Sales Intelligence refresh process started successfully! The system is now refreshing recommendations for all customers. This process may take several minutes to complete.');
+        logInfo('Process', 'All customers regeneration triggered successfully via Refresh Intelligence', result);
         
-        const result = await StrategyAgentService.regenerateAllRecommendations(true);
+        // Clear existing recommendations since they're being regenerated
+        setRecommendations(null);
+        setAllRecommendations(null);
         
-        if (result.success) {
-          setRegenerationMessage('✅ Regeneration process started successfully! The system is now regenerating recommendations for all customers. This process may take several minutes to complete.');
-          logInfo('Process', 'All customers regeneration triggered successfully', result);
-          
-          // Clear existing recommendations since they're being regenerated
-          setAllRecommendations(null);
-        } else {
-          setError(result.message || 'Failed to start regeneration process for all customers');
-          setRegenerationMessage('');
-        }
+        // Start polling for completion
+        await pollForCompletion();
+        
       } else {
-        const customerId = selectedCustomer;
-        logInfo('Process', 'Starting regeneration for customer', { customerId });
-        setRegenerationMessage('🔄 Regeneration process started... This will take some time. Please wait.');
-        
-        const result = await StrategyAgentService.regenerateCustomerRecommendations(customerId, true);
-        
-        if (result.success) {
-          setRegenerationMessage('✅ Regeneration process started successfully! The system is now regenerating recommendations for this customer. This process may take several minutes to complete.');
-          logInfo('Process', 'Customer regeneration triggered successfully', result);
-          
-          // Clear existing recommendations since they're being regenerated
-          setRecommendations(null);
-          if (allRecommendations) {
-            setAllRecommendations(prev => prev?.filter(rec => rec.customer_id !== customerId) || null);
-          }
-        } else {
-          setError(result.message || `Failed to start regeneration process for customer ${customerId}`);
-          setRegenerationMessage('');
-        }
+        setError(result.message || 'Failed to start Sales Intelligence refresh process');
+        setRegenerationMessage('');
+        setIsRegeneratingData(false);
       }
     } catch (error) {
-      logError('Process', 'Failed to regenerate recommendations', error instanceof Error ? error : new Error('Unknown error'), { selectedCustomer });
-      setError(`Failed to regenerate recommendations. Please try again.`);
+      logError('Process', 'Failed to refresh Sales Intelligence', error instanceof Error ? error : new Error('Unknown error'));
+      setError(`Failed to refresh Sales Intelligence. Please try again.`);
       setRegenerationMessage('');
-    } finally {
       setIsRegeneratingData(false);
-      // Show success message after a delay
-      setTimeout(() => {
-        setShowSuccessMessage(true);
-        setRegenerationMessage('🎉 Regeneration completed! You can now access the new report.');
-      }, 3000);
     }
+  };
+
+  // Poll for regeneration completion
+  const pollForCompletion = async () => {
+    const maxAttempts = 60; // Poll for up to 10 minutes (60 * 10 seconds)
+    const pollInterval = 10000; // Poll every 10 seconds
+    let attempts = 0;
+
+    const poll = async (): Promise<void> => {
+      if (attempts >= maxAttempts) {
+        setError('Regeneration process is taking longer than expected. Please check back later or contact support.');
+        setRegenerationMessage('');
+        setIsRegeneratingData(false);
+        return;
+      }
+
+      try {
+        const statusResult = await StrategyAgentService.checkRegenerationStatus();
+        
+        if (statusResult.success && statusResult.is_completed) {
+          // Regeneration completed successfully
+          setShowSuccessMessage(true);
+          setRegenerationMessage('🎉 Sales Intelligence refresh completed successfully! You can now access the updated recommendations.');
+          setIsRegeneratingData(false);
+          logInfo('Process', 'Sales Intelligence refresh completed successfully');
+          return;
+        } else if (statusResult.success && !statusResult.is_completed) {
+          // Still in progress
+          attempts++;
+          const progressText = statusResult.progress ? ` (${statusResult.progress}% complete)` : '';
+          setRegenerationMessage(`🔄 Sales Intelligence is still refreshing... Please wait${progressText}`);
+          
+          // Continue polling
+          setTimeout(poll, pollInterval);
+        } else {
+          // Error occurred
+          setError(statusResult.message || 'Failed to check regeneration status');
+          setRegenerationMessage('');
+          setIsRegeneratingData(false);
+        }
+      } catch (error) {
+        logError('Process', 'Failed to check regeneration status', error instanceof Error ? error : new Error('Unknown error'));
+        attempts++;
+        
+        if (attempts >= maxAttempts) {
+          setError('Failed to check regeneration status. Please try again later.');
+          setRegenerationMessage('');
+          setIsRegeneratingData(false);
+        } else {
+          // Continue polling even if status check fails
+          setTimeout(poll, pollInterval);
+        }
+      }
+    };
+
+    // Start polling
+    setTimeout(poll, pollInterval);
   };
 
   // Handle getting sales report - first generate the report, then show it
@@ -305,6 +338,25 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Refresh Intelligence Button */}
+            <button
+              onClick={handleRegenerateData}
+              disabled={isRegeneratingData}
+              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
+            >
+              {isRegeneratingData ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <Brain className="w-4 h-4" />
+                  Refresh Intelligence
+                </>
+              )}
+            </button>
+            
             {/* Download Button */}
             {(recommendations || allRecommendations) && (
               <button
@@ -425,31 +477,12 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                   </div>
               </div>
               
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Regenerate Button */}
-                  <button
-                    onClick={handleRegenerateData}
-                    disabled={!selectedCustomer || isRegeneratingData}
-                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
-                  >
-                    {isRegeneratingData ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Regenerating...
-                      </>
-                    ) : (
-                      <>
-                        <Brain className="w-4 h-4" />
-                        Regenerate Data
-                      </>
-                    )}
-                  </button>
-
-                  {/* Get Sales Report Button */}
+                {/* Get Sales Report Button */}
+                <div className="flex justify-center">
                   <button
                     onClick={handleGetSalesReport}
                     disabled={!selectedCustomer || isLoading}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
+                    className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
                   >
                     {isLoading ? (
                       <>
@@ -468,7 +501,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
             </div>
           )}
 
-          {/* Regeneration Status Message */}
+          {/* Sales Intelligence Refresh Status */}
           {regenerationMessage && (
             <div className={`rounded-lg p-4 border ${
               showSuccessMessage 
@@ -484,7 +517,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                 <p className={`font-medium text-sm ${
                   showSuccessMessage ? 'text-green-800' : 'text-blue-800'
                 }`}>
-                  {showSuccessMessage ? 'Success!' : 'Regeneration Status'}
+                  {showSuccessMessage ? 'Success!' : 'Sales Intelligence Status'}
                 </p>
               </div>
               <p className={`text-sm mt-1 ${
@@ -492,6 +525,13 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
               }`}>
                 {regenerationMessage}
               </p>
+              {!showSuccessMessage && (
+                <div className="mt-3 bg-blue-100 rounded-lg p-3 border-l-4 border-blue-400">
+                  <p className="text-sm text-blue-800 font-medium">
+                    🔄 Your sales intelligence is refreshing, it will take time please wait...
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -499,64 +539,13 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
           {recommendations && (
             <CustomerRecommendationsDisplay
               customerRec={recommendations}
-              showRegenerateButton={false}
+              onRegenerate={regenerateCustomerRecommendations}
+              isRegenerating={regeneratingCustomers.has(selectedCustomer)}
+              regenerateMessage={customerRegenerateMessages[selectedCustomer]}
+              showRegenerateButton={true}
             />
           )}
 
-          {/* Summary Cards */}
-          {recommendations && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Cross-sell Accepted</p>
-                    <p className="text-2xl font-bold text-gray-900">{recommendations?.Summary?.TotalCrossSell || 0}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-red-100 rounded-lg">
-                    <X className="w-5 h-5 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Rejected Recommendations</p>
-                    <p className="text-2xl font-bold text-gray-900">{recommendations?.Summary?.TotalRejected || 0}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary-100 rounded-lg">
-                    <Bot className="w-5 h-5 text-primary-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Already Purchased</p>
-                    <p className="text-2xl font-bold text-gray-900">{recommendations?.Summary?.TotalAlreadyPurchased || 0}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gray-100 rounded-lg">
-                    <Brain className="w-5 h-5 text-gray-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Total Recommendations</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {recommendations?.Summary?.TotalRecommendations || 0}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Error Display */}
           {error && (
@@ -585,373 +574,6 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
             </div>
           )}
 
-          {/* Sales Intelligence Dashboard Layout */}
-          {recommendations && (
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              
-              {/* Left Column - Customer Information and Classification (25% width) */}
-              <div className="lg:col-span-1 space-y-4">
-                {/* Combined Customer Information and Classification */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-primary-100 rounded-lg">
-                      <User className="w-5 h-5 text-primary-600" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900">Customer Information</h3>
-                  </div>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Name</p>
-                      <p className="text-base font-semibold text-gray-900">{recommendations.CustomerInfo?.CustomerName || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Customer ID</p>
-                      <p className="text-base font-semibold text-gray-900">{recommendations.CustomerInfo?.CustomerID || 'N/A'}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Individual Customer Regenerate Button */}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <button
-                      onClick={() => regenerateCustomerRecommendations(selectedCustomer)}
-                      disabled={regeneratingCustomers.has(selectedCustomer)}
-                      className="w-full px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-orange-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm font-medium shadow-sm"
-                    >
-                      {regeneratingCustomers.has(selectedCustomer) ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          Regenerating...
-                        </>
-                      ) : (
-                        <>
-                          <Brain className="w-4 h-4" />
-                          Regenerate Recommendations
-                        </>
-                      )}
-                    </button>
-                    
-                    {/* Customer Regeneration Status Message */}
-                    {customerRegenerateMessages[selectedCustomer] && (
-                      <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <div className="flex items-center gap-2">
-                          <Brain className="w-4 h-4 text-blue-600" />
-                          <p className="text-blue-800 font-medium text-sm">Regeneration Status</p>
-                        </div>
-                        <p className="text-blue-700 text-sm mt-1">{customerRegenerateMessages[selectedCustomer]}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Classification Card */}
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <Brain className="w-5 h-5 text-green-600" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900">Classification</h3>
-                  </div>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Type</p>
-                      <p className="text-base font-semibold text-gray-900">{recommendations.CustomerClassification?.CustomerType || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Stores</p>
-                      <p className="text-base font-semibold text-gray-900">{recommendations.CustomerClassification?.NumberOfStores || 0}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Total Quantity Sold</p>
-                      <p className="text-base font-semibold text-gray-900">{(recommendations.CustomerClassification?.TotalQuantitySold || 0).toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column - Product Recommendations (75% width) */}
-              <div className="lg:col-span-3">
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                  {/* Search and Filter Bar */}
-                  <div className="p-4 border-b border-gray-200">
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1 relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                          <Search className="h-4 w-4 text-gray-400" />
-                        </div>
-                        <input
-                          type="text"
-                          placeholder="Search products or category..."
-                          className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                        />
-                      </div>
-                      <button className="px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-sm">
-                        <Search className="w-4 h-4" />
-                        Filters
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Recommendation Tabs */}
-                  <div className="border-b border-gray-200">
-                    <nav className="flex space-x-8 px-4">
-                      <button
-                        onClick={() => setActiveTab('accepted')}
-                        className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-                          activeTab === 'accepted'
-                            ? 'border-primary-500 text-primary-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        Top Matches ({recommendations?.Summary?.TotalCrossSell || 0})
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('rejected')}
-                        className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-                          activeTab === 'rejected'
-                            ? 'border-primary-500 text-primary-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        Needs Review ({recommendations?.Summary?.TotalRejected || 0})
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('purchased')}
-                        className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-                          activeTab === 'purchased'
-                            ? 'border-primary-500 text-primary-600'
-                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                        }`}
-                      >
-                        Already Purchased ({recommendations?.Summary?.TotalAlreadyPurchased || 0})
-                      </button>
-                    </nav>
-                  </div>
-
-                  {/* Recommendation Content */}
-                  <div className="p-4">
-                    {activeTab === 'accepted' && (
-                      <div className="space-y-6">
-                        {recommendations.AcceptedRecommendations && recommendations.AcceptedRecommendations.length > 0 ? (
-                          recommendations.AcceptedRecommendations.map((rec, index) => (
-                            <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                              <div className="mb-4">
-                                <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                                  {rec.ProductName} (ID: {rec.CustomerCatalogueItemID})
-                                </h4>
-                                <p className="text-sm text-gray-600 mb-2">
-                                  Quantity Required: {rec.QuantityRequired} | 
-                                  Ingredients: {rec.Ingredients?.join(', ')}
-                                </p>
-                                <p className="text-sm font-medium text-green-700">
-                                  Presents {rec.CrossSell?.length || 0} cross-sell opportunities:
-                                </p>
-                              </div>
-                              
-                              {rec.CrossSell && rec.CrossSell.length > 0 && (
-                                <div className="space-y-4">
-                                  {rec.CrossSell.map((crossSell, csIndex) => (
-                                    <div key={csIndex} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                      <div className="flex items-start justify-between mb-3">
-                                        <div className="flex-1">
-                                          <h5 className="font-semibold text-gray-900 mb-2 text-sm">
-                                            {crossSell.SuggestedProduct}
-                                          </h5>
-                                          <p className="text-xs text-gray-500 mb-2">ID: {crossSell.ProductID}</p>
-                                        </div>
-                                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                                          {crossSell.Status}
-                                        </span>
-                                      </div>
-                                      
-                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                                        <div className="flex flex-col">
-                                          <span className="text-xs text-gray-500">Category</span>
-                                          <span className="text-sm font-medium text-gray-900">{crossSell.Category}</span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                          <span className="text-xs text-gray-500">Price</span>
-                                          <span className="text-sm font-medium text-gray-900">${crossSell.Price}</span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                          <span className="text-xs text-gray-500">Similarity</span>
-                                          <span className="text-sm font-medium text-gray-900">{Math.round((crossSell.Similarity || 0) * 100)}%</span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                          <span className="text-xs text-gray-500">Ingredient</span>
-                                          <span className="text-sm font-medium text-gray-900">{crossSell.Ingredient}</span>
-                                        </div>
-                                      </div>
-                                      
-                                      <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-green-400">
-                                        <p className="text-xs text-gray-700">
-                                          <strong className="text-green-700">AI Reasoning:</strong> {crossSell.AIReasoning}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-8 bg-gray-50 rounded-lg">
-                            <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                            <p className="text-gray-600">No accepted cross-sell opportunities found.</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {activeTab === 'rejected' && (
-                      <div className="space-y-6">
-                        {recommendations.RejectedRecommendations && recommendations.RejectedRecommendations.length > 0 ? (
-                          recommendations.RejectedRecommendations.map((rec, index) => (
-                            <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                              <div className="mb-4">
-                                <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                                  {rec.ProductName} (ID: {rec.CustomerCatalogueItemID})
-                                </h4>
-                                <p className="text-sm text-gray-600 mb-2">
-                                  Quantity Required: {rec.QuantityRequired} | 
-                                  Ingredients: {rec.Ingredients?.join(', ')}
-                                </p>
-                                <p className="text-sm font-medium text-red-700">
-                                  Had {rec.RejectedCrossSell?.length || 0} potential cross-sell opportunities that were rejected:
-                                </p>
-                              </div>
-                              
-                              {rec.RejectedCrossSell && rec.RejectedCrossSell.length > 0 && (
-                                <div className="space-y-4">
-                                  {rec.RejectedCrossSell.map((crossSell, csIndex) => (
-                                    <div key={csIndex} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                      <div className="flex items-start justify-between mb-3">
-                                        <div className="flex-1">
-                                          <h5 className="font-semibold text-gray-900 mb-2 text-sm">
-                                            {crossSell.SuggestedProduct}
-                                          </h5>
-                                          <p className="text-xs text-gray-500 mb-2">ID: {crossSell.ProductID}</p>
-                                        </div>
-                                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
-                                          {crossSell.Status}
-                                        </span>
-                                      </div>
-                                      
-                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                                        <div className="flex flex-col">
-                                          <span className="text-xs text-gray-500">Category</span>
-                                          <span className="text-sm font-medium text-gray-900">{crossSell.Category}</span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                          <span className="text-xs text-gray-500">Price</span>
-                                          <span className="text-sm font-medium text-gray-900">${crossSell.Price}</span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                          <span className="text-xs text-gray-500">Similarity</span>
-                                          <span className="text-sm font-medium text-gray-900">{Math.round((crossSell.Similarity || 0) * 100)}%</span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                          <span className="text-xs text-gray-500">Ingredient</span>
-                                          <span className="text-sm font-medium text-gray-900">{crossSell.Ingredient}</span>
-                                        </div>
-                                      </div>
-                                      
-                                      <div className="bg-red-50 rounded-lg p-3 border-l-4 border-red-400">
-                                        <p className="text-xs text-red-700">
-                                          <strong className="text-red-800">Rejection Reason:</strong> {crossSell.AIReasoning}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-8 bg-gray-50 rounded-lg">
-                            <X className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                            <p className="text-gray-600">No rejected cross-sell opportunities found.</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {activeTab === 'purchased' && (
-                      <div className="space-y-6">
-                        {recommendations.AlreadyPurchasedRecommendations && recommendations.AlreadyPurchasedRecommendations.length > 0 ? (
-                          recommendations.AlreadyPurchasedRecommendations.map((rec, index) => (
-                            <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                              <div className="mb-4">
-                                <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                                  {rec.ProductName} (ID: {rec.CustomerCatalogueItemID})
-                                </h4>
-                                <p className="text-sm text-gray-600 mb-2">
-                                  Quantity Required: {rec.QuantityRequired} | 
-                                  Ingredients: {rec.Ingredients?.join(', ')}
-                                </p>
-                                <p className="text-sm font-medium text-primary-700">
-                                  Has {rec.AlreadyPurchasedCrossSell?.length || 0} cross-sell products already purchased:
-                                </p>
-                              </div>
-                              
-                              {rec.AlreadyPurchasedCrossSell && rec.AlreadyPurchasedCrossSell.length > 0 && (
-                                <div className="space-y-4">
-                                  {rec.AlreadyPurchasedCrossSell.map((crossSell, csIndex) => (
-                                    <div key={csIndex} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                      <div className="flex items-start justify-between mb-3">
-                                        <div className="flex-1">
-                                          <h5 className="font-semibold text-gray-900 mb-2 text-sm">
-                                            {crossSell.SuggestedProduct}
-                                          </h5>
-                                          <p className="text-xs text-gray-500 mb-2">ID: {crossSell.ProductID}</p>
-                                        </div>
-                                        <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs font-medium rounded-full">
-                                          {crossSell.Status}
-                                        </span>
-                                      </div>
-                                      
-                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                                        <div className="flex flex-col">
-                                          <span className="text-xs text-gray-500">Category</span>
-                                          <span className="text-sm font-medium text-gray-900">{crossSell.Category}</span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                          <span className="text-xs text-gray-500">Price</span>
-                                          <span className="text-sm font-medium text-gray-900">${crossSell.Price}</span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                          <span className="text-xs text-gray-500">Similarity</span>
-                                          <span className="text-sm font-medium text-gray-900">{Math.round((crossSell.Similarity || 0) * 100)}%</span>
-                                        </div>
-                                        <div className="flex flex-col">
-                                          <span className="text-xs text-gray-500">Ingredient</span>
-                                          <span className="text-sm font-medium text-gray-900">{crossSell.Ingredient}</span>
-                                        </div>
-                                      </div>
-                                      
-                                      <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-primary-400">
-                                        <p className="text-xs text-gray-700">
-                                          <strong className="text-primary-700">AI Reasoning:</strong> {crossSell.AIReasoning}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-8 bg-gray-50 rounded-lg">
-                            <Bot className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                            <p className="text-gray-600">No already purchased cross-sell opportunities found.</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* All Customer Recommendations with Tabs */}
           {allRecommendations && (

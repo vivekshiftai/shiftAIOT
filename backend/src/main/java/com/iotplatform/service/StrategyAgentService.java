@@ -552,6 +552,69 @@ public class StrategyAgentService {
     }
 
     /**
+     * Check regeneration status from external Strategy Agent API
+     * 
+     * @return Map containing regeneration status
+     */
+    public Map<String, Object> checkRegenerationStatus() {
+        log.info("🔍 Checking regeneration status from external API");
+        
+        try {
+            // Prepare headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Accept", "application/json");
+            
+            // Create request entity
+            HttpEntity<String> requestEntity = new HttpEntity<>(headers);
+            
+            // Call external Strategy Agent API
+            String url = strategyAgentBaseUrl + "/regeneration_status";
+            log.info("🔍 Calling external Strategy Agent API: {}", url);
+            
+            ResponseEntity<Map> response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, Map.class);
+            
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                Map<String, Object> responseBody = response.getBody();
+                log.info("✅ Successfully retrieved regeneration status from external API");
+                
+                Boolean isCompleted = (Boolean) responseBody.get("is_completed");
+                Boolean success = (Boolean) responseBody.get("success");
+                String message = (String) responseBody.get("message");
+                Object progress = responseBody.get("progress");
+                
+                return Map.of(
+                    "success", success != null ? success : true,
+                    "message", message != null ? message : "Status check completed",
+                    "is_completed", isCompleted != null ? isCompleted : false,
+                    "progress", progress,
+                    "timestamp", System.currentTimeMillis(),
+                    "source", "external_api_status"
+                );
+            } else {
+                log.warn("⚠️ External API returned non-OK status: {}", response.getStatusCode());
+                return Map.of(
+                    "success", false,
+                    "message", "Failed to check regeneration status",
+                    "is_completed", false,
+                    "error", "External API returned status: " + response.getStatusCode(),
+                    "timestamp", System.currentTimeMillis()
+                );
+            }
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to check regeneration status from external API: {}", e.getMessage());
+            return Map.of(
+                "success", false,
+                "message", "Failed to check regeneration status",
+                "is_completed", false,
+                "error", e.getMessage(),
+                "timestamp", System.currentTimeMillis()
+            );
+        }
+    }
+
+    /**
      * Regenerate recommendations for all customers from external Strategy Agent API
      * 
      * @param forceRegenerate Whether to force regeneration (default: true)

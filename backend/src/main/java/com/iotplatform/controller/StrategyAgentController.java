@@ -329,6 +329,29 @@ public class StrategyAgentController {
     }
 
     /**
+     * Check regeneration status for all customers
+     */
+    @GetMapping("/regeneration-status")
+    public ResponseEntity<?> checkRegenerationStatus(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        try {
+            log.info("🔍 Checking regeneration status for user: {}", userDetails.getUser().getEmail());
+            
+            Map<String, Object> result = strategyAgentService.checkRegenerationStatus();
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to check regeneration status", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to check regeneration status: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Test Strategy Agent connection
      */
     @PostMapping("/test-connection")
