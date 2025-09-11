@@ -221,7 +221,7 @@ public class StrategyAgentService {
                 Map<String, Object> responseBody = response.getBody();
                 log.info("✅ Successfully retrieved customers from external API");
                 
-                // Handle the new response format from http://20.57.36.66:8002/customers
+                // Handle the new response format from Strategy Agent API
                 Object customers = responseBody.get("customers");
                 Object totalCustomers = responseBody.get("total_customers");
                 Boolean success = (Boolean) responseBody.get("success");

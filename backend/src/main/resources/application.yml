@@ -144,7 +144,7 @@ pdf:
 # Strategy Agent Configuration
 strategy:
   agent:
-    base-url: ${STRATEGY_AGENT_BASE_URL:http://20.57.36.66:8001}
+    base-url: ${STRATEGY_AGENT_BASE_URL:http://20.57.36.66:8002}
     timeout: ${STRATEGY_AGENT_TIMEOUT:30000}  # 30 seconds
     max-retries: ${STRATEGY_AGENT_MAX_RETRIES:3}
     retry-delay: ${STRATEGY_AGENT_RETRY_DELAY:1000}  # 1 second
