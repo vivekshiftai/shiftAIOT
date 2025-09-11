@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Download,
-  Send,
   User,
   CheckCircle,
   X,
@@ -12,6 +11,7 @@ import {
 } from 'lucide-react';
 import { logError, logInfo } from '../utils/logger';
 import { StrategyAgentService, StrategyAgentResponse } from '../services/strategyAgentService';
+import { CustomerRecommendationsDisplay } from '../components/SalesIntelligence/CustomerRecommendationsDisplay';
 import '../styles/knowledge.css';
 
 interface SalesIntelligenceSectionProps {
@@ -20,7 +20,7 @@ interface SalesIntelligenceSectionProps {
 
 export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> = ({ onBack }) => {
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<StrategyAgentResponse | null>(null);
   const [allRecommendations, setAllRecommendations] = useState<StrategyAgentResponse[] | null>(null);
   const [error, setError] = useState<string>('');
@@ -29,11 +29,14 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'accepted' | 'rejected' | 'purchased'>('accepted');
   const [isAllCustomers, setIsAllCustomers] = useState<boolean>(false);
-  const [customerActiveTabs, setCustomerActiveTabs] = useState<Record<string, 'accepted' | 'rejected' | 'purchased'>>({});
   const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
   const [regenerateMessage, setRegenerateMessage] = useState<string>('');
   const [regeneratingCustomers, setRegeneratingCustomers] = useState<Set<string>>(new Set());
   const [customerRegenerateMessages, setCustomerRegenerateMessages] = useState<Record<string, string>>({});
+  const [activeCustomerTab, setActiveCustomerTab] = useState<string>('');
+  const [isRegeneratingData, setIsRegeneratingData] = useState<boolean>(false);
+  const [regenerationMessage, setRegenerationMessage] = useState<string>('');
+  const [showSuccessMessage, setShowSuccessMessage] = useState<boolean>(false);
 
   // Filter customers based on search query
   const filteredCustomers = searchQuery.length > 0 
@@ -42,6 +45,13 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
         customer.id.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : availableCustomers;
+
+  // Set first customer as active when all recommendations are loaded
+  useEffect(() => {
+    if (allRecommendations && allRecommendations.length > 0 && !activeCustomerTab) {
+      setActiveCustomerTab(allRecommendations[0].customer_id || '');
+    }
+  }, [allRecommendations, activeCustomerTab]);
 
   // Handle customer selection
   const handleCustomerSelect = (customer: { id: string; name: string; type?: string; country?: string; region?: string; totalStores?: number } | 'all') => {
@@ -73,17 +83,6 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
   };
 
   // Handle customer-specific tab changes
-  const handleCustomerTabChange = (customerId: string, tab: 'accepted' | 'rejected' | 'purchased') => {
-    setCustomerActiveTabs(prev => ({
-      ...prev,
-      [customerId]: tab
-    }));
-  };
-
-  // Get active tab for a specific customer
-  const getCustomerActiveTab = (customerId: string): 'accepted' | 'rejected' | 'purchased' => {
-    return customerActiveTabs[customerId] || 'accepted';
-  };
 
   // Load available customers on component mount
   useEffect(() => {
@@ -117,36 +116,6 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
     };
   }, []);
 
-  const generateRecommendations = async () => {
-    if (!selectedCustomer) {
-      setError('Please select a customer first');
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-    setRecommendations(null);
-    setAllRecommendations(null);
-
-    try {
-      if (isAllCustomers) {
-        logInfo('Process', 'Generating recommendations for all customers');
-        const response = await StrategyAgentService.getAllCustomerRecommendations();
-        setAllRecommendations(response.recommendations);
-        logInfo('Process', `Recommendations generated successfully for ${response.total_customers} customers`);
-      } else {
-        logInfo('Process', `Generating recommendations for customer: ${selectedCustomer}`);
-        const response = await StrategyAgentService.generateRecommendations(selectedCustomer);
-        setRecommendations(response);
-        logInfo('Process', 'Recommendations generated successfully');
-      }
-    } catch (error) {
-      logError('Process', 'Failed to generate recommendations', error instanceof Error ? error : new Error('Unknown error'));
-      setError('Failed to generate recommendations. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const downloadPDFReport = async () => {
     if (!selectedCustomer) {
@@ -213,6 +182,90 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
       setRegenerateMessage('');
     } finally {
       setIsRegenerating(false);
+    }
+  };
+
+  // Handle regeneration for selected customer or all customers
+  const handleRegenerateData = async () => {
+    setIsRegeneratingData(true);
+    setRegenerationMessage('');
+    setShowSuccessMessage(false);
+    setError('');
+
+    try {
+      if (selectedCustomer === 'all') {
+        logInfo('Process', 'Starting regeneration for all customers');
+        setRegenerationMessage('🔄 Regeneration process started for all customers... This will take some time. Please wait.');
+        
+        const result = await StrategyAgentService.regenerateAllRecommendations(true);
+        
+        if (result.success) {
+          setRegenerationMessage('✅ Regeneration process started successfully! The system is now regenerating recommendations for all customers. This process may take several minutes to complete.');
+          logInfo('Process', 'All customers regeneration triggered successfully', result);
+          
+          // Clear existing recommendations since they're being regenerated
+          setAllRecommendations(null);
+        } else {
+          setError(result.message || 'Failed to start regeneration process for all customers');
+          setRegenerationMessage('');
+        }
+      } else {
+        const customerId = selectedCustomer;
+        logInfo('Process', 'Starting regeneration for customer', { customerId });
+        setRegenerationMessage('🔄 Regeneration process started... This will take some time. Please wait.');
+        
+        const result = await StrategyAgentService.regenerateCustomerRecommendations(customerId, true);
+        
+        if (result.success) {
+          setRegenerationMessage('✅ Regeneration process started successfully! The system is now regenerating recommendations for this customer. This process may take several minutes to complete.');
+          logInfo('Process', 'Customer regeneration triggered successfully', result);
+          
+          // Clear existing recommendations since they're being regenerated
+          setRecommendations(null);
+          if (allRecommendations) {
+            setAllRecommendations(prev => prev?.filter(rec => rec.customer_id !== customerId) || null);
+          }
+        } else {
+          setError(result.message || `Failed to start regeneration process for customer ${customerId}`);
+          setRegenerationMessage('');
+        }
+      }
+    } catch (error) {
+      logError('Process', 'Failed to regenerate recommendations', error instanceof Error ? error : new Error('Unknown error'), { selectedCustomer });
+      setError(`Failed to regenerate recommendations. Please try again.`);
+      setRegenerationMessage('');
+    } finally {
+      setIsRegeneratingData(false);
+      // Show success message after a delay
+      setTimeout(() => {
+        setShowSuccessMessage(true);
+        setRegenerationMessage('🎉 Regeneration completed! You can now access the new report.');
+      }, 3000);
+    }
+  };
+
+  // Handle getting sales report
+  const handleGetSalesReport = async () => {
+    try {
+      if (selectedCustomer === 'all') {
+        // Download PDF for all customers
+        const pdfBlob = await StrategyAgentService.downloadAllCustomersPDFReport();
+        
+        // Create download link and trigger download
+        const url = window.URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `all-customers-sales-report-${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        await downloadPDFReport();
+      }
+    } catch (error) {
+      logError('Process', 'Failed to download sales report', error instanceof Error ? error : new Error('Unknown error'));
+      setError('Failed to download sales report. Please try again.');
     }
   };
 
@@ -368,7 +421,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                         </div>
                         
                         {/* Customer List */}
-                        <div className="max-h-48 overflow-auto">
+                        <div className="max-h-48 overflow-auto pb-4">
                           {/* All Customers Option */}
                           <div
                             onClick={() => handleCustomerSelect('all')}
@@ -420,27 +473,82 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                   </div>
               </div>
               
-                <div>
-                <button
-                  onClick={generateRecommendations}
-                  disabled={!selectedCustomer || isLoading}
-                    className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
-                >
-                  {isLoading ? (
-                    <>
+                <div className="space-y-3">
+                  {/* Regenerate Button */}
+                  <button
+                    onClick={handleRegenerateData}
+                    disabled={!selectedCustomer || isRegeneratingData}
+                    className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
+                  >
+                    {isRegeneratingData ? (
+                      <>
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                        <Send className="w-4 h-4" />
-                      Generate Sales Intelligence
-                    </>
-                  )}
-                </button>
+                        Regenerating...
+                      </>
+                    ) : (
+                      <>
+                        <Brain className="w-4 h-4" />
+                        Regenerate Data
+                      </>
+                    )}
+                  </button>
+
+                  {/* Get Sales Report Button */}
+                  <button
+                    onClick={handleGetSalesReport}
+                    disabled={!selectedCustomer || isLoading}
+                    className="w-full px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium shadow-sm hover:shadow-md"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        Get Sales Report
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
+          )}
+
+          {/* Regeneration Status Message */}
+          {regenerationMessage && (
+            <div className={`rounded-lg p-4 border ${
+              showSuccessMessage 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-blue-50 border-blue-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                {showSuccessMessage ? (
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                ) : (
+                  <Brain className="w-5 h-5 text-blue-600" />
+                )}
+                <p className={`font-medium text-sm ${
+                  showSuccessMessage ? 'text-green-800' : 'text-blue-800'
+                }`}>
+                  {showSuccessMessage ? 'Success!' : 'Regeneration Status'}
+                </p>
+              </div>
+              <p className={`text-sm mt-1 ${
+                showSuccessMessage ? 'text-green-700' : 'text-blue-700'
+              }`}>
+                {regenerationMessage}
+              </p>
+            </div>
+          )}
+
+          {/* Single Customer Recommendations */}
+          {recommendations && (
+            <CustomerRecommendationsDisplay
+              customerRec={recommendations}
+              showRegenerateButton={false}
+            />
           )}
 
           {/* Summary Cards */}
@@ -453,7 +561,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-600">Cross-sell Accepted</p>
-                    <p className="text-2xl font-bold text-gray-900">{recommendations.Summary?.TotalCrossSell || 0}</p>
+                    <p className="text-2xl font-bold text-gray-900">{recommendations?.Summary?.TotalCrossSell || 0}</p>
                   </div>
                 </div>
               </div>
@@ -465,7 +573,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-600">Rejected Recommendations</p>
-                    <p className="text-2xl font-bold text-gray-900">{recommendations.Summary?.TotalRejected || 0}</p>
+                    <p className="text-2xl font-bold text-gray-900">{recommendations?.Summary?.TotalRejected || 0}</p>
                   </div>
                 </div>
               </div>
@@ -477,7 +585,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-600">Already Purchased</p>
-                    <p className="text-2xl font-bold text-gray-900">{recommendations.Summary?.TotalAlreadyPurchased || 0}</p>
+                    <p className="text-2xl font-bold text-gray-900">{recommendations?.Summary?.TotalAlreadyPurchased || 0}</p>
                   </div>
                 </div>
               </div>
@@ -490,7 +598,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                   <div>
                     <p className="text-sm font-medium text-gray-600">Total Recommendations</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {recommendations.Summary?.TotalRecommendations || 0}
+                      {recommendations?.Summary?.TotalRecommendations || 0}
                     </p>
                   </div>
                 </div>
@@ -642,7 +750,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                         }`}
                       >
-                        Top Matches ({recommendations.Summary?.TotalCrossSell || 0})
+                        Top Matches ({recommendations?.Summary?.TotalCrossSell || 0})
                       </button>
                       <button
                         onClick={() => setActiveTab('rejected')}
@@ -652,7 +760,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                         }`}
                       >
-                        Needs Review ({recommendations.Summary?.TotalRejected || 0})
+                        Needs Review ({recommendations?.Summary?.TotalRejected || 0})
                       </button>
                       <button
                         onClick={() => setActiveTab('purchased')}
@@ -662,7 +770,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                             : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                         }`}
                       >
-                        Already Purchased ({recommendations.Summary?.TotalAlreadyPurchased || 0})
+                        Already Purchased ({recommendations?.Summary?.TotalAlreadyPurchased || 0})
                       </button>
                     </nav>
                   </div>
@@ -893,9 +1001,10 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
             </div>
           )}
 
-          {/* All Customer Recommendations */}
+          {/* All Customer Recommendations with Tabs */}
           {allRecommendations && (
-            <div className="space-y-8">
+            <div className="space-y-6">
+              {/* Header */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg">
@@ -906,469 +1015,53 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                     <p className="text-sm text-gray-600">AI-powered cross-sell recommendations for all customers</p>
                   </div>
                 </div>
+
+                {/* Customer Tabs */}
+                <div className="border-b border-gray-200">
+                  <nav className="-mb-px flex space-x-8 overflow-x-auto">
+                    {allRecommendations.map((customerRec, index) => {
+                      const customerName = customerRec.CustomerInfo?.CustomerName || `Customer ${customerRec.customer_id}`;
+                      const isActive = activeCustomerTab === customerRec.customer_id;
+                      
+                      return (
+                        <button
+                          key={customerRec.customer_id || index}
+                          onClick={() => setActiveCustomerTab(customerRec.customer_id || '')}
+                          className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                            isActive
+                              ? 'border-primary-500 text-primary-600'
+                              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            <span className="truncate max-w-32">{customerName}</span>
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                              {(customerRec.Summary?.TotalCrossSell || 0) + (customerRec.Summary?.TotalRejected || 0) + (customerRec.Summary?.TotalAlreadyPurchased || 0)}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </nav>
+                </div>
               </div>
 
-              {/* Individual Customer Sections */}
-              {allRecommendations.map((customerRec, customerIndex) => (
-                <div key={customerRec.customer_id || customerIndex} className="space-y-6">
-                  {/* Customer Header */}
-                  <div className="bg-gradient-to-r from-primary-50 to-purple-50 rounded-lg p-6 border border-primary-200">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-primary-100 rounded-lg">
-                        <User className="w-8 h-8 text-primary-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-2xl font-bold text-gray-900">{customerRec.CustomerInfo?.CustomerName || 'Unknown Customer'}</h3>
-                        <p className="text-sm text-gray-600">Customer ID: {customerRec.customer_id}</p>
-                        {customerRec.CustomerClassification && (
-                          <div className="mt-2 flex flex-wrap gap-4 text-sm">
-                            <span className="px-3 py-1 bg-white rounded-full text-gray-700 border">
-                              <strong>Type:</strong> {customerRec.CustomerClassification.CustomerType}
-                            </span>
-                            <span className="px-3 py-1 bg-white rounded-full text-gray-700 border">
-                              <strong>Stores:</strong> {customerRec.CustomerClassification.NumberOfStores}
-                            </span>
-                            <span className="px-3 py-1 bg-white rounded-full text-gray-700 border">
-                              <strong>Quantity Sold:</strong> {customerRec.CustomerClassification.TotalQuantitySold?.toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      {/* Individual Customer Regenerate Button */}
-                      <div className="flex flex-col items-end gap-2">
-                        <button
-                          onClick={() => regenerateCustomerRecommendations(customerRec.customer_id)}
-                          disabled={regeneratingCustomers.has(customerRec.customer_id)}
-                          className="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-orange-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
-                        >
-                          {regeneratingCustomers.has(customerRec.customer_id) ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                              Regenerating...
-                            </>
-                          ) : (
-                            <>
-                              <Brain className="w-4 h-4" />
-                              Regenerate
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                    
-                    {/* Customer Regeneration Status Message */}
-                    {customerRegenerateMessages[customerRec.customer_id] && (
-                      <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <div className="flex items-center gap-2">
-                          <Brain className="w-4 h-4 text-blue-600" />
-                          <p className="text-blue-800 font-medium text-sm">Regeneration Status</p>
-                        </div>
-                        <p className="text-blue-700 text-sm mt-1">{customerRegenerateMessages[customerRec.customer_id]}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Summary Cards for this Customer */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-100 rounded-lg">
-                          <CheckCircle className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">Accepted</p>
-                          <p className="text-2xl font-bold text-green-600">{customerRec.Summary?.TotalCrossSell || 0}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-red-100 rounded-lg">
-                          <X className="w-5 h-5 text-red-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">Rejected</p>
-                          <p className="text-2xl font-bold text-red-600">{customerRec.Summary?.TotalRejected || 0}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <Bot className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">Already Purchased</p>
-                          <p className="text-2xl font-bold text-blue-600">{customerRec.Summary?.TotalAlreadyPurchased || 0}</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-purple-100 rounded-lg">
-                          <Brain className="w-5 h-5 text-purple-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">Total</p>
-                          <p className="text-2xl font-bold text-purple-600">{customerRec.Summary?.TotalRecommendations || 0}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Sales Intelligence Dashboard Layout for this Customer */}
-                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                    
-                    {/* Left Column - Customer Information and Classification (25% width) */}
-                    <div className="lg:col-span-1 space-y-4">
-                      {/* Combined Customer Information and Classification */}
-                      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <User className="w-4 h-4 text-primary-600" />
-                          <h3 className="text-sm font-semibold text-gray-900">Customer Details</h3>
-                        </div>
-                        
-                        <div className="space-y-3">
-                          <div>
-                            <p className="text-xs text-gray-500">Customer ID</p>
-                            <p className="text-sm font-medium text-gray-900">{customerRec.CustomerInfo?.CustomerID || 'N/A'}</p>
-                          </div>
-                          
-                          <div>
-                            <p className="text-xs text-gray-500">Customer Name</p>
-                            <p className="text-sm font-medium text-gray-900">{customerRec.CustomerInfo?.CustomerName || 'N/A'}</p>
-                          </div>
-                          
-                          {customerRec.CustomerClassification && (
-                            <>
-                              <div>
-                                <p className="text-xs text-gray-500">Customer Type</p>
-                                <p className="text-sm font-medium text-gray-900">{customerRec.CustomerClassification.CustomerType}</p>
-                              </div>
-                              
-                              <div>
-                                <p className="text-xs text-gray-500">Total Quantity Sold</p>
-                                <p className="text-sm font-medium text-gray-900">{customerRec.CustomerClassification.TotalQuantitySold?.toLocaleString() || 'N/A'}</p>
-                              </div>
-                              
-                              <div>
-                                <p className="text-xs text-gray-500">Number of Stores</p>
-                                <p className="text-sm font-medium text-gray-900">{customerRec.CustomerClassification.NumberOfStores || 'N/A'}</p>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right Column - Recommendations (75% width) */}
-                    <div className="lg:col-span-3">
-                      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                        
-                        {/* Tab Navigation */}
-                        <div className="border-b border-gray-200">
-                          <nav className="flex space-x-8 px-6" aria-label="Tabs">
-                            <button
-                              onClick={() => handleCustomerTabChange(customerRec.customer_id || '', 'accepted')}
-                              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                                getCustomerActiveTab(customerRec.customer_id || '') === 'accepted'
-                                  ? 'border-primary-500 text-primary-600'
-                                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                              }`}
-                            >
-                              Accepted Recommendations ({customerRec.AcceptedRecommendations?.length || 0})
-                            </button>
-                            <button
-                              onClick={() => handleCustomerTabChange(customerRec.customer_id || '', 'rejected')}
-                              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                                getCustomerActiveTab(customerRec.customer_id || '') === 'rejected'
-                                  ? 'border-primary-500 text-primary-600'
-                                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                              }`}
-                            >
-                              Rejected Recommendations ({customerRec.RejectedRecommendations?.length || 0})
-                            </button>
-                            <button
-                              onClick={() => handleCustomerTabChange(customerRec.customer_id || '', 'purchased')}
-                              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                                getCustomerActiveTab(customerRec.customer_id || '') === 'purchased'
-                                  ? 'border-primary-500 text-primary-600'
-                                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                              }`}
-                            >
-                              Already Purchased ({customerRec.AlreadyPurchasedRecommendations?.length || 0})
-                            </button>
-                          </nav>
-                        </div>
-
-                        {/* Tab Content */}
-                        <div className="p-6">
-                          {/* Accepted Recommendations */}
-                          {getCustomerActiveTab(customerRec.customer_id || '') === 'accepted' && (
-                            <div className="space-y-4">
-                              {customerRec.AcceptedRecommendations && customerRec.AcceptedRecommendations.length > 0 ? (
-                                customerRec.AcceptedRecommendations.map((recommendation, index) => (
-                                  <div key={index} className="border border-gray-200 rounded-lg p-4 bg-green-50">
-                                    <div className="flex items-start justify-between mb-3">
-                                      <div className="flex-1">
-                                        <h4 className="text-lg font-semibold text-gray-900 mb-1">{recommendation.ProductName}</h4>
-                                        <p className="text-sm text-gray-600">Quantity Required: {recommendation.QuantityRequired}</p>
-                                        <p className="text-sm text-gray-600">Customer Catalogue Item ID: {recommendation.CustomerCatalogueItemID}</p>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                                          Accepted
-                                        </span>
-                                      </div>
-                                    </div>
-                                    
-                                    {recommendation.Ingredients && recommendation.Ingredients.length > 0 && (
-                                      <div className="mb-3">
-                                        <p className="text-sm font-medium text-gray-700 mb-1">Ingredients:</p>
-                                        <div className="flex flex-wrap gap-1">
-                                          {recommendation.Ingredients.map((ingredient, idx) => (
-                                            <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                                              {ingredient}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                    
-                                    {recommendation.CrossSell && recommendation.CrossSell.length > 0 && (
-                                      <div>
-                                        <p className="text-sm font-medium text-gray-700 mb-2">Cross-Sell Opportunities:</p>
-                                        <div className="space-y-3">
-                                          {recommendation.CrossSell.map((crossSell, csIndex) => (
-                                            <div key={csIndex} className="bg-white rounded-lg p-3 border border-green-200">
-                                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Suggested Product</span>
-                                                  <span className="text-sm font-medium text-gray-900">{crossSell.SuggestedProduct}</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Category</span>
-                                                  <span className="text-sm font-medium text-gray-900">{crossSell.Category}</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Price</span>
-                                                  <span className="text-sm font-medium text-gray-900">${crossSell.Price}</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Similarity</span>
-                                                  <span className="text-sm font-medium text-gray-900">{(crossSell.Similarity * 100).toFixed(1)}%</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Product ID</span>
-                                                  <span className="text-sm font-medium text-gray-900">{crossSell.ProductID}</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Ingredient</span>
-                                                  <span className="text-sm font-medium text-gray-900">{crossSell.Ingredient}</span>
-                                                </div>
-                                              </div>
-                                              
-                                              <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-primary-400">
-                                                <p className="text-xs text-gray-700">
-                                                  <strong className="text-primary-700">AI Reasoning:</strong> {crossSell.AIReasoning}
-                                                </p>
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="text-center py-8 bg-gray-50 rounded-lg">
-                                  <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                                  <p className="text-gray-600">No accepted cross-sell opportunities found.</p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Rejected Recommendations */}
-                          {getCustomerActiveTab(customerRec.customer_id || '') === 'rejected' && (
-                            <div className="space-y-4">
-                              {customerRec.RejectedRecommendations && customerRec.RejectedRecommendations.length > 0 ? (
-                                customerRec.RejectedRecommendations.map((recommendation, index) => (
-                                  <div key={index} className="border border-gray-200 rounded-lg p-4 bg-red-50">
-                                    <div className="flex items-start justify-between mb-3">
-                                      <div className="flex-1">
-                                        <h4 className="text-lg font-semibold text-gray-900 mb-1">{recommendation.ProductName}</h4>
-                                        <p className="text-sm text-gray-600">Quantity Required: {recommendation.QuantityRequired}</p>
-                                        <p className="text-sm text-gray-600">Customer Catalogue Item ID: {recommendation.CustomerCatalogueItemID}</p>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
-                                          Rejected
-                                        </span>
-                                      </div>
-                                    </div>
-                                    
-                                    {recommendation.Ingredients && recommendation.Ingredients.length > 0 && (
-                                      <div className="mb-3">
-                                        <p className="text-sm font-medium text-gray-700 mb-1">Ingredients:</p>
-                                        <div className="flex flex-wrap gap-1">
-                                          {recommendation.Ingredients.map((ingredient, idx) => (
-                                            <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                                              {ingredient}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                    
-                                    {recommendation.RejectedCrossSell && recommendation.RejectedCrossSell.length > 0 && (
-                                      <div>
-                                        <p className="text-sm font-medium text-gray-700 mb-2">Rejected Cross-Sell Opportunities:</p>
-                                        <div className="space-y-3">
-                                          {recommendation.RejectedCrossSell.map((crossSell, csIndex) => (
-                                            <div key={csIndex} className="bg-white rounded-lg p-3 border border-red-200">
-                                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Suggested Product</span>
-                                                  <span className="text-sm font-medium text-gray-900">{crossSell.SuggestedProduct}</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Category</span>
-                                                  <span className="text-sm font-medium text-gray-900">{crossSell.Category}</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Price</span>
-                                                  <span className="text-sm font-medium text-gray-900">${crossSell.Price}</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Similarity</span>
-                                                  <span className="text-sm font-medium text-gray-900">{(crossSell.Similarity * 100).toFixed(1)}%</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Product ID</span>
-                                                  <span className="text-sm font-medium text-gray-900">{crossSell.ProductID}</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Ingredient</span>
-                                                  <span className="text-sm font-medium text-gray-900">{crossSell.Ingredient}</span>
-                                                </div>
-                                              </div>
-                                              
-                                              <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-red-400">
-                                                <p className="text-xs text-gray-700">
-                                                  <strong className="text-red-700">AI Reasoning:</strong> {crossSell.AIReasoning}
-                                                </p>
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="text-center py-8 bg-gray-50 rounded-lg">
-                                  <X className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                                  <p className="text-gray-600">No rejected cross-sell opportunities found.</p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Already Purchased Recommendations */}
-                          {getCustomerActiveTab(customerRec.customer_id || '') === 'purchased' && (
-                            <div className="space-y-4">
-                              {customerRec.AlreadyPurchasedRecommendations && customerRec.AlreadyPurchasedRecommendations.length > 0 ? (
-                                customerRec.AlreadyPurchasedRecommendations.map((recommendation, index) => (
-                                  <div key={index} className="border border-gray-200 rounded-lg p-4 bg-blue-50">
-                                    <div className="flex items-start justify-between mb-3">
-                                      <div className="flex-1">
-                                        <h4 className="text-lg font-semibold text-gray-900 mb-1">{recommendation.ProductName}</h4>
-                                        <p className="text-sm text-gray-600">Quantity Required: {recommendation.QuantityRequired}</p>
-                                        <p className="text-sm text-gray-600">Customer Catalogue Item ID: {recommendation.CustomerCatalogueItemID}</p>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                                          Already Purchased
-                                        </span>
-                                      </div>
-                                    </div>
-                                    
-                                    {recommendation.Ingredients && recommendation.Ingredients.length > 0 && (
-                                      <div className="mb-3">
-                                        <p className="text-sm font-medium text-gray-700 mb-1">Ingredients:</p>
-                                        <div className="flex flex-wrap gap-1">
-                                          {recommendation.Ingredients.map((ingredient, idx) => (
-                                            <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                                              {ingredient}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                    
-                                    {recommendation.AlreadyPurchasedCrossSell && recommendation.AlreadyPurchasedCrossSell.length > 0 && (
-                                      <div>
-                                        <p className="text-sm font-medium text-gray-700 mb-2">Already Purchased Cross-Sell Opportunities:</p>
-                                        <div className="space-y-3">
-                                          {recommendation.AlreadyPurchasedCrossSell.map((crossSell, csIndex) => (
-                                            <div key={csIndex} className="bg-white rounded-lg p-3 border border-blue-200">
-                                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Suggested Product</span>
-                                                  <span className="text-sm font-medium text-gray-900">{crossSell.SuggestedProduct}</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Category</span>
-                                                  <span className="text-sm font-medium text-gray-900">{crossSell.Category}</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Price</span>
-                                                  <span className="text-sm font-medium text-gray-900">${crossSell.Price}</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Similarity</span>
-                                                  <span className="text-sm font-medium text-gray-900">{(crossSell.Similarity * 100).toFixed(1)}%</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Product ID</span>
-                                                  <span className="text-sm font-medium text-gray-900">{crossSell.ProductID}</span>
-                                                </div>
-                                                <div className="flex flex-col">
-                                                  <span className="text-xs text-gray-500">Ingredient</span>
-                                                  <span className="text-sm font-medium text-gray-900">{crossSell.Ingredient}</span>
-                                                </div>
-                                              </div>
-                                              
-                                              <div className="bg-gray-50 rounded-lg p-3 border-l-4 border-blue-400">
-                                                <p className="text-xs text-gray-700">
-                                                  <strong className="text-blue-700">AI Reasoning:</strong> {crossSell.AIReasoning}
-                                                </p>
-                                              </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="text-center py-8 bg-gray-50 rounded-lg">
-                                  <Bot className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                                  <p className="text-gray-600">No already purchased cross-sell opportunities found.</p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+              {/* Active Customer Content */}
+              {allRecommendations.map((customerRec, customerIndex) => {
+                if (activeCustomerTab !== customerRec.customer_id) return null;
+                
+                return (
+                  <CustomerRecommendationsDisplay
+                    key={customerRec.customer_id || customerIndex}
+                    customerRec={customerRec}
+                    onRegenerate={regenerateCustomerRecommendations}
+                    isRegenerating={regeneratingCustomers.has(customerRec.customer_id)}
+                    regenerateMessage={customerRegenerateMessages[customerRec.customer_id]}
+                    showRegenerateButton={true}
+                  />
+                );
+              })}
             </div>
           )}
 
