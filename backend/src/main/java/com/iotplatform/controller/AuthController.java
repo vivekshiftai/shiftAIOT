@@ -367,16 +367,11 @@ public class AuthController {
     @PostMapping("/api/auth/logout")
     public ResponseEntity<?> logout() {
         // This endpoint helps users logout and clear their tokens
-        Map<String, Object> exampleLogin = new HashMap<>();
-        exampleLogin.put("email", "user@shiftaiot.com");
-        exampleLogin.put("password", "user123");
-        
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Logout successful. Please clear your browser's local storage and login again.");
         response.put("action", "Clear localStorage and login with existing user credentials");
         response.put("loginEndpoint", "/auth/signin");
         response.put("loginMethod", "POST");
-        response.put("exampleLogin", exampleLogin);
         
         return ResponseEntity.ok(response);
     }
