@@ -528,21 +528,23 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
           {/* All Customer Recommendations with Tabs */}
           {allRecommendations && (
             <div className="space-y-6">
-              {/* Header */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg">
-                    <Brain className="w-6 h-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">All Customer Recommendations</h2>
-                    <p className="text-sm text-gray-600">AI-powered cross-sell recommendations for all customers</p>
+              {/* Customer Tabs Header */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg">
+                      <Brain className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900">All Customer Recommendations</h2>
+                      <p className="text-sm text-gray-600">AI-powered cross-sell recommendations for all customers</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Customer Tabs */}
                 <div className="border-b border-gray-200">
-                  <nav className="-mb-px flex space-x-8 overflow-x-auto">
+                  <nav className="flex space-x-8 px-4 overflow-x-auto">
                     {allRecommendations.map((customerRec, index) => {
                       const customerName = customerRec.CustomerInfo?.CustomerName || `Customer ${customerRec.customer_id}`;
                       const isActive = activeCustomerTab === customerRec.customer_id;
@@ -551,7 +553,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                         <button
                           key={customerRec.customer_id || index}
                           onClick={() => setActiveCustomerTab(customerRec.customer_id || '')}
-                          className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                          className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
                             isActive
                               ? 'border-primary-500 text-primary-600'
                               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

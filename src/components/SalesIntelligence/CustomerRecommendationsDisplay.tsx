@@ -62,35 +62,69 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
   };
 
   return (
-    <div className="space-y-6">
-      {/* Customer Header */}
-      <div className="bg-gradient-to-r from-primary-50 to-purple-50 rounded-lg p-6 border border-primary-200">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary-100 rounded-lg">
-            <User className="w-8 h-8 text-primary-600" />
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      {/* Left Column - Customer Information (25% width) */}
+      <div className="lg:col-span-1 space-y-4">
+        {/* Customer Information Card */}
+        <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg p-4 border border-pink-200">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-pink-100 rounded-lg">
+              <User className="w-6 h-6 text-purple-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Customer Information</h3>
           </div>
-          <div className="flex-1">
-            <h3 className="text-2xl font-bold text-gray-900">
-              {customerRec.CustomerInfo?.CustomerName || 'Unknown Customer'}
-            </h3>
-            <p className="text-sm text-gray-600">Customer ID: {customerRec.customer_id}</p>
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Name</p>
+              <p className="text-lg font-bold text-gray-900">{customerRec.CustomerInfo?.CustomerName || 'Unknown Customer'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Customer ID</p>
+              <p className="text-base font-semibold text-gray-900">{customerRec.customer_id}</p>
+            </div>
             {customerRec.CustomerClassification && (
-              <div className="mt-2 flex flex-wrap gap-4 text-sm">
-                <span className="px-3 py-1 bg-white rounded-full text-gray-700 border">
+              <div className="mt-3 space-y-2">
+                <span className="px-3 py-1 bg-white rounded-full text-gray-700 border text-sm">
                   <strong>Type:</strong> {customerRec.CustomerClassification.CustomerType}
                 </span>
-                <span className="px-3 py-1 bg-white rounded-full text-gray-700 border">
+                <span className="px-3 py-1 bg-white rounded-full text-gray-700 border text-sm">
                   <strong>Stores:</strong> {customerRec.CustomerClassification.NumberOfStores}
                 </span>
-                <span className="px-3 py-1 bg-white rounded-full text-gray-700 border">
+                <span className="px-3 py-1 bg-white rounded-full text-gray-700 border text-sm">
                   <strong>Quantity Sold:</strong> {customerRec.CustomerClassification.TotalQuantitySold?.toLocaleString()}
                 </span>
               </div>
             )}
           </div>
-          
+        </div>
+
+        {/* Classification Card */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Brain className="w-5 h-5 text-green-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Classification</h3>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Type</p>
+              <p className="text-base font-semibold text-gray-900">{customerRec.CustomerClassification?.CustomerType || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Stores</p>
+              <p className="text-base font-semibold text-gray-900">{customerRec.CustomerClassification?.NumberOfStores || 0}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Quantity Sold</p>
+              <p className="text-base font-semibold text-gray-900">{(customerRec.CustomerClassification?.TotalQuantitySold || 0).toLocaleString()}</p>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Right Column - Product Recommendations (75% width) */}
+      <div className="lg:col-span-3 space-y-6">
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -235,24 +269,8 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
                       </p>
                     </div>
                     
-                    {recommendation.Ingredients && recommendation.Ingredients.length > 0 && (
-                      <div className="mb-4">
-                        <p className="text-sm font-medium text-gray-700 mb-2">Ingredients:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {recommendation.Ingredients.map((ingredient, idx) => (
-                            <span key={idx} className="px-3 py-1 bg-white text-gray-700 text-sm rounded-full border">
-                              {ingredient}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
                     {recommendation.CrossSell && recommendation.CrossSell.length > 0 && (
                       <div>
-                        <p className="text-sm font-medium text-gray-700 mb-3">
-                          Presents {recommendation.CrossSell.length} cross-sell opportunities:
-                        </p>
                         <div className="space-y-3">
                           {recommendation.CrossSell.map((crossSell, csIndex) => (
                             <div key={csIndex} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
@@ -300,9 +318,6 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
                     
                     {recommendation.RejectedCrossSell && recommendation.RejectedCrossSell.length > 0 && (
                       <div>
-                        <p className="text-sm font-medium text-gray-700 mb-3">
-                          Had {recommendation.RejectedCrossSell.length} potential cross-sell opportunities that were rejected:
-                        </p>
                         <div className="space-y-3">
                           {recommendation.RejectedCrossSell.map((crossSell, csIndex) => (
                             <div key={csIndex} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
@@ -350,9 +365,6 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
                     
                     {recommendation.AlreadyPurchasedCrossSell && recommendation.AlreadyPurchasedCrossSell.length > 0 && (
                       <div>
-                        <p className="text-sm font-medium text-gray-700 mb-3">
-                          Has {recommendation.AlreadyPurchasedCrossSell.length} cross-sell products already purchased:
-                        </p>
                         <div className="space-y-3">
                           {recommendation.AlreadyPurchasedCrossSell.map((crossSell, csIndex) => (
                             <div key={csIndex} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
@@ -403,6 +415,7 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

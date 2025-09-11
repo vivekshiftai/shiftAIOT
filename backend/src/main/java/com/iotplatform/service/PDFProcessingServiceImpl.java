@@ -461,6 +461,7 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
             }
 
             Map<String, Object> responseBody = response.getBody();
+            log.debug("🔍 Raw response body from external service: {}", responseBody);
             
             // Handle the external service response format
             RulesGenerationResponse rulesResponse = new RulesGenerationResponse();
@@ -471,18 +472,24 @@ public class PDFProcessingServiceImpl implements PDFProcessingService {
                 
                 // Convert rules from external format to our format
                 List<Map<String, Object>> externalRules = (List<Map<String, Object>>) responseBody.get("rules");
+                log.debug("🔍 Found {} external rules to convert", externalRules != null ? externalRules.size() : 0);
                 if (externalRules != null) {
                     // Convert to DTO format directly without storing in database
                     List<RulesGenerationResponse.Rule> dtoRules = new ArrayList<>();
                     for (Map<String, Object> externalRule : externalRules) {
+                        log.debug("🔍 Converting external rule: {}", externalRule);
                         RulesGenerationResponse.Rule dtoRule = new RulesGenerationResponse.Rule();
-                        dtoRule.setName((String) externalRule.get("rule_name"));
+                        dtoRule.setName((String) externalRule.get("name"));
                         dtoRule.setDescription((String) externalRule.get("description"));
                         dtoRule.setMetric((String) externalRule.get("metric"));
+                        dtoRule.setMetricValue((String) externalRule.get("metric_value"));
                         dtoRule.setThreshold((String) externalRule.get("threshold"));
                         dtoRule.setConsequence((String) externalRule.get("consequence"));
-                        dtoRule.setCondition("metric: " + dtoRule.getMetric() + ", threshold: " + dtoRule.getThreshold());
-                        dtoRule.setAction("consequence: " + dtoRule.getConsequence());
+                        dtoRule.setCondition((String) externalRule.get("condition"));
+                        dtoRule.setAction((String) externalRule.get("action"));
+                        dtoRule.setPriority((String) externalRule.get("priority"));
+                        log.debug("🔍 Converted DTO rule: name='{}', description='{}', metric='{}'", 
+                                 dtoRule.getName(), dtoRule.getDescription(), dtoRule.getMetric());
                         dtoRules.add(dtoRule);
                     }
                     rulesResponse.setRules(dtoRules);

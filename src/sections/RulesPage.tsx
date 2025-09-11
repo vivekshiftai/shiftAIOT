@@ -3,19 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useIoT } from '../contexts/IoTContext';
 import { ruleAPI, maintenanceAPI, deviceSafetyPrecautionsAPI, maintenanceSchedulerAPI } from '../services/api';
-import { handleAuthError } from '../utils/authUtils';
 import { logInfo, logError, logWarn } from '../utils/logger';
 import { 
   Plus, 
   Edit, 
   Trash2, 
   Search, 
-  Filter, 
-  Settings,
   Clock,
-  CheckCircle,
-  AlertTriangle,
-  BarChart3,
   Shield,
   Zap,
   Wrench
@@ -24,34 +18,9 @@ import Button from '../components/UI/Button';
 
 import Skeleton from '../components/UI/Skeleton';
 import { RuleForm, MaintenanceForm, SafetyForm } from '../components/Forms';
-import { getApiConfig } from '../config/api';
 import { Rule, MaintenanceTask, DeviceSafetyPrecaution } from '../types';
 
-interface RuleCondition {
-  id: string;
-  deviceId: string;
-  deviceName: string;
-  parameter: string;
-  operator: string;
-  value: string;
-}
 
-interface RuleAction {
-  id: string;
-  type: string;
-  deviceId: string;
-  deviceName: string;
-  action: string;
-  value?: string;
-}
-
-interface RuleFormData {
-  name: string;
-  description: string;
-  conditions: RuleCondition[];
-  actions: RuleAction[];
-  isActive: boolean;
-}
 
 
 
@@ -437,30 +406,6 @@ const RulesPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1 max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search rules..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-      </div>
 
       {rulesError && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -636,31 +581,6 @@ const RulesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Search and Filter */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1 max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search maintenance tasks..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as any)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="completed">Completed</option>
-          <option value="overdue">Overdue</option>
-        </select>
-      </div>
 
       {maintenanceError && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -809,30 +729,6 @@ const RulesPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1 max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search safety precautions..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-        </div>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as any)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-      </div>
 
       {safetyError && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
