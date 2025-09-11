@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Settings, 
   AlertTriangle, 
   Clock, 
   Filter, 
@@ -11,10 +10,9 @@ import {
   Wrench
 } from 'lucide-react';
 import { maintenanceAPI, userAPI } from '../../services/api';
-import { unifiedOnboardingService } from '../../services/unifiedOnboardingService';
 import Modal from '../UI/Modal';
 import Button from '../UI/Button';
-import { logError, logInfo, logComponentMount, logComponentError } from '../../utils/logger';
+import { logError, logInfo, logComponentMount } from '../../utils/logger';
 
 interface DeviceMaintenance {
   id: string;
@@ -190,20 +188,6 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'preventive':
-        return <Clock className="w-5 h-5 text-primary-500" />;
-      case 'corrective':
-        return <Wrench className="w-5 h-5 text-orange-500" />;
-      case 'emergency':
-        return <AlertTriangle className="w-5 h-5 text-red-500" />;
-      case 'routine':
-        return <Clock className="w-5 h-5 text-success-500" />;
-      default:
-        return <Wrench className="w-5 h-5 text-gray-500" />;
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -352,12 +336,6 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
     return new Date(dateString).toLocaleDateString();
   };
 
-  const formatDuration = (minutes?: number) => {
-    if (!minutes) return 'Not specified';
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-  };
 
   const getUserNameById = (userId: string): string => {
     const user = users.find(u => u.id === userId);
@@ -477,51 +455,51 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50">
+          <div className="bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden">
+            <table className="w-full border-collapse">
+              <thead className="bg-gray-100 border-b-2 border-gray-300">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Task Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Frequency</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-1/3">Task Name</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Frequency</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Priority</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-12"></th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white">
                 {filteredTasks.map((task) => (
                   <React.Fragment key={task.id}>
                     <tr 
-                      className={`hover:bg-gray-50 cursor-pointer ${
+                      className={`hover:bg-gray-50 cursor-pointer border-b border-gray-200 ${
                         task.status === 'completed' ? 'opacity-60' : ''
                       }`}
                       onClick={() => toggleRowExpansion(task.id)}
                     >
-                      <td className="px-4 py-3 text-sm text-gray-900">
+                      <td className="px-6 py-4 text-sm text-gray-900 border-r border-gray-200 font-medium">
                         {truncateText(task.title)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
+                      <td className="px-6 py-4 text-sm text-gray-600 border-r border-gray-200">
                         {task.frequency || 'Not specified'}
                       </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(task.status)}`}>
+                      <td className="px-6 py-4 text-sm border-r border-gray-200">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
                           {task.status.replace('_', ' ').toUpperCase()}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded-full text-xs ${getPriorityColor(task.priority)}`}>
+                      <td className="px-6 py-4 text-sm border-r border-gray-200">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
                           {task.priority}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm">
+                      <td className="px-6 py-4 text-sm border-r border-gray-200">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleEditTask(task);
                             }}
-                            className="p-1 text-primary-600 hover:bg-primary-100 rounded"
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Edit"
                           >
                             <Edit className="w-4 h-4" />
@@ -531,20 +509,22 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
                               e.stopPropagation();
                               handleDelete(task.id);
                             }}
-                            className="p-1 text-red-600 hover:bg-red-100 rounded"
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-400">
-                        {expandedRows.has(task.id) ? '↑' : '↓'}
+                      <td className="px-6 py-4 text-sm text-gray-400 text-center">
+                        <span className="text-lg font-bold">
+                          {expandedRows.has(task.id) ? '▲' : '▼'}
+                        </span>
                       </td>
                     </tr>
                     {expandedRows.has(task.id) && (
                       <tr>
-                        <td colSpan={6} className="px-4 py-4 bg-gray-50 border-t border-gray-200">
+                        <td colSpan={6} className="px-6 py-6 bg-gray-50 border-b border-gray-200">
                           <div className="space-y-3">
                             <div>
                               <h5 className="font-medium text-gray-800 mb-1">Description:</h5>

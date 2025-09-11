@@ -120,7 +120,7 @@ export const getStepCardStyle = (step: OnboardingStep, status: 'completed' | 'cu
   if (status === 'completed') {
     return 'bg-green-50 border-green-200 shadow-sm';
   } else if (status === 'current') {
-    return `${step.bgColor} border-2 border-blue-300 shadow-md`;
+    return `${step.bgColor} border-2 border-pink-300 shadow-md`;
   } else {
     return 'bg-gray-50 border-gray-200 opacity-60';
   }

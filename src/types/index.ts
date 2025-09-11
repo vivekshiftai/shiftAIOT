@@ -247,7 +247,7 @@ export type UserRole = 'ADMIN' | 'USER';
 export interface DeviceConnection {
   id: string;
   deviceId: string;
-  connectionType: 'MQTT' | 'HTTP' | 'WEBSOCKET' | 'COAP' | 'TCP' | 'UDP';
+  connectionType: 'MQTT' | 'HTTP' | 'COAP' | 'TCP' | 'UDP';
   status: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING' | 'ERROR';
   brokerUrl?: string;
   username?: string;

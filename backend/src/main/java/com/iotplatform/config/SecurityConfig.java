@@ -95,7 +95,6 @@ public class SecurityConfig {
 
                 // Documentation and monitoring
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                .requestMatchers("/websocket/**", "/ws/**").permitAll()
                 .requestMatchers("/health/**", "/actuator/health/**").permitAll()
                 .requestMatchers("/api/health/**").permitAll()
                 
@@ -104,7 +103,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/system/**").hasRole("ADMIN")
                 
                 // SSE endpoints need special handling - allow them but they'll handle auth internally
-                .requestMatchers("/api/devices/*/unified-onboarding-stream").permitAll()
+                .requestMatchers("/api/devices/unified-onboarding-stream").permitAll()
                 // Protected endpoints (authentication required)
                 .requestMatchers("/api/devices/**").authenticated()
                 .requestMatchers("/api/notifications/**").authenticated()
@@ -140,13 +139,25 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        logger.info("Configuring CORS for PostgreSQL backend with WebSocket support");
+        logger.info("Configuring CORS for PostgreSQL backend with SSE support");
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(false); // Set to false when using wildcard origins
-        configuration.setExposedHeaders(Arrays.asList("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
+        
+        // SSE-specific headers for real-time streaming
+        configuration.setExposedHeaders(Arrays.asList(
+            "Access-Control-Allow-Origin", 
+            "Access-Control-Allow-Credentials",
+            "Content-Type",
+            "Cache-Control",
+            "Connection",
+            "Transfer-Encoding"
+        ));
+        
+        // SSE-specific configuration
+        configuration.setMaxAge(3600L); // Cache preflight for 1 hour
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

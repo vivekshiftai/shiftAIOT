@@ -103,8 +103,6 @@ public class DeviceService {
     @Autowired
     private NotificationRepository notificationRepository;
 
-    @Autowired
-    private DeviceWebSocketService deviceWebSocketService;
 
     @Autowired
     private OrganizationService organizationService;
@@ -1097,14 +1095,6 @@ public class DeviceService {
         Device savedDevice = deviceRepository.save(device);
         logger.info("✅ Device status saved to database: {} is now {}", device.getName(), status);
         
-        // Broadcast real-time status update
-        try {
-            deviceWebSocketService.broadcastDeviceStatusUpdate(savedDevice);
-            logger.info("📡 WebSocket broadcast sent for device status update: {} -> {} for device: {}", oldStatus, status, device.getName());
-        } catch (Exception e) {
-            logger.error("❌ Failed to broadcast device status update for device: {}", id, e);
-            // Don't fail the status update if WebSocket broadcast fails
-        }
         
         return savedDevice;
     }

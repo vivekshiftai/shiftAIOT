@@ -253,7 +253,6 @@ export const DeviceConnectionManager: React.FC<DeviceConnectionManagerProps> = (
                   >
                     <option value="MQTT">MQTT</option>
                     <option value="HTTP">HTTP</option>
-                    <option value="WEBSOCKET">WebSocket</option>
                     <option value="COAP">COAP</option>
                     <option value="TCP">TCP</option>
                     <option value="UDP">UDP</option>

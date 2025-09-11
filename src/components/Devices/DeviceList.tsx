@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Plus, 
   Search, 
@@ -51,8 +51,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({
   // Onboarding state management
   const [onboardingDevices, setOnboardingDevices] = useState<Map<string, OnboardingDevice>>(new Map());
   
-  // WebSocket connection status
-  const [wsConnected, setWsConnected] = useState(false);
 
   const filteredDevices = devices.filter(device => {
     const matchesSearch = device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -163,21 +161,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({
   };
 
 
-  // Monitor polling service connection status
-  useEffect(() => {
-    const checkConnection = () => {
-      // Polling service is always "connected" when running
-      setWsConnected(true);
-    };
-
-    // Check initial connection status
-    checkConnection();
-
-    // Set up interval to check connection status
-    const interval = setInterval(checkConnection, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Combine regular devices with onboarding devices, ensuring no duplicates
   const onboardingDevicesList = Array.from(onboardingDevices.values()).map(onboarding => onboarding.device);
@@ -195,17 +178,6 @@ export const DeviceList: React.FC<DeviceListProps> = ({
         <div>
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-2xl font-bold text-slate-800">Smart Assets</h1>
-            {/* WebSocket connection indicator */}
-            <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-              wsConnected 
-                ? 'bg-green-100 text-green-700' 
-                : 'bg-red-100 text-red-700'
-            }`}>
-              <div className={`w-2 h-2 rounded-full ${
-                wsConnected ? 'bg-green-500' : 'bg-red-500'
-              }`} />
-              {wsConnected ? 'Live' : 'Offline'}
-            </div>
           </div>
           <p className="text-slate-600">
             {allDevices.length} of {devices.length} assets

@@ -55,12 +55,15 @@ export class DeviceStatsService {
    */
   private static async fetchRulesCount(deviceId: string): Promise<number> {
     try {
+      console.log(`🔧 DeviceStatsService: Fetching rules for device ${deviceId}`);
       const response = await ruleAPI.getByDevice(deviceId);
+      console.log(`🔧 DeviceStatsService: Rules response for device ${deviceId}:`, response);
       return response.data?.length || 0;
     } catch (error: any) {
       const status = error.response?.status;
-      if (status === 401) {
-        console.warn(`Unauthorized access to rules for device ${deviceId}`);
+      if (status === 401 || status === 403) {
+        console.warn(`❌ Access denied for rules endpoint for device ${deviceId} - Status: ${status}`);
+        console.warn(`❌ This might be the source of the AccessDeniedException in the logs`);
       } else if (status === 404) {
         console.warn(`Rules endpoint not found for device ${deviceId}`);
       } else {
@@ -75,14 +78,17 @@ export class DeviceStatsService {
    */
   private static async fetchMaintenanceCount(deviceId: string): Promise<number> {
     try {
+      console.log(`🔧 DeviceStatsService: Fetching maintenance for device ${deviceId}`);
       const response = await maintenanceAPI.getByDevice(deviceId);
+      console.log(`🔧 DeviceStatsService: Maintenance response for device ${deviceId}:`, response);
       // The backend returns a complex object with maintenanceTasks field
       const maintenanceData = response.data?.maintenanceTasks || response.data || [];
       return maintenanceData.length || 0;
     } catch (error: any) {
       const status = error.response?.status;
-      if (status === 401) {
-        console.warn(`Unauthorized access to maintenance for device ${deviceId}`);
+      if (status === 401 || status === 403) {
+        console.warn(`❌ Access denied for maintenance endpoint for device ${deviceId} - Status: ${status}`);
+        console.warn(`❌ This might be the source of the AccessDeniedException in the logs`);
       } else if (status === 404) {
         console.warn(`Maintenance endpoint not found for device ${deviceId}`);
       } else {
@@ -97,6 +103,7 @@ export class DeviceStatsService {
    */
   private static async fetchSafetyCount(deviceId: string): Promise<number> {
     try {
+      console.log(`🔧 DeviceStatsService: Fetching safety for device ${deviceId}`);
       const response = await deviceSafetyPrecautionsAPI.getByDevice(deviceId);
       console.log(`🔧 DeviceStatsService: Safety response for device ${deviceId}:`, response);
       const safetyData = response.data || [];
@@ -104,8 +111,9 @@ export class DeviceStatsService {
       return safetyData.length || 0;
     } catch (error: any) {
       const status = error.response?.status;
-      if (status === 401) {
-        console.warn(`Unauthorized access to safety precautions for device ${deviceId}`);
+      if (status === 401 || status === 403) {
+        console.warn(`❌ Access denied for safety precautions endpoint for device ${deviceId} - Status: ${status}`);
+        console.warn(`❌ This might be the source of the AccessDeniedException in the logs`);
       } else if (status === 404) {
         console.warn(`Safety precautions endpoint not found for device ${deviceId}`);
       } else if (status === 500) {

@@ -37,7 +37,8 @@ api.interceptors.request.use(
                            config.url?.includes('/upload-pdf') ||
                            config.url?.includes('/query') ||
                            config.url?.includes('/pdfs/') ||
-                           config.url?.includes('/knowledge/suggestions'); // Temporarily make suggestions public for testing
+                           config.url?.includes('/knowledge/suggestions') || // Temporarily make suggestions public for testing
+                           config.url?.includes('/unified-onboarding-stream'); // SSE endpoint handles auth internally
     
     if (!isPublicEndpoint) {
       const token = tokenService.getToken();

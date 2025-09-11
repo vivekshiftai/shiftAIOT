@@ -10,6 +10,20 @@ interface DeviceOnboardingLoaderProps {
   progress?: number;
   message?: string;
   onComplete?: () => void;
+  // SSE Progress tracking
+  sseProgress?: {
+    stage: string;
+    progress: number;
+    message: string;
+    subMessage?: string;
+    stepDetails?: {
+      currentStep: number;
+      totalSteps: number;
+      stepName: string;
+      status?: string;
+    };
+    error?: string;
+  } | null;
 }
 
 export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
@@ -19,10 +33,13 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
   pdfFileName,
   progress = 0,
   message = '',
-  onComplete
+  onComplete,
+  sseProgress
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+  const [realTimeProgress, setRealTimeProgress] = useState<number>(progress);
+  const [realTimeMessage, setRealTimeMessage] = useState<string>(message);
 
   useEffect(() => {
     const stepIndex = ONBOARDING_STEPS.findIndex(step => step.id === currentStep);
@@ -38,6 +55,69 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
       .map(step => step.id);
     setCompletedSteps(completed);
   }, [currentStepIndex]);
+
+  /**
+   * Handle SSE progress updates in real-time
+   * Updates the loading screen with live progress data from the backend
+   */
+  useEffect(() => {
+    if (sseProgress) {
+      console.log('📊 SSE Progress Update:', sseProgress);
+      
+      // Update real-time progress and message from SSE stream
+      setRealTimeProgress(sseProgress.progress);
+      setRealTimeMessage(sseProgress.message);
+      
+      // Map backend stage to frontend step and update current step
+      if (sseProgress.stage && sseProgress.stage !== currentStep) {
+        const mappedStep = mapBackendStageToStep(sseProgress.stage);
+        if (mappedStep !== currentStep) {
+          // Update current step based on SSE progress
+          const stepIndex = ONBOARDING_STEPS.findIndex(step => step.id === mappedStep);
+          if (stepIndex !== -1) {
+            setCurrentStepIndex(stepIndex);
+          }
+        }
+      }
+      
+      // Handle completion - trigger onComplete callback when onboarding finishes
+      if (sseProgress.stage === 'complete' && onComplete) {
+        console.log('✅ Onboarding completed via SSE');
+        onComplete();
+      }
+      
+      // Handle errors - display error message to user
+      if (sseProgress.error) {
+        console.error('❌ SSE Error:', sseProgress.error);
+        setRealTimeMessage(`Error: ${sseProgress.error}`);
+      }
+    }
+  }, [sseProgress, currentStep, onComplete]);
+
+  /**
+   * Maps backend stage names to frontend step IDs
+   * This ensures consistency between backend SSE events and frontend UI steps
+   */
+  const mapBackendStageToStep = (stage: string): string => {
+    switch (stage) {
+      case 'device':
+        return 'device_creation';
+      case 'assignment':
+        return 'user_assignment';
+      case 'upload':
+        return 'pdf_upload';
+      case 'rules':
+        return 'rules_generation';
+      case 'maintenance':
+        return 'maintenance_schedule';
+      case 'safety':
+        return 'safety_procedures';
+      case 'complete':
+        return 'safety_procedures'; // Complete stage shows the final step
+      default:
+        return 'device_creation';
+    }
+  };
 
   const getStepIcon = (step: OnboardingStep, status: string) => {
     if (status === 'completed') {
@@ -77,7 +157,7 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
         {/* Progress Steps */}
         <div className="p-6">
           <div className="grid grid-cols-3 gap-4 mb-6">
-            {ONBOARDING_STEPS.map((step, index) => {
+            {ONBOARDING_STEPS.map((step) => {
               const status = getStepStatus(step.id, currentStep, completedSteps);
               const isCurrent = status === 'current';
               
@@ -142,18 +222,30 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
                   Current Step: {ONBOARDING_STEPS[currentStepIndex]?.title}
                 </span>
                 <span className="text-sm text-gray-500">
-                  {progress}% Complete
+                  {realTimeProgress}% Complete
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
                   className="bg-gradient-to-r from-pink-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${progress}%` }}
+                  style={{ width: `${realTimeProgress}%` }}
                 />
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                {message || `Processing ${pdfFileName} for ${deviceName}...`}
+                {realTimeMessage || message || `Processing ${pdfFileName} for ${deviceName}...`}
               </p>
+              {sseProgress?.subMessage && (
+                <p className="text-xs text-gray-400 mt-1">
+                  {sseProgress.subMessage}
+                </p>
+              )}
+              {sseProgress?.stepDetails && (
+                <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                  <span>Step {sseProgress.stepDetails.currentStep} of {sseProgress.stepDetails.totalSteps}</span>
+                  <span>•</span>
+                  <span>{sseProgress.stepDetails.stepName}</span>
+                </div>
+              )}
             </div>
           )}
         </div>

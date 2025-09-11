@@ -439,35 +439,35 @@ const RulesPage: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full border-collapse">
+              <thead className="bg-gray-100 border-b-2 border-gray-300">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Rule Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Category
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Priority
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Created
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white">
                 {filteredRules.map((rule) => (
-                  <tr key={rule.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  <tr key={rule.id} className="hover:bg-gray-50 border-b border-gray-200">
+                    <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{rule.name}</div>
                         {rule.description && (
@@ -475,22 +475,22 @@ const RulesPage: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                         rule.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                       }`}>
                         {rule.status === 'ACTIVE' ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize border-r border-gray-200">
                       {rule.category || 'General'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(rule.priority)}`}>
+                    <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(rule.priority)}`}>
                         {rule.priority || 'Medium'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
                       {new Date(rule.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -507,7 +507,7 @@ const RulesPage: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEditRule(rule)}
-                          className="text-gray-600 hover:text-gray-900"
+                          className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -515,7 +515,7 @@ const RulesPage: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteRule(rule.id)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -614,38 +614,38 @@ const RulesPage: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full border-collapse">
+              <thead className="bg-gray-100 border-b-2 border-gray-300">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Task Name
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Priority
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Next Maintenance
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Frequency
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Device
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white">
                 {filteredMaintenance.map((task) => (
-                  <tr key={task.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  <tr key={task.id} className="hover:bg-gray-50 border-b border-gray-200">
+                    <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{task.taskName}</div>
                         {task.description && (
@@ -653,23 +653,23 @@ const RulesPage: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+                    <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
                         {task.status.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                    <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
                         {task.priority}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200">
                       {new Date(task.nextMaintenance).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize border-r border-gray-200">
                       {task.frequency}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200">
                       {task.deviceName || getDeviceName(task.deviceId)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -686,7 +686,7 @@ const RulesPage: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEditMaintenance(task)}
-                          className="text-gray-600 hover:text-gray-900"
+                          className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -694,7 +694,7 @@ const RulesPage: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteMaintenance(task.id)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -762,44 +762,44 @@ const RulesPage: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full border-collapse">
+              <thead className="bg-gray-100 border-b-2 border-gray-300">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Title
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Type
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Severity
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Category
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">
                     Created
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white">
                 {filteredSafety.map((precaution) => (
-                  <tr key={precaution.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                  <tr key={precaution.id} className="hover:bg-gray-50 border-b border-gray-200">
+                    <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{precaution.title}</div>
                         <div className="text-sm text-gray-500 truncate max-w-xs">{precaution.description}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
                       <div className="flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-full ${precaution.isActive ? 'bg-green-500' : 'bg-gray-400'}`} />
                         <span className="text-sm text-gray-900">
@@ -807,18 +807,18 @@ const RulesPage: React.FC = () => {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize border-r border-gray-200">
                       {precaution.type}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getSeverityColor(precaution.severity)}`}>
+                    <td className="px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getSeverityColor(precaution.severity)}`}>
                         {precaution.severity}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize border-r border-gray-200">
                       {precaution.category.replace('_', ' ')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
                       {new Date(precaution.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -835,7 +835,7 @@ const RulesPage: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEditSafety(precaution)}
-                          className="text-gray-600 hover:text-gray-900"
+                          className="text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-colors"
                         >
                           <Edit className="w-4 h-4" />
                         </Button>
@@ -843,7 +843,7 @@ const RulesPage: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteSafety(precaution.id)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-600 hover:bg-red-50 p-2 rounded-lg transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

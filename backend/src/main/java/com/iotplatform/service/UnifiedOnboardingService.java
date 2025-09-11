@@ -79,13 +79,29 @@ public class UnifiedOnboardingService {
     private OrganizationService organizationService;
 
     /**
-     * Complete unified onboarding workflow with real-time progress tracking
+     * Complete unified onboarding workflow with real-time progress tracking via SSE
      * 
-     * Correct Flow:
-     * 1. Create device (without storing PDF files)
-     * 2. Upload PDF to PDF Processing Service
-     * 3. Generate rules, maintenance, safety from processed PDF
-     * 4. Store only the results in our database
+     * This method orchestrates the entire 6-step device onboarding process:
+     * 1. Device Creation - Create device configuration in the system
+     * 2. User Assignment - Assign device to responsible user
+     * 3. PDF Upload - Upload device documentation to AI processing service
+     * 4. Rules Generation - Create intelligent IoT monitoring rules
+     * 5. Maintenance Schedule - Generate preventive maintenance plans
+     * 6. Safety Procedures - Extract safety guidelines and procedures
+     * 
+     * Each step sends real-time progress updates via SSE to the frontend,
+     * allowing users to see live progress during the onboarding process.
+     * 
+     * @param deviceRequest - Device configuration data
+     * @param manualFile - Device manual PDF file (optional)
+     * @param datasheetFile - Device datasheet PDF file (optional)
+     * @param certificateFile - Device certificate PDF file (optional)
+     * @param organizationId - Organization ID for device assignment
+     * @param currentUserId - ID of user performing the onboarding
+     * @param progressCallback - Callback function for SSE progress updates
+     * @return DeviceCreateResponse with complete device information
+     * @throws IOException if file operations fail
+     * @throws PDFProcessingException if PDF processing fails
      */
     public DeviceCreateResponse completeUnifiedOnboarding(
             DeviceCreateWithFileRequest deviceRequest,
@@ -238,7 +254,7 @@ public class UnifiedOnboardingService {
         }
         
         // Send final completion progress
-        sendProgressUpdate(progressCallback, "complete", 100, "Onboarding completed successfully", 
+        sendProgressUpdate(progressCallback, "complete", 100, "✅ Onboarding completed successfully", 
                           "Device successfully onboarded with all configurations and ready for use", null, 6, 6, "Completion");
         
         log.info("Unified onboarding workflow completed successfully for device: {}", deviceResponse.getId());
@@ -286,10 +302,12 @@ public class UnifiedOnboardingService {
                     .build();
                 
                 progressCallback.accept(progressUpdate);
-                log.info("Progress update sent: {} - {}% - {}", stage, progress, message);
+                log.info("📊 SSE Progress update sent: {} - {}% - {} (Step {}/{})", stage, progress, message, currentStep, totalSteps);
             } catch (Exception e) {
-                log.error("Failed to send progress update", e);
+                log.error("❌ Failed to send SSE progress update", e);
             }
+        } else {
+            log.warn("⚠️ Progress callback is null, cannot send update: {} - {}% - {}", stage, progress, message);
         }
     }
     

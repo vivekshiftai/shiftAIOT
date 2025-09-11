@@ -96,6 +96,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
   const [onboardingStartTime, setOnboardingStartTime] = useState<number>(0);
   const [onboardingProgress, setOnboardingProgress] = useState<number>(0);
   const [onboardingMessage, setOnboardingMessage] = useState<string>('');
+  
+  // SSE Progress tracking for real-time updates
+  const [sseProgress, setSseProgress] = useState<UnifiedOnboardingProgress | null>(null);
 
   // Debug progress state changes
   useEffect(() => {
@@ -334,6 +337,9 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         formData,
         uploadedFile.file,
         (progress: UnifiedOnboardingProgress) => {
+          // Update SSE progress for real-time display
+          setSseProgress(progress);
+          
           // Update progress percentage and message
           setOnboardingProgress(progress.progress);
           setOnboardingMessage(progress.message);
@@ -1027,9 +1033,10 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
       progress={onboardingProgress}
       message={onboardingMessage}
+      sseProgress={sseProgress}
       onComplete={() => {}}
     />
-  ), [currentOnboardingStep, formData.deviceName, uploadedFile?.file.name, onboardingProgress, onboardingMessage]);
+  ), [currentOnboardingStep, formData.deviceName, uploadedFile?.file.name, onboardingProgress, onboardingMessage, sseProgress]);
 
   // Render success message with integrated chat
   const renderSuccessContent = useCallback(() => (

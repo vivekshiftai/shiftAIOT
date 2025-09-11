@@ -52,22 +52,21 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
   onContinue, 
   onClose 
 }) => {
-  const [animationPhase, setAnimationPhase] = useState<'initial' | 'complete'>('initial');
   const [deviceStats, setDeviceStats] = useState<DeviceStats | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-  // Animation sequence
-  useEffect(() => {
-    const timer = setTimeout(() => setAnimationPhase('complete'), 500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Load real-time device statistics
+  // Load real-time device statistics with a delay to avoid race conditions
   useEffect(() => {
     const loadDeviceStats = async () => {
       try {
         setIsLoadingStats(true);
+        
+        // Add a small delay to ensure the device is fully created and accessible
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        console.log(`🔧 OnboardingSuccess: Loading device stats for device ${result.deviceId}`);
         const stats = await DeviceStatsService.getDeviceStats(result.deviceId);
+        console.log(`🔧 OnboardingSuccess: Device stats loaded:`, stats);
         setDeviceStats(stats);
       } catch (error) {
         logError('OnboardingSuccess', 'Failed to load device stats', error instanceof Error ? error : new Error('Unknown error'));
@@ -93,15 +92,15 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
     <div className="w-full h-full flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 duration-500">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-3 sm:p-4 border-b border-green-200">
+        <div className="bg-gradient-to-r from-pink-600 to-purple-600 p-3 sm:p-4 border-b border-pink-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-full flex items-center justify-center">
                 <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-base sm:text-lg font-bold text-white">✨ AI Machine Ready!</h2>
-                <p className="text-green-100 text-xs sm:text-sm">You can now chat with {result.deviceName} like a human!</p>
+                <h2 className="text-base sm:text-lg font-bold text-white">✨ AI Device Ready!</h2>
+                <p className="text-pink-100 text-xs sm:text-sm">You can now chat with {result.deviceName} like a human!</p>
               </div>
             </div>
             <button
@@ -117,27 +116,27 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
         <div className="flex-1 p-3 sm:p-4 overflow-y-auto">
           <div className="space-y-3 sm:space-y-4">
               {/* Device Info Card */}
-              <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-              <h3 className="text-sm sm:text-base font-semibold text-green-800 mb-2 flex items-center gap-2">
+              <div className="bg-pink-50 rounded-lg p-3 border border-pink-200">
+              <h3 className="text-sm sm:text-base font-semibold text-pink-800 mb-2 flex items-center gap-2">
                 <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
                   Device Information
                 </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
                   <div>
-                    <span className="text-green-600 font-medium">Name:</span>
-                  <p className="text-green-800 font-semibold truncate">{result.deviceName}</p>
+                    <span className="text-pink-600 font-medium">Name:</span>
+                  <p className="text-pink-800 font-semibold truncate">{result.deviceName}</p>
                   </div>
                   <div>
-                    <span className="text-green-600 font-medium">Type:</span>
-                    <p className="text-green-800 font-semibold">{result.deviceType || 'Smart Asset'}</p>
+                    <span className="text-pink-600 font-medium">Type:</span>
+                    <p className="text-pink-800 font-semibold">{result.deviceType || 'Smart Asset'}</p>
                   </div>
                   <div>
-                    <span className="text-green-600 font-medium">Processing Time:</span>
-                    <p className="text-green-800 font-semibold">{result.processingTime}s</p>
+                    <span className="text-pink-600 font-medium">Processing Time:</span>
+                    <p className="text-pink-800 font-semibold">{result.processingTime}s</p>
                   </div>
                   <div>
-                    <span className="text-green-600 font-medium">PDF File:</span>
-                    <p className="text-green-800 font-semibold truncate">{result.pdfFileName}</p>
+                    <span className="text-pink-600 font-medium">PDF File:</span>
+                    <p className="text-pink-800 font-semibold truncate">{result.pdfFileName}</p>
                   </div>
                 </div>
               </div>
@@ -176,49 +175,49 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
             </div>
 
             {/* AI Capabilities */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
-              <h3 className="text-sm sm:text-base font-semibold text-green-800 mb-2 flex items-center gap-2">
+            <div className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg p-3 border border-pink-200">
+              <h3 className="text-sm sm:text-base font-semibold text-pink-800 mb-2 flex items-center gap-2">
                 <Brain className="w-3 h-3 sm:w-4 sm:h-4" />
                 AI Capabilities
               </h3>
               <div className="grid grid-cols-2 gap-2">
-                <div className="bg-white rounded-lg p-2 border border-green-200">
+                <div className="bg-white rounded-lg p-2 border border-pink-200">
                   <div className="flex items-center gap-2 mb-1">
-                    <MessageSquare className="w-3 h-3 text-green-600" />
-                    <span className="text-xs font-medium text-green-700">Natural Language Chat</span>
+                    <MessageSquare className="w-3 h-3 text-pink-600" />
+                    <span className="text-xs font-medium text-pink-700">Natural Language Chat</span>
                   </div>
                 </div>
-                <div className="bg-white rounded-lg p-2 border border-green-200">
+                <div className="bg-white rounded-lg p-2 border border-pink-200">
                   <div className="flex items-center gap-2 mb-1">
-                    <Brain className="w-3 h-3 text-green-600" />
-                    <span className="text-xs font-medium text-green-700">Intelligent Analysis</span>
+                    <Brain className="w-3 h-3 text-pink-600" />
+                    <span className="text-xs font-medium text-pink-700">Intelligent Analysis</span>
                   </div>
                 </div>
-                <div className="bg-white rounded-lg p-2 border border-green-200">
+                <div className="bg-white rounded-lg p-2 border border-pink-200">
                   <div className="flex items-center gap-2 mb-1">
-                    <Clock className="w-3 h-3 text-green-600" />
-                    <span className="text-xs font-medium text-green-700">Predictive Monitoring</span>
+                    <Clock className="w-3 h-3 text-pink-600" />
+                    <span className="text-xs font-medium text-pink-700">Predictive Monitoring</span>
                   </div>
                 </div>
-                <div className="bg-white rounded-lg p-2 border border-green-200">
+                <div className="bg-white rounded-lg p-2 border border-pink-200">
                   <div className="flex items-center gap-2 mb-1">
-                    <Settings className="w-3 h-3 text-green-600" />
-                    <span className="text-xs font-medium text-green-700">Smart Automation</span>
+                    <Settings className="w-3 h-3 text-pink-600" />
+                    <span className="text-xs font-medium text-pink-700">Smart Automation</span>
                  </div>
                 </div>
                 </div>
               </div>
 
               {/* AI Assistant Ready */}
-              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg p-3 border border-emerald-200">
-              <h3 className="text-sm sm:text-base font-semibold text-emerald-800 mb-2 flex items-center gap-2">
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-3 border border-purple-200">
+              <h3 className="text-sm sm:text-base font-semibold text-purple-800 mb-2 flex items-center gap-2">
                 <Bot className="w-3 h-3 sm:w-4 sm:h-4" />
                   AI Assistant Ready
                 </h3>
-              <p className="text-emerald-700 text-xs sm:text-sm mb-2">
+              <p className="text-purple-700 text-xs sm:text-sm mb-2">
                   Ask me anything about {result.deviceName}
                 </p>
-                <div className="bg-white rounded-lg p-2 border border-emerald-200">
+                <div className="bg-white rounded-lg p-2 border border-purple-200">
                   <p className="text-xs sm:text-sm text-gray-700">
                     Hello! I'm your AI assistant for {result.deviceName}. I can help you with setup, maintenance, troubleshooting, and technical questions. What would you like to know?
                   </p>
@@ -228,17 +227,17 @@ export const OnboardingSuccess: React.FC<OnboardingSuccessProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="bg-green-50 p-3 sm:p-4 border-t border-green-200">
+        <div className="bg-pink-50 p-3 sm:p-4 border-t border-pink-200">
           <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
             <button
               onClick={onClose}
-              className="px-3 sm:px-4 py-2 bg-white text-green-700 border border-green-300 rounded-lg hover:bg-green-50 transition-colors text-xs sm:text-sm"
+              className="px-3 sm:px-4 py-2 bg-white text-pink-700 border border-pink-300 rounded-lg hover:bg-pink-50 transition-colors text-xs sm:text-sm"
             >
               Close
             </button>
             <button
               onClick={onContinue}
-              className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 text-xs sm:text-sm"
+              className="px-3 sm:px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors flex items-center justify-center gap-2 text-xs sm:text-sm"
             >
               <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
               Start Chat

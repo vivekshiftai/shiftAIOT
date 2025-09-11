@@ -6,7 +6,6 @@ import { logInfo, logError, logWarn } from '../utils/logger';
 import { Device, Rule, Notification, TelemetryData, Status } from '../types';
 import { tokenService } from '../services/tokenService';
 import { NotificationService } from '../services/notificationService';
-import { pollingService } from '../services/pollingService';
 import { useAuth } from './AuthContext';
 
 interface IoTContextType {
@@ -61,59 +60,6 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   const { user, isLoading: authLoading } = useAuth();
   const notificationService = user ? NotificationService.getInstance() : null;
 
-        // Real-time connection management (STOMP WebSocket with polling fallback)
-        useEffect(() => {
-          if (user?.organizationId) {
-            // Common callbacks for both STOMP WebSocket and polling
-            const deviceCallbacks = {
-              onDeviceStatusUpdate: (deviceId: string, status: string, deviceName: string) => {
-                logInfo('IoT', 'Device status update received', { deviceId, status, deviceName });
-                setDevices((prev: Device[]) => 
-                  prev.map((device: Device) => 
-                    device.id === deviceId 
-                      ? { ...device, status: status as Status }
-                      : device
-                  )
-                );
-              },
-              onDeviceCreated: (device: Device) => {
-                logInfo('IoT', 'Device created', { deviceId: device.id, deviceName: device.name });
-                setDevices((prev: Device[]) => {
-                  // Check if device already exists to prevent duplicates
-                  const deviceExists = prev.some(existingDevice => existingDevice.id === device.id);
-                  if (deviceExists) {
-                    logInfo('IoT', 'Device already exists, updating instead of adding', { deviceId: device.id });
-                    return prev.map(existingDevice => 
-                      existingDevice.id === device.id ? device : existingDevice
-                    );
-                  }
-                  return [...prev, device];
-                });
-              },
-              onDeviceDeleted: (deviceId: string, deviceName: string) => {
-                logInfo('IoT', 'Device deleted', { deviceId, deviceName });
-                setDevices((prev: Device[]) => prev.filter((device: Device) => device.id !== deviceId));
-              },
-              onConnectionStatusChange: (connected: boolean) => {
-                logInfo('IoT', 'Real-time connection status changed', { connected });
-              }
-            };
-
-            // Set up polling service callbacks for real-time updates
-            pollingService.setCallbacks(deviceCallbacks);
-
-            // Use polling service for real-time updates (WebSocket removed due to CORS issues)
-            logInfo('IoT', 'Starting polling service for real-time updates', { organizationId: user.organizationId });
-            pollingService.start(user.organizationId).catch(pollingError => {
-              logError('IoT', 'Polling service failed to start', pollingError instanceof Error ? pollingError : new Error('Unknown error'));
-            });
-
-            // Cleanup on unmount
-            return () => {
-              pollingService.stop();
-            };
-          }
-        }, [user?.organizationId]);
 
   // Load notifications from database and subscribe to updates
   useEffect(() => {
@@ -356,8 +302,6 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       
       
       
-      // Trigger polling to ensure immediate updates
-      pollingService.triggerPoll();
       
       return response;
       
@@ -484,8 +428,6 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       logInfo('IoT', 'Device created successfully', { deviceId: response.data?.id });
       await refreshDevices();
       
-      // Trigger polling to ensure immediate updates
-      pollingService.triggerPoll();
       
       // Create notification for device creation
       try {
@@ -523,8 +465,6 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       logInfo('IoT', 'Device assigned successfully', { deviceId, userId });
       await refreshDevices();
       
-      // Trigger polling to ensure immediate updates
-      pollingService.triggerPoll();
     } catch (error) {
       logError('IoT', 'Failed to assign device to user', error instanceof Error ? error : new Error('Unknown error'));
       throw error;
@@ -565,8 +505,6 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       logInfo('IoT', 'Device deleted successfully', { deviceId });
       await refreshDevices();
       
-      // Trigger polling to ensure immediate updates
-      pollingService.triggerPoll();
     } catch (error) {
       logError('IoT', 'Device deletion failed', error instanceof Error ? error : new Error('Unknown error'));
       

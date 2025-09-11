@@ -212,7 +212,7 @@ export class UnifiedOnboardingService {
 
       // Use fetch with streaming and timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout for SSE
 
       try {
         const response = await fetch(`${this.baseUrl}/api/devices/unified-onboarding-stream`, {

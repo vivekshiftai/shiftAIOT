@@ -190,13 +190,13 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
             <div
               className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm border ${
                 message.type === 'user'
-                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-indigo-400/30'
+                  ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white border-pink-400/30'
                   : 'bg-white/90 backdrop-blur-sm text-gray-800 border-gray-200/50'
               }`}
             >
               <div className="flex items-start gap-3">
                 {message.type === 'assistant' && (
-                  <div className="w-6 h-6 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <div className="w-6 h-6 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                     <Bot className="w-3 h-3 text-white" />
                   </div>
                 )}
@@ -238,7 +238,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
                   )}
                 </div>
                 {message.type === 'user' && (
-                  <div className="w-6 h-6 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <div className="w-6 h-6 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
                     <User className="w-3 h-3 text-white" />
                   </div>
                 )}
@@ -258,7 +258,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Ask about this device"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-sm bg-white text-gray-800 placeholder-gray-500 transition-all duration-300"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 resize-none text-sm bg-white text-gray-800 placeholder-gray-500 transition-all duration-300"
               rows={2}
               disabled={isLoading}
             />
@@ -268,7 +268,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
             disabled={!inputValue.trim() || isLoading}
             className={`flex-shrink-0 w-12 h-12 rounded-lg transition-all duration-300 flex items-center justify-center ${
               inputValue.trim() && !isLoading
-                ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transform hover:scale-105 shadow-lg'
+                ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:from-pink-600 hover:to-purple-700 transform hover:scale-105 shadow-lg'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
