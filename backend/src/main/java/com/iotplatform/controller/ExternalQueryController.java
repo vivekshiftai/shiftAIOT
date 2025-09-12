@@ -1,6 +1,14 @@
 package com.iotplatform.controller;
 
 import com.iotplatform.service.ExternalQueryProcessingService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +27,7 @@ import java.util.Map;
 @RequestMapping("/api/external-query")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "External Query Processing", description = "APIs for processing external queries through device PDFs and MCP server")
 public class ExternalQueryController {
 
     private final ExternalQueryProcessingService externalQueryProcessingService;
@@ -29,8 +38,70 @@ public class ExternalQueryController {
      * @param request The query request containing the query text and source
      * @return Processing result
      */
+    @Operation(
+        summary = "Process External Query",
+        description = "Process external queries through the complete flow: device extraction -> PDF query -> MCP response. No authentication required."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Query processed successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = Map.class),
+                examples = @ExampleObject(
+                    name = "Success Response",
+                    value = """
+                    {
+                      "success": true,
+                      "query": "What is the maintenance schedule for Rondo s-4000?",
+                      "source": "slack",
+                      "deviceName": "Rondo s-4000",
+                      "response": "🤖 Query Response for Rondo s-4000...",
+                      "error": "",
+                      "warning": ""
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - missing query text",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    name = "Error Response",
+                    value = """
+                    {
+                      "success": false,
+                      "error": "Query text is required"
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "500",
+            description = "Internal server error",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    name = "Error Response",
+                    value = """
+                    {
+                      "success": false,
+                      "error": "Internal server error: [error message]"
+                    }
+                    """
+                )
+            )
+        )
+    })
     @PostMapping("/process")
-    public ResponseEntity<Map<String, Object>> processExternalQuery(@RequestBody ExternalQueryRequest request) {
+    public ResponseEntity<Map<String, Object>> processExternalQuery(
+        @Parameter(description = "External query request", required = true)
+        @RequestBody ExternalQueryRequest request) {
         log.info("🔄 Received external query request: {}", request);
         
         try {
@@ -82,8 +153,49 @@ public class ExternalQueryController {
      * @param request The Slack webhook request
      * @return Processing result
      */
+    @Operation(
+        summary = "Process Slack Webhook Query",
+        description = "Simplified endpoint for processing queries from Slack webhooks. No authentication required."
+    )
+    @ApiResponses(value = {
+        @ApiResponse(
+            responseCode = "200",
+            description = "Slack query processed successfully",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    name = "Success Response",
+                    value = """
+                    {
+                      "success": true,
+                      "message": "Query processed successfully",
+                      "deviceName": "Rondo s-4000"
+                    }
+                    """
+                )
+            )
+        ),
+        @ApiResponse(
+            responseCode = "400",
+            description = "Bad request - no query text provided",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    name = "Error Response",
+                    value = """
+                    {
+                      "success": false,
+                      "error": "No query text provided"
+                    }
+                    """
+                )
+            )
+        )
+    })
     @PostMapping("/slack")
-    public ResponseEntity<Map<String, Object>> processSlackQuery(@RequestBody SlackWebhookRequest request) {
+    public ResponseEntity<Map<String, Object>> processSlackQuery(
+        @Parameter(description = "Slack webhook request", required = true)
+        @RequestBody SlackWebhookRequest request) {
         log.info("📱 Received Slack webhook query: {}", request);
         
         try {
@@ -118,6 +230,27 @@ public class ExternalQueryController {
     /**
      * Health check endpoint for external query service
      */
+    @Operation(
+        summary = "Health Check",
+        description = "Check the health status of the external query processing service. No authentication required."
+    )
+    @ApiResponse(
+        responseCode = "200",
+        description = "Service is healthy",
+        content = @Content(
+            mediaType = "application/json",
+            examples = @ExampleObject(
+                name = "Health Response",
+                value = """
+                {
+                  "status": "healthy",
+                  "service": "External Query Processing",
+                  "timestamp": 1694512345678
+                }
+                """
+            )
+        )
+    )
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> healthCheck() {
         return ResponseEntity.ok(Map.of(
@@ -130,9 +263,15 @@ public class ExternalQueryController {
     /**
      * Request DTO for external queries
      */
+    @Schema(description = "External query request payload")
     public static class ExternalQueryRequest {
+        @Schema(description = "The query text to process", example = "What is the maintenance schedule for Rondo s-4000?", required = true)
         private String query;
+        
+        @Schema(description = "Source of the query", example = "slack", required = false)
         private String source;
+        
+        @Schema(description = "Additional metadata", required = false)
         private Map<String, Object> metadata;
 
         // Getters and setters
@@ -149,10 +288,18 @@ public class ExternalQueryController {
     /**
      * Request DTO for Slack webhooks
      */
+    @Schema(description = "Slack webhook request payload")
     public static class SlackWebhookRequest {
+        @Schema(description = "The query text from Slack", example = "How do I operate the conveyor belt?", required = true)
         private String text;
+        
+        @Schema(description = "Slack user ID", example = "U123456", required = false)
         private String user;
+        
+        @Schema(description = "Slack channel ID", example = "C092C9RHPKN", required = false)
         private String channel;
+        
+        @Schema(description = "Message timestamp", example = "1694512345.123456", required = false)
         private String timestamp;
 
         // Getters and setters
