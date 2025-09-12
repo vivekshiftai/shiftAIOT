@@ -29,10 +29,9 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
   const [realTimeMessage, setRealTimeMessage] = useState(message);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
-  const [forceRender, setForceRender] = useState(0);
 
   // Suppress unused variable warnings for now
-  console.log('DeviceOnboardingLoader props:', { deviceName, pdfFileName, realTimeProgress, realTimeMessage, completedSteps, forceRender });
+  console.log('DeviceOnboardingLoader props:', { deviceName, pdfFileName, realTimeProgress, realTimeMessage, completedSteps });
 
   // Map backend stage to frontend step
   const mapBackendStageToStep = (stage: string): string => {
@@ -55,17 +54,6 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
       setCurrentStepIndex(stepIndex);
     }
   }, [currentStep]);
-
-  // Track component re-renders
-  useEffect(() => {
-    console.log('🔄 DeviceOnboardingLoader: Component re-rendered', {
-      realTimeProgress,
-      realTimeMessage,
-      currentStepIndex,
-      completedSteps: completedSteps.length,
-      forceRender
-    });
-  });
 
   useEffect(() => {
     // Mark previous steps as completed
@@ -104,7 +92,6 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
       });
       setRealTimeProgress(sseProgress.progress);
       setRealTimeMessage(sseProgress.message);
-      setForceRender(prev => prev + 1); // Force re-render
       console.log('📊 Loader: State updated successfully');
       
       // Map backend stage to frontend step and update current step
@@ -152,11 +139,7 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-        <SSEEventDisplay 
-          sseProgress={sseProgress || null} 
-          isProcessing={isProcessing}
-          key={forceRender} // Force re-render when state changes
-        />
+        <SSEEventDisplay sseProgress={sseProgress || null} isProcessing={isProcessing} />
       </div>
     </div>
   );
