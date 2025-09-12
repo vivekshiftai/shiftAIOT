@@ -35,7 +35,7 @@ api.interceptors.request.use(
                            config.url?.includes('/health') ||
                            config.url?.includes('/api/health/') ||
                            config.url?.includes('/upload-pdf') ||
-                           config.url?.includes('/query') ||
+                           config.url?.includes('/knowledge/query') || // Only knowledge query is public, not PDF query
                            config.url?.includes('/pdfs/') ||
                            config.url?.includes('/knowledge/suggestions') || // Temporarily make suggestions public for testing
                            config.url?.includes('/unified-onboarding-stream'); // SSE endpoint handles auth internally
