@@ -352,12 +352,19 @@ export class UnifiedOnboardingService {
             
             if (trimmedLine.startsWith('event: ')) {
               currentEvent = trimmedLine.substring(7).trim();
-              console.log('🌐 SSE: Event type received', { event: currentEvent });
+              console.log('🌐 SSE: Event type received', { 
+                event: currentEvent,
+                previousEvent: currentEvent,
+                previousData: currentData ? 'present' : 'missing'
+              });
             } else if (trimmedLine.startsWith('data: ')) {
               currentData = trimmedLine.substring(6);
               console.log('🌐 SSE: Data received', { 
                 dataLength: currentData.length, 
-                dataPreview: currentData.substring(0, Math.min(100, currentData.length)) + '...' 
+                dataPreview: currentData.substring(0, Math.min(100, currentData.length)) + '...',
+                currentEvent: currentEvent,
+                hasEvent: !!currentEvent,
+                hasData: !!currentData
               });
             } else if (trimmedLine === '') {
               // Empty line indicates end of event, process the accumulated data
@@ -376,7 +383,8 @@ export class UnifiedOnboardingService {
                 console.log('🌐 SSE: Processing event', { 
                   event: currentEvent, 
                   dataLength: currentData.length,
-                  dataPreview: currentData.substring(0, Math.min(100, currentData.length)) + '...' 
+                  dataPreview: currentData.substring(0, Math.min(100, currentData.length)) + '...',
+                  fullData: currentData
                 });
                 logInfo('UnifiedOnboarding', 'Processing SSE event data', { 
                   event: currentEvent, 
@@ -385,10 +393,28 @@ export class UnifiedOnboardingService {
                 
                 try {
                   const eventData = JSON.parse(currentData);
-                  console.log('🔍 SSE: Parsed event data', { currentEvent, eventData });
+                  console.log('🔍 SSE: Parsed event data', { 
+                    currentEvent, 
+                    eventData,
+                    eventDataKeys: Object.keys(eventData),
+                    eventDataStringified: JSON.stringify(eventData, null, 2)
+                  });
                   
                   if (currentEvent === 'progress' && eventData.stage && eventData.progress !== undefined) {
                     // This is a progress update
+                    console.log('🔥 SSE: Creating progress object from eventData', {
+                      eventData,
+                      stage: eventData.stage,
+                      progress: eventData.progress,
+                      message: eventData.message,
+                      subMessage: eventData.subMessage,
+                      stepDetails: eventData.stepDetails,
+                      deviceId: eventData.deviceId,
+                      error: eventData.error,
+                      retryable: eventData.retryable,
+                      timestamp: eventData.timestamp
+                    });
+                    
                     const progress: UnifiedOnboardingProgress = {
                       deviceId: eventData.deviceId,
                       stage: eventData.stage,
@@ -406,6 +432,12 @@ export class UnifiedOnboardingService {
                       stage: progress.stage,
                       progress: progress.progress,
                       message: progress.message,
+                      subMessage: progress.subMessage,
+                      stepDetails: progress.stepDetails,
+                      deviceId: progress.deviceId,
+                      error: progress.error,
+                      retryable: progress.retryable,
+                      timestamp: progress.timestamp,
                       fullProgress: progress
                     });
                     
@@ -417,10 +449,19 @@ export class UnifiedOnboardingService {
                     });
                     
                     if (onProgress) {
-                      console.log('🔥 SSE: Calling onProgress callback with:', progress);
+                      console.log('🔥 SSE: Calling onProgress callback with:', {
+                        progress,
+                        progressStringified: JSON.stringify(progress, null, 2),
+                        callbackType: typeof onProgress,
+                        callbackName: onProgress.name || 'anonymous'
+                      });
                       onProgress(progress);
+                      console.log('🔥 SSE: onProgress callback completed successfully');
                     } else {
-                      console.log('🔥 SSE: onProgress callback is null!');
+                      console.log('🔥 SSE: onProgress callback is null!', {
+                        onProgress,
+                        onProgressType: typeof onProgress
+                      });
                     }
                   } else if (currentEvent === 'complete') {
                     // This is the final result
@@ -462,6 +503,11 @@ export class UnifiedOnboardingService {
                 }
               }
               // Reset for next event
+              console.log('🌐 SSE: Event processing completed, resetting variables', {
+                processedEvent: currentEvent,
+                processedDataLength: currentData?.length || 0,
+                resettingTo: { currentEvent: '', currentData: '' }
+              });
               currentEvent = '';
               currentData = '';
               continue;

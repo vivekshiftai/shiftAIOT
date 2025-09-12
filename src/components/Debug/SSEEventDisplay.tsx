@@ -9,11 +9,33 @@ interface SSEEventDisplayProps {
 export const SSEEventDisplay: React.FC<SSEEventDisplayProps> = ({ sseProgress, isProcessing }) => {
   const [events, setEvents] = useState<UnifiedOnboardingProgress[]>([]);
 
+  console.log('📱 SSEEventDisplay: Component rendered', {
+    sseProgress,
+    isProcessing,
+    eventsCount: events.length,
+    events: events
+  });
+
   useEffect(() => {
     if (sseProgress) {
-      setEvents(prev => [...prev, sseProgress]);
+      console.log('📱 SSEEventDisplay: Received SSE progress update', {
+        sseProgress,
+        sseProgressStringified: JSON.stringify(sseProgress, null, 2),
+        currentEventsCount: events.length,
+        isProcessing
+      });
+      setEvents(prev => {
+        const newEvents = [...prev, sseProgress];
+        console.log('📱 SSEEventDisplay: Updated events array', {
+          previousCount: prev.length,
+          newCount: newEvents.length,
+          latestEvent: sseProgress,
+          allEvents: newEvents
+        });
+        return newEvents;
+      });
     }
-  }, [sseProgress]);
+  }, [sseProgress, events.length, isProcessing]);
 
   const getStageColor = (stage: string) => {
     switch (stage) {

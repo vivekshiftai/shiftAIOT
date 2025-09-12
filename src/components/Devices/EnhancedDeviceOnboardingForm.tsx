@@ -338,12 +338,26 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         uploadedFile.file,
         (progress: UnifiedOnboardingProgress) => {
           console.log('🚀 OnboardingForm: Progress callback received:', {
+            progress,
+            progressStringified: JSON.stringify(progress, null, 2),
             stage: progress.stage,
-            progress: progress.progress,
+            progressValue: progress.progress,
             message: progress.message,
             subMessage: progress.subMessage,
             error: progress.error,
-            timestamp: progress.timestamp
+            timestamp: progress.timestamp,
+            deviceId: progress.deviceId,
+            stepDetails: progress.stepDetails,
+            retryable: progress.retryable
+          });
+          
+          console.log('🚀 OnboardingForm: Updating state with progress data', {
+            previousSseProgress: sseProgress,
+            newSseProgress: progress,
+            previousOnboardingProgress: onboardingProgress,
+            newOnboardingProgress: progress.progress,
+            previousOnboardingMessage: onboardingMessage,
+            newOnboardingMessage: progress.message
           });
           
           // Update SSE progress for real-time display
@@ -352,6 +366,8 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           // Update progress percentage and message
           setOnboardingProgress(progress.progress);
           setOnboardingMessage(progress.message);
+          
+          console.log('🚀 OnboardingForm: State updated successfully');
           
           console.log('🚀 OnboardingForm: State updated', {
             progress: progress.progress,
@@ -1284,7 +1300,6 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
           progress={onboardingProgress}
           message={onboardingMessage}
           sseProgress={sseProgress}
-          embedded={false}
           onComplete={() => {
             console.log('🚀 Loader onComplete called - showing success message');
             console.log('🚀 OnboardingForm: Transitioning to success screen', {

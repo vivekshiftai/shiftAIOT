@@ -70,17 +70,29 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
   useEffect(() => {
     if (sseProgress) {
       console.log('📊 Loader: SSE Progress Update received', {
+        sseProgress,
+        sseProgressStringified: JSON.stringify(sseProgress, null, 2),
         stage: sseProgress.stage,
         progress: sseProgress.progress,
         message: sseProgress.message,
         subMessage: sseProgress.subMessage,
         error: sseProgress.error,
-        stepDetails: sseProgress.stepDetails
+        stepDetails: sseProgress.stepDetails,
+        deviceId: sseProgress.deviceId,
+        timestamp: sseProgress.timestamp,
+        retryable: sseProgress.retryable
       });
       
       // Update real-time progress and message from SSE stream
+      console.log('📊 Loader: Updating state with SSE data', {
+        previousProgress: realTimeProgress,
+        newProgress: sseProgress.progress,
+        previousMessage: realTimeMessage,
+        newMessage: sseProgress.message
+      });
       setRealTimeProgress(sseProgress.progress);
       setRealTimeMessage(sseProgress.message);
+      console.log('📊 Loader: State updated successfully');
       
       // Map backend stage to frontend step and update current step
       if (sseProgress.stage && sseProgress.stage !== currentStep) {
