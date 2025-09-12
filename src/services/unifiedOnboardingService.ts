@@ -1,6 +1,7 @@
 import { getApiConfig } from '../config/api';
 import { logInfo, logError } from '../utils/logger';
 import { deviceAPI } from './api';
+import { SSEParser } from './sseParser';
 
 export interface UnifiedOnboardingProgress {
   deviceId?: string;
@@ -247,6 +248,13 @@ export class UnifiedOnboardingService {
           contentType: contentType,
           headers: Object.fromEntries(response.headers.entries())
         });
+        
+        // Debug: Check if content-type contains event-stream
+        console.log('🌐 SSE: Content-Type check', {
+          contentType,
+          includesEventStream: contentType && contentType.includes('text/event-stream'),
+          contentTypeLower: contentType?.toLowerCase()
+        });
         logInfo('UnifiedOnboarding', 'Response content type', contentType);
         logInfo('UnifiedOnboarding', 'Response status', response.status);
         logInfo('UnifiedOnboarding', 'Response headers', Object.fromEntries(response.headers.entries()));
@@ -254,6 +262,11 @@ export class UnifiedOnboardingService {
         if (contentType && contentType.includes('text/event-stream')) {
           console.log('🌐 SSE: Using streaming response');
           logInfo('UnifiedOnboarding', 'Using SSE streaming response');
+          return this.handleStreamingResponse(response, onProgress);
+        } else if (onProgress) {
+          // If we have a progress callback, try to use streaming even if content-type is not perfect
+          console.log('🌐 SSE: Content-type not perfect but trying streaming anyway (has progress callback)');
+          logInfo('UnifiedOnboarding', 'Attempting SSE streaming despite content-type');
           return this.handleStreamingResponse(response, onProgress);
         } else {
           console.log('🌐 SSE: Using regular JSON response (fallback)');
@@ -366,7 +379,17 @@ export class UnifiedOnboardingService {
 
           for (const line of lines) {
             const trimmedLine = line.trim();
-            console.log('🌐 SSE: Processing line', { line: trimmedLine });
+            console.log('🌐 SSE: Processing line', { 
+              line: trimmedLine, 
+              lineLength: trimmedLine.length,
+              startsWithEvent: trimmedLine.startsWith('event: '),
+              startsWithData: trimmedLine.startsWith('data: '),
+              currentEventBefore: currentEvent,
+              currentDataBefore: currentData,
+              firstChar: trimmedLine.charAt(0),
+              first6Chars: trimmedLine.substring(0, 6),
+              first7Chars: trimmedLine.substring(0, 7)
+            });
             logInfo('UnifiedOnboarding', 'Processing SSE line', { line: trimmedLine });
             
             if (trimmedLine.startsWith('event: ')) {
@@ -380,6 +403,8 @@ export class UnifiedOnboardingService {
                 currentEventLength: currentEvent.length,
                 currentDataLength: currentData.length
               });
+              console.log('🌐 SSE: Event variable updated', { currentEvent, currentData });
+              console.log('🌐 SSE: Variables after event update', { currentEvent, currentData });
             } else if (trimmedLine.startsWith('data: ')) {
               const previousData = currentData;
               currentData = trimmedLine.substring(6);
@@ -393,6 +418,8 @@ export class UnifiedOnboardingService {
                 currentEventLength: currentEvent.length,
                 currentDataLength: currentData.length
               });
+              console.log('🌐 SSE: Data variable updated', { currentEvent, currentData });
+              console.log('🌐 SSE: Variables after data update', { currentEvent, currentData });
             } else if (trimmedLine === '') {
               // Empty line indicates end of event, process the accumulated data
               console.log('🌐 SSE: Empty line detected - processing event', { 

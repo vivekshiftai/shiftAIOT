@@ -1497,9 +1497,39 @@ public class DeviceController {
     }
 
     /**
+     * Simple SSE test endpoint
+     */
+    @GetMapping(value = "/test-sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @CrossOrigin(origins = "*")
+    public SseEmitter testSse() {
+        logger.info("🌐 SSE: Test endpoint called");
+        SseEmitter emitter = new SseEmitter(30000L); // 30 second timeout
+        
+        new Thread(() -> {
+            try {
+                for (int i = 1; i <= 5; i++) {
+                    logger.info("🌐 SSE: Sending test event {}", i);
+                    emitter.send(SseEmitter.event()
+                        .name("test")
+                        .data("{\"message\":\"Test event " + i + "\",\"count\":" + i + "}"));
+                    Thread.sleep(1000);
+                }
+                emitter.complete();
+                logger.info("🌐 SSE: Test events completed");
+            } catch (Exception e) {
+                logger.error("❌ Test SSE error", e);
+                emitter.completeWithError(e);
+            }
+        }).start();
+        
+        return emitter;
+    }
+
+    /**
      * Device onboarding with real-time progress streaming using Server-Sent Events
      */
     @PostMapping(value = "/unified-onboarding-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @CrossOrigin(origins = "*")
     public SseEmitter unifiedOnboardingWithProgress(
             @RequestParam("deviceData") String deviceData,
             @RequestParam(value = "manualFile", required = false) MultipartFile manualFile,
@@ -1509,6 +1539,7 @@ public class DeviceController {
             HttpServletRequest request) {
         
         SseEmitter emitter = new SseEmitter(300000L); // 5 minute timeout
+        logger.info("🌐 SSE: Created SseEmitter with 5-minute timeout");
         
         // Set response headers for SSE
         try {
