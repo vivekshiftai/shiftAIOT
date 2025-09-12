@@ -216,11 +216,22 @@ export class UnifiedOnboardingService {
       const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout for SSE
 
       try {
+        console.log('🌐 SSE: Making request to:', `${this.baseUrl}/api/devices/unified-onboarding-stream`);
+        console.log('🌐 SSE: Request headers:', headers);
+        console.log('🌐 SSE: FormData keys:', Array.from(formData.keys()));
+        
         const response = await fetch(`${this.baseUrl}/api/devices/unified-onboarding-stream`, {
           method: 'POST',
           headers,
           body: formData,
           signal: controller.signal
+        });
+        
+        console.log('🌐 SSE: Response received:', {
+          status: response.status,
+          statusText: response.statusText,
+          headers: Object.fromEntries(response.headers.entries()),
+          body: response.body ? 'present' : 'missing'
         });
 
         clearTimeout(timeoutId);
@@ -308,6 +319,9 @@ export class UnifiedOnboardingService {
       
       // Add a test to verify SSE connection
       console.log('🌐 SSE: Testing SSE connection - if you see this, the connection is established');
+      console.log('🌐 SSE: Response status:', response.status);
+      console.log('🌐 SSE: Response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('🌐 SSE: Response body type:', response.body?.constructor.name);
 
       // Set up a timeout to handle incomplete streams
       const timeoutId = setTimeout(() => {
@@ -410,7 +424,9 @@ export class UnifiedOnboardingService {
                     currentEvent, 
                     eventData,
                     eventDataKeys: Object.keys(eventData),
-                    eventDataStringified: JSON.stringify(eventData, null, 2)
+                    eventDataStringified: JSON.stringify(eventData, null, 2),
+                    timestamp: eventData.timestamp,
+                    timestampType: typeof eventData.timestamp
                   });
                   
                   if (currentEvent === 'progress' && eventData.stage && eventData.progress !== undefined) {
@@ -439,6 +455,17 @@ export class UnifiedOnboardingService {
                       retryable: eventData.retryable,
                       timestamp: eventData.timestamp
                     };
+                    
+                    console.log('🔥 SSE: Created progress object', {
+                      progress,
+                      progressKeys: Object.keys(progress),
+                      stage: progress.stage,
+                      progressValue: progress.progress,
+                      message: progress.message,
+                      deviceId: progress.deviceId,
+                      stepDetails: progress.stepDetails,
+                      timestamp: progress.timestamp
+                    });
                     
                     console.log('🔥 SSE: Processing progress update', {
                       event: currentEvent,

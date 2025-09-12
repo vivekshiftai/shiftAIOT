@@ -129,7 +129,7 @@ public class UnifiedOnboardingService {
         
         // Send progress update for device creation
         sendProgressUpdate(progressCallback, "device", 10, "Creating device configuration...", 
-                          "Setting up device in the system", null, 1, 6, "Device Creation");
+                          "Setting up device in the system", null, 1, 6, "Device Creation", null);
         
         DeviceCreateResponse deviceResponse = createDeviceTransactional(deviceRequest, organizationId, currentUserId);
         
@@ -137,12 +137,12 @@ public class UnifiedOnboardingService {
         
         // Send progress update for device creation completion
         sendProgressUpdate(progressCallback, "device", 20, "Device created successfully", 
-                          "Device configuration saved to database", null, 1, 6, "Device Creation");
+                          "Device configuration saved to database", null, 1, 6, "Device Creation", deviceResponse.getId());
         
         // Step 2: Assign device to user
         log.info("Step 2: Assigning device to user...");
         sendProgressUpdate(progressCallback, "assignment", 30, "Assigning device to user", 
-                          "Setting up user responsibility and notifications", null, 2, 6, "User Assignment");
+                          "Setting up user responsibility and notifications", null, 2, 6, "User Assignment", deviceResponse.getId());
         
         // Get device assignee information
         Optional<Device> device = deviceRepository.findById(deviceResponse.getId());
@@ -151,11 +151,11 @@ public class UnifiedOnboardingService {
         if (deviceAssignee != null && !deviceAssignee.trim().isEmpty()) {
             log.info("✅ Device assigned to user: {}", deviceAssignee);
             sendProgressUpdate(progressCallback, "assignment", 40, "Device assigned successfully", 
-                              "User will receive notifications and be responsible for maintenance", null, 2, 6, "User Assignment");
+                              "User will receive notifications and be responsible for maintenance", null, 2, 6, "User Assignment", deviceResponse.getId());
         } else {
             log.warn("⚠️ No user assigned to device");
             sendProgressUpdate(progressCallback, "assignment", 40, "Device created without assignment", 
-                              "Device can be assigned later from the device management page", null, 2, 6, "User Assignment");
+                              "Device can be assigned later from the device management page", null, 2, 6, "User Assignment", deviceResponse.getId());
         }
         
         // Step 3: Upload PDF to PDF Processing Service and process - This is non-transactional
@@ -187,7 +187,7 @@ public class UnifiedOnboardingService {
             
             // Send error progress update
             sendProgressUpdate(progressCallback, "error", 0, "PDF processing failed", 
-                              "Device created but PDF processing encountered an error", e.getMessage(), 0, 5, "Error");
+                              "Device created but PDF processing encountered an error", e.getMessage(), 0, 5, "Error", deviceResponse.getId());
             
             // Don't fail the entire onboarding if PDF processing fails
         }
@@ -255,7 +255,7 @@ public class UnifiedOnboardingService {
         
         // Send final completion progress
         sendProgressUpdate(progressCallback, "complete", 100, "✅ Onboarding completed successfully", 
-                          "Device successfully onboarded with all configurations and ready for use", null, 6, 6, "Completion");
+                          "Device successfully onboarded with all configurations and ready for use", null, 6, 6, "Completion", deviceResponse.getId());
         
         log.info("Unified onboarding workflow completed successfully for device: {}", deviceResponse.getId());
         
@@ -281,10 +281,11 @@ public class UnifiedOnboardingService {
      */
     private void sendProgressUpdate(Consumer<UnifiedOnboardingProgress> progressCallback, 
                                   String stage, int progress, String message, String subMessage, 
-                                  String error, int currentStep, int totalSteps, String stepName) {
+                                  String error, int currentStep, int totalSteps, String stepName, String deviceId) {
         if (progressCallback != null) {
             try {
                 UnifiedOnboardingProgress progressUpdate = UnifiedOnboardingProgress.builder()
+                    .deviceId(deviceId)
                     .stage(stage)
                     .progress(progress)
                     .message(message)
@@ -365,14 +366,14 @@ public class UnifiedOnboardingService {
                 String errorMsg = "No PDF file provided for processing";
                 log.error(errorMsg);
                 sendProgressUpdate(progressCallback, "error", 0, "No PDF file found", 
-                                  "Please provide a PDF file for processing", errorMsg, 0, 5, "PDF Upload");
+                                  "Please provide a PDF file for processing", errorMsg, 0, 5, "PDF Upload", deviceId);
                 throw new PDFProcessingException(errorMsg);
             }
 
             // Step 2.1: Upload PDF to processing service
             log.info("Step 2.1: Uploading PDF to processing service...");
             sendProgressUpdate(progressCallback, "upload", 50, "Uploading PDF to AI processing service", 
-                              "Sending document for intelligent analysis", null, 3, 6, "PDF Upload");
+                              "Sending document for intelligent analysis", null, 3, 6, "PDF Upload", deviceId);
             
             PDFUploadResponse uploadResponse = pdfProcessingService.uploadPDF(pdfFile, organizationId);
             pdfResult.pdfName = uploadResponse.getPdfName();
@@ -384,7 +385,7 @@ public class UnifiedOnboardingService {
             
             // Send progress update for PDF upload completion
             sendProgressUpdate(progressCallback, "upload", 60, "PDF uploaded successfully", 
-                              "Document received and queued for processing", null, 3, 6, "PDF Upload");
+                              "Document received and queued for processing", null, 3, 6, "PDF Upload", deviceId);
             
             // Step 1.5: Store PDF metadata in unified PDF system
             try {
@@ -424,7 +425,7 @@ public class UnifiedOnboardingService {
             // Step 2.2: Generate rules from processed PDF
             log.info("Step 2.2: Generating rules from processed PDF...");
             sendProgressUpdate(progressCallback, "rules", 70, "Generating intelligent monitoring rules", 
-                              "Analyzing device specifications and creating automation rules", null, 4, 6, "Rules Generation");
+                              "Analyzing device specifications and creating automation rules", null, 4, 6, "Rules Generation", deviceId);
             
             RulesGenerationResponse rulesResponse = pdfProcessingService.generateRules(pdfResult.pdfName, deviceId, organizationId);
             pdfResult.rulesGenerated = rulesResponse.getRules().size();
@@ -445,12 +446,12 @@ public class UnifiedOnboardingService {
             
             // Send progress update for rules completion
             sendProgressUpdate(progressCallback, "rules", 80, "Rules generated successfully", 
-                              pdfResult.rulesGenerated + " monitoring rules created and configured", null, 4, 6, "Rules Generation");
+                              pdfResult.rulesGenerated + " monitoring rules created and configured", null, 4, 6, "Rules Generation", deviceId);
 
             // Step 2.3: Generate maintenance schedule from processed PDF
             log.info("Step 2.3: Generating maintenance schedule from processed PDF...");
             sendProgressUpdate(progressCallback, "maintenance", 85, "Creating maintenance schedule", 
-                              "Extracting maintenance requirements and creating service plans", null, 5, 6, "Maintenance Schedule");
+                              "Extracting maintenance requirements and creating service plans", null, 5, 6, "Maintenance Schedule", deviceId);
             
             MaintenanceGenerationResponse maintenanceResponse = pdfProcessingService.generateMaintenance(pdfResult.pdfName, deviceId, organizationId);
             pdfResult.maintenanceItems = maintenanceResponse.getMaintenanceTasks().size();
@@ -497,12 +498,12 @@ public class UnifiedOnboardingService {
             
             // Send progress update for maintenance completion
             sendProgressUpdate(progressCallback, "maintenance", 90, "Maintenance schedule created", 
-                              pdfResult.maintenanceItems + " maintenance tasks scheduled", null, 5, 6, "Maintenance Schedule");
+                              pdfResult.maintenanceItems + " maintenance tasks scheduled", null, 5, 6, "Maintenance Schedule", deviceId);
 
             // Step 2.4: Generate safety precautions from processed PDF
             log.info("Step 2.4: Generating safety precautions from processed PDF...");
             sendProgressUpdate(progressCallback, "safety", 95, "Extracting safety procedures", 
-                              "Identifying safety requirements and creating protocols", null, 6, 6, "Safety Procedures");
+                              "Identifying safety requirements and creating protocols", null, 6, 6, "Safety Procedures", deviceId);
             
             SafetyGenerationResponse safetyResponse = pdfProcessingService.generateSafety(pdfResult.pdfName, deviceId, organizationId);
             pdfResult.safetyPrecautions = safetyResponse.getSafetyPrecautions().size();
@@ -515,7 +516,7 @@ public class UnifiedOnboardingService {
             
             // Send progress update for safety completion
             sendProgressUpdate(progressCallback, "safety", 98, "Safety procedures configured", 
-                              pdfResult.safetyPrecautions + " safety protocols established", null, 6, 6, "Safety Procedures");
+                              pdfResult.safetyPrecautions + " safety protocols established", null, 6, 6, "Safety Procedures", deviceId);
 
             // Convert processing time string to long if possible, otherwise use current time
             try {
