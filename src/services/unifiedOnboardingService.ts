@@ -390,6 +390,7 @@ export class UnifiedOnboardingService {
                   if (currentEvent === 'progress' && eventData.stage && eventData.progress !== undefined) {
                     // This is a progress update
                     const progress: UnifiedOnboardingProgress = {
+                      deviceId: eventData.deviceId,
                       stage: eventData.stage,
                       progress: eventData.progress,
                       message: eventData.message,
