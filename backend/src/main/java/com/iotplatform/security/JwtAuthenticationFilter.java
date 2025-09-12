@@ -66,6 +66,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 "/query",
                 "/pdfs/",
                 "/knowledge/suggestions", // Temporarily make suggestions public for testing
+                "/api/external-query/", // Allow external query processing
             };
             
             for (String endpoint : publicEndpoints) {

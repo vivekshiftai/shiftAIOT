@@ -92,6 +92,7 @@ public class SecurityConfig {
                 .requestMatchers("/devices/health").permitAll()
                 .requestMatchers("/api/organizations").permitAll() // Allow organization listing for signup
                 .requestMatchers("/knowledge/suggestions").permitAll() // Temporarily make suggestions public for testing
+                .requestMatchers("/api/external-query/**").permitAll() // Allow external query processing
 
                 // Documentation and monitoring
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
@@ -164,3 +165,5 @@ public class SecurityConfig {
         return source;
     }
 }
+
+//nothing to change here
