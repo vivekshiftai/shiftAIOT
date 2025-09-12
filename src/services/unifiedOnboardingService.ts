@@ -305,6 +305,9 @@ export class UnifiedOnboardingService {
       let currentData = '';
 
       console.log('🌐 SSE: Initialized variables', { currentEvent, currentData, buffer: buffer.length });
+      
+      // Add a test to verify SSE connection
+      console.log('🌐 SSE: Testing SSE connection - if you see this, the connection is established');
 
       // Set up a timeout to handle incomplete streams
       const timeoutId = setTimeout(() => {

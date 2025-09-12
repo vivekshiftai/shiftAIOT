@@ -9,6 +9,7 @@ interface SSEEventDisplayProps {
 export const SSEEventDisplay: React.FC<SSEEventDisplayProps> = ({ sseProgress, isProcessing }) => {
   const [events, setEvents] = useState<UnifiedOnboardingProgress[]>([]);
   const [currentStep, setCurrentStep] = useState<UnifiedOnboardingProgress | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('connecting');
 
   console.log('📱 SSEEventDisplay: Component rendered', {
     sseProgress,
@@ -23,8 +24,16 @@ export const SSEEventDisplay: React.FC<SSEEventDisplayProps> = ({ sseProgress, i
         sseProgress,
         sseProgressStringified: JSON.stringify(sseProgress, null, 2),
         currentEventsCount: events.length,
-        isProcessing
+        isProcessing,
+        stage: sseProgress.stage,
+        progress: sseProgress.progress,
+        message: sseProgress.message,
+        subMessage: sseProgress.subMessage,
+        stepDetails: sseProgress.stepDetails
       });
+      
+      // Update connection status
+      setConnectionStatus('connected');
       
       setEvents(prev => {
         const newEvents = [...prev, sseProgress];
@@ -39,6 +48,17 @@ export const SSEEventDisplay: React.FC<SSEEventDisplayProps> = ({ sseProgress, i
 
       // Update current step
       setCurrentStep(sseProgress);
+      console.log('📱 SSEEventDisplay: Updated current step', {
+        stage: sseProgress.stage,
+        progress: sseProgress.progress,
+        stepName: sseProgress.stepDetails?.stepName,
+        currentStep: sseProgress.stepDetails?.currentStep,
+        totalSteps: sseProgress.stepDetails?.totalSteps
+      });
+    } else if (isProcessing) {
+      setConnectionStatus('connecting');
+    } else {
+      setConnectionStatus('disconnected');
     }
   }, [sseProgress, isProcessing]);
 
@@ -127,6 +147,20 @@ export const SSEEventDisplay: React.FC<SSEEventDisplayProps> = ({ sseProgress, i
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">Device Onboarding</h2>
         <p className="text-gray-600">Setting up your device with intelligent monitoring</p>
+        <div className="mt-4 flex justify-center">
+          <div className="flex items-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${
+              connectionStatus === 'connected' ? 'bg-green-500 animate-pulse' : 
+              connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' : 
+              connectionStatus === 'error' ? 'bg-red-500' : 'bg-gray-400'
+            }`}></div>
+            <span className="text-sm text-gray-600">
+              {connectionStatus === 'connected' ? 'SSE Connected' : 
+               connectionStatus === 'connecting' ? 'Connecting...' : 
+               connectionStatus === 'error' ? 'Connection Error' : 'Disconnected'}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Current Step Display */}
@@ -227,18 +261,72 @@ export const SSEEventDisplay: React.FC<SSEEventDisplayProps> = ({ sseProgress, i
         </div>
       </div>
 
-      {/* Debug Info (only show if there are events) */}
-      {events.length > 0 && (
-        <div className="mt-8 bg-gray-50 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Debug Info</h4>
-          <div className="text-xs text-gray-600 space-y-1">
-            <div><strong>Events Received:</strong> {events.length}</div>
-            <div><strong>Current Stage:</strong> {currentStep?.stage || 'None'}</div>
-            <div><strong>Progress:</strong> {currentStep?.progress || 0}%</div>
-            <div><strong>Status:</strong> {currentStep?.stepDetails?.status || 'Unknown'}</div>
-          </div>
+      {/* Debug Info and Test Controls */}
+      <div className="mt-8 bg-gray-50 rounded-lg p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h4 className="text-sm font-medium text-gray-700">Debug Info</h4>
+          <button
+            onClick={() => {
+              // Simulate the SSE data flow from the logs
+              const testSteps = [
+                { stage: 'device', progress: 10, message: 'Creating device configuration...', subMessage: 'Setting up device in the system', currentStep: 1, totalSteps: 6, stepName: 'Device Creation' },
+                { stage: 'device', progress: 20, message: 'Device created successfully', subMessage: 'Device configuration saved to database', currentStep: 1, totalSteps: 6, stepName: 'Device Creation' },
+                { stage: 'assignment', progress: 30, message: 'Assigning device to user', subMessage: 'Setting up user responsibility', currentStep: 2, totalSteps: 6, stepName: 'User Assignment' },
+                { stage: 'assignment', progress: 40, message: 'Device assigned successfully', subMessage: 'Assignment verified', currentStep: 2, totalSteps: 6, stepName: 'User Assignment' },
+                { stage: 'upload', progress: 50, message: 'Uploading PDF to AI service', subMessage: 'Document chunking for downstream processing', currentStep: 3, totalSteps: 6, stepName: 'PDF Upload' },
+                { stage: 'upload', progress: 60, message: 'PDF uploaded successfully', subMessage: 'Data available for intelligence analysis', currentStep: 3, totalSteps: 6, stepName: 'PDF Upload' },
+                { stage: 'rules', progress: 70, message: 'Generating intelligent rules', subMessage: 'Device specs analyzed, automation rules extracted', currentStep: 4, totalSteps: 6, stepName: 'Rules Generation' },
+                { stage: 'rules', progress: 80, message: 'Rules generated successfully', subMessage: 'Count and success of rules stored', currentStep: 4, totalSteps: 6, stepName: 'Rules Generation' },
+                { stage: 'maintenance', progress: 85, message: 'Creating maintenance schedule', subMessage: 'Maintenance tasks and frequency derived from PDF chunks', currentStep: 5, totalSteps: 6, stepName: 'Maintenance Schedule' },
+                { stage: 'maintenance', progress: 90, message: 'Maintenance schedule created', subMessage: 'DB storage and task assignment validated', currentStep: 5, totalSteps: 6, stepName: 'Maintenance Schedule' },
+                { stage: 'safety', progress: 95, message: 'Extracting safety procedures', subMessage: 'Analyzing for safety protocols', currentStep: 6, totalSteps: 6, stepName: 'Safety Procedures' },
+                { stage: 'safety', progress: 98, message: 'Safety procedures configured', subMessage: 'Protocols finalized in database', currentStep: 6, totalSteps: 6, stepName: 'Safety Procedures' },
+                { stage: 'complete', progress: 100, message: 'Onboarding completed successfully', subMessage: 'Device successfully onboarded with all configurations and ready for use', currentStep: 6, totalSteps: 6, stepName: 'Completion' }
+              ];
+
+              let stepIndex = 0;
+              const interval = setInterval(() => {
+                if (stepIndex < testSteps.length) {
+                  const step = testSteps[stepIndex];
+                  const mockProgress: UnifiedOnboardingProgress = {
+                    stage: step.stage as any,
+                    progress: step.progress,
+                    message: step.message,
+                    subMessage: step.subMessage,
+                    stepDetails: {
+                      currentStep: step.currentStep,
+                      totalSteps: step.totalSteps,
+                      stepName: step.stepName,
+                      status: step.progress === 100 ? 'completed' : 'processing',
+                      startTime: Date.now()
+                    },
+                    timestamp: new Date().toISOString()
+                  };
+                  
+                  // Simulate the SSE progress update
+                  setCurrentStep(mockProgress);
+                  setEvents(prev => [...prev, mockProgress]);
+                  
+                  stepIndex++;
+                } else {
+                  clearInterval(interval);
+                }
+              }, 2000); // 2 seconds between steps
+            }}
+            className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm transition-colors"
+          >
+            Test SSE Flow
+          </button>
         </div>
-      )}
+        
+        <div className="text-xs text-gray-600 space-y-1">
+          <div><strong>Events Received:</strong> {events.length}</div>
+          <div><strong>Current Stage:</strong> {currentStep?.stage || 'None'}</div>
+          <div><strong>Progress:</strong> {currentStep?.progress || 0}%</div>
+          <div><strong>Status:</strong> {currentStep?.stepDetails?.status || 'Unknown'}</div>
+          <div><strong>Step:</strong> {currentStep?.stepDetails?.currentStep || 0}/{currentStep?.stepDetails?.totalSteps || 0}</div>
+        </div>
+      </div>
     </div>
   );
 };
