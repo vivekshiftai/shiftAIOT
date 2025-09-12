@@ -304,6 +304,8 @@ export class UnifiedOnboardingService {
       let currentEvent = '';
       let currentData = '';
 
+      console.log('🌐 SSE: Initialized variables', { currentEvent, currentData, buffer: buffer.length });
+
       // Set up a timeout to handle incomplete streams
       const timeoutId = setTimeout(() => {
         if (!isCompleted && !hasReceivedData) {
@@ -351,20 +353,28 @@ export class UnifiedOnboardingService {
             logInfo('UnifiedOnboarding', 'Processing SSE line', { line: trimmedLine });
             
             if (trimmedLine.startsWith('event: ')) {
+              const previousEvent = currentEvent;
+              const previousData = currentData;
               currentEvent = trimmedLine.substring(7).trim();
               console.log('🌐 SSE: Event type received', { 
                 event: currentEvent,
-                previousEvent: currentEvent,
-                previousData: currentData ? 'present' : 'missing'
+                previousEvent,
+                previousData: previousData ? 'present' : 'missing',
+                currentEventLength: currentEvent.length,
+                currentDataLength: currentData.length
               });
             } else if (trimmedLine.startsWith('data: ')) {
+              const previousData = currentData;
               currentData = trimmedLine.substring(6);
               console.log('🌐 SSE: Data received', { 
                 dataLength: currentData.length, 
                 dataPreview: currentData.substring(0, Math.min(100, currentData.length)) + '...',
-                currentEvent: currentEvent,
+                currentEvent,
+                previousData: previousData ? 'present' : 'missing',
                 hasEvent: !!currentEvent,
-                hasData: !!currentData
+                hasData: !!currentData,
+                currentEventLength: currentEvent.length,
+                currentDataLength: currentData.length
               });
             } else if (trimmedLine === '') {
               // Empty line indicates end of event, process the accumulated data
