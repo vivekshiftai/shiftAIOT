@@ -3,6 +3,7 @@ import { logInfo, logError } from '../utils/logger';
 import { deviceAPI } from './api';
 
 export interface UnifiedOnboardingProgress {
+  deviceId?: string;
   stage: 'device' | 'assignment' | 'upload' | 'rules' | 'maintenance' | 'safety' | 'complete';
   progress: number;
   message: string;
@@ -341,7 +342,9 @@ export class UnifiedOnboardingService {
           buffer += chunk;
           const lines = buffer.split('\n');
           buffer = lines.pop() || ''; // Keep incomplete line in buffer
-          
+
+          console.log('🌐 SSE: Processing lines', { linesCount: lines.length, lines: lines.slice(0, 5) });
+
           for (const line of lines) {
             const trimmedLine = line.trim();
             console.log('🌐 SSE: Processing line', { line: trimmedLine });
@@ -358,7 +361,18 @@ export class UnifiedOnboardingService {
               });
             } else if (trimmedLine === '') {
               // Empty line indicates end of event, process the accumulated data
-              if (currentData) {
+              console.log('🌐 SSE: Empty line detected - processing event', { 
+                currentEvent, 
+                currentData: currentData ? 'present' : 'missing', 
+                hasEvent: !!currentEvent, 
+                hasData: !!currentData,
+                eventLength: currentEvent?.length || 0,
+                dataLength: currentData?.length || 0,
+                rawLine: `"${line}"`,
+                trimmedLine: `"${trimmedLine}"`
+              });
+              
+              if (currentEvent && currentData) {
                 console.log('🌐 SSE: Processing event', { 
                   event: currentEvent, 
                   dataLength: currentData.length,
@@ -371,6 +385,7 @@ export class UnifiedOnboardingService {
                 
                 try {
                   const eventData = JSON.parse(currentData);
+                  console.log('🔍 SSE: Parsed event data', { currentEvent, eventData });
                   
                   if (currentEvent === 'progress' && eventData.stage && eventData.progress !== undefined) {
                     // This is a progress update
@@ -406,8 +421,9 @@ export class UnifiedOnboardingService {
                     } else {
                       console.log('🔥 SSE: onProgress callback is null!');
                     }
-                  } else if (currentEvent === 'complete' && eventData.success !== undefined) {
+                  } else if (currentEvent === 'complete') {
                     // This is the final result
+                    console.log('🎉 SSE: Processing complete event', { eventData });
                     clearTimeout(timeoutId);
                     isCompleted = true;
                     logInfo('UnifiedOnboarding', 'Received final result from SSE stream', eventData);
