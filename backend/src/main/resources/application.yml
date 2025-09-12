@@ -180,8 +180,8 @@ azure:
   openai:
     endpoint: ${AZURE_OPENAI_ENDPOINT:https://chgai.cognitiveservices.azure.com/}
     api-key: ${AZURE_OPENAI_API_KEY:}
-    deployment-name: ${AZURE_OPENAI_DEPLOYMENT_NAME:o3-mini}
-    model: ${AZURE_OPENAI_MODEL:o3-mini}
+    deployment-name: ${AZURE_OPENAI_DEPLOYMENT_NAME:DeepSeek-V3-0324}
+    model: ${AZURE_OPENAI_MODEL:DeepSeek-V3-0324}
     max-completion-tokens: 1000
     temperature: 0.7
 
