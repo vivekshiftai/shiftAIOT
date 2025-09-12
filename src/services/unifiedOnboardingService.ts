@@ -382,20 +382,21 @@ export class UnifiedOnboardingService {
             console.log('🌐 SSE: Processing line', { 
               line: trimmedLine, 
               lineLength: trimmedLine.length,
-              startsWithEvent: trimmedLine.startsWith('event: '),
-              startsWithData: trimmedLine.startsWith('data: '),
+              startsWithEvent: trimmedLine.startsWith('event:'),
+              startsWithData: trimmedLine.startsWith('data:'),
               currentEventBefore: currentEvent,
               currentDataBefore: currentData,
               firstChar: trimmedLine.charAt(0),
               first6Chars: trimmedLine.substring(0, 6),
-              first7Chars: trimmedLine.substring(0, 7)
+              first7Chars: trimmedLine.substring(0, 7),
+              charCodes: trimmedLine.substring(0, 10).split('').map(c => c.charCodeAt(0))
             });
             logInfo('UnifiedOnboarding', 'Processing SSE line', { line: trimmedLine });
             
-            if (trimmedLine.startsWith('event: ')) {
+            if (trimmedLine.startsWith('event:')) {
               const previousEvent = currentEvent;
               const previousData = currentData;
-              currentEvent = trimmedLine.substring(7).trim();
+              currentEvent = trimmedLine.substring(6).trim();
               console.log('🌐 SSE: Event type received', { 
                 event: currentEvent,
                 previousEvent,
@@ -405,9 +406,9 @@ export class UnifiedOnboardingService {
               });
               console.log('🌐 SSE: Event variable updated', { currentEvent, currentData });
               console.log('🌐 SSE: Variables after event update', { currentEvent, currentData });
-            } else if (trimmedLine.startsWith('data: ')) {
+            } else if (trimmedLine.startsWith('data:')) {
               const previousData = currentData;
-              currentData = trimmedLine.substring(6);
+              currentData = trimmedLine.substring(5);
               console.log('🌐 SSE: Data received', { 
                 dataLength: currentData.length, 
                 dataPreview: currentData.substring(0, Math.min(100, currentData.length)) + '...',
