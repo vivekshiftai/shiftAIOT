@@ -25,6 +25,13 @@ server:
     accept-count: 100
     max-threads: 200
     min-spare-threads: 10
+    # SSE Configuration
+    async:
+      request-timeout: 300000  # 5 minutes for SSE
+      thread-pool:
+        core-size: 8
+        max-size: 200
+        queue-capacity: 100
 
 
 spring:

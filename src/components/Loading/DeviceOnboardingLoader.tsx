@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, Clock, FileText, Cpu } from 'lucide-react';
+import { CheckCircle, Clock, FileText, Cpu, CheckCircle2 } from 'lucide-react';
 import { ONBOARDING_STEPS, getStepStatus, getStepCardStyle, OnboardingStep } from '../../utils/onboardingSteps.tsx';
 
 interface DeviceOnboardingLoaderProps {
@@ -62,7 +62,14 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
    */
   useEffect(() => {
     if (sseProgress) {
-      console.log('📊 SSE Progress Update:', sseProgress);
+      console.log('📊 Loader: SSE Progress Update received', {
+        stage: sseProgress.stage,
+        progress: sseProgress.progress,
+        message: sseProgress.message,
+        subMessage: sseProgress.subMessage,
+        error: sseProgress.error,
+        stepDetails: sseProgress.stepDetails
+      });
       
       // Update real-time progress and message from SSE stream
       setRealTimeProgress(sseProgress.progress);
@@ -71,10 +78,21 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
       // Map backend stage to frontend step and update current step
       if (sseProgress.stage && sseProgress.stage !== currentStep) {
         const mappedStep = mapBackendStageToStep(sseProgress.stage);
+        console.log('📊 Loader: Mapping backend stage to frontend step', {
+          backendStage: sseProgress.stage,
+          mappedStep: mappedStep,
+          currentStep: currentStep
+        });
+        
         if (mappedStep !== currentStep) {
           // Update current step based on SSE progress
           const stepIndex = ONBOARDING_STEPS.findIndex(step => step.id === mappedStep);
           if (stepIndex !== -1) {
+            console.log('📊 Loader: Updating step index', {
+              from: currentStepIndex,
+              to: stepIndex,
+              stepName: ONBOARDING_STEPS[stepIndex]?.title
+            });
             setCurrentStepIndex(stepIndex);
           }
         }
@@ -82,8 +100,16 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
       
       // Handle completion - trigger onComplete callback when onboarding finishes
       if (sseProgress.stage === 'complete' && onComplete) {
-        console.log('✅ Onboarding completed via SSE');
-        onComplete();
+        console.log('📊 Loader: Onboarding completed via SSE - triggering onComplete');
+        // Show success message before completing
+        setRealTimeMessage('✅ Onboarding completed successfully! Device is ready for use.');
+        setRealTimeProgress(100);
+        
+        // Wait a moment to show the success message, then complete
+        setTimeout(() => {
+          console.log('📊 Loader: Calling onComplete callback after 2 second delay');
+          onComplete();
+        }, 2000); // 2 second delay to show success message
       }
       
       // Handle errors - display error message to user
@@ -219,19 +245,30 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
             <div className="bg-gray-50 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">
-                  Current Step: {ONBOARDING_STEPS[currentStepIndex]?.title}
+                  {sseProgress?.stage === 'complete' ? (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                      <span>Onboarding Complete!</span>
+                    </div>
+                  ) : (
+                    `Current Step: ${ONBOARDING_STEPS[currentStepIndex]?.title}`
+                  )}
                 </span>
-                <span className="text-sm text-gray-500">
+                <span className={`text-sm ${sseProgress?.stage === 'complete' ? 'text-green-600 font-semibold' : 'text-gray-500'}`}>
                   {realTimeProgress}% Complete
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
-                  className="bg-gradient-to-r from-pink-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out"
+                  className={`h-3 rounded-full transition-all duration-500 ease-out ${
+                    sseProgress?.stage === 'complete' 
+                      ? 'bg-gradient-to-r from-green-500 to-green-600' 
+                      : 'bg-gradient-to-r from-pink-500 to-purple-600'
+                  }`}
                   style={{ width: `${realTimeProgress}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className={`text-xs mt-2 ${sseProgress?.stage === 'complete' ? 'text-green-600 font-semibold' : 'text-gray-500'}`}>
                 {realTimeMessage || message || `Processing ${pdfFileName} for ${deviceName}...`}
               </p>
               {sseProgress?.subMessage && (

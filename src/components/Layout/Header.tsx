@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTheme } from '../../contexts/ThemeContext';
 import { useToast } from '../UI/Toast';
 import { NotificationDropdown } from './NotificationDropdown';
 import { useNavigate } from 'react-router-dom';
@@ -10,10 +9,8 @@ import {
   User, 
   Info,
   Trash2,
-  AlertTriangle,
-  Bell
+  AlertTriangle
 } from 'lucide-react';
-import Button from '../UI/Button';
 import { IconButton } from '../UI/Button';
 
 interface HeaderProps {

@@ -302,6 +302,14 @@ public class UnifiedOnboardingService {
                     .build();
                 
                 progressCallback.accept(progressUpdate);
+                
+                // Add small delay to ensure SSE events are properly sent
+                try {
+                    Thread.sleep(100); // 100ms delay
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                
                 log.info("📊 SSE Progress update sent: {} - {}% - {} (Step {}/{})", stage, progress, message, currentStep, totalSteps);
             } catch (Exception e) {
                 log.error("❌ Failed to send SSE progress update", e);

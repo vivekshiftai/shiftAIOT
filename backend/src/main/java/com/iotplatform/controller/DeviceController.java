@@ -1510,6 +1510,17 @@ public class DeviceController {
         
         SseEmitter emitter = new SseEmitter(300000L); // 5 minute timeout
         
+        // Set response headers for SSE
+        try {
+            // Send initial connection event
+            emitter.send(SseEmitter.event()
+                .name("open")
+                .data("{\"message\":\"SSE connection established\"}"));
+            logger.info("🌐 SSE: Initial connection event sent");
+        } catch (Exception e) {
+            logger.error("❌ Failed to send initial SSE event", e);
+        }
+        
         // Manual authentication for SSE endpoint
         CustomUserDetails userDetails = null;
         try {
@@ -1601,13 +1612,33 @@ public class DeviceController {
                 Consumer<UnifiedOnboardingProgress> progressCallback = (progress) -> {
                     try {
                         String progressJson = objectMapper.writeValueAsString(progress);
+                        
+                        logger.info("🌐 SSE: Sending progress event - Stage: {}, Progress: {}%, Message: {}, SubMessage: {}, Error: {}, CurrentStep: {}/{}, Timestamp: {}", 
+                                   progress.getStage(), progress.getProgress(), progress.getMessage(), 
+                                   progress.getSubMessage(), progress.getError(),
+                                   progress.getStepDetails() != null ? progress.getStepDetails().getCurrentStep() : 0,
+                                   progress.getStepDetails() != null ? progress.getStepDetails().getTotalSteps() : 0,
+                                   progress.getTimestamp());
+                        
+                        // Send progress event with proper SSE formatting
                         emitter.send(SseEmitter.event()
                             .name("progress")
-                            .data(progressJson));
+                            .data(progressJson)
+                            .id(String.valueOf(System.currentTimeMillis()))
+                            .reconnectTime(5000L));
+                        
                         logger.info("📊 Progress sent via SSE - Stage: {}, Progress: {}%, Message: {}", 
                                    progress.getStage(), progress.getProgress(), progress.getMessage());
                     } catch (Exception e) {
                         logger.error("❌ Failed to send progress event", e);
+                        try {
+                            // Send error event if progress fails
+                            emitter.send(SseEmitter.event()
+                                .name("error")
+                                .data("{\"error\":\"Failed to send progress update\",\"message\":\"" + e.getMessage() + "\"}"));
+                        } catch (Exception ex) {
+                            logger.error("❌ Failed to send error event", ex);
+                        }
                     }
                 };
                 
@@ -1648,9 +1679,14 @@ public class DeviceController {
                 logger.info("📊 Sending final result with actual counts - Rules: {}, Maintenance: {}, Safety: {}", 
                            rulesGenerated, maintenanceItems, safetyPrecautions);
                 
+                logger.info("🌐 SSE: Sending completion event - DeviceId: {}, DeviceName: {}, Rules: {}, Maintenance: {}, Safety: {}", 
+                           response.getId(), response.getName(), rulesGenerated, maintenanceItems, safetyPrecautions);
+                
                 emitter.send(SseEmitter.event()
                     .name("complete")
-                    .data(objectMapper.writeValueAsString(finalResult)));
+                    .data(objectMapper.writeValueAsString(finalResult))
+                    .id(String.valueOf(System.currentTimeMillis()))
+                    .reconnectTime(5000L));
                 
                 logger.info("✅ Device onboarding completed successfully for user: {}", finalUserDetails.getUser().getEmail());
                 

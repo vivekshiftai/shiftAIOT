@@ -337,12 +337,27 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
         formData,
         uploadedFile.file,
         (progress: UnifiedOnboardingProgress) => {
+          console.log('🚀 OnboardingForm: Progress callback received:', {
+            stage: progress.stage,
+            progress: progress.progress,
+            message: progress.message,
+            subMessage: progress.subMessage,
+            error: progress.error,
+            timestamp: progress.timestamp
+          });
+          
           // Update SSE progress for real-time display
           setSseProgress(progress);
           
           // Update progress percentage and message
           setOnboardingProgress(progress.progress);
           setOnboardingMessage(progress.message);
+          
+          console.log('🚀 OnboardingForm: State updated', {
+            progress: progress.progress,
+            message: progress.message,
+            currentStep: progress.stage
+          });
           
           // Map backend progress stages to our 6-step process using shared utility
           const stepId = mapBackendStageToStep(progress.stage);
@@ -1024,19 +1039,6 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
     );
   }, [currentStep]);
 
-  // Render loading screen within the modal
-  const renderLoadingContent = useCallback(() => (
-    <DeviceOnboardingLoader
-      isProcessing={true}
-      currentStep={currentOnboardingStep}
-      deviceName={formData.deviceName}
-      pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
-      progress={onboardingProgress}
-      message={onboardingMessage}
-      sseProgress={sseProgress}
-      onComplete={() => {}}
-    />
-  ), [currentOnboardingStep, formData.deviceName, uploadedFile?.file.name, onboardingProgress, onboardingMessage, sseProgress]);
 
   // Render success message with integrated chat
   const renderSuccessContent = useCallback(() => (
@@ -1272,22 +1274,39 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        {/* Full width layout for loading and success states */}
-        {(showOnboardingLoader || showSuccessMessage) ? (
+      {/* Show loading screen as standalone modal */}
+      {showOnboardingLoader && (
+        <DeviceOnboardingLoader
+          isProcessing={true}
+          currentStep={currentOnboardingStep}
+          deviceName={formData.deviceName}
+          pdfFileName={uploadedFile?.file.name || 'device_documentation.pdf'}
+          progress={onboardingProgress}
+          message={onboardingMessage}
+          sseProgress={sseProgress}
+          embedded={false}
+          onComplete={() => {
+            console.log('🚀 Loader onComplete called - showing success message');
+            console.log('🚀 OnboardingForm: Transitioning to success screen', {
+              showOnboardingLoader: false,
+              showSuccessMessage: true,
+              deviceName: formData.deviceName
+            });
+            setShowOnboardingLoader(false);
+            setShowSuccessMessage(true);
+          }}
+        />
+      )}
+
+      {/* Show success screen as standalone modal */}
+      {showSuccessMessage && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col border border-gray-200">
-            {/* Header for loading/success states */}
+            {/* Header for success state */}
             <div className="bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white p-6 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold mb-1">
-                  {showSuccessMessage ? 'Onboarding Complete!' : 'AI Processing'}
-                </h2>
-                <p className="text-blue-100 text-sm">
-                  {showSuccessMessage
-                    ? 'Your device has been successfully onboarded'
-                    : 'Processing your device documentation with AI'
-                  }
-                </p>
+                <h2 className="text-2xl font-bold mb-1">Onboarding Complete!</h2>
+                <p className="text-blue-100 text-sm">Your device has been successfully onboarded</p>
               </div>
               <button
                 onClick={onCancel}
@@ -1299,21 +1318,31 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
 
             {/* Full width content area */}
             <div className="flex-1 overflow-y-auto p-8">
-              {showOnboardingLoader ? (
-                renderLoadingContent()
-              ) : (
-                renderSuccessContent()
-              )}
+              {renderSuccessContent()}
             </div>
           </div>
-        ) : (
-          /* Form layout with 60% width, divided into 5 parts (2 for progress, 3 for input) */
+        </div>
+      )}
+
+      {/* Show form when not loading or showing success */}
+      {!showOnboardingLoader && !showSuccessMessage && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          {/* Form layout with 60% width, divided into 5 parts (2 for progress, 3 for input) */}
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex border border-gray-200 overflow-hidden">
             {/* Progress Section - 2/5 width */}
             <div className="w-2/5 bg-gradient-to-br from-slate-50 to-gray-100 p-8 flex flex-col border-r border-gray-200">
               {/* Header */}
               <div className="mb-8">
-                <h2 className="text-2xl font-bold mb-3 text-gray-800">Device Onboarding</h2>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-2xl font-bold text-gray-800">Device Onboarding</h2>
+                  <button
+                    onClick={onCancel}
+                    className="p-2 hover:bg-gray-200 rounded-lg transition-all duration-300"
+                    title="Close"
+                  >
+                    <span className="text-xl font-bold text-gray-600">×</span>
+                  </button>
+                </div>
                 <p className="text-gray-600 text-sm leading-relaxed">
                   Enter basic asset information and specifications
                 </p>
@@ -1467,8 +1496,8 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </>
   );
 };

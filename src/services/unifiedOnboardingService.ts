@@ -230,10 +230,21 @@ export class UnifiedOnboardingService {
 
         // Check if response is streaming (text/event-stream)
         const contentType = response.headers.get('content-type');
+        console.log('🌐 SSE: Response received', {
+          status: response.status,
+          contentType: contentType,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+        logInfo('UnifiedOnboarding', 'Response content type', contentType);
+        logInfo('UnifiedOnboarding', 'Response status', response.status);
+        logInfo('UnifiedOnboarding', 'Response headers', Object.fromEntries(response.headers.entries()));
+        
         if (contentType && contentType.includes('text/event-stream')) {
+          console.log('🌐 SSE: Using streaming response');
           logInfo('UnifiedOnboarding', 'Using SSE streaming response');
           return this.handleStreamingResponse(response, onProgress);
         } else {
+          console.log('🌐 SSE: Using regular JSON response (fallback)');
           // Fallback to regular JSON response
           logInfo('UnifiedOnboarding', 'Using regular JSON response');
           const result = await response.json();
@@ -274,14 +285,17 @@ export class UnifiedOnboardingService {
    * Handle streaming response from Server-Sent Events with improved error handling
    */
   private async handleStreamingResponse(response: Response, onProgress?: (progress: UnifiedOnboardingProgress) => void): Promise<any> {
+    console.log('🌐 SSE: Starting stream processing');
     return new Promise((resolve, reject) => {
       const reader = response.body?.getReader();
       if (!reader) {
+        console.error('🌐 SSE: No response body reader available');
         logError('UnifiedOnboarding', 'No response body reader available');
         reject(new Error('No response body reader available'));
         return;
       }
 
+      console.log('🌐 SSE: Stream reader created, starting to read chunks');
       const decoder = new TextDecoder();
       let buffer = '';
       let isCompleted = false;
@@ -290,6 +304,7 @@ export class UnifiedOnboardingService {
       // Set up a timeout to handle incomplete streams
       const timeoutId = setTimeout(() => {
         if (!isCompleted && !hasReceivedData) {
+          console.error('🌐 SSE: Stream timeout - no data received');
           logError('UnifiedOnboarding', 'SSE stream timeout - no data received');
           reader.cancel();
           reject(new Error('Stream timeout - no data received'));
@@ -301,22 +316,27 @@ export class UnifiedOnboardingService {
           const { done, value } = await reader.read();
           
           if (done) {
+            console.log('🌐 SSE: Stream completed');
             clearTimeout(timeoutId);
             isCompleted = true;
             
             if (!hasReceivedData) {
+              console.error('🌐 SSE: Stream completed without data');
               logError('UnifiedOnboarding', 'SSE stream completed without data');
               reject(new Error('Stream completed without data'));
               return;
             }
             
+            console.log('🌐 SSE: Stream completed successfully');
             logInfo('UnifiedOnboarding', 'SSE stream completed successfully');
             resolve({ success: true, message: 'Streaming completed' });
             return;
           }
 
           hasReceivedData = true;
-          buffer += decoder.decode(value, { stream: true });
+          const chunk = decoder.decode(value, { stream: true });
+          console.log('🌐 SSE: Received chunk', { size: chunk.length, preview: chunk.substring(0, 100) });
+          buffer += chunk;
           const lines = buffer.split('\n');
           buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
@@ -324,9 +344,23 @@ export class UnifiedOnboardingService {
           let currentData = '';
           
           for (const line of lines) {
-            if (line.trim() === '') {
+            const trimmedLine = line.trim();
+            console.log('🌐 SSE: Processing line', { line: trimmedLine });
+            logInfo('UnifiedOnboarding', 'Processing SSE line', { line: trimmedLine });
+            
+            if (trimmedLine === '') {
               // Empty line indicates end of event, process the accumulated data
               if (currentData) {
+                console.log('🌐 SSE: Processing event', { 
+                  event: currentEvent, 
+                  dataLength: currentData.length,
+                  dataPreview: currentData.substring(0, Math.min(100, currentData.length)) + '...' 
+                });
+                logInfo('UnifiedOnboarding', 'Processing SSE event data', { 
+                  event: currentEvent, 
+                  data: currentData.substring(0, Math.min(100, currentData.length)) + '...' 
+                });
+                
                 try {
                   const eventData = JSON.parse(currentData);
                   
@@ -343,6 +377,14 @@ export class UnifiedOnboardingService {
                       timestamp: eventData.timestamp
                     };
                     
+                    console.log('🔥 SSE: Processing progress update', {
+                      event: currentEvent,
+                      stage: progress.stage,
+                      progress: progress.progress,
+                      message: progress.message,
+                      fullProgress: progress
+                    });
+                    
                     logInfo('UnifiedOnboarding', 'Processing progress update', {
                       event: currentEvent,
                       stage: progress.stage,
@@ -351,7 +393,10 @@ export class UnifiedOnboardingService {
                     });
                     
                     if (onProgress) {
+                      console.log('🔥 SSE: Calling onProgress callback with:', progress);
                       onProgress(progress);
+                    } else {
+                      console.log('🔥 SSE: onProgress callback is null!');
                     }
                   } else if (currentEvent === 'complete' && eventData.success !== undefined) {
                     // This is the final result
@@ -399,16 +444,25 @@ export class UnifiedOnboardingService {
             
             if (line.startsWith('event: ')) {
               currentEvent = line.substring(7).trim();
+              console.log('🌐 SSE: Event type received', { event: currentEvent });
               logInfo('UnifiedOnboarding', 'Received SSE event', { event: currentEvent });
             } else if (line.startsWith('data: ')) {
               currentData = line.substring(6); // Remove 'data: ' prefix
-              logInfo('UnifiedOnboarding', 'Received SSE data', { data: currentData.substring(0, Math.min(100, currentData.length)) + '...' });
+              console.log('🌐 SSE: Data received', { 
+                dataLength: currentData.length,
+                dataPreview: currentData.substring(0, Math.min(100, currentData.length)) + '...'
+              });
+              logInfo('UnifiedOnboarding', 'Received SSE data', { 
+                data: currentData.substring(0, Math.min(100, currentData.length)) + '...',
+                fullLength: currentData.length
+              });
             }
           }
 
           // Continue reading
           processChunk();
         } catch (error) {
+          console.error('🌐 SSE: Error processing chunk', error);
           clearTimeout(timeoutId);
           isCompleted = true;
           const errorObj = error instanceof Error ? error : new Error('Unknown error');
