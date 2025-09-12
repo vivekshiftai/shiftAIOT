@@ -1401,7 +1401,22 @@ export const DeviceDetailsSection: React.FC = () => {
                                 <div className="text-xs text-gray-500 mb-1">Table {index + 1}:</div>
                                 <div 
                                   className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm"
-                                  dangerouslySetInnerHTML={{ __html: table }}
+                                  style={{
+                                    '--table-border': '#d1d5db',
+                                    '--table-border-thick': '#9ca3af'
+                                  } as React.CSSProperties}
+                                  dangerouslySetInnerHTML={{ 
+                                    __html: table.replace(
+                                      /<table/g, 
+                                      '<table style="border-collapse: collapse; width: 100%; border: 1px solid var(--table-border-thick);"'
+                                    ).replace(
+                                      /<th/g, 
+                                      '<th style="border: 1px solid var(--table-border); padding: 8px; background-color: #f9fafb; font-weight: 600;"'
+                                    ).replace(
+                                      /<td/g, 
+                                      '<td style="border: 1px solid var(--table-border); padding: 8px;"'
+                                    )
+                                  }}
                                 />
                               </div>
                             ))}

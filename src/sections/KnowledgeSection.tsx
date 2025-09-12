@@ -570,11 +570,11 @@ export const KnowledgeSection: React.FC = () => {
                       <div className="mt-3">
                         <div className="text-xs font-medium text-gray-500 mb-2">📊 Database Results:</div>
                         <div className="overflow-x-auto">
-                          <table className="w-full text-xs border border-gray-200 rounded-lg">
+                          <table className="w-full text-xs border-collapse border border-gray-300 rounded-lg overflow-hidden">
                             <thead className="bg-gray-50">
                               <tr>
                                 {Object.keys(message.databaseResults[0]).slice(0, 5).map((key, index) => (
-                                  <th key={index} className="px-2 py-1 text-left font-medium text-gray-700 border-b border-gray-200">
+                                  <th key={index} className="px-3 py-2 text-left font-medium text-gray-700 border-b border-gray-300 border-r border-gray-200 last:border-r-0">
                                     {key}
                                   </th>
                                 ))}
@@ -582,9 +582,9 @@ export const KnowledgeSection: React.FC = () => {
                             </thead>
                             <tbody>
                               {message.databaseResults.slice(0, 5).map((row, rowIndex) => (
-                                <tr key={rowIndex} className="border-b border-gray-100">
+                                <tr key={rowIndex} className="border-b border-gray-200 hover:bg-gray-50">
                                   {Object.values(row).slice(0, 5).map((value, colIndex) => (
-                                    <td key={colIndex} className="px-2 py-1 text-gray-600">
+                                    <td key={colIndex} className="px-3 py-2 text-gray-600 border-r border-gray-200 last:border-r-0">
                                       {value ? String(value).substring(0, 50) + (String(value).length > 50 ? '...' : '') : '-'}
                                     </td>
                                   ))}
@@ -658,7 +658,22 @@ export const KnowledgeSection: React.FC = () => {
                               <div className="text-xs text-gray-500 mb-1">Table {index + 1}:</div>
                               <div 
                                 className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm"
-                                dangerouslySetInnerHTML={{ __html: table }}
+                                style={{
+                                  '--table-border': '#d1d5db',
+                                  '--table-border-thick': '#9ca3af'
+                                } as React.CSSProperties}
+                                dangerouslySetInnerHTML={{ 
+                                  __html: table.replace(
+                                    /<table/g, 
+                                    '<table style="border-collapse: collapse; width: 100%; border: 1px solid var(--table-border-thick);"'
+                                  ).replace(
+                                    /<th/g, 
+                                    '<th style="border: 1px solid var(--table-border); padding: 8px; background-color: #f9fafb; font-weight: 600;"'
+                                  ).replace(
+                                    /<td/g, 
+                                    '<td style="border: 1px solid var(--table-border); padding: 8px;"'
+                                  )
+                                }}
                               />
                             </div>
                           ))}
