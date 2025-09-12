@@ -35,6 +35,67 @@ public class MaintenanceController {
     private final MaintenanceNotificationScheduler maintenanceNotificationScheduler;
 
     /**
+     * Debug endpoint to check maintenance task data and assigned users.
+     */
+    @GetMapping("/debug")
+    @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
+    public ResponseEntity<Map<String, Object>> debugMaintenanceTasks(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            log.info("🔍 Debug maintenance tasks requested by user: {}", userDetails.getUser().getId());
+            
+            // Call the debug method
+            maintenanceNotificationScheduler.debugMaintenanceTasks();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Debug information logged to console. Check application logs for details.");
+            response.put("timestamp", java.time.LocalDateTime.now());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error during maintenance debug: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", "Debug failed: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Manually trigger maintenance notifications for testing.
+     */
+    @PostMapping("/trigger-notifications")
+    @PreAuthorize("hasAuthority('MAINTENANCE_WRITE')")
+    public ResponseEntity<Map<String, Object>> triggerMaintenanceNotifications(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            log.info("📢 Manual maintenance notification trigger requested by user: {}", userDetails.getUser().getId());
+            
+            // Trigger maintenance notifications
+            int notificationsSent = maintenanceNotificationScheduler.triggerMaintenanceNotifications();
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Maintenance notifications triggered successfully");
+            response.put("notificationsSent", notificationsSent);
+            response.put("timestamp", java.time.LocalDateTime.now());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("Error during manual maintenance notification trigger: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", "Trigger failed: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Get today's maintenance tasks for the organization.
      */
             @GetMapping("/today")
@@ -601,47 +662,4 @@ public class MaintenanceController {
         }
     }
 
-    /**
-     * Manually trigger maintenance notifications for testing.
-     */
-            @PostMapping("/trigger-notifications")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Map<String, Object>> triggerMaintenanceNotifications(
-            @AuthenticationPrincipal CustomUserDetails userDetails) {
-        
-        if (userDetails == null || userDetails.getUser() == null) {
-            log.warn("Unauthorized access attempt to trigger maintenance notifications");
-            return ResponseEntity.status(401).build();
-        }
-        
-        try {
-            log.info("Manual trigger of maintenance notifications requested by user: {}", 
-                    userDetails.getUser().getUsername());
-            
-            // Trigger the maintenance notification scheduler
-            int notificationsSent = maintenanceNotificationScheduler.triggerMaintenanceNotifications();
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Maintenance notifications triggered successfully");
-            response.put("notificationsSent", notificationsSent);
-            response.put("triggeredBy", userDetails.getUser().getUsername());
-            response.put("timestamp", java.time.LocalDateTime.now());
-            
-            log.info("✅ Manual maintenance notification trigger completed successfully by user: {}", 
-                    userDetails.getUser().getUsername());
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            log.error("Error triggering maintenance notifications manually: {}", e.getMessage(), e);
-            
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("error", "Failed to trigger maintenance notifications");
-            errorResponse.put("message", e.getMessage());
-            
-            return ResponseEntity.status(500).body(errorResponse);
-        }
-    }
 }

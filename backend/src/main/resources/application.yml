@@ -225,7 +225,13 @@ logging:
   level:
     root: INFO
     
-    com.iotplatform: INFO
+    com.iotplatform: DEBUG
+    
+    # Maintenance notification system - set to DEBUG for detailed troubleshooting
+    com.iotplatform.service.MaintenanceNotificationScheduler: DEBUG
+    com.iotplatform.service.MaintenanceScheduleService: DEBUG
+    com.iotplatform.repository.MaintenanceScheduleRepository: DEBUG
+    com.iotplatform.controller.MaintenanceController: DEBUG
     
     # Hibernate logging - set to INFO for balanced logging
     org.hibernate: INFO

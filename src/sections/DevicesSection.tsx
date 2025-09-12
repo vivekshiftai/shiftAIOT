@@ -8,7 +8,7 @@ import { useIoT } from '../contexts/IoTContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Device } from '../types';
 import { DevicesLoading } from '../components/Loading/LoadingComponents';
-import { logInfo } from '../utils/logger';
+import { logInfo, logError } from '../utils/logger';
 
 export const DevicesSection: React.FC = () => {
   const navigate = useNavigate();
@@ -193,25 +193,6 @@ export const DevicesSection: React.FC = () => {
       )}
 
       {/* Error Message */}
-      {successMessage && (
-        <div className="mb-4 p-4 bg-success-500/20 border border-success-500/30 rounded-lg glass">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <CheckCircle className="w-5 h-5 text-success-500 mr-3" />
-              <span className="text-success-300">{successMessage}</span>
-            </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setSuccessMessage('');
-              }}
-              className="text-success-400 hover:text-success-300"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
-            </button>
-          </div>
-        </div>
-      )}
 
       {errorMessage && (
         <div className="mb-4 p-4 bg-danger-500/20 border border-danger-500/30 rounded-lg glass">

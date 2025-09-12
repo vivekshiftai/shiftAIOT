@@ -278,6 +278,14 @@ public class MaintenanceNotificationScheduler {
             String lastName = (String) taskData[27]; // last_name from users table
             String email = (String) taskData[28]; // email from users table
 
+            // Debug logging to see what's in the array
+            log.debug("DEBUG: taskData array length: {}", taskData.length);
+            log.debug("DEBUG: assignedUserId at position 25: '{}'", assignedUserId);
+            log.debug("DEBUG: deviceName at position 24: '{}'", deviceName);
+            log.debug("DEBUG: firstName at position 26: '{}'", firstName);
+            log.debug("DEBUG: lastName at position 27: '{}'", lastName);
+            log.debug("DEBUG: email at position 28: '{}'", email);
+            
             // Skip if no assigned user
             if (assignedUserId == null || assignedUserId.trim().isEmpty()) {
                 log.warn("Skipping maintenance reminder - no assigned user for device: {}", deviceName);
@@ -343,6 +351,14 @@ public class MaintenanceNotificationScheduler {
             String lastName = (String) taskData[27]; // last_name from users table
             String email = (String) taskData[28]; // email from users table
 
+            // Debug logging to see what's in the array
+            log.debug("DEBUG: taskData array length: {}", taskData.length);
+            log.debug("DEBUG: assignedUserId at position 25: '{}'", assignedUserId);
+            log.debug("DEBUG: deviceName at position 24: '{}'", deviceName);
+            log.debug("DEBUG: firstName at position 26: '{}'", firstName);
+            log.debug("DEBUG: lastName at position 27: '{}'", lastName);
+            log.debug("DEBUG: email at position 28: '{}'", email);
+            
             // Skip if no assigned user
             if (assignedUserId == null || assignedUserId.trim().isEmpty()) {
                 log.warn("Skipping maintenance task - no assigned user for device: {}", deviceName);
@@ -622,6 +638,24 @@ public class MaintenanceNotificationScheduler {
                     Object[] task = allTasks.get(i);
                     log.info("📋 Task {}: ID={}, Name={}, Device={}, Status={}, NextMaintenance={}", 
                         i+1, task[0], task[2], task[1], task[10], task[8]);
+                    
+                    // Debug the array structure
+                    log.info("🔍 DEBUG: Array length: {}", task.length);
+                    if (task.length > 24) {
+                        log.info("🔍 DEBUG: Device name (pos 24): '{}'", task[24]);
+                    }
+                    if (task.length > 25) {
+                        log.info("🔍 DEBUG: Assigned user ID (pos 25): '{}'", task[25]);
+                    }
+                    if (task.length > 26) {
+                        log.info("🔍 DEBUG: First name (pos 26): '{}'", task[26]);
+                    }
+                    if (task.length > 27) {
+                        log.info("🔍 DEBUG: Last name (pos 27): '{}'", task[27]);
+                    }
+                    if (task.length > 28) {
+                        log.info("🔍 DEBUG: Email (pos 28): '{}'", task[28]);
+                    }
                 }
             }
             
