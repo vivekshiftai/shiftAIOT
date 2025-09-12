@@ -300,6 +300,8 @@ export class UnifiedOnboardingService {
       let buffer = '';
       let isCompleted = false;
       let hasReceivedData = false;
+      let currentEvent = '';
+      let currentData = '';
 
       // Set up a timeout to handle incomplete streams
       const timeoutId = setTimeout(() => {
@@ -339,16 +341,22 @@ export class UnifiedOnboardingService {
           buffer += chunk;
           const lines = buffer.split('\n');
           buffer = lines.pop() || ''; // Keep incomplete line in buffer
-
-          let currentEvent = '';
-          let currentData = '';
           
           for (const line of lines) {
             const trimmedLine = line.trim();
             console.log('🌐 SSE: Processing line', { line: trimmedLine });
             logInfo('UnifiedOnboarding', 'Processing SSE line', { line: trimmedLine });
             
-            if (trimmedLine === '') {
+            if (trimmedLine.startsWith('event: ')) {
+              currentEvent = trimmedLine.substring(7).trim();
+              console.log('🌐 SSE: Event type received', { event: currentEvent });
+            } else if (trimmedLine.startsWith('data: ')) {
+              currentData = trimmedLine.substring(6);
+              console.log('🌐 SSE: Data received', { 
+                dataLength: currentData.length, 
+                dataPreview: currentData.substring(0, Math.min(100, currentData.length)) + '...' 
+              });
+            } else if (trimmedLine === '') {
               // Empty line indicates end of event, process the accumulated data
               if (currentData) {
                 console.log('🌐 SSE: Processing event', { 
@@ -440,22 +448,6 @@ export class UnifiedOnboardingService {
               currentEvent = '';
               currentData = '';
               continue;
-            }
-            
-            if (line.startsWith('event: ')) {
-              currentEvent = line.substring(7).trim();
-              console.log('🌐 SSE: Event type received', { event: currentEvent });
-              logInfo('UnifiedOnboarding', 'Received SSE event', { event: currentEvent });
-            } else if (line.startsWith('data: ')) {
-              currentData = line.substring(6); // Remove 'data: ' prefix
-              console.log('🌐 SSE: Data received', { 
-                dataLength: currentData.length,
-                dataPreview: currentData.substring(0, Math.min(100, currentData.length)) + '...'
-              });
-              logInfo('UnifiedOnboarding', 'Received SSE data', { 
-                data: currentData.substring(0, Math.min(100, currentData.length)) + '...',
-                fullLength: currentData.length
-              });
             }
           }
 

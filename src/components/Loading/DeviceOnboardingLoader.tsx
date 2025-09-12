@@ -240,6 +240,22 @@ export const DeviceOnboardingLoader: React.FC<DeviceOnboardingLoaderProps> = ({
             })}
           </div>
 
+          {/* Debug SSE Data */}
+          {sseProgress && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">🔍 SSE Debug Info:</h4>
+              <div className="text-xs text-blue-700 space-y-1">
+                <div><strong>Stage:</strong> {sseProgress.stage}</div>
+                <div><strong>Progress:</strong> {sseProgress.progress}%</div>
+                <div><strong>Message:</strong> {sseProgress.message}</div>
+                {sseProgress.subMessage && <div><strong>Sub:</strong> {sseProgress.subMessage}</div>}
+                {sseProgress.stepDetails && (
+                  <div><strong>Step:</strong> {sseProgress.stepDetails.currentStep}/{sseProgress.stepDetails.totalSteps} - {sseProgress.stepDetails.stepName}</div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Current Step Progress */}
           {isProcessing && (
             <div className="bg-gray-50 rounded-xl p-4">
