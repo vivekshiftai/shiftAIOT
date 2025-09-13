@@ -192,9 +192,9 @@ public class ExternalQueryProcessingService {
                 log.info("📤 Sending message to default channel: C092C9RHPKN");
             }
             
-            // Create clean message structure with slack_post_message tool
-            String cleanMessage = String.format("Use the slack_post_message tool to send a message with text '%s' to Slack %s %s", 
-                formattedResponse, messageType, targetId);
+            // Create clean message structure with slack_post_message tool including the target ID at the start
+            String cleanMessage = String.format("Send this message to the %s using tool slack_post_message for the ID %s with text '%s'", 
+                messageType, targetId, formattedResponse);
             payload.put("message", cleanMessage);
             
             HttpHeaders headers = new HttpHeaders();
@@ -361,9 +361,9 @@ public class ExternalQueryProcessingService {
                 log.info("📤 Sending generic message to default channel: C092C9RHPKN");
             }
             
-            // Create clean message structure with slack_post_message tool
-            String cleanMessage = String.format("Use the slack_post_message tool to send a message with text '%s' to Slack %s %s", 
-                response, messageType, targetId);
+            // Create clean message structure with slack_post_message tool including the target ID at the start
+            String cleanMessage = String.format("Send this message to the %s using tool slack_post_message for the ID %s with text '%s'", 
+                messageType, targetId, response);
             payload.put("message", cleanMessage);
             
             HttpHeaders headers = new HttpHeaders();

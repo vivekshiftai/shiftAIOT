@@ -1343,20 +1343,22 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
       {!showOnboardingLoader && !showSuccessMessage && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           {/* Form layout with 60% width, divided into 5 parts (2 for progress, 3 for input) */}
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex border border-gray-200 overflow-hidden relative">
+            {/* Close Button - Positioned at top right of entire modal */}
+            <button
+              onClick={onCancel}
+              className="absolute top-6 right-6 w-10 h-10 bg-white/80 hover:bg-white rounded-2xl shadow-sm border border-gray-200 flex items-center justify-center transition-all duration-300 backdrop-blur-sm z-10"
+              title="Close"
+            >
+              <span className="text-xl font-bold text-gray-600">×</span>
+            </button>
+            
             {/* Progress Section - 2/5 width */}
             <div className="w-2/5 bg-gradient-to-br from-slate-50 to-gray-100 p-8 flex flex-col border-r border-gray-200">
               {/* Header */}
               <div className="mb-8">
-                <div className="flex items-center justify-between mb-3">
+                <div className="mb-3">
                   <h2 className="text-2xl font-bold text-gray-800">Device Onboarding</h2>
-                  <button
-                    onClick={onCancel}
-                    className="p-2 hover:bg-gray-200 rounded-lg transition-all duration-300"
-                    title="Close"
-                  >
-                    <span className="text-xl font-bold text-gray-600">×</span>
-                  </button>
                 </div>
                 <p className="text-gray-600 text-sm leading-relaxed">
                   Enter basic asset information and specifications
@@ -1448,13 +1450,6 @@ export const EnhancedDeviceOnboardingForm: React.FC<EnhancedDeviceOnboardingForm
                 </div>
               </div>
 
-              {/* Close Button */}
-              <button
-                onClick={onCancel}
-                className="absolute top-6 right-6 w-10 h-10 bg-white/80 hover:bg-white rounded-2xl shadow-sm border border-gray-200 flex items-center justify-center transition-all duration-300 backdrop-blur-sm"
-              >
-                <span className="text-xl font-bold text-gray-600">×</span>
-              </button>
             </div>
 
             {/* Form Content Section - 3/5 width */}
