@@ -15,6 +15,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Service for processing external queries through the complete flow:
@@ -251,12 +253,55 @@ public class ExternalQueryProcessingService {
      * Handle case when no device is found in query
      */
     private ExternalQueryResult handleNoDeviceFound(String query, String source, String channelId, String userId) {
-        String response = "🤖 *Query Response*\n" +
-                         "❌ No specific device found in your query: \"" + query + "\"\n" +
-                         "Please specify a device name (e.g., 'Rondo s-4000', 'Conveyor Belt System') to get device-specific information.";
-        
-        log.info("📤 Sending 'no device found' response through MCP server");
-        return sendGenericResponseThroughMCP(response, channelId, userId);
+        try {
+            // Get available device names to help the user
+            List<UnifiedPDF> allPDFs = unifiedPDFService.getPDFsByOrganization(defaultOrganizationId);
+            Set<String> availableDeviceNames = allPDFs.stream()
+                .map(UnifiedPDF::getDeviceName)
+                .filter(deviceName -> deviceName != null && !deviceName.trim().isEmpty())
+                .map(String::trim)
+                .collect(Collectors.toSet());
+            
+            StringBuilder response = new StringBuilder();
+            response.append("🤖 *Query Response*\n");
+            response.append("❌ No specific device found in your query: \"").append(query).append("\"\n\n");
+            response.append("📋 *Please specify a device name for better understanding.*\n\n");
+            
+            if (!availableDeviceNames.isEmpty()) {
+                response.append("🔍 *Available devices in the system:*\n");
+                for (String deviceName : availableDeviceNames) {
+                    response.append("• ").append(deviceName).append("\n");
+                }
+                response.append("\n");
+                response.append("💡 *Example queries:*\n");
+                String firstDevice = availableDeviceNames.iterator().next();
+                response.append("• \"How do I operate ").append(firstDevice).append("?\"\n");
+                response.append("• \"What's the maintenance schedule for ").append(firstDevice).append("?\"\n");
+                response.append("• \"Show me safety procedures for ").append(firstDevice).append("\"\n");
+            } else {
+                response.append("⚠️ No devices are currently available in the system.\n");
+                response.append("Please contact the administrator to upload device documentation.");
+            }
+            
+            log.info("📤 Sending 'no device found' response with available devices list through MCP server");
+            return sendGenericResponseThroughMCP(response.toString(), channelId, userId);
+            
+        } catch (Exception e) {
+            log.error("❌ Error getting available device names for 'no device found' response: {}", e.getMessage(), e);
+            
+            // Fallback response without device list
+            String fallbackResponse = "🤖 *Query Response*\n" +
+                                    "❌ No specific device found in your query: \"" + query + "\"\n\n" +
+                                    "📋 *Please specify a device name for better understanding.*\n\n" +
+                                    "💡 *Example queries:*\n" +
+                                    "• \"How do I operate [device name]?\"\n" +
+                                    "• \"What's the maintenance schedule for [device name]?\"\n" +
+                                    "• \"Show me safety procedures for [device name]\"\n\n" +
+                                    "Please specify the exact device name to get device-specific information.";
+            
+            log.info("📤 Sending fallback 'no device found' response through MCP server");
+            return sendGenericResponseThroughMCP(fallbackResponse, channelId, userId);
+        }
     }
 
     /**

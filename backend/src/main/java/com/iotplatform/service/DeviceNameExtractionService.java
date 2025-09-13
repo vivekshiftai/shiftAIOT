@@ -6,6 +6,8 @@ import com.azure.ai.openai.models.*;
 import com.azure.core.credential.AzureKeyCredential;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iotplatform.model.UnifiedPDF;
+import com.iotplatform.service.UnifiedPDFService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,6 +15,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Service for extracting device names from natural language queries using Azure OpenAI
@@ -24,6 +28,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class DeviceNameExtractionService {
+
+    private final UnifiedPDFService unifiedPDFService;
 
     @Value("${azure.openai.endpoint}")
     private String endpoint;
@@ -42,6 +48,9 @@ public class DeviceNameExtractionService {
 
     @Value("${azure.openai.temperature:0.1}")
     private double temperature;
+
+    @Value("${external.query.organization-id:shiftAIOT-org-2024}")
+    private String defaultOrganizationId;
 
     private OpenAIClient openAIClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -76,8 +85,12 @@ public class DeviceNameExtractionService {
         try {
             initializeClient();
             
-            // Create system prompt for device name extraction
-            String systemPrompt = createDeviceExtractionPrompt();
+            // Step 1: Get available device names from PDF table
+            Set<String> availableDeviceNames = getAvailableDeviceNames();
+            log.info("📋 Found {} available device names in PDF table", availableDeviceNames.size());
+            
+            // Create system prompt for device name extraction with available device names
+            String systemPrompt = createDeviceExtractionPrompt(availableDeviceNames);
             
             // Create user message
             String userMessage = "Query: " + query;
@@ -121,31 +134,75 @@ public class DeviceNameExtractionService {
     }
     
     /**
-     * Create system prompt for device name extraction
+     * Get available device names from the PDF table
      */
-    private String createDeviceExtractionPrompt() {
-        return """
-            You are an AI assistant specialized in extracting device names from natural language queries about IoT devices.
+    private Set<String> getAvailableDeviceNames() {
+        try {
+            log.info("🔍 Fetching available device names from PDF table for organization: {}", defaultOrganizationId);
             
-            Your task is to identify the specific device name mentioned in the user's query.
+            // Get all PDFs for the organization
+            List<UnifiedPDF> allPDFs = unifiedPDFService.getPDFsByOrganization(defaultOrganizationId);
             
-            Rules:
-            1. Look for device names, model numbers, or equipment names
-            2. Device names are typically proper nouns or specific model identifiers
-            3. Common patterns: "Rondo s-40", "Conveyor Belt System", "Temperature Sensor 1", "Pump Station A"
-            4. If no specific device is mentioned, return "null"
-            5. If multiple devices are mentioned, return the primary device
-            6. Return only the device name, nothing else
+            // Extract unique device names (filter out null/empty names)
+            Set<String> deviceNames = allPDFs.stream()
+                .map(UnifiedPDF::getDeviceName)
+                .filter(deviceName -> deviceName != null && !deviceName.trim().isEmpty())
+                .map(String::trim)
+                .collect(Collectors.toSet());
             
-            Examples:
-            - "What is the maintenance schedule for Rondo s-40?" → "Rondo s-40"
-            - "How do I operate the conveyor belt?" → "conveyor belt"
-            - "Show me safety procedures for Temperature Sensor 1" → "Temperature Sensor 1"
-            - "What are the general maintenance tips?" → "null"
-            - "Tell me about device status" → "null"
+            log.info("✅ Retrieved {} unique device names from PDF table: {}", deviceNames.size(), deviceNames);
+            return deviceNames;
             
-            Respond with only the device name or "null" if no device is specified.
-            """;
+        } catch (Exception e) {
+            log.error("❌ Failed to fetch device names from PDF table: {}", e.getMessage(), e);
+            return Set.of(); // Return empty set on error
+        }
+    }
+
+    /**
+     * Create system prompt for device name extraction with available device names
+     */
+    private String createDeviceExtractionPrompt(Set<String> availableDeviceNames) {
+        StringBuilder prompt = new StringBuilder();
+        
+        prompt.append("You are an AI assistant specialized in extracting device names from natural language queries about IoT devices.\n\n");
+        prompt.append("Your task is to identify the specific device name mentioned in the user's query.\n\n");
+        
+        // Add available device names if any exist
+        if (!availableDeviceNames.isEmpty()) {
+            prompt.append("AVAILABLE DEVICE NAMES IN THE SYSTEM:\n");
+            for (String deviceName : availableDeviceNames) {
+                prompt.append("- ").append(deviceName).append("\n");
+            }
+            prompt.append("\n");
+            prompt.append("IMPORTANT: Only extract device names that are in the above list. If the query mentions a device not in this list, return 'null'.\n\n");
+        } else {
+            prompt.append("NOTE: No device names are currently available in the system.\n\n");
+        }
+        
+        prompt.append("Rules:\n");
+        prompt.append("1. Look for device names, model numbers, or equipment names\n");
+        prompt.append("2. Device names are typically proper nouns or specific model identifiers\n");
+        prompt.append("3. If no specific device is mentioned, return 'null'\n");
+        prompt.append("4. If multiple devices are mentioned, return the primary device\n");
+        prompt.append("5. Return only the device name, nothing else\n");
+        prompt.append("6. Match the device name exactly as it appears in the available list above\n\n");
+        
+        prompt.append("Examples:\n");
+        if (!availableDeviceNames.isEmpty()) {
+            // Use actual device names from the system for examples
+            String firstDevice = availableDeviceNames.iterator().next();
+            prompt.append("- \"What is the maintenance schedule for ").append(firstDevice).append("?\" → \"").append(firstDevice).append("\"\n");
+        } else {
+            prompt.append("- \"What is the maintenance schedule for Rondo s-40?\" → \"Rondo s-40\"\n");
+        }
+        prompt.append("- \"How do I operate the conveyor belt?\" → \"conveyor belt\"\n");
+        prompt.append("- \"What are the general maintenance tips?\" → \"null\"\n");
+        prompt.append("- \"Tell me about device status\" → \"null\"\n\n");
+        
+        prompt.append("Respond with only the device name or \"null\" if no device is specified.");
+        
+        return prompt.toString();
     }
     
     /**
