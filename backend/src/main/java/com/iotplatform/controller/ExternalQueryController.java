@@ -115,9 +115,14 @@ public class ExternalQueryController {
             
             String source = request.getSource() != null ? request.getSource() : "unknown";
             
-            // Process the query through the complete flow
+            // Process the query through the complete flow with dynamic channel/user IDs
             ExternalQueryProcessingService.ExternalQueryResult result = 
-                externalQueryProcessingService.processExternalQuery(request.getQuery().trim(), source);
+                externalQueryProcessingService.processExternalQuery(
+                    request.getQuery().trim(), 
+                    source, 
+                    request.getChannelId(),  // Use channel ID from request
+                    request.getUserId()      // Use user ID from request
+                );
             
             // Return the result
             Map<String, Object> response = Map.of(
@@ -207,9 +212,14 @@ public class ExternalQueryController {
                 ));
             }
             
-            // Process the query
+            // Process the query with dynamic channel and user IDs from Slack webhook
             ExternalQueryProcessingService.ExternalQueryResult result = 
-                externalQueryProcessingService.processExternalQuery(query.trim(), "slack");
+                externalQueryProcessingService.processExternalQuery(
+                    query.trim(), 
+                    "slack", 
+                    request.getChannelId(),  // Use actual channel ID from Slack
+                    request.getUserId()      // Use actual user ID from Slack
+                );
             
             // Return simple response for Slack webhook
             return ResponseEntity.ok(Map.of(
@@ -271,6 +281,12 @@ public class ExternalQueryController {
         @Schema(description = "Source of the query", example = "slack", required = false)
         private String source;
         
+        @Schema(description = "Slack channel ID for dynamic responses", example = "C092C9RHPKN", required = false)
+        private String channelId;
+        
+        @Schema(description = "Slack user ID for direct messages", example = "U123456", required = false)
+        private String userId;
+        
         @Schema(description = "Additional metadata", required = false)
         private Map<String, Object> metadata;
 
@@ -280,6 +296,12 @@ public class ExternalQueryController {
         
         public String getSource() { return source; }
         public void setSource(String source) { this.source = source; }
+        
+        public String getChannelId() { return channelId; }
+        public void setChannelId(String channelId) { this.channelId = channelId; }
+        
+        public String getUserId() { return userId; }
+        public void setUserId(String userId) { this.userId = userId; }
         
         public Map<String, Object> getMetadata() { return metadata; }
         public void setMetadata(Map<String, Object> metadata) { this.metadata = metadata; }
@@ -314,5 +336,9 @@ public class ExternalQueryController {
         
         public String getTimestamp() { return timestamp; }
         public void setTimestamp(String timestamp) { this.timestamp = timestamp; }
+        
+        // Additional getters for compatibility with ExternalQueryProcessingService
+        public String getUserId() { return user; }
+        public String getChannelId() { return channel; }
     }
 }

@@ -53,6 +53,19 @@ public class ExternalQueryProcessingService {
      * @return Processing result with response
      */
     public ExternalQueryResult processExternalQuery(String query, String source) {
+        return processExternalQuery(query, source, null, null);
+    }
+
+    /**
+     * Process external query through the complete flow with Slack channel and user IDs
+     * 
+     * @param query The external query text
+     * @param source The source of the query (e.g., "slack", "webhook", "api")
+     * @param channelId The Slack channel ID (for dynamic channel responses)
+     * @param userId The Slack user ID (for user-specific responses)
+     * @return Processing result with response
+     */
+    public ExternalQueryResult processExternalQuery(String query, String source, String channelId, String userId) {
         log.info("🔄 Processing external query from {}: {}", source, query);
         
         try {
@@ -61,24 +74,24 @@ public class ExternalQueryProcessingService {
             log.info("📱 Extracted device name: '{}' from query: '{}'", deviceName, query);
             
             if (deviceName == null) {
-                return handleNoDeviceFound(query, source);
+                return handleNoDeviceFound(query, source, channelId, userId);
             }
             
             // Step 2: Find device PDF
             Optional<UnifiedPDF> devicePDF = findDevicePDF(deviceName);
             if (devicePDF.isEmpty()) {
-                return handleDevicePDFNotFound(deviceName, query, source);
+                return handleDevicePDFNotFound(deviceName, query, source, channelId, userId);
             }
             
             // Step 3: Query PDF using external service
             PDFQueryResponse pdfResponse = queryDevicePDF(devicePDF.get(), query);
             
-            // Step 4: Return response through MCP server
-            return sendResponseThroughMCP(pdfResponse, query, deviceName, source);
+            // Step 4: Return response through MCP server with dynamic channel/user IDs
+            return sendResponseThroughMCP(pdfResponse, query, deviceName, source, channelId, userId);
             
         } catch (Exception e) {
             log.error("❌ Error processing external query: {}", e.getMessage(), e);
-            return handleProcessingError(query, source, e);
+            return handleProcessingError(query, source, e, channelId, userId);
         }
     }
 
@@ -148,16 +161,32 @@ public class ExternalQueryProcessingService {
      * Send response through MCP server
      */
     private ExternalQueryResult sendResponseThroughMCP(PDFQueryResponse pdfResponse, String originalQuery, 
-                                                      String deviceName, String source) {
+                                                      String deviceName, String source, String channelId, String userId) {
         try {
             log.info("📤 Sending response through MCP server for device: {}", deviceName);
             
             // Format the response for MCP
             String formattedResponse = formatResponseForMCP(pdfResponse, originalQuery, deviceName);
             
-            // Send to MCP server
+            // Send to MCP server with priority: User ID first, then Channel ID, then default
             Map<String, String> payload = new HashMap<>();
-            payload.put("message", "Send a message to Slack channel C092C9RHPKN with the text '" + formattedResponse + "'");
+            String messageText;
+            
+            if (userId != null && !userId.trim().isEmpty()) {
+                // Priority 1: Send direct message to user
+                messageText = "Send a direct message to Slack user " + userId + " with the text '" + formattedResponse + "'";
+                log.info("📤 Sending direct message to user: {}", userId);
+            } else if (channelId != null && !channelId.trim().isEmpty()) {
+                // Priority 2: Send to specific channel
+                messageText = "Send a message to Slack channel " + channelId + " with the text '" + formattedResponse + "'";
+                log.info("📤 Sending message to channel: {}", channelId);
+            } else {
+                // Priority 3: Fallback to default channel
+                messageText = "Send a message to Slack channel C092C9RHPKN with the text '" + formattedResponse + "'";
+                log.info("📤 Sending message to default channel: C092C9RHPKN");
+            }
+            
+            payload.put("message", messageText);
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -221,46 +250,62 @@ public class ExternalQueryProcessingService {
     /**
      * Handle case when no device is found in query
      */
-    private ExternalQueryResult handleNoDeviceFound(String query, String source) {
+    private ExternalQueryResult handleNoDeviceFound(String query, String source, String channelId, String userId) {
         String response = "🤖 *Query Response*\n" +
                          "❌ No specific device found in your query: \"" + query + "\"\n" +
                          "Please specify a device name (e.g., 'Rondo s-4000', 'Conveyor Belt System') to get device-specific information.";
         
         log.info("📤 Sending 'no device found' response through MCP server");
-        return sendGenericResponseThroughMCP(response);
+        return sendGenericResponseThroughMCP(response, channelId, userId);
     }
 
     /**
      * Handle case when device PDF is not found
      */
-    private ExternalQueryResult handleDevicePDFNotFound(String deviceName, String query, String source) {
+    private ExternalQueryResult handleDevicePDFNotFound(String deviceName, String query, String source, String channelId, String userId) {
         String response = "🤖 *Query Response for " + deviceName + "*\n" +
                          "❌ No documentation found for device: " + deviceName + "\n" +
                          "The device documentation may not be uploaded yet. Please contact the administrator.";
         
         log.info("📤 Sending 'device PDF not found' response through MCP server");
-        return sendGenericResponseThroughMCP(response);
+        return sendGenericResponseThroughMCP(response, channelId, userId);
     }
 
     /**
      * Handle processing errors
      */
-    private ExternalQueryResult handleProcessingError(String query, String source, Exception error) {
+    private ExternalQueryResult handleProcessingError(String query, String source, Exception error, String channelId, String userId) {
         String response = "🤖 *Query Response*\n" +
                          "❌ Error processing your query: \"" + query + "\"\n" +
                          "Please try again or contact support if the issue persists.";
         
         log.info("📤 Sending error response through MCP server");
-        return sendGenericResponseThroughMCP(response);
+        return sendGenericResponseThroughMCP(response, channelId, userId);
     }
 
     /**
      * Send generic response through MCP server
      */
-    private ExternalQueryResult sendGenericResponseThroughMCP(String response) {
+    private ExternalQueryResult sendGenericResponseThroughMCP(String response, String channelId, String userId) {
         try {
             Map<String, String> payload = new HashMap<>();
-            payload.put("message", "Send a message to Slack channel C092C9RHPKN with the text '" + response + "'");
+            String messageText;
+            
+            if (userId != null && !userId.trim().isEmpty()) {
+                // Priority 1: Send direct message to user
+                messageText = "Send a direct message to Slack user " + userId + " with the text '" + response + "'";
+                log.info("📤 Sending generic direct message to user: {}", userId);
+            } else if (channelId != null && !channelId.trim().isEmpty()) {
+                // Priority 2: Send to specific channel
+                messageText = "Send a message to Slack channel " + channelId + " with the text '" + response + "'";
+                log.info("📤 Sending generic message to channel: {}", channelId);
+            } else {
+                // Priority 3: Fallback to default channel
+                messageText = "Send a message to Slack channel C092C9RHPKN with the text '" + response + "'";
+                log.info("📤 Sending generic message to default channel: C092C9RHPKN");
+            }
+            
+            payload.put("message", messageText);
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
