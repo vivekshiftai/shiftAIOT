@@ -7,54 +7,17 @@ interface SSEEventDisplayProps {
 }
 
 export const SSEEventDisplay: React.FC<SSEEventDisplayProps> = ({ sseProgress, isProcessing }) => {
-  const [events, setEvents] = useState<UnifiedOnboardingProgress[]>([]);
   const [currentStep, setCurrentStep] = useState<UnifiedOnboardingProgress | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'error'>('connecting');
 
-  console.log('📱 SSEEventDisplay: Component rendered', {
-    sseProgress,
-    isProcessing,
-    eventsCount: events.length,
-    currentStep
-  });
 
   useEffect(() => {
     if (sseProgress) {
-      console.log('📱 SSEEventDisplay: Received SSE progress update', {
-        sseProgress,
-        sseProgressStringified: JSON.stringify(sseProgress, null, 2),
-        currentEventsCount: events.length,
-        isProcessing,
-        stage: sseProgress.stage,
-        progress: sseProgress.progress,
-        message: sseProgress.message,
-        subMessage: sseProgress.subMessage,
-        stepDetails: sseProgress.stepDetails
-      });
-      
       // Update connection status
       setConnectionStatus('connected');
       
-      setEvents(prev => {
-        const newEvents = [...prev, sseProgress];
-        console.log('📱 SSEEventDisplay: Updated events array', {
-          previousCount: prev.length,
-          newCount: newEvents.length,
-          latestEvent: sseProgress,
-          allEvents: newEvents
-        });
-        return newEvents;
-      });
-
       // Update current step
       setCurrentStep(sseProgress);
-      console.log('📱 SSEEventDisplay: Updated current step', {
-        stage: sseProgress.stage,
-        progress: sseProgress.progress,
-        stepName: sseProgress.stepDetails?.stepName,
-        currentStep: sseProgress.stepDetails?.currentStep,
-        totalSteps: sseProgress.stepDetails?.totalSteps
-      });
 
     } else if (isProcessing) {
       setConnectionStatus('connecting');
@@ -124,14 +87,6 @@ export const SSEEventDisplay: React.FC<SSEEventDisplayProps> = ({ sseProgress, i
     }
   };
 
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case 'completed': return 'text-green-600 bg-green-100';
-      case 'processing': return 'text-blue-600 bg-blue-100';
-      case 'failed': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
 
   const getProgressColor = (progress: number) => {
     if (progress < 30) return 'from-red-400 to-red-600';
@@ -143,82 +98,107 @@ export const SSEEventDisplay: React.FC<SSEEventDisplayProps> = ({ sseProgress, i
   const stageInfo = currentStep ? getStageInfo(currentStep.stage) : getStageInfo('processing');
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-8 max-w-4xl mx-auto max-h-[90vh] overflow-y-auto">
+    <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
       {/* Header */}
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Device Onboarding</h2>
-        <p className="text-gray-600">Setting up your device with intelligent monitoring</p>
-        <div className="mt-4 flex justify-center">
+      <div className="bg-gradient-to-r from-pink-600 to-purple-600 p-6 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold mb-1">Device Onboarding</h2>
+            <p className="text-pink-100 text-sm">Setting up your device with intelligent monitoring</p>
+          </div>
           <div className="flex items-center gap-2">
             <div className={`w-3 h-3 rounded-full ${
-              connectionStatus === 'connected' ? 'bg-green-500 animate-pulse' : 
-              connectionStatus === 'connecting' ? 'bg-yellow-500 animate-pulse' : 
-              connectionStatus === 'error' ? 'bg-red-500' : 'bg-gray-400'
+              connectionStatus === 'connected' ? 'bg-green-400 animate-pulse' : 
+              connectionStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' : 
+              connectionStatus === 'error' ? 'bg-red-400' : 'bg-gray-400'
             }`}></div>
-            <span className="text-sm text-gray-600">
-              {connectionStatus === 'connected' ? 'SSE Connected' : 
-               connectionStatus === 'connecting' ? 'Connecting...' : 
-               connectionStatus === 'error' ? 'Connection Error' : 'Disconnected'}
-            </span>
           </div>
         </div>
       </div>
 
 
-      {/* Current Step Display */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <div className="text-4xl">{stageInfo.icon}</div>
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900">{stageInfo.title}</h3>
-              <p className="text-gray-600">{stageInfo.description}</p>
+      {/* Content Area */}
+      <div className="p-8 overflow-y-auto max-h-[calc(90vh-120px)]">
+        {/* Completion Status Section */}
+        {currentStep?.stage === 'complete' ? (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-8 mb-8 border border-green-200">
+            <div className="flex items-center gap-6 mb-6">
+              <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
+                <span className="text-3xl text-white">✅</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Onboarding Complete</h3>
+                <p className="text-gray-600">Device successfully onboarded with all configurations and ready for use</p>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-gray-900">100%</div>
+                <div className="text-sm text-gray-500">Step 6 of 6</div>
+              </div>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-200 rounded-full h-4 mb-6">
+              <div className="h-4 rounded-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-500 ease-out" style={{ width: '100%' }}></div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                <span className="text-white text-lg">✅</span>
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold text-gray-900">Onboarding completed successfully</h4>
+                <p className="text-gray-600">Device successfully onboarded with all configurations and ready for use</p>
+              </div>
+              <div className="ml-auto">
+                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">Completed</span>
+              </div>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-gray-900">
-              {currentStep?.progress || 0}%
+        ) : (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-8 mb-8 border border-blue-200">
+            <div className="flex items-center gap-6 mb-6">
+              <div className="text-5xl">{stageInfo.icon}</div>
+              <div className="flex-1">
+                <h3 className="text-2xl font-semibold text-gray-900 mb-2">{stageInfo.title}</h3>
+                <p className="text-gray-600">{stageInfo.description}</p>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-gray-900">
+                  {currentStep?.progress || 0}%
+                </div>
+                <div className="text-sm text-gray-500">
+                  {currentStep?.stepDetails ? 
+                    `Step ${currentStep.stepDetails.currentStep} of ${currentStep.stepDetails.totalSteps}` : 
+                    'Initializing...'
+                  }
+                </div>
+              </div>
             </div>
-            <div className="text-sm text-gray-500">
-              {currentStep?.stepDetails ? 
-                `Step ${currentStep.stepDetails.currentStep} of ${currentStep.stepDetails.totalSteps}` : 
-                'Initializing...'
-              }
+
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-200 rounded-full h-4 mb-6">
+              <div
+                className={`h-4 rounded-full bg-gradient-to-r transition-all duration-500 ease-out ${getProgressColor(currentStep?.progress || 0)}`}
+                style={{ width: `${currentStep?.progress || 0}%` }}
+              ></div>
             </div>
-          </div>
-        </div>
 
-        {/* Progress Bar */}
-        <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
-          <div
-            className={`h-3 rounded-full bg-gradient-to-r transition-all duration-500 ease-out ${getProgressColor(currentStep?.progress || 0)}`}
-            style={{ width: `${currentStep?.progress || 0}%` }}
-          ></div>
-        </div>
-
-        {/* Current Message */}
-        {currentStep?.message && (
-          <div className="bg-white rounded-lg p-4 border-l-4 border-blue-500">
-            <p className="text-gray-800 font-medium">{currentStep.message}</p>
-            {currentStep.subMessage && (
-              <p className="text-gray-600 text-sm mt-1">{currentStep.subMessage}</p>
+            {/* Current Message */}
+            {currentStep?.message && (
+              <div className="bg-white rounded-lg p-4 border-l-4 border-blue-500 mb-4">
+                <p className="text-gray-800 font-medium">{currentStep.message}</p>
+                {currentStep.subMessage && (
+                  <p className="text-gray-600 text-sm mt-1">{currentStep.subMessage}</p>
+                )}
+              </div>
             )}
           </div>
         )}
 
-        {/* Status Badge */}
-        {currentStep?.stepDetails?.status && (
-          <div className="mt-4 flex justify-center">
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(currentStep.stepDetails.status)}`}>
-              {currentStep.stepDetails.status.charAt(0).toUpperCase() + currentStep.stepDetails.status.slice(1)}
-            </span>
-          </div>
-        )}
-
-        {/* Step Progress Timeline */}
-        <div className="space-y-4">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4">Onboarding Steps</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Onboarding Steps Section */}
+        <div className="space-y-6">
+          <h4 className="text-xl font-semibold text-gray-900">Onboarding Steps</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             {[
               { stage: 'device', title: 'Device Creation', icon: '🔧' },
               { stage: 'assignment', title: 'User Assignment', icon: '👤' },
@@ -263,17 +243,6 @@ export const SSEEventDisplay: React.FC<SSEEventDisplayProps> = ({ sseProgress, i
         </div>
       </div>
 
-      {/* Debug Info */}
-      <div className="mt-8 bg-gray-50 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">Debug Info</h4>
-        <div className="text-xs text-gray-600 space-y-1">
-          <div><strong>Events Received:</strong> {events.length}</div>
-          <div><strong>Current Stage:</strong> {currentStep?.stage || 'None'}</div>
-          <div><strong>Progress:</strong> {currentStep?.progress || 0}%</div>
-          <div><strong>Status:</strong> {currentStep?.stepDetails?.status || 'Unknown'}</div>
-          <div><strong>Step:</strong> {currentStep?.stepDetails?.currentStep || 0}/{currentStep?.stepDetails?.totalSteps || 0}</div>
-        </div>
-      </div>
     </div>
   );
 };

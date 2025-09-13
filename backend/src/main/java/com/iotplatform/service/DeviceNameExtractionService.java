@@ -95,6 +95,9 @@ public class DeviceNameExtractionService {
             // Create user message
             String userMessage = "Query: " + query;
             
+            log.debug("🔍 System prompt: {}", systemPrompt);
+            log.debug("🔍 User message: {}", userMessage);
+            
             // Prepare chat messages
             List<ChatRequestMessage> messages = Arrays.asList(
                 new ChatRequestSystemMessage(systemPrompt),
@@ -116,6 +119,14 @@ public class DeviceNameExtractionService {
                 ChatResponseMessage message = choice.getMessage();
                 String aiResponse = message.getContent();
                 
+                log.debug("🔍 Raw AI response: '{}'", aiResponse);
+                
+                // Check if AI response is null
+                if (aiResponse == null) {
+                    log.warn("⚠️ AI response content is null - this might indicate an issue with the AI service or prompt");
+                    return null;
+                }
+                
                 // Extract device name from response
                 String deviceName = extractDeviceNameFromResponse(aiResponse);
                 
@@ -123,7 +134,7 @@ public class DeviceNameExtractionService {
                 return deviceName;
                 
             } else {
-                log.warn("⚠️ No response from Azure OpenAI for device name extraction");
+                log.warn("⚠️ No response from Azure OpenAI for device name extraction - choices is null or empty");
                 return null;
             }
             
@@ -210,6 +221,12 @@ public class DeviceNameExtractionService {
      */
     private String extractDeviceNameFromResponse(String aiResponse) {
         try {
+            // Check if response is null or empty
+            if (aiResponse == null || aiResponse.trim().isEmpty()) {
+                log.warn("⚠️ AI response is null or empty");
+                return null;
+            }
+            
             // Clean the response
             String cleanedResponse = aiResponse.trim();
             

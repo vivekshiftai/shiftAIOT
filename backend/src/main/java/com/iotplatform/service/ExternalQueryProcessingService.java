@@ -170,25 +170,32 @@ public class ExternalQueryProcessingService {
             // Format the response for MCP
             String formattedResponse = formatResponseForMCP(pdfResponse, originalQuery, deviceName);
             
-            // Send to MCP server with priority: User ID first, then Channel ID, then default
+            // Send to MCP server with clean JSON structure
             Map<String, String> payload = new HashMap<>();
-            String messageText;
+            String targetId;
+            String messageType;
             
             if (userId != null && !userId.trim().isEmpty()) {
                 // Priority 1: Send direct message to user
-                messageText = "Send a direct message to Slack user " + userId + " with the text '" + formattedResponse + "'";
+                targetId = userId;
+                messageType = "user";
                 log.info("📤 Sending direct message to user: {}", userId);
             } else if (channelId != null && !channelId.trim().isEmpty()) {
                 // Priority 2: Send to specific channel
-                messageText = "Send a message to Slack channel " + channelId + " with the text '" + formattedResponse + "'";
+                targetId = channelId;
+                messageType = "channel";
                 log.info("📤 Sending message to channel: {}", channelId);
             } else {
                 // Priority 3: Fallback to default channel
-                messageText = "Send a message to Slack channel C092C9RHPKN with the text '" + formattedResponse + "'";
+                targetId = "C092C9RHPKN";
+                messageType = "channel";
                 log.info("📤 Sending message to default channel: C092C9RHPKN");
             }
             
-            payload.put("message", messageText);
+            // Create clean message structure with slack_post_message tool
+            String cleanMessage = String.format("Use the slack_post_message tool to send a message with text '%s' to Slack %s %s", 
+                formattedResponse, messageType, targetId);
+            payload.put("message", cleanMessage);
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -334,23 +341,30 @@ public class ExternalQueryProcessingService {
     private ExternalQueryResult sendGenericResponseThroughMCP(String response, String channelId, String userId) {
         try {
             Map<String, String> payload = new HashMap<>();
-            String messageText;
+            String targetId;
+            String messageType;
             
             if (userId != null && !userId.trim().isEmpty()) {
                 // Priority 1: Send direct message to user
-                messageText = "Send a direct message to Slack user " + userId + " with the text '" + response + "'";
+                targetId = userId;
+                messageType = "user";
                 log.info("📤 Sending generic direct message to user: {}", userId);
             } else if (channelId != null && !channelId.trim().isEmpty()) {
                 // Priority 2: Send to specific channel
-                messageText = "Send a message to Slack channel " + channelId + " with the text '" + response + "'";
+                targetId = channelId;
+                messageType = "channel";
                 log.info("📤 Sending generic message to channel: {}", channelId);
             } else {
                 // Priority 3: Fallback to default channel
-                messageText = "Send a message to Slack channel C092C9RHPKN with the text '" + response + "'";
+                targetId = "C092C9RHPKN";
+                messageType = "channel";
                 log.info("📤 Sending generic message to default channel: C092C9RHPKN");
             }
             
-            payload.put("message", messageText);
+            // Create clean message structure with slack_post_message tool
+            String cleanMessage = String.format("Use the slack_post_message tool to send a message with text '%s' to Slack %s %s", 
+                response, messageType, targetId);
+            payload.put("message", cleanMessage);
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
