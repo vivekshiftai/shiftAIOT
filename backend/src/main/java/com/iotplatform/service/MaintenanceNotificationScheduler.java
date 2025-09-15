@@ -345,15 +345,17 @@ public class MaintenanceNotificationScheduler {
             String status = (String) taskData[10]; // status
             String priority = (String) taskData[9]; // priority
             String description = (String) taskData[3]; // description
-            String assignedUserId = (String) taskData[25]; // assigned_user_id from devices table
+            String assignedUserId = (String) taskData[16]; // assigned_to from maintenance table
             String deviceName = (String) taskData[24]; // device_name from devices table
-            String firstName = (String) taskData[26]; // first_name from users table
-            String lastName = (String) taskData[27]; // last_name from users table
-            String email = (String) taskData[28]; // email from users table
+            String firstName = (String) taskData[25]; // first_name from users table
+            String lastName = (String) taskData[26]; // last_name from users table
+            String email = (String) taskData[27]; // email from users table
 
             // Debug logging to see what's in the array
             log.info("🔍 Processing maintenance task: '{}' for device: '{}'", taskName, deviceName);
-            log.info("🔍 Assigned user ID: '{}', User: {} {} ({})", assignedUserId, firstName, lastName, email);
+            log.info("🔍 Array length: {}", taskData.length);
+            log.info("🔍 Assigned user ID (pos 16): '{}'", assignedUserId);
+            log.info("🔍 User details - FirstName (pos 25): '{}', LastName (pos 26): '{}', Email (pos 27): '{}'", firstName, lastName, email);
             log.info("🔍 Task status: {}, Next maintenance: {}", status, nextMaintenance);
             
             // Skip if no assigned user
@@ -580,8 +582,12 @@ public class MaintenanceNotificationScheduler {
             // Debug: Log details of each task found
             for (int i = 0; i < todaysTasks.size(); i++) {
                 Object[] taskData = todaysTasks.get(i);
-                log.debug("Task {}: ID={}, Device={}, AssignedTo={}, NextMaintenance={}, Status={}", 
-                    i+1, taskData[0], taskData[24], taskData[25], taskData[8], taskData[10]);
+                log.info("🔍 Task {}: Array length={}", i+1, taskData.length);
+                log.info("🔍 Task {}: ID={}, Device={}, AssignedTo={}, NextMaintenance={}, Status={}", 
+                    i+1, taskData[0], taskData[24], taskData[16], taskData[8], taskData[10]);
+                // Log the last few positions to see where user data is
+                log.info("🔍 Task {}: Position 16={}, 24={}, 25={}, 26={}, 27={}", 
+                    i+1, taskData[16], taskData[24], taskData[25], taskData[26], taskData[27]);
             }
 
             int notificationsSent = 0;

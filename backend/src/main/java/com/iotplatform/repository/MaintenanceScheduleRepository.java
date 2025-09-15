@@ -57,7 +57,12 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
     
     // Find today's maintenance tasks with device and user details
     @Query(value = """
-        SELECT m.*, d.name as device_name, m.assigned_to as assigned_user_id, u.first_name, u.last_name, u.email 
+        SELECT m.id, m.device_id, m.task_name, m.description, m.component_name, m.maintenance_type, 
+               m.frequency, m.last_maintenance, m.next_maintenance, m.priority, m.status, 
+               m.estimated_cost, m.estimated_duration, m.required_tools, m.safety_notes, 
+               m.category, m.assigned_to, m.assigned_by, m.assigned_at, m.completed_by, 
+               m.completed_at, m.organization_id, m.created_at, m.updated_at,
+               d.name as device_name, u.first_name, u.last_name, u.email 
         FROM device_maintenance m 
         LEFT JOIN devices d ON m.device_id = d.id 
         LEFT JOIN users u ON m.assigned_to = u.id 
@@ -70,7 +75,12 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
     // Find ALL today's maintenance tasks with device and user details (across all organizations)
     // This includes overdue tasks and tasks scheduled for today
     @Query(value = """
-        SELECT m.*, d.name as device_name, m.assigned_to as assigned_user_id, u.first_name, u.last_name, u.email 
+        SELECT m.id, m.device_id, m.task_name, m.description, m.component_name, m.maintenance_type, 
+               m.frequency, m.last_maintenance, m.next_maintenance, m.priority, m.status, 
+               m.estimated_cost, m.estimated_duration, m.required_tools, m.safety_notes, 
+               m.category, m.assigned_to, m.assigned_by, m.assigned_at, m.completed_by, 
+               m.completed_at, m.organization_id, m.created_at, m.updated_at,
+               d.name as device_name, u.first_name, u.last_name, u.email 
         FROM device_maintenance m 
         LEFT JOIN devices d ON m.device_id = d.id 
         LEFT JOIN users u ON m.assigned_to = u.id 
@@ -97,7 +107,12 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
     
     // Find maintenance tasks that need reminders (due today or overdue, not completed)
     @Query(value = """
-        SELECT m.*, d.name as device_name, m.assigned_to as assigned_user_id, u.first_name, u.last_name, u.email 
+        SELECT m.id, m.device_id, m.task_name, m.description, m.component_name, m.maintenance_type, 
+               m.frequency, m.last_maintenance, m.next_maintenance, m.priority, m.status, 
+               m.estimated_cost, m.estimated_duration, m.required_tools, m.safety_notes, 
+               m.category, m.assigned_to, m.assigned_by, m.assigned_at, m.completed_by, 
+               m.completed_at, m.organization_id, m.created_at, m.updated_at,
+               d.name as device_name, u.first_name, u.last_name, u.email 
         FROM device_maintenance m 
         LEFT JOIN devices d ON m.device_id = d.id 
         LEFT JOIN users u ON m.assigned_to = u.id 
