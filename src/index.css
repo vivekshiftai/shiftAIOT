@@ -399,6 +399,11 @@ code {
   100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
 }
 
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.5); }
+}
+
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
@@ -425,6 +430,10 @@ code {
 
 .animate-bounce {
   animation: bounce 1s infinite;
+}
+
+.animate-dot-pulse {
+  animation: dotPulse 1.2s ease-in-out infinite;
 }
 
 .animate-float {

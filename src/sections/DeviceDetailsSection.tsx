@@ -1268,7 +1268,7 @@ export const DeviceDetailsSection: React.FC = () => {
 
       case 'chat':
         return (
-          <div className="flex flex-col h-96">
+          <div className="flex flex-col h-full min-h-0">
             {/* Error Display */}
             {error && (
               <div className="mb-4 p-4 bg-red-50 rounded-lg border border-red-200">
@@ -1335,7 +1335,7 @@ export const DeviceDetailsSection: React.FC = () => {
 
 
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-slate-50 rounded-lg">
+            <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-slate-50 rounded-lg min-h-0">
               {chatMessages.map((message) => (
                 <div
                   key={message.id}
@@ -1474,29 +1474,30 @@ export const DeviceDetailsSection: React.FC = () => {
             </div>
 
 
-            {/* Chat Input */}
-            <div className="flex gap-2 mt-4">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                placeholder="Ask about this device..."
-                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-              <button
-                onClick={sendMessage}
-                disabled={!newMessage.trim() || isTyping}
-                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Send className="w-4 h-4" />
-                Send
-              </button>
-            </div>
+            {/* Chat Input - Fixed at bottom */}
+            <div className="flex-shrink-0 bg-white border-t border-slate-200 p-4">
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  placeholder="Ask about this device..."
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!newMessage.trim() || isTyping}
+                  className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  Send
+                </button>
+              </div>
 
-            {/* Quick Actions */}
-            {devicePDFs.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
+              {/* Quick Actions */}
+              {devicePDFs.length > 0 && (
+                <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setNewMessage('How do I set up this device?')}
                   className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
@@ -1547,7 +1548,7 @@ export const DeviceDetailsSection: React.FC = () => {
                 )}
               </div>
             )}
-
+            </div>
           </div>
         );
 
@@ -1559,10 +1560,10 @@ export const DeviceDetailsSection: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <button
             onClick={() => navigate('/devices')}
             className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
@@ -1576,8 +1577,8 @@ export const DeviceDetailsSection: React.FC = () => {
               })}
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-slate-800">{device.name}</h1>
-              <p className="text-slate-600">{deviceTypeInfo.label} • {device.location}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">{device.name}</h1>
+              <p className="text-slate-600 text-sm sm:text-base">{deviceTypeInfo.label} • {device.location}</p>
             </div>
           </div>
         </div>

@@ -328,7 +328,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
   return (
     <div className="bg-white rounded-xl shadow-sm border border-neutral-200 hover:shadow-md hover:border-primary-300 transition-all cursor-pointer group overflow-hidden">
       {/* Card Header */}
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-start gap-4 flex-1 min-w-0">
             {/* Device Icon */}
@@ -338,9 +338,9 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
 
             {/* Device Info */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-2">
-                <h3 className="font-semibold text-neutral-800 text-lg truncate">{device.name}</h3>
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusInfo.bg} ${statusInfo.color} flex-shrink-0`}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                <h3 className="font-semibold text-neutral-800 text-base sm:text-lg truncate">{device.name}</h3>
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${statusInfo.bg} ${statusInfo.color} flex-shrink-0 self-start`}>
                   {device.status}
                 </span>
               </div>
@@ -406,7 +406,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
         {/* Quick Status Change - Only for users with permission */}
         {canUpdateStatus && !isOnboarding && (
           <div className="pt-4 border-t border-neutral-100" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
               <span className="text-xs text-neutral-600 font-medium">Quick Status:</span>
               <select
                 value={device.status}

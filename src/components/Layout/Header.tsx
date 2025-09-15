@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../UI/Toast';
 import { NotificationDropdown } from './NotificationDropdown';
 import { useNavigate } from 'react-router-dom';
+import { logError, logInfo } from '../../utils/logger';
 import { 
   Search, 
   Settings, 
@@ -62,38 +63,38 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   };
 
   return (
-            <header className="bg-white text-neutral-700 h-16 flex items-center justify-between px-6 shadow-sm border-b border-neutral-200 flex-shrink-0">
-      <div className="flex items-center gap-4">
+            <header className="bg-white text-neutral-700 h-16 flex items-center justify-between px-3 sm:px-6 shadow-sm border-b border-neutral-200 flex-shrink-0">
+      <div className="flex items-center gap-2 sm:gap-4">
         {/* Sidebar Toggle */}
         <button
           onClick={onToggleSidebar}
           aria-label="Toggle sidebar"
-          className="text-neutral-600 hover:text-neutral-700 transition-colors px-3 py-2 rounded-lg hover:bg-neutral-50"
+          className="text-neutral-600 hover:text-neutral-700 transition-colors px-2 sm:px-3 py-2 rounded-lg hover:bg-neutral-50"
         >
           ☰
         </button>
 
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} className="relative hidden md:block">
+        {/* Search Bar - Responsive */}
+        <form onSubmit={handleSearch} className="relative hidden sm:block">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-500 w-4 h-4" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search assets, rules, users..."
-            className="pl-10 pr-4 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-neutral-50 text-neutral-700 w-80 transition-all placeholder-neutral-500 futuristic-input"
+            className="pl-10 pr-4 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-neutral-50 text-neutral-700 w-60 sm:w-80 transition-all placeholder-neutral-500 futuristic-input"
           />
         </form>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1 sm:gap-3">
         {/* Notifications */}
         <NotificationDropdown 
           isOpen={notificationDropdownOpen}
           onToggle={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
         />
 
-        {/* Help */}
+        {/* Help - Hidden on mobile */}
         <IconButton
           icon={<Info className="w-5 h-5" />}
           variant="ghost"
@@ -103,21 +104,21 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             alert('Help documentation will be available soon!');
           }}
           aria-label="Help"
-          className="text-neutral-600 hover:text-neutral-700 transition-colors"
+          className="text-neutral-600 hover:text-neutral-700 transition-colors hidden sm:flex"
         />
 
         {/* User Menu */}
         <div className="relative" ref={userDropdownRef}>
           <button
             onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-            className="flex items-center gap-3 p-2 rounded-lg hover:bg-neutral-50 transition-colors"
+            className="flex items-center gap-2 sm:gap-3 p-1 sm:p-2 rounded-lg hover:bg-neutral-50 transition-colors"
           >
             <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center shadow-sm">
               <span className="text-white text-sm font-medium">
                 {user?.email?.charAt(0).toUpperCase() || 'U'}
               </span>
             </div>
-            <div className="hidden md:block text-left">
+            <div className="hidden sm:block text-left">
               <p className="text-sm font-medium text-neutral-700">
                 {user?.firstName && user?.lastName 
                   ? `${user.firstName} ${user.lastName}` 
@@ -128,14 +129,14 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
                 {user?.role?.toLowerCase() || 'User'}
               </p>
             </div>
-            <Settings className={`w-4 h-4 text-neutral-500 transition-transform ${
+            <Settings className={`w-4 h-4 text-neutral-500 transition-transform hidden sm:block ${
               userDropdownOpen ? 'rotate-180' : ''
             }`} />
           </button>
 
           {/* User Dropdown */}
           {userDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-neutral-200 py-2 z-50">
+            <div className="absolute right-0 mt-2 w-48 sm:w-56 bg-white rounded-xl shadow-lg border border-neutral-200 py-2 z-50">
               <div className="px-4 py-3 border-b border-neutral-200">
                 <p className="text-sm font-medium text-neutral-700">
                   {user?.firstName && user?.lastName 

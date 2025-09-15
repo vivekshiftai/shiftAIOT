@@ -388,11 +388,11 @@ const RulesPage: React.FC = () => {
   };
 
   const renderRulesTab = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Automation Rules</h2>
-          <p className="text-gray-600">Manage IoT automation rules</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Automation Rules</h2>
+          <p className="text-gray-600 text-sm sm:text-base">Manage IoT automation rules</p>
         </div>
         <Button
           onClick={() => {
@@ -558,11 +558,11 @@ const RulesPage: React.FC = () => {
   );
 
   const renderMaintenanceTab = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Maintenance Tasks</h2>
-          <p className="text-gray-600">Manage device maintenance schedules</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Maintenance Tasks</h2>
+          <p className="text-gray-600 text-sm sm:text-base">Manage device maintenance schedules</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -763,11 +763,11 @@ const RulesPage: React.FC = () => {
   );
 
   const renderSafetyTab = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Safety Precautions</h2>
-          <p className="text-gray-600">Manage device safety guidelines</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Safety Precautions</h2>
+          <p className="text-gray-600 text-sm sm:text-base">Manage device safety guidelines</p>
         </div>
         <Button
           onClick={() => {
@@ -938,12 +938,12 @@ const RulesPage: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
              {/* Header */}
-       <div className="flex items-center justify-between">
+       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
          <div>
-           <h1 className="text-3xl font-bold text-gray-900">DeviceCare Center</h1>
-           <p className="text-gray-600">Manage rules, maintenance, and safety precautions</p>
+           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">DeviceCare Center</h1>
+           <p className="text-gray-600 text-sm sm:text-base">Manage rules, maintenance, and safety precautions</p>
          </div>
        </div>
 

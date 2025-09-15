@@ -356,14 +356,14 @@ export const DashboardSection: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-primary mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2">
             Command Center
           </h1>
-          <p className="text-secondary text-lg">
+          <p className="text-secondary text-sm sm:text-lg">
             Welcome back! Here's what's happening with your smart assets.
           </p>
         </div>

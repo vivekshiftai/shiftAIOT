@@ -170,7 +170,7 @@ export const DevicesSection: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Success Message */}
       {successMessage && (
         <div className="mb-4 p-4 bg-success-500/20 border border-success-500/30 rounded-lg glass">
@@ -215,10 +215,10 @@ export const DevicesSection: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-primary">Smart Assets</h1>
-          <p className="text-secondary mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-primary">Smart Assets</h1>
+          <p className="text-secondary mt-2 text-sm sm:text-base">
             {isAdmin() ? 'Monitor and control your smart assets' : 'View your smart assets'}
           </p>
         </div>
@@ -235,7 +235,7 @@ export const DevicesSection: React.FC = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-6">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search Bar */}
           <div className="flex-1">
@@ -253,7 +253,7 @@ export const DevicesSection: React.FC = () => {
           </div>
           
           {/* Filter Buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-neutral-500" />
               <select

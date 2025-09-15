@@ -50,7 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false }) => {
   const isDeviceCareActive = currentPage === 'device-care';
 
   return (
-    <div className="bg-white border-r border-neutral-200 w-64 min-h-screen p-4">
+    <div className="bg-white border-r border-neutral-200 w-64 min-h-screen p-4 fixed lg:relative z-50 lg:z-auto">
       <div className="mb-4">
         <h1 className="text-2xl font-bold px-3 py-2 text-neutral-700">
           ActiveOps Hub

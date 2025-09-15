@@ -231,10 +231,10 @@ export const SSEEventDisplay: React.FC<SSEEventDisplayProps> = ({ sseProgress, i
                 <h4 className="text-lg font-semibold text-gray-900">{stageInfo.title}</h4>
                 {/* Loading dots */}
                 <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '450ms' }}></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-dot-pulse" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-dot-pulse" style={{ animationDelay: '200ms' }}></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-dot-pulse" style={{ animationDelay: '400ms' }}></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-dot-pulse" style={{ animationDelay: '600ms' }}></div>
                 </div>
               </div>
               

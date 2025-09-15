@@ -161,18 +161,29 @@ const MainAppLayout: React.FC = () => {
 
   return (
     <div className="h-screen bg-secondary flex overflow-hidden">
-      <Sidebar
-        activeSection={section}
-        onSectionChange={handleSectionChange}
-        collapsed={sidebarCollapsed}
-      />
+      {/* Sidebar - Hidden on mobile, visible on desktop */}
+      <div className={`${sidebarCollapsed ? 'hidden' : 'block'} lg:block transition-all duration-300`}>
+        <Sidebar
+          activeSection={section}
+          onSectionChange={handleSectionChange}
+          collapsed={sidebarCollapsed}
+        />
+      </div>
+      
+      {/* Mobile overlay when sidebar is open */}
+      {!sidebarCollapsed && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarCollapsed(true)}
+        />
+      )}
       
       <div className="flex-1 flex flex-col min-w-0">
         <Header
           onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         
-        <main className="flex-1 p-4 overflow-auto">
+        <main className="flex-1 p-2 sm:p-4 overflow-auto">
           {error && (
             <div className="mb-6 p-4 bg-error-50 border border-error-200 rounded-xl">
               <div className="flex items-center">

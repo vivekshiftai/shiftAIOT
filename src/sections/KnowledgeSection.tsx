@@ -485,15 +485,15 @@ export const KnowledgeSection: React.FC = () => {
   return (
     <div ref={knowledgeSectionRef} className="knowledge-section flex flex-col bg-gray-50 h-full">
       {/* Fixed Header */}
-      <div className="knowledge-fixed-header flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <div className="knowledge-fixed-header flex-shrink-0 bg-white border-b border-gray-200 px-3 sm:px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <div className="p-2 rounded-lg">
-              <Brain className="w-6 h-6 text-primary-600" />
+              <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Knowledge Base</h1>
-              <p className="text-sm text-gray-600">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Knowledge Base</h1>
+              <p className="text-xs sm:text-sm text-gray-600">
                 AI-powered machine documentation and chat assistant
                 {selectedDevice && (
                   <span className="ml-2 text-primary-600 font-medium">
@@ -507,7 +507,7 @@ export const KnowledgeSection: React.FC = () => {
       </div>
 
       {/* Main Content Area - Fixed height, no overflow */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
         {/* Left Panel - Chat Interface */}
         <div className="flex-1 flex flex-col bg-white min-h-0">
           {/* Chat Messages Area - Scrollable content only */}
@@ -732,10 +732,10 @@ export const KnowledgeSection: React.FC = () => {
           </div>
 
           {/* Chat Input Footer - Fixed at bottom */}
-          <div className="knowledge-fixed-footer flex-shrink-0 bg-white border-t border-gray-200 p-4">
+          <div className="knowledge-fixed-footer flex-shrink-0 bg-white border-t border-gray-200 p-3 sm:p-4">
             <div className="space-y-3">
               {/* Quick Actions */}
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setNewMessage('How do I troubleshoot mechanical machine issues?')}
                   className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
@@ -757,7 +757,7 @@ export const KnowledgeSection: React.FC = () => {
               </div>
               
               {/* Message Input */}
-              <div className="relative flex gap-3">
+              <div className="relative flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <div className="flex-1 relative">
                   <input
                     type="text"
@@ -791,10 +791,10 @@ export const KnowledgeSection: React.FC = () => {
                 <button
                   onClick={sendMessage}
                   disabled={!newMessage.trim() || isTyping}
-                  className="px-6 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+                  className="px-4 sm:px-6 py-3 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm"
                 >
                   <Send className="w-4 h-4" />
-                  Send
+                  <span className="hidden sm:inline">Send</span>
                 </button>
               </div>
             </div>
@@ -802,11 +802,11 @@ export const KnowledgeSection: React.FC = () => {
         </div>
 
         {/* Right Panel - AI Ready Devices - 33% width */}
-        <div className="w-1/3 flex flex-col bg-white border-l border-gray-200 min-h-0">
+        <div className="w-full lg:w-1/3 flex flex-col bg-white border-l border-gray-200 min-h-0">
           {/* AI Ready Devices Header - Fixed */}
-          <div className="knowledge-fixed-header flex-shrink-0 p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">AI Ready Machines</h2>
+          <div className="knowledge-fixed-header flex-shrink-0 p-3 sm:p-4 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-4">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900">AI Ready Machines</h2>
               <div className="flex items-center gap-2">
                 <label className="cursor-pointer">
                   <input
