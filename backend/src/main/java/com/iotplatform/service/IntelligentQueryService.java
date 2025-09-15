@@ -41,16 +41,19 @@ public class IntelligentQueryService {
         log.info("📝 Query: {}", query);
         
         try {
-            // Step 1: Extract device name from query using LLM
-            log.info("🔍 Step 1: Extracting device name from query...");
-            String deviceName = deviceNameExtractionService.extractDeviceName(query);
+            // Step 1: Extract device name and plain query from query using LLM
+            log.info("🔍 Step 1: Extracting device name and plain query from query...");
+            DeviceNameExtractionService.DeviceExtractionResult extractionResult = deviceNameExtractionService.extractDeviceName(query);
+            
+            String deviceName = extractionResult.getDeviceName();
+            String plainQuery = extractionResult.getPlainQuery();
             
             if (deviceName == null) {
                 log.warn("⚠️ No device name found in query: {}", query);
                 return createNoDeviceResponse(query, "No specific device mentioned in the query");
             }
             
-            log.info("✅ Device name extracted: '{}'", deviceName);
+            log.info("✅ Device name extracted: '{}', Plain query: '{}'", deviceName, plainQuery);
             
             // Step 2: Find device documents in unified_pdfs table
             log.info("🔍 Step 2: Looking up device documents for device: '{}'", deviceName);
@@ -74,11 +77,11 @@ public class IntelligentQueryService {
             
             log.info("✅ Selected PDF: '{}' (type: {})", selectedPDF.getName(), selectedPDF.getDocumentType());
             
-            // Step 4: Query the PDF using the existing PDF processing service
-            log.info("🔍 Step 4: Querying PDF document...");
+            // Step 4: Query the PDF using the existing PDF processing service with plain query
+            log.info("🔍 Step 4: Querying PDF document with plain query...");
             PDFQueryRequest pdfRequest = new PDFQueryRequest();
             pdfRequest.setPdfName(selectedPDF.getName());
-            pdfRequest.setQuery(query);
+            pdfRequest.setQuery(plainQuery);  // Use plain query instead of original query
             pdfRequest.setOrganizationId(organizationId);
             
             PDFQueryResponse pdfResponse = pdfProcessingService.queryPDF(pdfRequest, userId, organizationId);
