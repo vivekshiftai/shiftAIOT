@@ -1341,7 +1341,7 @@ export const DeviceDetailsSection: React.FC = () => {
                   key={message.id}
                   className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className="flex items-start gap-2 sm:gap-3 max-w-[65%] sm:max-w-[70%] lg:max-w-[65%]">
+                  <div className="flex items-start gap-2 sm:gap-3 max-w-[60%] sm:max-w-[65%] lg:max-w-[60%]">
                     <div className={`p-2 rounded-full flex-shrink-0 shadow-sm ${
                       message.type === 'user'
                         ? 'bg-primary-500 text-white'
@@ -1457,7 +1457,7 @@ export const DeviceDetailsSection: React.FC = () => {
               ))}
               {isTyping && (
                 <div className="flex justify-start">
-                  <div className="flex items-start gap-2 sm:gap-3 max-w-[65%] sm:max-w-[70%] lg:max-w-[65%]">
+                  <div className="flex items-start gap-2 sm:gap-3 max-w-[60%] sm:max-w-[65%] lg:max-w-[60%]">
                     <div className="p-2 rounded-full flex-shrink-0 shadow-sm bg-white text-slate-600 border border-slate-200">
                       <Bot className="w-4 h-4" />
                     </div>
