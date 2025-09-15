@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavig
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { IoTProvider, useIoT } from './contexts/IoTContext';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { logError } from './utils/logger';
+import { logError, logInfo } from './utils/logger';
 
 // Clear old authentication data on app start to fix JWT issues
 const clearOldAuthData = () => {
@@ -128,7 +128,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const MainAppLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { loading: iotLoading } = useIoT();
+  const { loading: iotLoading, refreshDevices } = useIoT();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -150,7 +150,16 @@ const MainAppLayout: React.FC = () => {
 
   const section = getCurrentSection();
 
-  const handleSectionChange = (section: string) => {
+  const handleSectionChange = async (section: string) => {
+    // Refresh devices when navigating to devices section
+    if (section === 'devices') {
+      try {
+        await refreshDevices();
+        logInfo('App', 'Devices refreshed on navigation to devices section');
+      } catch (error) {
+        logError('App', 'Failed to refresh devices on navigation', error instanceof Error ? error : new Error('Unknown error'));
+      }
+    }
     navigate(`/${section}`);
   };
 

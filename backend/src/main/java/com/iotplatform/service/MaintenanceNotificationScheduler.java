@@ -352,16 +352,13 @@ public class MaintenanceNotificationScheduler {
             String email = (String) taskData[28]; // email from users table
 
             // Debug logging to see what's in the array
-            log.debug("DEBUG: taskData array length: {}", taskData.length);
-            log.debug("DEBUG: assignedUserId at position 25: '{}'", assignedUserId);
-            log.debug("DEBUG: deviceName at position 24: '{}'", deviceName);
-            log.debug("DEBUG: firstName at position 26: '{}'", firstName);
-            log.debug("DEBUG: lastName at position 27: '{}'", lastName);
-            log.debug("DEBUG: email at position 28: '{}'", email);
+            log.info("🔍 Processing maintenance task: '{}' for device: '{}'", taskName, deviceName);
+            log.info("🔍 Assigned user ID: '{}', User: {} {} ({})", assignedUserId, firstName, lastName, email);
+            log.info("🔍 Task status: {}, Next maintenance: {}", status, nextMaintenance);
             
             // Skip if no assigned user
             if (assignedUserId == null || assignedUserId.trim().isEmpty()) {
-                log.warn("Skipping maintenance task - no assigned user for device: {}", deviceName);
+                log.warn("⚠️ Skipping maintenance task - no assigned user for device: {}", deviceName);
                 return false;
             }
 
@@ -569,24 +566,31 @@ public class MaintenanceNotificationScheduler {
         log.info("📅 Current date: {}", LocalDate.now());
         
         try {
-        // Search by today's date and fetch ALL maintenance tasks for today
-        List<Object[]> todaysTasks = maintenanceScheduleRepository
-            .findAllTodaysMaintenanceTasksWithDetails();
+            // Search by today's date and fetch ALL maintenance tasks for today
+            List<Object[]> todaysTasks = maintenanceScheduleRepository
+                .findAllTodaysMaintenanceTasksWithDetails();
 
-        if (todaysTasks.isEmpty()) {
+            if (todaysTasks.isEmpty()) {
                 log.info("ℹ️ No maintenance tasks found for today - no notifications to send");
-            return 0;
-        }
+                return 0;
+            }
 
             log.info("📋 Found {} maintenance tasks for today", todaysTasks.size());
+            
+            // Debug: Log details of each task found
+            for (int i = 0; i < todaysTasks.size(); i++) {
+                Object[] taskData = todaysTasks.get(i);
+                log.debug("Task {}: ID={}, Device={}, AssignedTo={}, NextMaintenance={}, Status={}", 
+                    i+1, taskData[0], taskData[24], taskData[25], taskData[8], taskData[10]);
+            }
 
-        int notificationsSent = 0;
+            int notificationsSent = 0;
             int notificationsFailed = 0;
             
-        for (Object[] taskData : todaysTasks) {
+            for (Object[] taskData : todaysTasks) {
                 try {
-            if (processMaintenanceTask(taskData)) {
-                notificationsSent++;
+                    if (processMaintenanceTask(taskData)) {
+                        notificationsSent++;
                     } else {
                         notificationsFailed++;
                     }
@@ -599,13 +603,14 @@ public class MaintenanceNotificationScheduler {
             log.info("✅ Manual maintenance notification trigger completed");
             log.info("📊 Summary: {} notifications sent, {} failed", notificationsSent, notificationsFailed);
             
-        return notificationsSent;
+            return notificationsSent;
             
         } catch (Exception e) {
             log.error("❌ Error during manual maintenance notification trigger: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to trigger maintenance notifications: " + e.getMessage(), e);
         }
     }
+    
 
     /**
      * Debug method to check maintenance task data without sending notifications.

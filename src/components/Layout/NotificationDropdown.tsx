@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Bell, X, Filter } from 'lucide-react';
+import { Bell, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useIoT } from '../../contexts/IoTContext';
 import { Notification } from '../../types';
@@ -75,75 +75,48 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
       {/* Bell Icon Button */}
       <button
         onClick={onToggle}
-        className="relative p-3 hover:bg-slate-50 rounded-xl transition-all duration-200 group"
+        className="relative p-2 hover:bg-gray-100 rounded-md transition-colors"
       >
-        <Bell className={`w-6 h-6 ${getBellColor()} transition-all duration-200 group-hover:scale-110`} />
+        <Bell className={`w-5 h-5 ${getBellColor()}`} />
         {unreadCount > 0 && (
-          <span className={`absolute -top-1 -right-1 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-semibold shadow-lg animate-pulse ${
-            getBellColor().includes('red') ? 'bg-gradient-to-r from-red-500 to-red-600' :
-            getBellColor().includes('orange') ? 'bg-gradient-to-r from-orange-500 to-orange-600' :
-            getBellColor().includes('yellow') ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' :
-            getBellColor().includes('green') ? 'bg-gradient-to-r from-green-500 to-green-600' :
-            getBellColor().includes('purple') ? 'bg-gradient-to-r from-purple-500 to-purple-600' :
-            getBellColor().includes('amber') ? 'bg-gradient-to-r from-amber-500 to-amber-600' :
-            'bg-gradient-to-r from-blue-500 to-blue-600'
-          }`}>
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
-      {/* Enhanced Dropdown */}
+      {/* Clean Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-16 w-[420px] bg-white rounded-2xl shadow-2xl border border-slate-200/50 backdrop-blur-sm z-[9999] max-h-[500px] overflow-hidden animate-scaleIn">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-slate-50 to-slate-100 p-6 border-b border-slate-200/50">
+        <div className="absolute right-0 top-16 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden">
+          {/* Simple Header */}
+          <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-xl">
-                  <Bell className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">Notifications</h3>
-                  <p className="text-sm text-slate-600 mt-0.5">
-                    {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+                <p className="text-sm text-gray-500">
+                  {unreadCount} unread
+                </p>
               </div>
               <button
                 onClick={onToggle}
-                className="p-2 hover:bg-white/80 rounded-xl transition-all duration-200 group"
+                className="p-1 hover:bg-gray-100 rounded-md transition-colors"
               >
-                <X className="w-5 h-5 text-slate-500 group-hover:text-slate-700" />
+                <X className="w-4 h-4 text-gray-500" />
               </button>
-            </div>
-            
-            {/* Filter Options */}
-            <div className="mt-4 flex items-center gap-2">
-              <Filter className="w-4 h-4 text-slate-500" />
-              <select className="text-sm bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                <option>All Types</option>
-                <option>Device Alerts</option>
-                <option>Maintenance</option>
-                <option>Security</option>
-              </select>
             </div>
           </div>
 
           {/* Notifications List */}
-          <div className="max-h-[320px] overflow-y-auto custom-scrollbar">
+          <div className="max-h-64 overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="p-8 text-center">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Bell className="w-8 h-8 text-slate-400" />
-                </div>
-                <h4 className="text-lg font-semibold text-slate-700 mb-2">No notifications</h4>
-                <p className="text-slate-500 text-sm">You're all caught up! New notifications will appear here.</p>
+              <div className="p-6 text-center">
+                <Bell className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No notifications</p>
               </div>
             ) : (
               <div className="p-2">
                 {notifications.map((notification) => (
-                  <div key={notification.id} className="mb-2">
+                  <div key={notification.id} className="mb-1">
                     <CleanNotificationItem
                       notification={notification}
                       onClick={handleNotificationClick}
@@ -154,12 +127,12 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
             )}
           </div>
 
-          {/* Footer */}
+          {/* Simple Footer */}
           {notifications.length > 0 && (
-            <div className="bg-gradient-to-r from-slate-50 to-slate-100 p-4 border-t border-slate-200/50">
+            <div className="p-3 border-t border-gray-200">
               <button 
                 onClick={handleViewAllNotifications}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-xl"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors"
               >
                 View all notifications
               </button>

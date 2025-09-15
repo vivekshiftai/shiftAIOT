@@ -13,7 +13,7 @@ import { logInfo, logError } from '../utils/logger';
 export const DevicesSection: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { devices, updateDeviceStatus, loading, deleteDevice } = useIoT();
+  const { devices, updateDeviceStatus, loading, deleteDevice, refreshDevices } = useIoT();
   const { isAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -35,7 +35,17 @@ export const DevicesSection: React.FC = () => {
   // Load data only when component mounts
   useEffect(() => {
     logInfo('DevicesSection', 'Component mounted - data loaded from IoT context');
-  }, []);
+    // Refresh devices when component mounts to ensure we have the latest data
+    const refreshDevicesOnMount = async () => {
+      try {
+        await refreshDevices();
+        logInfo('DevicesSection', 'Devices refreshed on component mount');
+      } catch (error) {
+        logError('DevicesSection', 'Failed to refresh devices on mount', error instanceof Error ? error : new Error('Unknown error'));
+      }
+    };
+    refreshDevicesOnMount();
+  }, [refreshDevices]);
 
   // Note: Removed handleSectionClick to prevent unnecessary device refreshing
   // Devices are now loaded once from IoT context and don't need manual refreshing
@@ -48,6 +58,21 @@ export const DevicesSection: React.FC = () => {
     if (status) setStatusFilter(status);
     if (search) setSearchTerm(search);
   }, [location.search]);
+
+  // Refresh devices when navigating to devices section
+  useEffect(() => {
+    if (location.pathname === '/devices') {
+      const refreshOnNavigation = async () => {
+        try {
+          await refreshDevices();
+          logInfo('DevicesSection', 'Devices refreshed on navigation to devices section');
+        } catch (error) {
+          logError('DevicesSection', 'Failed to refresh devices on navigation', error instanceof Error ? error : new Error('Unknown error'));
+        }
+      };
+      refreshOnNavigation();
+    }
+  }, [location.pathname, refreshDevices]);
 
   const filteredDevices = useMemo(() => {
     const base = devices.filter(device => {

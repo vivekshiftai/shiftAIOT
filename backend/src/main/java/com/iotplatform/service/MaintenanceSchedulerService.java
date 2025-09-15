@@ -1,7 +1,9 @@
 package com.iotplatform.service;
 
+import com.iotplatform.model.Device;
 import com.iotplatform.model.DeviceMaintenance;
 import com.iotplatform.repository.DeviceMaintenanceRepository;
+import com.iotplatform.repository.DeviceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -9,10 +11,12 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -20,6 +24,7 @@ import java.util.List;
 public class MaintenanceSchedulerService {
     
     private final DeviceMaintenanceRepository deviceMaintenanceRepository;
+    private final DeviceRepository deviceRepository;
     private final MaintenanceScheduleService maintenanceScheduleService;
     private final MaintenanceNotificationScheduler maintenanceNotificationScheduler;
     
@@ -52,9 +57,13 @@ public class MaintenanceSchedulerService {
             log.info("🔄 Starting maintenance schedule update process...");
             log.info("📅 Current date: {}", LocalDate.now());
             
-            // Get all active maintenance tasks
+            // Get all active maintenance tasks that need attention (due today, overdue, or need rescheduling)
             List<DeviceMaintenance> activeMaintenanceTasks = deviceMaintenanceRepository.findByStatus(DeviceMaintenance.Status.ACTIVE);
             log.info("📊 Found {} active maintenance tasks to process", activeMaintenanceTasks.size());
+            
+            // Also get tasks that are due today or overdue
+            List<DeviceMaintenance> tasksNeedingAttention = getMaintenanceTasksNeedingAttention();
+            log.info("📊 Found {} tasks needing immediate attention (due today or overdue)", tasksNeedingAttention.size());
             
             int updatedCount = 0;
             int overdueCount = 0;
@@ -213,10 +222,10 @@ public class MaintenanceSchedulerService {
         log.info("📋 Starting comprehensive maintenance update process...");
         
         try {
-            // First, update all maintenance schedules
+            // Update all maintenance schedules
             updateMaintenanceSchedules();
             
-            // Then trigger notifications for any tasks that were updated
+            // Finally, trigger notifications for any tasks that were updated
             log.info("📢 Triggering maintenance notifications for updated tasks...");
             int notificationsSent = maintenanceNotificationScheduler.triggerMaintenanceNotifications();
             
@@ -226,6 +235,85 @@ public class MaintenanceSchedulerService {
         } catch (Exception e) {
             log.error("❌ Error during manual maintenance schedule update: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to update maintenance schedules: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Ensure that some maintenance tasks exist for testing purposes.
+     * This creates test maintenance tasks if none exist.
+     */
+    private void ensureMaintenanceTasksExist() {
+        try {
+            List<DeviceMaintenance> existingTasks = deviceMaintenanceRepository.findAll();
+            if (existingTasks.isEmpty()) {
+                log.info("🔧 No maintenance tasks found, creating test tasks...");
+                createTestMaintenanceTasks();
+            } else {
+                log.info("✅ Found {} existing maintenance tasks", existingTasks.size());
+            }
+        } catch (Exception e) {
+            log.error("❌ Error checking for existing maintenance tasks: {}", e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Create test maintenance tasks for devices that don't have any.
+     */
+    private void createTestMaintenanceTasks() {
+        try {
+            // Get all devices
+            List<Device> devices = deviceRepository.findAll();
+            if (devices.isEmpty()) {
+                log.warn("⚠️ No devices found - cannot create maintenance tasks");
+                return;
+            }
+            
+            LocalDate today = LocalDate.now();
+            int tasksCreated = 0;
+            
+            for (Device device : devices) {
+                try {
+                    // Check if device already has maintenance tasks
+                    List<DeviceMaintenance> existingTasks = deviceMaintenanceRepository.findByDeviceId(device.getId());
+                    if (!existingTasks.isEmpty()) {
+                        continue; // Skip devices that already have maintenance tasks
+                    }
+                    
+                    // Create a test maintenance task
+                    DeviceMaintenance maintenance = new DeviceMaintenance();
+                    maintenance.setId(UUID.randomUUID().toString());
+                    maintenance.setDeviceId(device.getId());
+                    maintenance.setTaskName("Routine Inspection - " + device.getName());
+                    maintenance.setDescription("Regular inspection and maintenance of " + device.getName());
+                    maintenance.setComponentName("General");
+                    maintenance.setMaintenanceType(DeviceMaintenance.MaintenanceType.PREVENTIVE);
+                    maintenance.setFrequency("Weekly");
+                    maintenance.setLastMaintenance(today.minusDays(7)); // Last week
+                    maintenance.setNextMaintenance(today); // Due today
+                    maintenance.setPriority(DeviceMaintenance.Priority.MEDIUM);
+                    maintenance.setStatus(DeviceMaintenance.Status.ACTIVE);
+                    maintenance.setEstimatedCost(new BigDecimal("100.00"));
+                    maintenance.setEstimatedDuration("2 hours");
+                    maintenance.setRequiredTools("Basic tools, safety equipment");
+                    maintenance.setSafetyNotes("Follow standard safety procedures");
+                    maintenance.setCategory("Preventive");
+                    maintenance.setOrganizationId(device.getOrganizationId());
+                    maintenance.setCreatedAt(LocalDateTime.now());
+                    maintenance.setUpdatedAt(LocalDateTime.now());
+                    
+                    deviceMaintenanceRepository.save(maintenance);
+                    tasksCreated++;
+                    log.info("✅ Created test maintenance task for device: {}", device.getName());
+                    
+                } catch (Exception e) {
+                    log.error("❌ Failed to create maintenance task for device '{}': {}", device.getName(), e.getMessage());
+                }
+            }
+            
+            log.info("✅ Created {} test maintenance tasks", tasksCreated);
+            
+        } catch (Exception e) {
+            log.error("❌ Error creating test maintenance tasks: {}", e.getMessage(), e);
         }
     }
     

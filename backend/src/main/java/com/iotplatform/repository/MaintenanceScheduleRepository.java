@@ -57,10 +57,10 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
     
     // Find today's maintenance tasks with device and user details
     @Query(value = """
-        SELECT m.*, d.name as device_name, d.assigned_user_id, u.first_name, u.last_name, u.email 
+        SELECT m.*, d.name as device_name, m.assigned_to as assigned_user_id, u.first_name, u.last_name, u.email 
         FROM device_maintenance m 
         LEFT JOIN devices d ON m.device_id = d.id 
-        LEFT JOIN users u ON d.assigned_user_id = u.id 
+        LEFT JOIN users u ON m.assigned_to = u.id 
         WHERE m.organization_id = :organizationId 
         AND m.next_maintenance = CURRENT_DATE 
         AND m.status != 'completed'
@@ -70,13 +70,13 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
     // Find ALL today's maintenance tasks with device and user details (across all organizations)
     // This includes overdue tasks and tasks scheduled for today
     @Query(value = """
-        SELECT m.*, d.name as device_name, d.assigned_user_id, u.first_name, u.last_name, u.email 
+        SELECT m.*, d.name as device_name, m.assigned_to as assigned_user_id, u.first_name, u.last_name, u.email 
         FROM device_maintenance m 
         LEFT JOIN devices d ON m.device_id = d.id 
-        LEFT JOIN users u ON d.assigned_user_id = u.id 
+        LEFT JOIN users u ON m.assigned_to = u.id 
         WHERE m.next_maintenance <= CURRENT_DATE 
         AND m.status IN ('ACTIVE', 'PENDING', 'OVERDUE')
-        AND d.assigned_user_id IS NOT NULL
+        AND m.assigned_to IS NOT NULL
         """, nativeQuery = true)
     List<Object[]> findAllTodaysMaintenanceTasksWithDetails();
     
@@ -97,13 +97,13 @@ public interface MaintenanceScheduleRepository extends JpaRepository<Maintenance
     
     // Find maintenance tasks that need reminders (due today or overdue, not completed)
     @Query(value = """
-        SELECT m.*, d.name as device_name, d.assigned_user_id, u.first_name, u.last_name, u.email 
+        SELECT m.*, d.name as device_name, m.assigned_to as assigned_user_id, u.first_name, u.last_name, u.email 
         FROM device_maintenance m 
         LEFT JOIN devices d ON m.device_id = d.id 
-        LEFT JOIN users u ON d.assigned_user_id = u.id 
+        LEFT JOIN users u ON m.assigned_to = u.id 
         WHERE m.next_maintenance <= CURRENT_DATE 
         AND m.status IN ('ACTIVE', 'PENDING', 'OVERDUE')
-        AND d.assigned_user_id IS NOT NULL
+        AND m.assigned_to IS NOT NULL
         AND u.id IS NOT NULL
         """, nativeQuery = true)
     List<Object[]> findMaintenanceTasksNeedingReminders();
