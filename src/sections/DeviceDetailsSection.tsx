@@ -1268,7 +1268,7 @@ export const DeviceDetailsSection: React.FC = () => {
 
       case 'chat':
         return (
-          <div className="flex flex-col h-full min-h-0">
+          <div className="flex flex-col h-[calc(100vh-200px)] min-h-[400px] max-h-[800px] sm:h-[calc(100vh-180px)] sm:min-h-[500px] lg:h-[calc(100vh-160px)] lg:min-h-[600px]">
             {/* Error Display */}
             {error && (
               <div className="mb-4 p-4 bg-red-50 rounded-lg border border-red-200">
@@ -1335,7 +1335,7 @@ export const DeviceDetailsSection: React.FC = () => {
 
 
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-slate-50 rounded-lg min-h-0">
+            <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-slate-50 rounded-lg min-h-0 max-h-[calc(100vh-350px)] sm:max-h-[calc(100vh-330px)] lg:max-h-[calc(100vh-310px)]">
               {chatMessages.map((message) => (
                 <div
                   key={message.id}
@@ -1475,8 +1475,8 @@ export const DeviceDetailsSection: React.FC = () => {
 
 
             {/* Chat Input - Fixed at bottom */}
-            <div className="flex-shrink-0 bg-white border-t border-slate-200 p-4">
-              <div className="flex gap-2 mb-3">
+            <div className="flex-shrink-0 bg-white border-t border-slate-200 p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row gap-2 mb-3">
                 <input
                   type="text"
                   value={newMessage}
@@ -1488,10 +1488,10 @@ export const DeviceDetailsSection: React.FC = () => {
                 <button
                   onClick={sendMessage}
                   disabled={!newMessage.trim() || isTyping}
-                  className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Send className="w-4 h-4" />
-                  Send
+                  <span className="hidden sm:inline">Send</span>
                 </button>
               </div>
 
