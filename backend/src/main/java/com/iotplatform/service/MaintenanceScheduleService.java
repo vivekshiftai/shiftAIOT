@@ -571,32 +571,45 @@ public class MaintenanceScheduleService {
     /**
      * Calculate next maintenance date based on frequency string.
      * Enhanced version that handles complex frequency patterns and numeric values.
+     * Uses the provided base date or current date if not provided.
      */
     public LocalDate calculateNextMaintenanceDate(String frequency) {
+        return calculateNextMaintenanceDate(frequency, LocalDate.now());
+    }
+    
+    /**
+     * Calculate next maintenance date based on frequency string and base date.
+     * Enhanced version that handles complex frequency patterns and numeric values.
+     */
+    public LocalDate calculateNextMaintenanceDate(String frequency, LocalDate baseDate) {
         if (frequency == null || frequency.trim().isEmpty()) {
             log.warn("Frequency is null or empty, defaulting to daily");
-            return LocalDate.now().plusDays(1);
+            return baseDate.plusDays(1);
+        }
+        
+        if (baseDate == null) {
+            log.warn("Base date is null, using current date");
+            baseDate = LocalDate.now();
         }
         
         String normalizedFrequency = frequency.toLowerCase().trim();
-        LocalDate today = LocalDate.now();
         
         try {
             // Enhanced pattern matching for complex frequencies
             if (normalizedFrequency.contains("daily") || normalizedFrequency.contains("every day")) {
-                return today.plusDays(1);
+                return baseDate.plusDays(1);
             } else if (normalizedFrequency.contains("weekly") || normalizedFrequency.contains("every week")) {
-                return today.plusWeeks(1);
+                return baseDate.plusWeeks(1);
             } else if (normalizedFrequency.contains("monthly") || normalizedFrequency.contains("every month")) {
-                return today.plusMonths(1);
+                return baseDate.plusMonths(1);
             } else if (normalizedFrequency.contains("quarterly") || normalizedFrequency.contains("every 3 months")) {
-                return today.plusMonths(3);
+                return baseDate.plusMonths(3);
             } else if (normalizedFrequency.contains("semi-annual") || normalizedFrequency.contains("every 6 months")) {
-                return today.plusMonths(6);
+                return baseDate.plusMonths(6);
             } else if (normalizedFrequency.contains("annual") || normalizedFrequency.contains("yearly") || normalizedFrequency.contains("every year")) {
-                return today.plusYears(1);
+                return baseDate.plusYears(1);
             } else if (normalizedFrequency.contains("bi-annual") || normalizedFrequency.contains("every 2 years")) {
-                return today.plusYears(2);
+                return baseDate.plusYears(2);
             }
             
             // Regex pattern for numeric frequencies (e.g., "30 days", "6 months", "2 years")
@@ -609,13 +622,13 @@ public class MaintenanceScheduleService {
                 
                 switch (unit) {
                     case "day":
-                        return today.plusDays(number);
+                        return baseDate.plusDays(number);
                     case "week":
-                        return today.plusWeeks(number);
+                        return baseDate.plusWeeks(number);
                     case "month":
-                        return today.plusMonths(number);
+                        return baseDate.plusMonths(number);
                     case "year":
-                        return today.plusYears(number);
+                        return baseDate.plusYears(number);
                 }
             }
             
@@ -627,15 +640,15 @@ public class MaintenanceScheduleService {
                 int hours = Integer.parseInt(hoursMatcher.group(1));
                 int days = Math.max(1, hours / 24); // Convert hours to days, minimum 1 day
                 log.info("Converting {} hours to {} days for maintenance scheduling", hours, days);
-                return today.plusDays(days);
+                return baseDate.plusDays(days);
             }
             
             log.warn("Unknown frequency format: '{}', defaulting to daily", frequency);
-            return today.plusDays(1);
+            return baseDate.plusDays(1);
             
         } catch (Exception e) {
             log.error("Error calculating next maintenance date for frequency: {}", frequency, e);
-            return today.plusDays(1);
+            return baseDate.plusDays(1);
         }
     }
     

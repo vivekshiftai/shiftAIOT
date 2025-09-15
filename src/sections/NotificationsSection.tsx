@@ -3,6 +3,7 @@ import { Bell, Filter, Search, CheckCircle } from 'lucide-react';
 import { useIoT } from '../contexts/IoTContext';
 import { Notification } from '../types';
 import { CleanNotificationItem } from '../components/Layout/CleanNotificationItem';
+import { NotificationDetailModal } from '../components/UI/NotificationDetailModal';
 import { logInfo } from '../utils/logger';
 
 export const NotificationsSection: React.FC = () => {
@@ -11,6 +12,8 @@ export const NotificationsSection: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   useEffect(() => {
     const filter = params.get('filter');
@@ -39,8 +42,15 @@ export const NotificationsSection: React.FC = () => {
 
 
   const handleNotificationClick = (notification: Notification) => {
-    // Handle notification click - could navigate to device details
+    // Open detail modal
+    setSelectedNotification(notification);
+    setIsDetailModalOpen(true);
     logInfo('NotificationsSection', 'Notification clicked', { notificationId: notification.id, category: notification.category });
+  };
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedNotification(null);
   };
 
 
@@ -159,6 +169,13 @@ export const NotificationsSection: React.FC = () => {
           <span>Read: {totalCount - unreadCount}</span>
         </div>
       </div>
+
+      {/* Notification Detail Modal */}
+      <NotificationDetailModal
+        notification={selectedNotification}
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseDetailModal}
+      />
 
     </div>
   );

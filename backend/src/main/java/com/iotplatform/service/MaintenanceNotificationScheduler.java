@@ -123,8 +123,8 @@ public class MaintenanceNotificationScheduler {
                         LocalDate.parse(nextMaintenance).isBefore(LocalDate.now()) && 
                         "OVERDUE".equals(status)) {
                         
-                        // Calculate next maintenance date based on frequency
-                        LocalDate newNextMaintenance = maintenanceScheduleService.calculateNextMaintenanceDate(frequency);
+                        // Calculate next maintenance date based on frequency from the overdue date
+                        LocalDate newNextMaintenance = maintenanceScheduleService.calculateNextMaintenanceDate(frequency, LocalDate.parse(nextMaintenance));
                         
                         // Update the task with new next maintenance date and reset to ACTIVE
                         maintenanceScheduleRepository.updateMaintenanceTaskSchedule(taskId, newNextMaintenance, "ACTIVE");
@@ -462,7 +462,7 @@ public class MaintenanceNotificationScheduler {
                 // Also try to send conversation notification if configured
                 try {
                     MaintenanceNotificationRequest conversationNotification = conversationNotificationService
-                        .createNotificationRequest(taskData, deviceName, assignedUserId, assignedUserName, organizationId);
+                        .createReminderNotificationRequest(taskData, deviceName, assignedUserId, assignedUserName, organizationId, (int)reminderNumber);
                     conversationNotificationService.sendMaintenanceNotification(conversationNotification);
                     log.info("✅ Conversation reminder notification sent for user: {} for task: {}", assignedUserName, taskName);
                 } catch (Exception e) {

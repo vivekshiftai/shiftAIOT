@@ -47,6 +47,9 @@ public class MaintenanceNotificationRequest {
     @JsonProperty("organizationId")
     private String organizationId;
     
+    @JsonProperty("formattedMessage")
+    private String formattedMessage;
+    
     // Explicit getter methods in case Lombok fails
     public String getUserId() {
         return userId;
@@ -82,5 +85,9 @@ public class MaintenanceNotificationRequest {
     
     public String getOrganizationId() {
         return organizationId;
+    }
+    
+    public String getFormattedMessage() {
+        return formattedMessage;
     }
 }

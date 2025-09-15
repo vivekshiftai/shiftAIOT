@@ -1,9 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Bell, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useIoT } from '../../contexts/IoTContext';
 import { Notification } from '../../types';
 import { CleanNotificationItem } from './CleanNotificationItem';
+import { NotificationDetailModal } from '../UI/NotificationDetailModal';
 
 interface NotificationDropdownProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   const { notifications, markNotificationAsRead } = useIoT();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -60,9 +63,20 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   };
 
   const handleNotificationClick = async (notification: Notification) => {
-    // Handle notification click - could navigate to device details or mark as read
+    // Mark as read first
     await markNotificationAsRead(notification.id);
-    onToggle(); // Close the dropdown
+    
+    // Open detail modal
+    setSelectedNotification(notification);
+    setIsDetailModalOpen(true);
+    
+    // Close the dropdown
+    onToggle();
+  };
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedNotification(null);
   };
 
   const handleViewAllNotifications = () => {
@@ -140,6 +154,13 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
           )}
         </div>
       )}
+
+      {/* Notification Detail Modal */}
+      <NotificationDetailModal
+        notification={selectedNotification}
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseDetailModal}
+      />
     </div>
   );
 };
