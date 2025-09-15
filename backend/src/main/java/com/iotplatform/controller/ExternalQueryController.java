@@ -20,6 +20,9 @@ import java.util.Map;
  * Controller for handling external queries from various sources
  * Implements the complete flow: query -> device extraction -> PDF query -> MCP response
  * 
+ * Provides a single generic endpoint that can handle queries from any external source
+ * including Slack, webhooks, APIs, and other integrations.
+ * 
  * @author IoT Platform Team
  * @version 1.0
  */
@@ -33,14 +36,14 @@ public class ExternalQueryController {
     private final ExternalQueryProcessingService externalQueryProcessingService;
 
     /**
-     * Process external query from Slack or other MCP sources
+     * Process external query from any source (Slack, webhooks, APIs, etc.)
      * 
      * @param request The query request containing the query text and source
      * @return Processing result
      */
     @Operation(
         summary = "Process External Query",
-        description = "Process external queries through the complete flow: device extraction -> PDF query -> MCP response. No authentication required."
+        description = "Process external queries through the complete flow: device extraction -> PDF query -> MCP response. Handles queries from any external source including Slack, webhooks, APIs, and other integrations. No authentication required."
     )
     @ApiResponses(value = {
         @ApiResponse(
@@ -152,90 +155,6 @@ public class ExternalQueryController {
         }
     }
 
-    /**
-     * Process query from Slack webhook (simplified endpoint)
-     * 
-     * @param request The Slack webhook request
-     * @return Processing result
-     */
-    @Operation(
-        summary = "Process Slack Webhook Query",
-        description = "Simplified endpoint for processing queries from Slack webhooks. No authentication required."
-    )
-    @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200",
-            description = "Slack query processed successfully",
-            content = @Content(
-                mediaType = "application/json",
-                examples = @ExampleObject(
-                    name = "Success Response",
-                    value = """
-                    {
-                      "success": true,
-                      "message": "Query processed successfully",
-                      "deviceName": "Rondo s-4000"
-                    }
-                    """
-                )
-            )
-        ),
-        @ApiResponse(
-            responseCode = "400",
-            description = "Bad request - no query text provided",
-            content = @Content(
-                mediaType = "application/json",
-                examples = @ExampleObject(
-                    name = "Error Response",
-                    value = """
-                    {
-                      "success": false,
-                      "error": "No query text provided"
-                    }
-                    """
-                )
-            )
-        )
-    })
-    @PostMapping("/slack")
-    public ResponseEntity<Map<String, Object>> processSlackQuery(
-        @Parameter(description = "Slack webhook request", required = true)
-        @RequestBody SlackWebhookRequest request) {
-        log.info("📱 Received Slack webhook query: {}", request);
-        
-        try {
-            String query = request.getText();
-            if (query == null || query.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "error", "No query text provided"
-                ));
-            }
-            
-            // Process the query with dynamic channel and user IDs from Slack webhook
-            ExternalQueryProcessingService.ExternalQueryResult result = 
-                externalQueryProcessingService.processExternalQuery(
-                    query.trim(), 
-                    "slack", 
-                    request.getChannelId(),  // Use actual channel ID from Slack
-                    request.getUserId()      // Use actual user ID from Slack
-                );
-            
-            // Return simple response for Slack webhook
-            return ResponseEntity.ok(Map.of(
-                "success", result.isSuccess(),
-                "message", result.isSuccess() ? "Query processed successfully" : "Query processing failed",
-                "deviceName", result.getDeviceName() != null ? result.getDeviceName() : "none"
-            ));
-            
-        } catch (Exception e) {
-            log.error("❌ Error processing Slack query: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body(Map.of(
-                "success", false,
-                "error", "Internal server error"
-            ));
-        }
-    }
 
     /**
      * Health check endpoint for external query service
@@ -307,38 +226,4 @@ public class ExternalQueryController {
         public void setMetadata(Map<String, Object> metadata) { this.metadata = metadata; }
     }
 
-    /**
-     * Request DTO for Slack webhooks
-     */
-    @Schema(description = "Slack webhook request payload")
-    public static class SlackWebhookRequest {
-        @Schema(description = "The query text from Slack", example = "How do I operate the conveyor belt?", required = true)
-        private String text;
-        
-        @Schema(description = "Slack user ID", example = "U123456", required = false)
-        private String user;
-        
-        @Schema(description = "Slack channel ID", example = "C092C9RHPKN", required = false)
-        private String channel;
-        
-        @Schema(description = "Message timestamp", example = "1694512345.123456", required = false)
-        private String timestamp;
-
-        // Getters and setters
-        public String getText() { return text; }
-        public void setText(String text) { this.text = text; }
-        
-        public String getUser() { return user; }
-        public void setUser(String user) { this.user = user; }
-        
-        public String getChannel() { return channel; }
-        public void setChannel(String channel) { this.channel = channel; }
-        
-        public String getTimestamp() { return timestamp; }
-        public void setTimestamp(String timestamp) { this.timestamp = timestamp; }
-        
-        // Additional getters for compatibility with ExternalQueryProcessingService
-        public String getUserId() { return user; }
-        public String getChannelId() { return channel; }
-    }
 }

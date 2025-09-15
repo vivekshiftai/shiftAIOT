@@ -74,13 +74,13 @@ public class DeviceNameExtractionService {
     }
 
     /**
-     * Extract device name from a natural language query
+     * Extract device name and plain query from a natural language query
      * 
      * @param query The natural language query
-     * @return The extracted device name or null if not found
+     * @return DeviceExtractionResult containing device name and plain query
      */
-    public String extractDeviceName(String query) {
-        log.info("🔍 Extracting device name from query: {}", query);
+    public DeviceExtractionResult extractDeviceName(String query) {
+        log.info("🔍 Extracting device name and plain query from: {}", query);
         
         try {
             initializeClient();
@@ -89,7 +89,7 @@ public class DeviceNameExtractionService {
             Set<String> availableDeviceNames = getAvailableDeviceNames();
             log.info("📋 Found {} available device names in PDF table", availableDeviceNames.size());
             
-            // Create system prompt for device name extraction with available device names
+            // Create system prompt for device name and plain query extraction
             String systemPrompt = createDeviceExtractionPrompt(availableDeviceNames);
             
             // Create user message
@@ -109,7 +109,7 @@ public class DeviceNameExtractionService {
                 .setMaxTokens(maxCompletionTokens)
                 .setTemperature(temperature);
             
-            log.debug("🤖 Calling Azure OpenAI for device name extraction");
+            log.debug("🤖 Calling Azure OpenAI for device name and plain query extraction");
             
             // Call Azure OpenAI
             ChatCompletions chatCompletions = openAIClient.getChatCompletions(deploymentName, options);
@@ -124,23 +124,24 @@ public class DeviceNameExtractionService {
                 // Check if AI response is null
                 if (aiResponse == null) {
                     log.warn("⚠️ AI response content is null - this might indicate an issue with the AI service or prompt");
-                    return null;
+                    return new DeviceExtractionResult(null, query);
                 }
                 
-                // Extract device name from response
-                String deviceName = extractDeviceNameFromResponse(aiResponse);
+                // Extract device name and plain query from response
+                DeviceExtractionResult result = extractDeviceNameAndPlainQueryFromResponse(aiResponse, query);
                 
-                log.info("✅ Device name extracted successfully: '{}' from query: '{}'", deviceName, query);
-                return deviceName;
+                log.info("✅ Device extraction completed - Device: '{}', Plain Query: '{}'", 
+                    result.getDeviceName(), result.getPlainQuery());
+                return result;
                 
             } else {
-                log.warn("⚠️ No response from Azure OpenAI for device name extraction - choices is null or empty");
-                return null;
+                log.warn("⚠️ No response from Azure OpenAI for device extraction - choices is null or empty");
+                return new DeviceExtractionResult(null, query);
             }
             
         } catch (Exception e) {
-            log.error("❌ Failed to extract device name from query: {}", query, e);
-            return null;
+            log.error("❌ Failed to extract device name and plain query from query: {}", query, e);
+            return new DeviceExtractionResult(null, query);
         }
     }
     
@@ -171,13 +172,15 @@ public class DeviceNameExtractionService {
     }
 
     /**
-     * Create system prompt for device name extraction with available device names
+     * Create system prompt for device name and plain query extraction with available device names
      */
     private String createDeviceExtractionPrompt(Set<String> availableDeviceNames) {
         StringBuilder prompt = new StringBuilder();
         
-        prompt.append("You are an AI assistant specialized in extracting device names from natural language queries about IoT devices.\n\n");
-        prompt.append("Your task is to identify the specific device name mentioned in the user's query.\n\n");
+        prompt.append("You are an AI assistant specialized in analyzing natural language queries about IoT devices.\n\n");
+        prompt.append("Your task is to:\n");
+        prompt.append("1. Identify the specific device name mentioned in the user's query\n");
+        prompt.append("2. Extract the plain query (the actual question/request without the device name)\n\n");
         
         // Add available device names if any exist
         if (!availableDeviceNames.isEmpty()) {
@@ -186,7 +189,7 @@ public class DeviceNameExtractionService {
                 prompt.append("- ").append(deviceName).append("\n");
             }
             prompt.append("\n");
-            prompt.append("IMPORTANT: Only extract device names that are in the above list. If the query mentions a device not in this list, return 'null'.\n\n");
+            prompt.append("IMPORTANT: Only extract device names that are in the above list. If the query mentions a device not in this list, set device_name to 'null'.\n\n");
         } else {
             prompt.append("NOTE: No device names are currently available in the system.\n\n");
         }
@@ -194,24 +197,32 @@ public class DeviceNameExtractionService {
         prompt.append("Rules:\n");
         prompt.append("1. Look for device names, model numbers, or equipment names\n");
         prompt.append("2. Device names are typically proper nouns or specific model identifiers\n");
-        prompt.append("3. If no specific device is mentioned, return 'null'\n");
-        prompt.append("4. If multiple devices are mentioned, return the primary device\n");
-        prompt.append("5. Return only the device name, nothing else\n");
+        prompt.append("3. If no specific device is mentioned, set device_name to 'null'\n");
+        prompt.append("4. If multiple devices are mentioned, use the primary device\n");
+        prompt.append("5. The plain_query should be the actual question/request without the device name\n");
         prompt.append("6. Match the device name exactly as it appears in the available list above\n\n");
         
         prompt.append("Examples:\n");
         if (!availableDeviceNames.isEmpty()) {
-            // Use actual device names from the system for examples
             String firstDevice = availableDeviceNames.iterator().next();
-            prompt.append("- \"What is the maintenance schedule for ").append(firstDevice).append("?\" → \"").append(firstDevice).append("\"\n");
+            prompt.append("- \"What is the maintenance schedule for ").append(firstDevice).append("?\"\n");
+            prompt.append("  → device_name: \"").append(firstDevice).append("\", plain_query: \"What is the maintenance schedule?\"\n\n");
         } else {
-            prompt.append("- \"What is the maintenance schedule for Rondo s-40?\" → \"Rondo s-40\"\n");
+            prompt.append("- \"What is the maintenance schedule for Rondo s-4000?\"\n");
+            prompt.append("  → device_name: \"Rondo s-4000\", plain_query: \"What is the maintenance schedule?\"\n\n");
         }
-        prompt.append("- \"How do I operate the conveyor belt?\" → \"conveyor belt\"\n");
-        prompt.append("- \"What are the general maintenance tips?\" → \"null\"\n");
-        prompt.append("- \"Tell me about device status\" → \"null\"\n\n");
+        prompt.append("- \"How do I operate the conveyor belt?\"\n");
+        prompt.append("  → device_name: \"conveyor belt\", plain_query: \"How do I operate?\"\n\n");
+        prompt.append("- \"What are the general maintenance tips?\"\n");
+        prompt.append("  → device_name: \"null\", plain_query: \"What are the general maintenance tips?\"\n\n");
+        prompt.append("- \"Tell me about device status\"\n");
+        prompt.append("  → device_name: \"null\", plain_query: \"Tell me about device status\"\n\n");
         
-        prompt.append("Respond with only the device name or \"null\" if no device is specified.");
+        prompt.append("Respond in JSON format:\n");
+        prompt.append("{\n");
+        prompt.append("  \"device_name\": \"device name or null\",\n");
+        prompt.append("  \"plain_query\": \"the plain question/request\"\n");
+        prompt.append("}\n");
         
         return prompt.toString();
     }
@@ -249,6 +260,87 @@ public class DeviceNameExtractionService {
         } catch (Exception e) {
             log.warn("⚠️ Failed to parse device name from AI response: {}", aiResponse, e);
             return null;
+        }
+    }
+
+
+    /**
+     * Extract device name and plain query from AI response
+     */
+    private DeviceExtractionResult extractDeviceNameAndPlainQueryFromResponse(String aiResponse, String originalQuery) {
+        try {
+            // Check if response is null or empty
+            if (aiResponse == null || aiResponse.trim().isEmpty()) {
+                log.warn("⚠️ AI response is null or empty");
+                return new DeviceExtractionResult(null, originalQuery);
+            }
+            
+            // Clean the response
+            String cleanedResponse = aiResponse.trim();
+            
+            // Try to parse as JSON
+            try {
+                JsonNode jsonNode = objectMapper.readTree(cleanedResponse);
+                
+                String deviceName = null;
+                String plainQuery = originalQuery; // Default to original query
+                
+                if (jsonNode.has("device_name")) {
+                    String deviceNameValue = jsonNode.get("device_name").asText();
+                    if (!deviceNameValue.equals("null") && !deviceNameValue.trim().isEmpty()) {
+                        deviceName = deviceNameValue.trim();
+                    }
+                }
+                
+                if (jsonNode.has("plain_query")) {
+                    String plainQueryValue = jsonNode.get("plain_query").asText();
+                    if (!plainQueryValue.trim().isEmpty()) {
+                        plainQuery = plainQueryValue.trim();
+                    }
+                }
+                
+                return new DeviceExtractionResult(deviceName, plainQuery);
+                
+            } catch (Exception jsonException) {
+                log.warn("⚠️ Failed to parse JSON response, falling back to simple extraction: {}", jsonException.getMessage());
+                
+                // Fallback: try to extract device name using the old method
+                String deviceName = extractDeviceNameFromResponse(cleanedResponse);
+                return new DeviceExtractionResult(deviceName, originalQuery);
+            }
+            
+        } catch (Exception e) {
+            log.warn("⚠️ Failed to parse device extraction from AI response: {}", aiResponse, e);
+            return new DeviceExtractionResult(null, originalQuery);
+        }
+    }
+
+    /**
+     * Result class for device name and plain query extraction
+     */
+    public static class DeviceExtractionResult {
+        private final String deviceName;
+        private final String plainQuery;
+
+        public DeviceExtractionResult(String deviceName, String plainQuery) {
+            this.deviceName = deviceName;
+            this.plainQuery = plainQuery;
+        }
+
+        public String getDeviceName() {
+            return deviceName;
+        }
+
+        public String getPlainQuery() {
+            return plainQuery;
+        }
+
+        @Override
+        public String toString() {
+            return "DeviceExtractionResult{" +
+                    "deviceName='" + deviceName + '\'' +
+                    ", plainQuery='" + plainQuery + '\'' +
+                    '}';
         }
     }
 }

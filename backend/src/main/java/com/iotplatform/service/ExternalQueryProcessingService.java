@@ -21,9 +21,9 @@ import java.util.stream.Collectors;
 /**
  * Service for processing external queries through the complete flow:
  * 1. Receive external query
- * 2. Extract device name from query
+ * 2. Extract device name and plain query from query using LLM
  * 3. Find device PDF
- * 4. Query PDF using external service
+ * 4. Query PDF using external service with plain query
  * 5. Return response through MCP server
  * 
  * @author IoT Platform Team
@@ -71,9 +71,15 @@ public class ExternalQueryProcessingService {
         log.info("🔄 Processing external query from {}: {}", source, query);
         
         try {
-            // Step 1: Extract device name from query
-            String deviceName = deviceNameExtractionService.extractDeviceName(query);
-            log.info("📱 Extracted device name: '{}' from query: '{}'", deviceName, query);
+            // Step 1: Extract device name and plain query from query
+            DeviceNameExtractionService.DeviceExtractionResult extractionResult = 
+                deviceNameExtractionService.extractDeviceName(query);
+            
+            String deviceName = extractionResult.getDeviceName();
+            String plainQuery = extractionResult.getPlainQuery();
+            
+            log.info("📱 Extracted device name: '{}' and plain query: '{}' from original query: '{}'", 
+                deviceName, plainQuery, query);
             
             if (deviceName == null) {
                 return handleNoDeviceFound(query, source, channelId, userId);
@@ -85,8 +91,8 @@ public class ExternalQueryProcessingService {
                 return handleDevicePDFNotFound(deviceName, query, source, channelId, userId);
             }
             
-            // Step 3: Query PDF using external service
-            PDFQueryResponse pdfResponse = queryDevicePDF(devicePDF.get(), query);
+            // Step 3: Query PDF using external service with plain query
+            PDFQueryResponse pdfResponse = queryDevicePDF(devicePDF.get(), plainQuery);
             
             // Step 4: Return response through MCP server with dynamic channel/user IDs
             return sendResponseThroughMCP(pdfResponse, query, deviceName, source, channelId, userId);
