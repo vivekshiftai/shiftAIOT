@@ -260,7 +260,26 @@ export const KnowledgeSection: React.FC = () => {
             
             // Format response with personalized template
             const username = getUserDisplayName(user);
-            const formattedContent = formatKnowledgeBaseResponse(queryResponse, username);
+            let formattedContent = formatKnowledgeBaseResponse(queryResponse, username);
+            
+            // Safety check: Ensure we don't display raw JSON
+            if (formattedContent.includes('"response":') || formattedContent.includes('"chunks_used":')) {
+              logError('KnowledgeSection', 'Raw JSON response detected, cleaning up', new Error('JSON response not properly formatted'));
+              // Try to extract just the response content
+              try {
+                const jsonMatch = formattedContent.match(/"response":\s*"([^"]*(?:\\.[^"]*)*)"/);
+                if (jsonMatch && jsonMatch[1]) {
+                  formattedContent = jsonMatch[1]
+                    .replace(/\\n/g, '\n')
+                    .replace(/\\"/g, '"')
+                    .replace(/\\t/g, '\t');
+                } else {
+                  formattedContent = "I found information about your query, but there was an issue formatting the response. Please try asking your question in a different way.";
+                }
+              } catch (error) {
+                formattedContent = "I found information about your query, but there was an issue formatting the response. Please try asking your question in a different way.";
+              }
+            }
             
             const assistantMessage: ChatMessage = {
               id: (Date.now() + 1).toString(),
@@ -737,22 +756,28 @@ export const KnowledgeSection: React.FC = () => {
               {/* Quick Actions */}
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => setNewMessage('How do I troubleshoot mechanical machine issues?')}
+                  onClick={() => setNewMessage('How do I install this machine and how to start it and stop it? Explain me the complete setup process.')}
                   className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
                 >
-                  Machine troubleshooting
+                  Setup Guide
                 </button>
                 <button
-                  onClick={() => setNewMessage('What maintenance procedures are recommended?')}
+                  onClick={() => setNewMessage('What maintenance procedures are required for this machine? How often should I perform maintenance and what are the steps?')}
                   className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
                 >
                   Maintenance
                 </button>
                 <button
-                  onClick={() => setNewMessage('How do I install mechanical machines?')}
+                  onClick={() => setNewMessage('Help me troubleshoot common issues with this machine. What are the most frequent problems and how to fix them?')}
                   className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
                 >
-                  Machine installation
+                  Troubleshooting
+                </button>
+                <button
+                  onClick={() => setNewMessage('Show me the technical specifications, operating parameters, and performance characteristics of this machine.')}
+                  className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
+                >
+                  Specifications
                 </button>
               </div>
               

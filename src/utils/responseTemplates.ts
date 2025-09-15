@@ -82,9 +82,27 @@ export function formatKnowledgeBaseResponse(
     }
     
     // Clean up the response - remove JSON structure if present
+    if (cleanResponse.includes('"response":')) {
+      try {
+        // Try to parse as JSON first
+        const jsonResponse = JSON.parse(cleanResponse);
+        if (jsonResponse.response) {
+          cleanResponse = jsonResponse.response;
+        }
+      } catch (parseError) {
+        // If JSON parsing fails, use regex cleanup
+        cleanResponse = cleanResponse
+          .replace(/^\{[\s\S]*?"response":\s*"/, '') // Remove opening JSON structure
+          .replace(/"[\s\S]*?\}$/, '') // Remove closing JSON structure
+          .replace(/\\n/g, '\n') // Convert escaped newlines to actual newlines
+          .replace(/\\"/g, '"') // Convert escaped quotes
+          .replace(/\\t/g, '\t') // Convert escaped tabs
+          .trim();
+      }
+    }
+    
+    // Additional cleanup for escaped characters
     cleanResponse = cleanResponse
-      .replace(/^\{[\s\S]*?"response":\s*"/, '') // Remove opening JSON structure
-      .replace(/"[\s\S]*?\}$/, '') // Remove closing JSON structure
       .replace(/\\n/g, '\n') // Convert escaped newlines to actual newlines
       .replace(/\\"/g, '"') // Convert escaped quotes
       .replace(/\\t/g, '\t') // Convert escaped tabs

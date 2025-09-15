@@ -933,6 +933,25 @@ export const DeviceDetailsSection: React.FC = () => {
           const username = getUserDisplayName(user);
           let enhancedContent = formatKnowledgeBaseResponse(queryResponse, username);
           
+          // Safety check: Ensure we don't display raw JSON
+          if (enhancedContent.includes('"response":') || enhancedContent.includes('"chunks_used":')) {
+            logError('DeviceDetails', 'Raw JSON response detected, cleaning up', new Error('JSON response not properly formatted'));
+            // Try to extract just the response content
+            try {
+              const jsonMatch = enhancedContent.match(/"response":\s*"([^"]*(?:\\.[^"]*)*)"/);
+              if (jsonMatch && jsonMatch[1]) {
+                enhancedContent = jsonMatch[1]
+                  .replace(/\\n/g, '\n')
+                  .replace(/\\"/g, '"')
+                  .replace(/\\t/g, '\t');
+              } else {
+                enhancedContent = "I found information about your query, but there was an issue formatting the response. Please try asking your question in a different way.";
+              }
+            } catch (error) {
+              enhancedContent = "I found information about your query, but there was an issue formatting the response. Please try asking your question in a different way.";
+            }
+          }
+          
           // Add information about found images and tables
           if (queryResponse.images && queryResponse.images.length > 0) {
             // Validate image data before including
@@ -1476,52 +1495,33 @@ export const DeviceDetailsSection: React.FC = () => {
 
             {/* Chat Input - Fixed at bottom */}
             <div className="flex-shrink-0 bg-white border-t border-slate-200 p-3 sm:p-4">
-              <div className="flex flex-col sm:flex-row gap-2 mb-3">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder="Ask about this device..."
-                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-                <button
-                  onClick={sendMessage}
-                  disabled={!newMessage.trim() || isTyping}
-                  className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  <Send className="w-4 h-4" />
-                  <span className="hidden sm:inline">Send</span>
-                </button>
-              </div>
-
-              {/* Quick Actions */}
+              {/* Quick Actions - Above search bar */}
               {devicePDFs.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setNewMessage('How do I set up this device?')}
-                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
-                >
-                  Setup Guide
-                </button>
-                <button
-                  onClick={() => setNewMessage('What maintenance is required?')}
-                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
-                >
-                  Maintenance
-                </button>
-                <button
-                  onClick={() => setNewMessage('Help me troubleshoot issues')}
-                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
-                >
-                  Troubleshooting
-                </button>
-                <button
-                  onClick={() => setNewMessage('Show me technical specifications')}
-                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
-                >
-                  Specifications
-                </button>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <button
+                    onClick={() => setNewMessage('How do I install this machine and how to start it and stop it? Explain me the complete setup process.')}
+                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                  >
+                    Setup Guide
+                  </button>
+                  <button
+                    onClick={() => setNewMessage('What maintenance procedures are required for this machine? How often should I perform maintenance and what are the steps?')}
+                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                  >
+                    Maintenance
+                  </button>
+                  <button
+                    onClick={() => setNewMessage('Help me troubleshoot common issues with this machine. What are the most frequent problems and how to fix them?')}
+                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                  >
+                    Troubleshooting
+                  </button>
+                  <button
+                    onClick={() => setNewMessage('Show me the technical specifications, operating parameters, and performance characteristics of this machine.')}
+                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                  >
+                    Specifications
+                  </button>
                 {device?.type === 'SENSOR' && (
                   <button
                     onClick={() => setNewMessage('What are the machine calibration procedures?')}
@@ -1547,7 +1547,27 @@ export const DeviceDetailsSection: React.FC = () => {
                   </button>
                 )}
               </div>
-            )}
+              )}
+
+              {/* Search Bar */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  placeholder="Ask about this device..."
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!newMessage.trim() || isTyping}
+                  className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  <span className="hidden sm:inline">Send</span>
+                </button>
+              </div>
             </div>
           </div>
         );
