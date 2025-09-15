@@ -19,7 +19,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Service for extracting device names from natural language queries using Azure OpenAI
+ * Service for extracting device names from natural language queries using Mistral model via Azure OpenAI
  * 
  * @author IoT Platform Team
  * @version 1.0
@@ -65,7 +65,7 @@ public class DeviceNameExtractionService {
                     .endpoint(endpoint)
                     .credential(new AzureKeyCredential(apiKey))
                     .buildClient();
-                log.info("✅ Azure OpenAI client initialized successfully");
+                log.info("✅ Azure OpenAI client initialized successfully with Mistral model");
             } catch (Exception e) {
                 log.error("❌ Failed to initialize Azure OpenAI client", e);
                 throw new RuntimeException("Failed to initialize OpenAI client", e);
@@ -95,8 +95,8 @@ public class DeviceNameExtractionService {
             // Create user message
             String userMessage = "Query: " + query;
             
-            log.debug("🔍 System prompt: {}", systemPrompt);
-            log.debug("🔍 User message: {}", userMessage);
+            log.info("🔍 System prompt: {}", systemPrompt);
+            log.info("🔍 User message: {}", userMessage);
             
             // Prepare chat messages
             List<ChatRequestMessage> messages = Arrays.asList(
@@ -109,7 +109,7 @@ public class DeviceNameExtractionService {
                 .setMaxTokens(maxCompletionTokens)
                 .setTemperature(temperature);
             
-            log.debug("🤖 Calling Azure OpenAI for device name and plain query extraction");
+            log.debug("🤖 Calling Mistral model via Azure OpenAI for device name and plain query extraction");
             
             // Call Azure OpenAI
             ChatCompletions chatCompletions = openAIClient.getChatCompletions(deploymentName, options);
@@ -119,7 +119,7 @@ public class DeviceNameExtractionService {
                 ChatResponseMessage message = choice.getMessage();
                 String aiResponse = message.getContent();
                 
-                log.debug("🔍 Raw AI response: '{}'", aiResponse);
+                log.info("🔍 Raw AI response: '{}'", aiResponse);
                 
                 // Check if AI response is null
                 if (aiResponse == null) {
@@ -189,9 +189,9 @@ public class DeviceNameExtractionService {
                 prompt.append("- ").append(deviceName).append("\n");
             }
             prompt.append("\n");
-            prompt.append("IMPORTANT: Only extract device names that are in the above list. If the query mentions a device not in this list, set device_name to 'null'.\n\n");
+            prompt.append("IMPORTANT: Try to match device names from the above list first. If the query mentions a device that is similar to one in the list (e.g., partial match, different case, or slight variation), use the closest match from the list. Only set device_name to 'null' if no reasonable match can be found.\n\n");
         } else {
-            prompt.append("NOTE: No device names are currently available in the system.\n\n");
+            prompt.append("NOTE: No device names are currently available in the system. Extract any device names mentioned in the query as they appear.\n\n");
         }
         
         prompt.append("Rules:\n");
@@ -289,6 +289,7 @@ public class DeviceNameExtractionService {
                     String deviceNameValue = jsonNode.get("device_name").asText();
                     if (!deviceNameValue.equals("null") && !deviceNameValue.trim().isEmpty()) {
                         deviceName = deviceNameValue.trim();
+                        log.info("🔍 Extracted device name: '{}'", deviceName);
                     }
                 }
                 

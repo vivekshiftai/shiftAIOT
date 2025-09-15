@@ -266,10 +266,10 @@ export const DeviceList: React.FC<DeviceListProps> = ({
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="all">All ({getStatusCount('all')})</option>
-                <option value="ONLINE">Online ({getStatusCount('ONLINE')})</option>
-                <option value="OFFLINE">Offline ({getStatusCount('OFFLINE')})</option>
-                <option value="WARNING">Warning ({getStatusCount('WARNING')})</option>
-                <option value="ERROR">Error ({getStatusCount('ERROR')})</option>
+                <option value="ONLINE" className="text-green-600 font-medium">🟢 Online ({getStatusCount('ONLINE')})</option>
+                <option value="OFFLINE" className="text-gray-600 font-medium">⚫ Offline ({getStatusCount('OFFLINE')})</option>
+                <option value="WARNING" className="text-yellow-600 font-medium">🟡 Warning ({getStatusCount('WARNING')})</option>
+                <option value="ERROR" className="text-red-600 font-medium">🔴 Error ({getStatusCount('ERROR')})</option>
               </select>
             </div>
             

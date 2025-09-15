@@ -94,8 +94,8 @@ public class ExternalQueryProcessingService {
             // Step 3: Query PDF using external service with plain query
             PDFQueryResponse pdfResponse = queryDevicePDF(devicePDF.get(), plainQuery);
             
-            // Step 4: Return response through MCP server with dynamic channel/user IDs
-            return sendResponseThroughMCP(pdfResponse, query, deviceName, source, channelId, userId);
+            // Step 4: Return PDF response directly in the specified structure
+            return createDirectResponse(pdfResponse, query, deviceName, source, channelId, userId);
             
         } catch (Exception e) {
             log.error("❌ Error processing external query: {}", e.getMessage(), e);
@@ -163,6 +163,83 @@ public class ExternalQueryProcessingService {
         
         log.info("✅ PDF query completed successfully for device: {}", devicePDF.getDeviceName());
         return response;
+    }
+
+    /**
+     * Create direct response in the specified structure
+     */
+    private ExternalQueryResult createDirectResponse(PDFQueryResponse pdfResponse, String originalQuery, 
+                                                   String deviceName, String source, String channelId, String userId) {
+        try {
+            log.info("📤 Creating direct response for device: {} with source: {}", deviceName, source);
+            
+            // Create the response structure as requested
+            Map<String, Object> responseData = new HashMap<>();
+            
+            // Add the main response
+            responseData.put("response", pdfResponse.getResponse() != null ? pdfResponse.getResponse() : "No response available");
+            
+            // Add images if available - include all image data as received from PDF processing
+            if (pdfResponse.getImages() != null && !pdfResponse.getImages().isEmpty()) {
+                // Return the images list as-is from the PDF processing response
+                responseData.put("images", pdfResponse.getImages());
+            }
+            
+            // Add source
+            responseData.put("source", source);
+            
+            // Add user_id if user, or channel_id if channel
+            if (userId != null && !userId.trim().isEmpty()) {
+                responseData.put("user_id", userId);
+            } else if (channelId != null && !channelId.trim().isEmpty()) {
+                responseData.put("channel_id", channelId);
+            }
+            
+            // Convert to JSON string for the response
+            String jsonResponse = objectMapper.writeValueAsString(responseData);
+            
+            log.info("✅ Direct response created successfully for device: {}", deviceName);
+            return ExternalQueryResult.success(jsonResponse, deviceName, pdfResponse);
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to create direct response: {}", e.getMessage(), e);
+            return ExternalQueryResult.error("Failed to create direct response: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Create direct error response in the specified structure
+     */
+    private ExternalQueryResult createDirectErrorResponse(String errorMessage, String source, String channelId, String userId) {
+        try {
+            log.info("📤 Creating direct error response with source: {}", source);
+            
+            // Create the response structure as requested
+            Map<String, Object> responseData = new HashMap<>();
+            
+            // Add the error response
+            responseData.put("response", errorMessage);
+            
+            // Add source
+            responseData.put("source", source);
+            
+            // Add user_id if user, or channel_id if channel
+            if (userId != null && !userId.trim().isEmpty()) {
+                responseData.put("user_id", userId);
+            } else if (channelId != null && !channelId.trim().isEmpty()) {
+                responseData.put("channel_id", channelId);
+            }
+            
+            // Convert to JSON string for the response
+            String jsonResponse = objectMapper.writeValueAsString(responseData);
+            
+            log.info("✅ Direct error response created successfully");
+            return ExternalQueryResult.success(jsonResponse, null, null);
+            
+        } catch (Exception e) {
+            log.error("❌ Failed to create direct error response: {}", e.getMessage(), e);
+            return ExternalQueryResult.error("Failed to create direct error response: " + e.getMessage());
+        }
     }
 
     /**
@@ -296,8 +373,8 @@ public class ExternalQueryProcessingService {
                 response.append("Please contact the administrator to upload device documentation.");
             }
             
-            log.info("📤 Sending 'no device found' response with available devices list through MCP server");
-            return sendGenericResponseThroughMCP(response.toString(), channelId, userId);
+            log.info("📤 Creating 'no device found' response with available devices list");
+            return createDirectErrorResponse(response.toString(), source, channelId, userId);
             
         } catch (Exception e) {
             log.error("❌ Error getting available device names for 'no device found' response: {}", e.getMessage(), e);
@@ -312,8 +389,8 @@ public class ExternalQueryProcessingService {
                                     "• \"Show me safety procedures for [device name]\"\n\n" +
                                     "Please specify the exact device name to get device-specific information.";
             
-            log.info("📤 Sending fallback 'no device found' response through MCP server");
-            return sendGenericResponseThroughMCP(fallbackResponse, channelId, userId);
+            log.info("📤 Creating fallback 'no device found' response");
+            return createDirectErrorResponse(fallbackResponse, source, channelId, userId);
         }
     }
 
@@ -325,8 +402,8 @@ public class ExternalQueryProcessingService {
                          "❌ No documentation found for device: " + deviceName + "\n" +
                          "The device documentation may not be uploaded yet. Please contact the administrator.";
         
-        log.info("📤 Sending 'device PDF not found' response through MCP server");
-        return sendGenericResponseThroughMCP(response, channelId, userId);
+        log.info("📤 Creating 'device PDF not found' response");
+        return createDirectErrorResponse(response, source, channelId, userId);
     }
 
     /**
@@ -337,8 +414,8 @@ public class ExternalQueryProcessingService {
                          "❌ Error processing your query: \"" + query + "\"\n" +
                          "Please try again or contact support if the issue persists.";
         
-        log.info("📤 Sending error response through MCP server");
-        return sendGenericResponseThroughMCP(response, channelId, userId);
+        log.info("📤 Creating error response");
+        return createDirectErrorResponse(response, source, channelId, userId);
     }
 
     /**

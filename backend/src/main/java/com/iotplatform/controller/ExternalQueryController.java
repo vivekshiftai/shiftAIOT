@@ -1,5 +1,6 @@
 package com.iotplatform.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iotplatform.service.ExternalQueryProcessingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -34,6 +36,7 @@ import java.util.Map;
 public class ExternalQueryController {
 
     private final ExternalQueryProcessingService externalQueryProcessingService;
+    private final ObjectMapper objectMapper;
 
     /**
      * Process external query from any source (Slack, webhooks, APIs, etc.)
@@ -56,13 +59,23 @@ public class ExternalQueryController {
                     name = "Success Response",
                     value = """
                     {
-                      "success": true,
-                      "query": "What is the maintenance schedule for Rondo s-4000?",
+                      "response": "The maintenance schedule for Rondo s-4000 includes...",
+                      "images": [
+                        {
+                          "filename": "diagram_1.png",
+                          "data": "base64_encoded_image_data",
+                          "mime_type": "image/png",
+                          "size": 245760
+                        },
+                        {
+                          "filename": "chart_2.jpg",
+                          "data": "base64_encoded_image_data",
+                          "mime_type": "image/jpeg",
+                          "size": 189432
+                        }
+                      ],
                       "source": "slack",
-                      "deviceName": "Rondo s-4000",
-                      "response": "🤖 Query Response for Rondo s-4000...",
-                      "error": "",
-                      "warning": ""
+                      "user_id": "U123456"
                     }
                     """
                 )
@@ -77,8 +90,9 @@ public class ExternalQueryController {
                     name = "Error Response",
                     value = """
                     {
-                      "success": false,
-                      "error": "Query text is required"
+                      "response": "Query text is required",
+                      "source": "slack",
+                      "user_id": "U123456"
                     }
                     """
                 )
@@ -93,8 +107,9 @@ public class ExternalQueryController {
                     name = "Error Response",
                     value = """
                     {
-                      "success": false,
-                      "error": "Internal server error: [error message]"
+                      "response": "Internal server error: [error message]",
+                      "source": "slack",
+                      "user_id": "U123456"
                     }
                     """
                 )
@@ -127,31 +142,55 @@ public class ExternalQueryController {
                     request.getUserId()      // Use user ID from request
                 );
             
-            // Return the result
-            Map<String, Object> response = Map.of(
-                "success", result.isSuccess(),
-                "query", request.getQuery(),
-                "source", source,
-                "deviceName", result.getDeviceName(),
-                "response", result.getResponse(),
-                "error", result.getError() != null ? result.getError() : "",
-                "warning", result.getWarning() != null ? result.getWarning() : ""
-            );
+            // Parse the JSON response from the service
+            Map<String, Object> responseData;
+            try {
+                if (result.isSuccess() && result.getResponse() != null) {
+                    // Parse the JSON response from the service
+                    responseData = objectMapper.readValue(result.getResponse(), Map.class);
+                } else {
+                    // Create error response structure
+                    responseData = new HashMap<>();
+                    responseData.put("response", result.getError() != null ? result.getError() : "Unknown error occurred");
+                    responseData.put("source", source);
+                    if (request.getUserId() != null && !request.getUserId().trim().isEmpty()) {
+                        responseData.put("user_id", request.getUserId());
+                    } else if (request.getChannelId() != null && !request.getChannelId().trim().isEmpty()) {
+                        responseData.put("channel_id", request.getChannelId());
+                    }
+                }
+            } catch (Exception e) {
+                log.error("❌ Failed to parse response JSON: {}", e.getMessage(), e);
+                // Fallback response structure
+                responseData = new HashMap<>();
+                responseData.put("response", result.getResponse() != null ? result.getResponse() : "Response parsing failed");
+                responseData.put("source", source);
+                if (request.getUserId() != null && !request.getUserId().trim().isEmpty()) {
+                    responseData.put("user_id", request.getUserId());
+                } else if (request.getChannelId() != null && !request.getChannelId().trim().isEmpty()) {
+                    responseData.put("channel_id", request.getChannelId());
+                }
+            }
             
             if (result.isSuccess()) {
                 log.info("✅ External query processed successfully for device: {}", result.getDeviceName());
-                return ResponseEntity.ok(response);
+                return ResponseEntity.ok(responseData);
             } else {
                 log.warn("⚠️ External query processing failed: {}", result.getError());
-                return ResponseEntity.status(500).body(response);
+                return ResponseEntity.status(500).body(responseData);
             }
             
         } catch (Exception e) {
             log.error("❌ Error processing external query: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body(Map.of(
-                "success", false,
-                "error", "Internal server error: " + e.getMessage()
-            ));
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("response", "Internal server error: " + e.getMessage());
+            errorResponse.put("source", request.getSource() != null ? request.getSource() : "unknown");
+            if (request.getUserId() != null && !request.getUserId().trim().isEmpty()) {
+                errorResponse.put("user_id", request.getUserId());
+            } else if (request.getChannelId() != null && !request.getChannelId().trim().isEmpty()) {
+                errorResponse.put("channel_id", request.getChannelId());
+            }
+            return ResponseEntity.status(500).body(errorResponse);
         }
     }
 

@@ -421,10 +421,10 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({
                     : 'border-neutral-300 hover:border-primary-400 hover:shadow-md'
                 }`}
               >
-                <option value="ONLINE">● Online</option>
-                <option value="OFFLINE">● Offline</option>
-                <option value="WARNING">● Warning</option>
-                <option value="ERROR">● Error</option>
+                <option value="ONLINE" className="text-green-600 font-medium">🟢 Online</option>
+                <option value="OFFLINE" className="text-gray-600 font-medium">⚫ Offline</option>
+                <option value="WARNING" className="text-yellow-600 font-medium">🟡 Warning</option>
+                <option value="ERROR" className="text-red-600 font-medium">🔴 Error</option>
               </select>
               {isUpdatingStatus && (
                 <div className="flex items-center gap-2">

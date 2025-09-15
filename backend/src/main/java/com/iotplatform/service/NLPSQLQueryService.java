@@ -14,7 +14,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 /**
- * Service for converting natural language queries to SQL using Azure OpenAI
+ * Service for converting natural language queries to SQL using Mistral model via Azure OpenAI
  * 
  * @author IoT Platform Team
  * @version 1.0

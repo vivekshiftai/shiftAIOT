@@ -263,10 +263,10 @@ export const DevicesSection: React.FC = () => {
                 className="px-4 py-3 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white text-neutral-900 transition-all min-w-[120px]"
               >
                 <option value="all">All Status</option>
-                <option value="ONLINE">Online</option>
-                <option value="OFFLINE">Offline</option>
-                <option value="WARNING">Warning</option>
-                <option value="ERROR">Error</option>
+                <option value="ONLINE" className="text-green-600 font-medium">🟢 Online</option>
+                <option value="OFFLINE" className="text-gray-600 font-medium">⚫ Offline</option>
+                <option value="WARNING" className="text-yellow-600 font-medium">🟡 Warning</option>
+                <option value="ERROR" className="text-red-600 font-medium">🔴 Error</option>
               </select>
             </div>
             

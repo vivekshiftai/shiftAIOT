@@ -15,7 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Service for polishing prompts using Azure OpenAI before sending to Slack
+ * Service for polishing prompts using Mistral model via Azure OpenAI before sending to Slack
  * 
  * @author IoT Platform Team
  * @version 1.0

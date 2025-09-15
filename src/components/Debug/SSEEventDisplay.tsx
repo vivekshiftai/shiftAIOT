@@ -33,56 +33,88 @@ export const SSEEventDisplay: React.FC<SSEEventDisplayProps> = ({ sseProgress, i
           title: 'Device Creation',
           description: 'Setting up device configuration',
           icon: '🔧',
-          color: 'blue'
+          color: 'blue',
+          additionalLines: [
+            'Creating device record in database',
+            'Configuring device parameters and settings'
+          ]
         };
       case 'assignment':
         return {
           title: 'User Assignment',
           description: 'Assigning device to responsible user',
           icon: '👤',
-          color: 'indigo'
+          color: 'indigo',
+          additionalLines: [
+            'Setting up user responsibility and ownership',
+            'Configuring notification preferences'
+          ]
         };
       case 'upload':
         return {
           title: 'PDF Upload',
           description: 'Uploading device documentation',
           icon: '📄',
-          color: 'purple'
+          color: 'purple',
+          additionalLines: [
+            'Securely uploading PDF documentation',
+            'Validating document format and content'
+          ]
         };
       case 'rules':
         return {
           title: 'Rules Generation',
           description: 'Creating intelligent monitoring rules',
           icon: '⚡',
-          color: 'yellow'
+          color: 'yellow',
+          additionalLines: [
+            'Analyzing device specifications and capabilities',
+            'Setting up alert thresholds and automation'
+          ]
         };
       case 'maintenance':
         return {
           title: 'Maintenance Schedule',
           description: 'Generating preventive maintenance plans',
           icon: '🔧',
-          color: 'orange'
+          color: 'orange',
+          additionalLines: [
+            'Extracting maintenance requirements from documentation',
+            'Creating automated service schedules'
+          ]
         };
       case 'safety':
         return {
           title: 'Safety Procedures',
           description: 'Extracting safety guidelines',
           icon: '🛡️',
-          color: 'red'
+          color: 'red',
+          additionalLines: [
+            'Analyzing safety protocols and procedures',
+            'Setting up safety alerts and compliance monitoring'
+          ]
         };
       case 'complete':
         return {
           title: 'Onboarding Complete',
           description: 'Device successfully onboarded',
           icon: '✅',
-          color: 'green'
+          color: 'green',
+          additionalLines: [
+            'All configurations completed successfully',
+            'Device is ready for monitoring and operation'
+          ]
         };
       default:
         return {
           title: 'Processing',
           description: 'Setting up your device',
           icon: '⏳',
-          color: 'gray'
+          color: 'gray',
+          additionalLines: [
+            'Initializing onboarding process',
+            'Preparing system for device setup'
+          ]
         };
     }
   };
@@ -192,6 +224,34 @@ export const SSEEventDisplay: React.FC<SSEEventDisplayProps> = ({ sseProgress, i
                 )}
               </div>
             )}
+
+            {/* Step Details Card */}
+            <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <h4 className="text-lg font-semibold text-gray-900">{stageInfo.title}</h4>
+                {/* Loading dots */}
+                <div className="flex gap-1">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '450ms' }}></div>
+                </div>
+              </div>
+              
+              {/* Three lines of step data */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  <p className="text-gray-700 text-sm">{stageInfo.description}</p>
+                </div>
+                {stageInfo.additionalLines?.map((line, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                    <p className="text-gray-700 text-sm">{line}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
