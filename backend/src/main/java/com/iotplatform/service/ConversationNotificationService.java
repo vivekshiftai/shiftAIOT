@@ -46,6 +46,7 @@ public class ConversationNotificationService {
 
     /**
      * Send a maintenance notification to the conversation flow endpoint.
+     * Uses a structured prompt format similar to the security alert template.
      * 
      * @param notification The maintenance notification request
      * @return true if sent successfully, false otherwise
@@ -111,25 +112,216 @@ public class ConversationNotificationService {
     public CompletableFuture<Boolean> sendMaintenanceNotificationAsync(MaintenanceNotificationRequest notification) {
         return CompletableFuture.supplyAsync(() -> sendMaintenanceNotification(notification));
     }
+    
+    /**
+     * Send a maintenance reminder notification using structured prompt.
+     * 
+     * @param notification The maintenance notification request
+     * @param reminderNumber The reminder number (1, 2, or 3)
+     * @return true if sent successfully, false otherwise
+     */
+    public boolean sendMaintenanceReminderNotification(MaintenanceNotificationRequest notification, int reminderNumber) {
+        log.info("Sending maintenance reminder notification #{} for user: {}, device: {}, task: {}", 
+                reminderNumber, notification.getUserId(), notification.getDeviceName(), notification.getTask());
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                ResponseEntity<String> response = sendReminderNotificationWithRetry(notification, reminderNumber, attempt);
+                
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    log.info("Maintenance reminder notification #{} sent successfully on attempt {} for user: {}", 
+                            reminderNumber, attempt, notification.getUserId());
+                    return true;
+                } else {
+                    log.warn("Maintenance reminder notification #{} failed on attempt {} with status: {} for user: {}", 
+                            reminderNumber, attempt, response.getStatusCode(), notification.getUserId());
+                }
+                
+            } catch (HttpClientErrorException e) {
+                log.error("Client error sending maintenance reminder notification #{} on attempt {} for user: {} - {}", 
+                        reminderNumber, attempt, notification.getUserId(), e.getMessage());
+                if (e.getStatusCode() == HttpStatus.NOT_FOUND || e.getStatusCode() == HttpStatus.BAD_REQUEST) {
+                    // Don't retry on client errors
+                    break;
+                }
+            } catch (HttpServerErrorException e) {
+                log.error("Server error sending maintenance reminder notification #{} on attempt {} for user: {} - {}", 
+                        reminderNumber, attempt, notification.getUserId(), e.getMessage());
+            } catch (ResourceAccessException e) {
+                log.error("Connection error sending maintenance reminder notification #{} on attempt {} for user: {} - {}", 
+                        reminderNumber, attempt, notification.getUserId(), e.getMessage());
+            } catch (Exception e) {
+                log.error("Unexpected error sending maintenance reminder notification #{} on attempt {} for user: {} - {}", 
+                        reminderNumber, attempt, notification.getUserId(), e.getMessage(), e);
+            }
+
+            // Wait before retry (except on last attempt)
+            if (attempt < maxRetries) {
+                try {
+                    Thread.sleep(retryDelay);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.warn("Interrupted while waiting for retry");
+                    break;
+                }
+            }
+        }
+
+        log.error("Failed to send maintenance reminder notification #{} after {} attempts for user: {}", 
+                reminderNumber, maxRetries, notification.getUserId());
+        return false;
+    }
+    
+    /**
+     * Send reminder notification with retry logic using conversation API with structured prompt.
+     * 
+     * @param notification The notification to send
+     * @param reminderNumber The reminder number
+     * @param attempt Current attempt number
+     * @return ResponseEntity from the API call
+     */
+    private ResponseEntity<String> sendReminderNotificationWithRetry(MaintenanceNotificationRequest notification, int reminderNumber, int attempt) {
+        String url = conversationApiBaseUrl;
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        
+        // Create structured prompt for reminder
+        String structuredPrompt = createStructuredReminderPrompt(notification, reminderNumber);
+        
+        // Create request payload for conversation API
+        String requestPayload = String.format(
+            "{\"message\": \"%s\"}",
+            structuredPrompt.replace("\"", "\\\"")
+        );
+        
+        HttpEntity<String> request = new HttpEntity<>(requestPayload, headers);
+        
+        log.debug("Sending maintenance reminder notification #{} attempt {} to URL: {} with prompt: {}", 
+                reminderNumber, attempt, url, structuredPrompt);
+        
+        return restTemplate.postForEntity(url, request, String.class);
+    }
 
     /**
-     * Send notification with retry logic.
+     * Send notification with retry logic using conversation API with structured prompt.
      * 
      * @param notification The notification to send
      * @param attempt Current attempt number
      * @return ResponseEntity from the API call
      */
     private ResponseEntity<String> sendNotificationWithRetry(MaintenanceNotificationRequest notification, int attempt) {
-        String url = conversationApiBaseUrl + "/maintenance-notification";
+        String url = conversationApiBaseUrl;
         
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         
-        HttpEntity<MaintenanceNotificationRequest> request = new HttpEntity<>(notification, headers);
+        // Create structured prompt for conversation API
+        String structuredPrompt = createStructuredMaintenancePrompt(notification);
         
-        log.debug("Sending maintenance notification attempt {} to URL: {}", attempt, url);
+        // Create request payload for conversation API
+        String requestPayload = String.format(
+            "{\"message\": \"%s\"}",
+            structuredPrompt.replace("\"", "\\\"")
+        );
+        
+        HttpEntity<String> request = new HttpEntity<>(requestPayload, headers);
+        
+        log.debug("Sending maintenance notification attempt {} to URL: {} with prompt: {}", attempt, url, structuredPrompt);
         
         return restTemplate.postForEntity(url, request, String.class);
+    }
+
+    /**
+     * Create a structured prompt for maintenance notifications using the conversation API.
+     * This follows the same format as the security alert template you provided.
+     * 
+     * @param notification The maintenance notification request
+     * @return Structured prompt string
+     */
+    private String createStructuredMaintenancePrompt(MaintenanceNotificationRequest notification) {
+        // Get priority emoji
+        String priorityEmoji = getPriorityEmoji(notification.getPriority());
+        
+        // Format the structured prompt similar to your security alert example
+        return String.format(
+            "Post a Slack message to channel_id=C092C9RHPKN.\\n\\n" +
+            "Important: Do not forget to include both plain text and blocks in the same message.\\n\\n" +
+            "Text: '🔔 Maintenance Alert: %s requires maintenance. Action required. Please review the details below and take appropriate action.'\\n\\n" +
+            "Blocks:\\n" +
+            "1. Header block: '🔔 Maintenance Alert: %s'\\n\\n" +
+            "2. Section block with fields summarizing the issue:\\n" +
+            "   - Device: %s\\n" +
+            "   - Task: %s\\n" +
+            "   - Assigned To: %s\\n" +
+            "   - Priority: %s %s\\n" +
+            "   - Due Date: %s\\n" +
+            "   - Task ID: %s\\n\\n" +
+            "3. Section block with plain text: 'Description: Maintenance task scheduled for today. Please complete the maintenance task as soon as possible to ensure optimal device performance.'\\n\\n" +
+            "4. Divider block\\n\\n" +
+            "5. Actions block with three buttons:\\n" +
+            "   - 'Mark as Completed' (primary style)\\n" +
+            "   - 'Reschedule' (default style)\\n" +
+            "   - 'View Details' (default style)\\n\\n" +
+            "Ensure that the final Slack message contains BOTH the plain text and the blocks together.",
+            notification.getDeviceName(),
+            notification.getDeviceName(),
+            notification.getDeviceName(),
+            notification.getTask(),
+            notification.getAssignedTo(),
+            priorityEmoji,
+            notification.getPriority(),
+            "Today", // You can modify this to use actual due date
+            notification.getFormattedMessage() != null ? 
+                notification.getFormattedMessage().substring(0, Math.min(8, notification.getFormattedMessage().length())) : "N/A"
+        );
+    }
+    
+    /**
+     * Create a structured prompt for maintenance reminder notifications.
+     * 
+     * @param notification The maintenance notification request
+     * @param reminderNumber The reminder number
+     * @return Structured prompt string
+     */
+    private String createStructuredReminderPrompt(MaintenanceNotificationRequest notification, int reminderNumber) {
+        // Get priority emoji
+        String priorityEmoji = getPriorityEmoji(notification.getPriority());
+        
+        // Format the structured prompt for reminders
+        return String.format(
+            "Post a Slack message to channel_id=C092C9RHPKN.\\n\\n" +
+            "Important: Do not forget to include both plain text and blocks in the same message.\\n\\n" +
+            "Text: '🔔 Maintenance Reminder #%d: %s requires maintenance. This is reminder #%d. Please complete the maintenance task as soon as possible.'\\n\\n" +
+            "Blocks:\\n" +
+            "1. Header block: '🔔 Maintenance Reminder #%d: %s'\\n\\n" +
+            "2. Section block with fields summarizing the issue:\\n" +
+            "   - Device: %s\\n" +
+            "   - Task: %s\\n" +
+            "   - Assigned To: %s\\n" +
+            "   - Priority: %s %s\\n" +
+            "   - Due Date: Today (Overdue)\\n" +
+            "   - Reminder: #%d of 3\\n\\n" +
+            "3. Section block with plain text: 'Description: This is reminder #%d for the maintenance task. The task is now overdue and requires immediate attention. Please complete the maintenance task as soon as possible.'\\n\\n" +
+            "4. Divider block\\n\\n" +
+            "5. Actions block with three buttons:\\n" +
+            "   - 'Mark as Completed' (primary style)\\n" +
+            "   - 'Reschedule' (default style)\\n" +
+            "   - 'Escalate' (danger style)\\n\\n" +
+            "Ensure that the final Slack message contains BOTH the plain text and the blocks together.",
+            reminderNumber,
+            notification.getDeviceName(),
+            reminderNumber,
+            reminderNumber,
+            notification.getDeviceName(),
+            notification.getDeviceName(),
+            notification.getTask(),
+            notification.getAssignedTo(),
+            priorityEmoji,
+            notification.getPriority(),
+            reminderNumber,
+            reminderNumber
+        );
     }
 
     /**

@@ -463,7 +463,7 @@ public class MaintenanceNotificationScheduler {
                 try {
                     MaintenanceNotificationRequest conversationNotification = conversationNotificationService
                         .createReminderNotificationRequest(taskData, deviceName, assignedUserId, assignedUserName, organizationId, (int)reminderNumber);
-                    conversationNotificationService.sendMaintenanceNotification(conversationNotification);
+                    conversationNotificationService.sendMaintenanceReminderNotification(conversationNotification, (int)reminderNumber);
                     log.info("✅ Conversation reminder notification sent for user: {} for task: {}", assignedUserName, taskName);
                 } catch (Exception e) {
                     log.warn("⚠️ Conversation reminder notification failed for user: {} for task: {} - {}", 
