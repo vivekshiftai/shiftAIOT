@@ -821,13 +821,14 @@ export const KnowledgeSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Panel - AI Ready Devices - 33% width */}
-        <div className="w-full lg:w-1/3 flex flex-col bg-white border-l border-gray-200 min-h-0">
+        {/* Right Panel - AI Ready Devices - 25% width */}
+        <div className="w-full lg:w-1/4 flex flex-col bg-white border-l border-gray-200 min-h-0">
           {/* AI Ready Devices Header - Fixed */}
           <div className="knowledge-fixed-header flex-shrink-0 p-3 sm:p-4 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-4">
               <h2 className="section-header">AI Ready Machines</h2>
-              <div className="flex items-center gap-2">
+              {/* Upload Guide Button - Commented out for now */}
+              {/* <div className="flex items-center gap-2">
                 <label className="cursor-pointer">
                   <input
                     type="file"
@@ -845,7 +846,7 @@ export const KnowledgeSection: React.FC = () => {
                     {uploading ? 'Uploading...' : 'Upload Guide'}
                   </div>
                 </label>
-              </div>
+              </div> */}
             </div>
 
             {/* Search */}
