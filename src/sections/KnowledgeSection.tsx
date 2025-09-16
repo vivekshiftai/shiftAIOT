@@ -506,21 +506,16 @@ export const KnowledgeSection: React.FC = () => {
       {/* Fixed Header */}
       <div className="knowledge-fixed-header flex-shrink-0 bg-white border-b border-gray-200 px-3 sm:px-6 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <div className="p-2 rounded-lg">
-              <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600" />
-            </div>
-            <div>
-              <h1 className="page-header">Knowledge Base</h1>
-              <p className="page-subtitle">
-                AI-powered machine documentation and chat assistant
-                {selectedDevice && (
-                  <span className="ml-2 text-primary-600 font-medium">
-                    • Active: {selectedDevice.name}
-                  </span>
-                )}
-              </p>
-            </div>
+          <div>
+            <h1 className="page-header">Knowledge Base</h1>
+            <p className="page-subtitle">
+              AI-powered machine documentation and chat assistant
+              {selectedDevice && (
+                <span className="ml-2 text-primary-600 font-medium">
+                  • Active: {selectedDevice.name}
+                </span>
+              )}
+            </p>
           </div>
         </div>
       </div>
