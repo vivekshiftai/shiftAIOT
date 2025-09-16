@@ -248,8 +248,8 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold gradient-text">User Management</h1>
-          <p className="text-secondary">Manage users and their permissions in your organization</p>
+          <h1 className="page-header">User Management</h1>
+          <p className="page-subtitle">Manage users and their permissions in your organization</p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -440,7 +440,7 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
         {filteredUsers.length === 0 && (
           <div className="text-center py-12">
             <Users className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-slate-900 mb-2">No users found</h3>
+            <h3 className="subsection-header">No users found</h3>
             <p className="text-slate-600">
               {searchTerm || roleFilter !== 'ALL' || statusFilter !== 'ALL'
                 ? 'Try adjusting your search or filters'
@@ -455,7 +455,7 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-800">User Details</h3>
+              <h3 className="subsection-header">User Details</h3>
               <button
                 onClick={() => setShowUserDetails(false)}
                 className="p-1 hover:bg-slate-100 rounded transition-colors"
@@ -521,7 +521,7 @@ export const UsersSection: React.FC<UserSectionProps> = ({ className = '' }) => 
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6">
             <div className="text-center">
               <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-800 mb-2">Delete User</h3>
+              <h3 className="subsection-header">Delete User</h3>
               <p className="text-slate-600 mb-6">
                 Are you sure you want to delete <strong>{selectedUser.firstName} {selectedUser.lastName}</strong>? 
                 This action cannot be undone.

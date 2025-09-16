@@ -332,6 +332,31 @@ code {
   box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1), 0 0 20px rgba(34, 197, 94, 0.2);
 }
 
+/* Unified Header System */
+.page-header {
+  @apply text-3xl font-bold text-gray-900 mb-2 px-0 py-0;
+}
+
+.page-subtitle {
+  @apply text-gray-600 text-base px-0 py-0;
+}
+
+.section-header {
+  @apply text-xl font-semibold text-gray-900 mb-1 px-0 py-0;
+}
+
+.section-subtitle {
+  @apply text-gray-600 text-sm px-0 py-0;
+}
+
+.subsection-header {
+  @apply text-lg font-medium text-gray-900 mb-2 px-0 py-0;
+}
+
+.subsection-subtitle {
+  @apply text-gray-600 text-sm px-0 py-0;
+}
+
 /* Badge Styles */
 .badge {
   @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;

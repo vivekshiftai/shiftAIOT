@@ -287,8 +287,8 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
               </button>
             )}
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Sales Intelligence</h1>
-              <p className="text-sm text-gray-600 mt-1">AI-powered cross-sell recommendations and analysis</p>
+              <h1 className="page-header">Sales Intelligence</h1>
+              <p className="page-subtitle">AI-powered cross-sell recommendations and analysis</p>
             </div>
           </div>
           <div className="flex items-center gap-3">

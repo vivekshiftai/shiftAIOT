@@ -242,8 +242,8 @@ export const DevicesSection: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-primary">Smart Assets</h1>
-          <p className="text-secondary mt-2 text-sm sm:text-base">
+          <h1 className="page-header">Smart Assets</h1>
+          <p className="page-subtitle">
             {isAdmin() ? 'Monitor and control your smart assets' : 'View your smart assets'}
           </p>
         </div>

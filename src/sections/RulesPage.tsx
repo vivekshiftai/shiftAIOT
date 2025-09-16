@@ -391,8 +391,8 @@ const RulesPage: React.FC = () => {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Automation Rules</h2>
-          <p className="text-gray-600 text-sm sm:text-base">Manage IoT automation rules</p>
+          <h2 className="section-header">Automation Rules</h2>
+          <p className="section-subtitle">Manage IoT automation rules</p>
         </div>
         <Button
           onClick={() => {
@@ -451,7 +451,7 @@ const RulesPage: React.FC = () => {
       ) : filteredRules.length === 0 ? (
         <div className="text-center py-12">
           <Zap className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No rules found</h3>
+          <h3 className="subsection-header">No rules found</h3>
           <p className="text-gray-600 mb-4">
             {searchTerm || filterStatus !== 'all' 
               ? 'Try adjusting your search or filters'
@@ -561,8 +561,8 @@ const RulesPage: React.FC = () => {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Maintenance Tasks</h2>
-          <p className="text-gray-600 text-sm sm:text-base">Manage device maintenance schedules</p>
+          <h2 className="section-header">Maintenance Tasks</h2>
+          <p className="section-subtitle">Manage device maintenance schedules</p>
         </div>
         <div className="flex items-center gap-3">
           <Button
@@ -652,7 +652,7 @@ const RulesPage: React.FC = () => {
       ) : filteredMaintenance.length === 0 ? (
         <div className="text-center py-12">
           <Wrench className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No maintenance tasks found</h3>
+          <h3 className="subsection-header">No maintenance tasks found</h3>
           <p className="text-gray-600 mb-4">
             {searchTerm || filterStatus !== 'all' 
               ? 'Try adjusting your search or filters'
@@ -766,8 +766,8 @@ const RulesPage: React.FC = () => {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Safety Precautions</h2>
-          <p className="text-gray-600 text-sm sm:text-base">Manage device safety guidelines</p>
+          <h2 className="section-header">Safety Precautions</h2>
+          <p className="section-subtitle">Manage device safety guidelines</p>
         </div>
         <Button
           onClick={() => {
@@ -826,7 +826,7 @@ const RulesPage: React.FC = () => {
       ) : filteredSafety.length === 0 ? (
         <div className="text-center py-12">
           <Shield className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No safety precautions found</h3>
+          <h3 className="subsection-header">No safety precautions found</h3>
           <p className="text-gray-600 mb-4">
             {searchTerm || filterStatus !== 'all' 
               ? 'Try adjusting your search or filters'
@@ -942,8 +942,8 @@ const RulesPage: React.FC = () => {
              {/* Header */}
        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
          <div>
-           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">DeviceCare Center</h1>
-           <p className="text-gray-600 text-sm sm:text-base">Manage rules, maintenance, and safety precautions</p>
+           <h1 className="page-header">DeviceCare Center</h1>
+           <p className="page-subtitle">Manage rules, maintenance, and safety precautions</p>
          </div>
        </div>
 
@@ -962,7 +962,6 @@ const RulesPage: React.FC = () => {
             }`}
           >
             <div className="flex items-center gap-2">
-                                <Zap className="w-4 h-4" />
               Rules ({rules.length})
             </div>
           </button>
@@ -978,7 +977,6 @@ const RulesPage: React.FC = () => {
             }`}
           >
             <div className="flex items-center gap-2">
-              <Wrench className="w-4 h-4" />
               Maintenance ({maintenanceTasks.length})
             </div>
           </button>
@@ -994,7 +992,6 @@ const RulesPage: React.FC = () => {
             }`}
           >
             <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4" />
               Safety ({safetyPrecautions.length})
             </div>
           </button>

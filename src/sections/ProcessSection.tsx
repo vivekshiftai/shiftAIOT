@@ -41,8 +41,8 @@ export const ProcessSection: React.FC = () => {
       <div className="knowledge-fixed-header flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
             <div>
-            <h1 className="text-3xl font-bold text-gray-900">Smart Process</h1>
-            <p className="text-sm text-gray-600 mt-1">Select a smart process to get started</p>
+            <h1 className="page-header">Smart Process</h1>
+            <p className="page-subtitle">Select a smart process to get started</p>
           </div>
         </div>
       </div>
@@ -67,7 +67,7 @@ export const ProcessSection: React.FC = () => {
                         <IconComponent className="w-6 h-6 text-primary-600" />
                 </div>
                       <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                        <h3 className="subsection-header group-hover:text-blue-600 transition-colors">
                           {process.name}
                         </h3>
                         <p className="text-sm text-gray-600 mt-1">

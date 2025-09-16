@@ -60,8 +60,8 @@ export const NotificationsSection: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-primary">Notification Center</h1>
-          <p className="text-secondary mt-2">
+          <h1 className="page-header">Notification Center</h1>
+          <p className="page-subtitle">
             Manage and view all your platform notifications
           </p>
         </div>
@@ -139,7 +139,7 @@ export const NotificationsSection: React.FC = () => {
         {filteredNotifications.length === 0 ? (
           <div className="p-12 text-center">
             <Bell className="w-12 h-12 text-secondary-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-primary mb-2">No notifications found</h3>
+            <h3 className="subsection-header">No notifications found</h3>
             <p className="text-secondary">
               {notifications.length === 0 
                 ? "You don't have any notifications yet."

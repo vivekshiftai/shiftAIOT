@@ -511,8 +511,8 @@ export const KnowledgeSection: React.FC = () => {
               <Brain className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Knowledge Base</h1>
-              <p className="text-xs sm:text-sm text-gray-600">
+              <h1 className="page-header">Knowledge Base</h1>
+              <p className="page-subtitle">
                 AI-powered machine documentation and chat assistant
                 {selectedDevice && (
                   <span className="ml-2 text-primary-600 font-medium">
@@ -831,7 +831,7 @@ export const KnowledgeSection: React.FC = () => {
           {/* AI Ready Devices Header - Fixed */}
           <div className="knowledge-fixed-header flex-shrink-0 p-3 sm:p-4 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-4">
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900">AI Ready Machines</h2>
+              <h2 className="section-header">AI Ready Machines</h2>
               <div className="flex items-center gap-2">
                 <label className="cursor-pointer">
                   <input
@@ -955,8 +955,8 @@ export const KnowledgeSection: React.FC = () => {
                 <FileText className="w-5 h-5 text-primary-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Upload Device Guide</h3>
-                <p className="text-sm text-gray-600">Associate with a machine for better organization</p>
+                <h3 className="subsection-header">Upload Device Guide</h3>
+                <p className="subsection-subtitle">Associate with a machine for better organization</p>
               </div>
             </div>
             

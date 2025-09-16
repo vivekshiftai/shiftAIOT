@@ -132,8 +132,8 @@ export const RulesSection: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Automation Rules</h1>
-          <p className="text-slate-600 text-sm sm:text-base">Manage IoT automation rules and triggers</p>
+          <h1 className="page-header">Automation Rules</h1>
+          <p className="page-subtitle">Manage IoT automation rules and triggers</p>
         </div>
         <Button
           variant="primary"
@@ -239,7 +239,7 @@ export const RulesSection: React.FC = () => {
         {filteredRules.length === 0 ? (
           <div className="text-center py-12">
             <Settings className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No rules found</h3>
+            <h3 className="subsection-header">No rules found</h3>
             <p className="text-gray-500 mb-4">
               {rules.length === 0 
                 ? "You don't have any automation rules yet."

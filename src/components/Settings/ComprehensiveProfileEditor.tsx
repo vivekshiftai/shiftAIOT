@@ -293,8 +293,7 @@ export const ComprehensiveProfileEditor: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Basic Information */}
         <div className="bg-white rounded-lg border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-600" />
+          <h3 className="subsection-header">
             Basic Information
           </h3>
           
@@ -359,8 +358,7 @@ export const ComprehensiveProfileEditor: React.FC = () => {
 
         {/* Account Information */}
         <div className="bg-white rounded-lg border border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-            <Shield className="w-5 h-5 text-green-600" />
+          <h3 className="subsection-header">
             Account Information
           </h3>
           

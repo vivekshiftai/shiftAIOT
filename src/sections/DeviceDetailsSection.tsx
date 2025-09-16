@@ -662,7 +662,7 @@ export const DeviceDetailsSection: React.FC = () => {
           <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                             <Settings className="w-8 h-8 text-slate-400" />
           </div>
-          <h3 className="text-lg font-medium text-slate-800 mb-2">Device not found</h3>
+          <h3 className="subsection-header">Device not found</h3>
           <p className="text-slate-600 mb-6">
             The device you're looking for doesn't exist or has been removed.
           </p>
@@ -1062,7 +1062,7 @@ export const DeviceDetailsSection: React.FC = () => {
           <div className="space-y-8">
             {/* Header with Edit Button */}
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-slate-800">Device Profile</h2>
+              <h2 className="section-header">Device Profile</h2>
               {!isEditing ? (
                 <button
                   onClick={handleEditClick}
@@ -1097,8 +1097,7 @@ export const DeviceDetailsSection: React.FC = () => {
 
             {/* Device Information */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                <Settings className="w-5 h-5" />
+              <h3 className="subsection-header">
                 Device Information
               </h3>
               <div className="space-y-3">
@@ -1200,8 +1199,7 @@ export const DeviceDetailsSection: React.FC = () => {
             {/* Tags */}
             {device.tags && device.tags.length > 0 && (
               <div className="border-t border-slate-200 pt-6">
-                <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                  <Settings className="w-5 h-5" />
+                <h3 className="subsection-header">
                   Tags
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -1597,8 +1595,8 @@ export const DeviceDetailsSection: React.FC = () => {
               })}
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">{device.name}</h1>
-              <p className="text-slate-600 text-sm sm:text-base">{deviceTypeInfo.label} • {device.location}</p>
+              <h1 className="page-header">{device.name}</h1>
+              <p className="page-subtitle">{deviceTypeInfo.label} • {device.location}</p>
             </div>
           </div>
         </div>
