@@ -35,7 +35,7 @@ public class ConversationNotificationService {
 
     private final RestTemplate restTemplate;
 
-    @Value("${conversation.api.base-url:http://20.57.36.66:8100/api/chat}")
+    @Value("${conversation.api.base-url:http://20.57.36.66:5000/chat}")
     private String conversationApiBaseUrl;
 
     @Value("${conversation.api.max-retries:3}")
@@ -114,6 +114,72 @@ public class ConversationNotificationService {
     }
     
     /**
+     * Send a custom message to the conversation channel.
+     * 
+     * @param message The custom message to send
+     * @return true if sent successfully, false otherwise
+     */
+    public boolean sendCustomMessageToConversationChannel(String message) {
+        log.info("Sending custom message to conversation channel");
+        
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                ResponseEntity<String> response = sendCustomMessageWithRetry(message, attempt);
+                
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    log.info("Custom message sent successfully on attempt {} to conversation channel", attempt);
+                    return true;
+                } else {
+                    log.warn("Custom message failed on attempt {} with status: {}", attempt, response.getStatusCode());
+                }
+                
+            } catch (Exception e) {
+                log.error("Error sending custom message on attempt {}: {}", attempt, e.getMessage(), e);
+            }
+
+            // Wait before retry (except on last attempt)
+            if (attempt < maxRetries) {
+                try {
+                    Thread.sleep(retryDelay);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.warn("Interrupted while waiting for retry");
+                    break;
+                }
+            }
+        }
+
+        log.error("Failed to send custom message after {} attempts", maxRetries);
+        return false;
+    }
+    
+    /**
+     * Send custom message with retry logic using conversation API.
+     * 
+     * @param message The custom message to send
+     * @param attempt Current attempt number
+     * @return ResponseEntity from the API call
+     */
+    private ResponseEntity<String> sendCustomMessageWithRetry(String message, int attempt) {
+        String url = conversationApiBaseUrl;
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        
+        // Send the custom message directly as the message content
+        String requestPayload = String.format(
+            "{\"message\": \"%s\"}",
+            message.replace("\"", "\\\"").replace("\n", "\\n")
+        );
+        
+        HttpEntity<String> request = new HttpEntity<>(requestPayload, headers);
+        
+        log.debug("Sending custom message attempt {} to URL: {} with message: {}", attempt, url, message);
+        
+        return restTemplate.postForEntity(url, request, String.class);
+    }
+    
+    /**
      * Send a maintenance reminder notification using structured prompt.
      * 
      * @param notification The maintenance notification request
@@ -189,10 +255,10 @@ public class ConversationNotificationService {
         // Create structured prompt for reminder
         String structuredPrompt = createStructuredReminderPrompt(notification, reminderNumber);
         
-        // Create request payload for conversation API
+        // Send the structured prompt directly as the message content
         String requestPayload = String.format(
             "{\"message\": \"%s\"}",
-            structuredPrompt.replace("\"", "\\\"")
+            structuredPrompt.replace("\"", "\\\"").replace("\n", "\\n")
         );
         
         HttpEntity<String> request = new HttpEntity<>(requestPayload, headers);
@@ -219,10 +285,10 @@ public class ConversationNotificationService {
         // Create structured prompt for conversation API
         String structuredPrompt = createStructuredMaintenancePrompt(notification);
         
-        // Create request payload for conversation API
+        // Send the structured prompt directly as the message content
         String requestPayload = String.format(
             "{\"message\": \"%s\"}",
-            structuredPrompt.replace("\"", "\\\"")
+            structuredPrompt.replace("\"", "\\\"").replace("\n", "\\n")
         );
         
         HttpEntity<String> request = new HttpEntity<>(requestPayload, headers);
@@ -234,7 +300,7 @@ public class ConversationNotificationService {
 
     /**
      * Create a structured prompt for maintenance notifications using the conversation API.
-     * This follows the same format as the security alert template you provided.
+     * This follows the exact same format as the security alert template you provided.
      * 
      * @param notification The maintenance notification request
      * @return Structured prompt string
@@ -243,37 +309,41 @@ public class ConversationNotificationService {
         // Get priority emoji
         String priorityEmoji = getPriorityEmoji(notification.getPriority());
         
-        // Format the structured prompt similar to your security alert example
+        // Generate task ID from device name and task
+        String taskId = generateTaskId(notification.getDeviceName(), notification.getTask());
+        
+        // Format the structured prompt using the security alert template format
         return String.format(
-            "Post a Slack message to channel_id=C092C9RHPKN.\\n\\n" +
-            "Important: Do not forget to include both plain text and blocks in the same message.\\n\\n" +
-            "Text: '🔔 Maintenance Alert: %s requires maintenance. Action required. Please review the details below and take appropriate action.'\\n\\n" +
-            "Blocks:\\n" +
-            "1. Header block: '🔔 Maintenance Alert: %s'\\n\\n" +
-            "2. Section block with fields summarizing the issue:\\n" +
-            "   - Device: %s\\n" +
-            "   - Task: %s\\n" +
-            "   - Assigned To: %s\\n" +
-            "   - Priority: %s %s\\n" +
-            "   - Due Date: %s\\n" +
-            "   - Task ID: %s\\n\\n" +
-            "3. Section block with plain text: 'Description: Maintenance task scheduled for today. Please complete the maintenance task as soon as possible to ensure optimal device performance.'\\n\\n" +
-            "4. Divider block\\n\\n" +
-            "5. Actions block with three buttons:\\n" +
-            "   - 'Mark as Completed' (primary style)\\n" +
-            "   - 'Reschedule' (default style)\\n" +
-            "   - 'View Details' (default style)\\n\\n" +
+            "Post a Slack message to channel_id=C092C9RHPKN.\n\n" +
+            "Important: Do not forget to include both plain text and blocks in the same message.\n\n" +
+            "Text: '🔧 Maintenance Alert: %s requires scheduled maintenance. A new maintenance task has been assigned for completion.'\n\n" +
+            "Blocks:\n" +
+            "1. Header block: '🔧 Maintenance Task Assigned'\n\n" +
+            "2. Section block with fields summarizing the issue:\n" +
+            "   - Task ID: %s\n" +
+            "   - Priority: %s %s\n" +
+            "   - Category: Device Maintenance\n" +
+            "   - Status: Pending Assignment\n" +
+            "   - Target Device: %s\n" +
+            "   - Assigned To: %s\n" +
+            "   - Due Date: Today\n" +
+            "   - Timestamp: %s\n\n" +
+            "3. Section block with plain text: 'Description: Scheduled maintenance task for %s. Task: %s. Please complete the maintenance task as soon as possible to ensure optimal device performance and prevent potential issues.'\n\n" +
+            "4. Divider block\n\n" +
+            "5. Actions block with three buttons:\n" +
+            "   - 'Mark as Completed' (primary style)\n" +
+            "   - 'Reschedule Task' (default style)\n" +
+            "   - 'View Details' (default style)\n\n" +
             "Ensure that the final Slack message contains BOTH the plain text and the blocks together.",
             notification.getDeviceName(),
-            notification.getDeviceName(),
-            notification.getDeviceName(),
-            notification.getTask(),
-            notification.getAssignedTo(),
+            taskId,
             priorityEmoji,
             notification.getPriority(),
-            "Today", // You can modify this to use actual due date
-            notification.getFormattedMessage() != null ? 
-                notification.getFormattedMessage().substring(0, Math.min(8, notification.getFormattedMessage().length())) : "N/A"
+            notification.getDeviceName(),
+            notification.getAssignedTo(),
+            java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a z")),
+            notification.getDeviceName(),
+            notification.getTask()
         );
     }
     
@@ -288,39 +358,46 @@ public class ConversationNotificationService {
         // Get priority emoji
         String priorityEmoji = getPriorityEmoji(notification.getPriority());
         
-        // Format the structured prompt for reminders
+        // Generate task ID from device name and task
+        String taskId = generateTaskId(notification.getDeviceName(), notification.getTask());
+        
+        // Format the structured prompt using the security alert template format for reminders
         return String.format(
-            "Post a Slack message to channel_id=C092C9RHPKN.\\n\\n" +
-            "Important: Do not forget to include both plain text and blocks in the same message.\\n\\n" +
-            "Text: '🔔 Maintenance Reminder #%d: %s requires maintenance. This is reminder #%d. Please complete the maintenance task as soon as possible.'\\n\\n" +
-            "Blocks:\\n" +
-            "1. Header block: '🔔 Maintenance Reminder #%d: %s'\\n\\n" +
-            "2. Section block with fields summarizing the issue:\\n" +
-            "   - Device: %s\\n" +
-            "   - Task: %s\\n" +
-            "   - Assigned To: %s\\n" +
-            "   - Priority: %s %s\\n" +
-            "   - Due Date: Today (Overdue)\\n" +
-            "   - Reminder: #%d of 3\\n\\n" +
-            "3. Section block with plain text: 'Description: This is reminder #%d for the maintenance task. The task is now overdue and requires immediate attention. Please complete the maintenance task as soon as possible.'\\n\\n" +
-            "4. Divider block\\n\\n" +
-            "5. Actions block with three buttons:\\n" +
-            "   - 'Mark as Completed' (primary style)\\n" +
-            "   - 'Reschedule' (default style)\\n" +
-            "   - 'Escalate' (danger style)\\n\\n" +
+            "Post a Slack message to channel_id=C092C9RHPKN.\n\n" +
+            "Important: Do not forget to include both plain text and blocks in the same message.\n\n" +
+            "Text: '⚠️ Maintenance Reminder #%d: %s requires urgent maintenance. This is reminder #%d of 3. Please complete the maintenance task immediately.'\n\n" +
+            "Blocks:\n" +
+            "1. Header block: '⚠️ Maintenance Reminder #%d - Overdue Task'\n\n" +
+            "2. Section block with fields summarizing the issue:\n" +
+            "   - Task ID: %s\n" +
+            "   - Priority: %s %s\n" +
+            "   - Category: Device Maintenance\n" +
+            "   - Status: Overdue - Reminder #%d of 3\n" +
+            "   - Target Device: %s\n" +
+            "   - Assigned To: %s\n" +
+            "   - Due Date: Today (Overdue)\n" +
+            "   - Timestamp: %s\n\n" +
+            "3. Section block with plain text: 'Description: This is reminder #%d for the maintenance task on %s. Task: %s. The task is now overdue and requires immediate attention to prevent potential device failures or performance issues.'\n\n" +
+            "4. Divider block\n\n" +
+            "5. Actions block with three buttons:\n" +
+            "   - 'Mark as Completed' (primary style)\n" +
+            "   - 'Reschedule Task' (default style)\n" +
+            "   - 'Escalate to Manager' (danger style)\n\n" +
             "Ensure that the final Slack message contains BOTH the plain text and the blocks together.",
             reminderNumber,
             notification.getDeviceName(),
             reminderNumber,
             reminderNumber,
-            notification.getDeviceName(),
-            notification.getDeviceName(),
-            notification.getTask(),
-            notification.getAssignedTo(),
+            taskId,
             priorityEmoji,
             notification.getPriority(),
             reminderNumber,
-            reminderNumber
+            notification.getDeviceName(),
+            notification.getAssignedTo(),
+            java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a z")),
+            reminderNumber,
+            notification.getDeviceName(),
+            notification.getTask()
         );
     }
 
@@ -352,10 +429,8 @@ public class ConversationNotificationService {
         // Default due time to 9:00 AM if not specified
         LocalTime dueTime = LocalTime.of(9, 0);
         
-        // Create fixed template message for Slack
-        String formattedMessage = createFixedSlackMessage(deviceName, taskName, priority, assignedUserName, taskId, nextMaintenance);
-        
-        log.info("📝 Created fixed template message for Slack: {}", formattedMessage);
+        log.info("📝 Creating maintenance notification request for device: {}, task: {}, user: {}", 
+                deviceName, taskName, assignedUserName);
         
         return MaintenanceNotificationRequest.builder()
                 .userId(assignedUserId)
@@ -367,131 +442,10 @@ public class ConversationNotificationService {
                 .description(description)
                 .assignedTo(assignedUserName)
                 .organizationId(organizationId)
-                .formattedMessage(formattedMessage)
+                .formattedMessage(null) // No longer needed - we use structured prompts
                 .build();
     }
     
-    /**
-     * Create a fixed template message for Slack notifications with blocks.
-     * This replaces the LLM-generated messages with a consistent format.
-     * 
-     * @param deviceName The device name
-     * @param taskName The maintenance task name
-     * @param priority The priority level
-     * @param assignedUserName The assigned user name
-     * @return Formatted Slack message with blocks
-     */
-    private String createFixedSlackMessage(String deviceName, String taskName, String priority, String assignedUserName, String taskId, String nextMaintenance) {
-        // Clean up device name for display
-        String displayDeviceName = deviceName != null ? deviceName : "Unknown Device";
-        String displayTaskName = taskName != null ? taskName : "Maintenance Task";
-        String displayPriority = priority != null ? priority.toUpperCase() : "MEDIUM";
-        String displayUserName = assignedUserName != null ? assignedUserName : "Assigned User";
-        String displayTaskId = taskId != null ? taskId.substring(0, Math.min(8, taskId.length())) : "N/A";
-        String displayDueDate = nextMaintenance != null ? nextMaintenance : "Today";
-        
-        // Get priority emoji
-        String priorityEmoji = getPriorityEmoji(displayPriority);
-        
-        // Create plain text message
-        String plainText = String.format(
-            "🔔 Maintenance Alert: %s requires maintenance. Action required. Please review the details below and take appropriate action.",
-            displayDeviceName
-        );
-        
-        // Create blocks JSON structure
-        String blocks = String.format(
-            "[" +
-            "{" +
-            "  \"type\": \"header\"," +
-            "  \"text\": {" +
-            "    \"type\": \"plain_text\"," +
-            "    \"text\": \"🔔 Maintenance Alert: %s\"" +
-            "  }" +
-            "}," +
-            "{" +
-            "  \"type\": \"section\"," +
-            "  \"fields\": [" +
-            "    {" +
-            "      \"type\": \"mrkdwn\"," +
-            "      \"text\": \"*Device:*\\n%s\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"mrkdwn\"," +
-            "      \"text\": \"*Task:*\\n%s\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"mrkdwn\"," +
-            "      \"text\": \"*Assigned To:*\\n%s\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"mrkdwn\"," +
-            "      \"text\": \"*Priority:*\\n%s %s\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"mrkdwn\"," +
-            "      \"text\": \"*Due Date:*\\n%s\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"mrkdwn\"," +
-            "      \"text\": \"*Task ID:*\\n%s\"" +
-            "    }" +
-            "  ]" +
-            "}," +
-            "{" +
-            "  \"type\": \"section\"," +
-            "  \"text\": {" +
-            "    \"type\": \"mrkdwn\"," +
-            "    \"text\": \"*Description:* Maintenance task scheduled for today. Please complete the maintenance task as soon as possible to ensure optimal device performance.\"" +
-            "  }" +
-            "}," +
-            "{" +
-            "  \"type\": \"divider\"" +
-            "}," +
-            "{" +
-            "  \"type\": \"actions\"," +
-            "  \"elements\": [" +
-            "    {" +
-            "      \"type\": \"button\"," +
-            "      \"text\": {" +
-            "        \"type\": \"plain_text\"," +
-            "        \"text\": \"Mark as Completed\"" +
-            "      }," +
-            "      \"style\": \"primary\"," +
-            "      \"action_id\": \"mark_completed\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"button\"," +
-            "      \"text\": {" +
-            "        \"type\": \"plain_text\"," +
-            "        \"text\": \"Reschedule\"" +
-            "      }," +
-            "      \"action_id\": \"reschedule\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"button\"," +
-            "      \"text\": {" +
-            "        \"type\": \"plain_text\"," +
-            "        \"text\": \"View Details\"" +
-            "      }," +
-            "      \"action_id\": \"view_details\"" +
-            "    }" +
-            "  ]" +
-            "}" +
-            "]",
-            displayDeviceName,
-            displayDeviceName,
-            displayTaskName,
-            displayUserName,
-            priorityEmoji,
-            displayPriority,
-            displayDueDate,
-            displayTaskId
-        );
-        
-        // Return both plain text and blocks
-        return String.format("TEXT: %s\n\nBLOCKS: %s", plainText, blocks);
-    }
     
     /**
      * Create a maintenance notification request for reminders with a different template.
@@ -521,10 +475,8 @@ public class ConversationNotificationService {
         // Default due time to 9:00 AM if not specified
         LocalTime dueTime = LocalTime.of(9, 0);
         
-        // Create fixed template message for Slack reminders
-        String formattedMessage = createFixedReminderSlackMessage(deviceName, taskName, priority, assignedUserName, reminderNumber);
-        
-        log.info("📝 Created fixed reminder template message for Slack: {}", formattedMessage);
+        log.info("📝 Creating maintenance reminder notification request #{} for device: {}, task: {}, user: {}", 
+                reminderNumber, deviceName, taskName, assignedUserName);
         
         return MaintenanceNotificationRequest.builder()
                 .userId(assignedUserId)
@@ -536,129 +488,29 @@ public class ConversationNotificationService {
                 .description(description)
                 .assignedTo(assignedUserName)
                 .organizationId(organizationId)
-                .formattedMessage(formattedMessage)
+                .formattedMessage(null) // No longer needed - we use structured prompts
                 .build();
     }
     
+    
     /**
-     * Create a fixed template message for Slack reminder notifications with blocks.
+     * Generate a task ID from device name and task.
      * 
      * @param deviceName The device name
-     * @param taskName The maintenance task name
-     * @param priority The priority level
-     * @param assignedUserName The assigned user name
-     * @param reminderNumber The reminder number
-     * @return Formatted Slack reminder message with blocks
+     * @param task The task name
+     * @return Generated task ID
      */
-    private String createFixedReminderSlackMessage(String deviceName, String taskName, String priority, String assignedUserName, int reminderNumber) {
-        // Clean up device name for display
-        String displayDeviceName = deviceName != null ? deviceName : "Unknown Device";
-        String displayTaskName = taskName != null ? taskName : "Maintenance Task";
-        String displayPriority = priority != null ? priority.toUpperCase() : "MEDIUM";
-        String displayUserName = assignedUserName != null ? assignedUserName : "Assigned User";
+    private String generateTaskId(String deviceName, String task) {
+        if (deviceName == null || task == null) {
+            return "MT-" + System.currentTimeMillis();
+        }
         
-        // Get priority emoji
-        String priorityEmoji = getPriorityEmoji(displayPriority);
+        // Create a short ID from device name and task
+        String deviceShort = deviceName.replaceAll("[^A-Za-z0-9]", "").substring(0, Math.min(4, deviceName.length()));
+        String taskShort = task.replaceAll("[^A-Za-z0-9]", "").substring(0, Math.min(4, task.length()));
         
-        // Create plain text message
-        String plainText = String.format(
-            "🔔 Maintenance Reminder #%d: %s requires maintenance. This is reminder #%d. Please complete the maintenance task as soon as possible.",
-            reminderNumber, displayDeviceName, reminderNumber
-        );
-        
-        // Create blocks JSON structure for reminder
-        String blocks = String.format(
-            "[" +
-            "{" +
-            "  \"type\": \"header\"," +
-            "  \"text\": {" +
-            "    \"type\": \"plain_text\"," +
-            "    \"text\": \"🔔 Maintenance Reminder #%d: %s\"" +
-            "  }" +
-            "}," +
-            "{" +
-            "  \"type\": \"section\"," +
-            "  \"fields\": [" +
-            "    {" +
-            "      \"type\": \"mrkdwn\"," +
-            "      \"text\": \"*Device:*\\n%s\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"mrkdwn\"," +
-            "      \"text\": \"*Task:*\\n%s\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"mrkdwn\"," +
-            "      \"text\": \"*Assigned To:*\\n%s\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"mrkdwn\"," +
-            "      \"text\": \"*Priority:*\\n%s %s\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"mrkdwn\"," +
-            "      \"text\": \"*Due Date:*\\nToday (Overdue)\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"mrkdwn\"," +
-            "      \"text\": \"*Reminder:*\\n#%d of 3\"" +
-            "    }" +
-            "  ]" +
-            "}," +
-            "{" +
-            "  \"type\": \"section\"," +
-            "  \"text\": {" +
-            "    \"type\": \"mrkdwn\"," +
-            "    \"text\": \"*Description:* This is reminder #%d for the maintenance task. The task is now overdue and requires immediate attention. Please complete the maintenance task as soon as possible.\"" +
-            "  }" +
-            "}," +
-            "{" +
-            "  \"type\": \"divider\"" +
-            "}," +
-            "{" +
-            "  \"type\": \"actions\"," +
-            "  \"elements\": [" +
-            "    {" +
-            "      \"type\": \"button\"," +
-            "      \"text\": {" +
-            "        \"type\": \"plain_text\"," +
-            "        \"text\": \"Mark as Completed\"" +
-            "      }," +
-            "      \"style\": \"primary\"," +
-            "      \"action_id\": \"mark_completed\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"button\"," +
-            "      \"text\": {" +
-            "        \"type\": \"plain_text\"," +
-            "        \"text\": \"Reschedule\"" +
-            "      }," +
-            "      \"action_id\": \"reschedule\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"button\"," +
-            "      \"text\": {" +
-            "        \"type\": \"plain_text\"," +
-            "        \"text\": \"Escalate\"" +
-            "      }," +
-            "      \"style\": \"danger\"," +
-            "      \"action_id\": \"escalate\"" +
-            "    }" +
-            "  ]" +
-            "}" +
-            "]",
-            reminderNumber, displayDeviceName,
-            displayDeviceName,
-            displayTaskName,
-            displayUserName,
-            priorityEmoji,
-            displayPriority,
-            reminderNumber,
-            reminderNumber
-        );
-        
-        // Return both plain text and blocks
-        return String.format("TEXT: %s\n\nBLOCKS: %s", plainText, blocks);
+        return "MT-" + deviceShort.toUpperCase() + "-" + taskShort.toUpperCase() + "-" + 
+               java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("MMdd"));
     }
     
     /**
@@ -683,128 +535,4 @@ public class ConversationNotificationService {
         }
     }
     
-    /**
-     * Create a JSON-formatted Slack message payload for direct API integration.
-     * This method creates a proper JSON structure that can be sent directly to Slack API.
-     * 
-     * @param deviceName The device name
-     * @param taskName The maintenance task name
-     * @param priority The priority level
-     * @param assignedUserName The assigned user name
-     * @param taskId The task ID
-     * @param nextMaintenance The next maintenance date
-     * @return JSON-formatted Slack message payload
-     */
-    public String createSlackMessagePayload(String deviceName, String taskName, String priority, String assignedUserName, String taskId, String nextMaintenance) {
-        // Clean up device name for display
-        String displayDeviceName = deviceName != null ? deviceName : "Unknown Device";
-        String displayTaskName = taskName != null ? taskName : "Maintenance Task";
-        String displayPriority = priority != null ? priority.toUpperCase() : "MEDIUM";
-        String displayUserName = assignedUserName != null ? assignedUserName : "Assigned User";
-        String displayTaskId = taskId != null ? taskId.substring(0, Math.min(8, taskId.length())) : "N/A";
-        String displayDueDate = nextMaintenance != null ? nextMaintenance : "Today";
-        
-        // Get priority emoji
-        String priorityEmoji = getPriorityEmoji(displayPriority);
-        
-        // Create plain text message
-        String plainText = String.format(
-            "🔔 Maintenance Alert: %s requires maintenance. Action required. Please review the details below and take appropriate action.",
-            displayDeviceName
-        );
-        
-        // Create JSON payload
-        return String.format(
-            "{" +
-            "  \"text\": \"%s\"," +
-            "  \"blocks\": [" +
-            "    {" +
-            "      \"type\": \"header\"," +
-            "      \"text\": {" +
-            "        \"type\": \"plain_text\"," +
-            "        \"text\": \"🔔 Maintenance Alert: %s\"" +
-            "      }" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"section\"," +
-            "      \"fields\": [" +
-            "        {" +
-            "          \"type\": \"mrkdwn\"," +
-            "          \"text\": \"*Device:*\\n%s\"" +
-            "        }," +
-            "        {" +
-            "          \"type\": \"mrkdwn\"," +
-            "          \"text\": \"*Task:*\\n%s\"" +
-            "        }," +
-            "        {" +
-            "          \"type\": \"mrkdwn\"," +
-            "          \"text\": \"*Assigned To:*\\n%s\"" +
-            "        }," +
-            "        {" +
-            "          \"type\": \"mrkdwn\"," +
-            "          \"text\": \"*Priority:*\\n%s %s\"" +
-            "        }," +
-            "        {" +
-            "          \"type\": \"mrkdwn\"," +
-            "          \"text\": \"*Due Date:*\\n%s\"" +
-            "        }," +
-            "        {" +
-            "          \"type\": \"mrkdwn\"," +
-            "          \"text\": \"*Task ID:*\\n%s\"" +
-            "        }" +
-            "      ]" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"section\"," +
-            "      \"text\": {" +
-            "        \"type\": \"mrkdwn\"," +
-            "        \"text\": \"*Description:* Maintenance task scheduled for today. Please complete the maintenance task as soon as possible to ensure optimal device performance.\"" +
-            "      }" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"divider\"" +
-            "    }," +
-            "    {" +
-            "      \"type\": \"actions\"," +
-            "      \"elements\": [" +
-            "        {" +
-            "          \"type\": \"button\"," +
-            "          \"text\": {" +
-            "            \"type\": \"plain_text\"," +
-            "            \"text\": \"Mark as Completed\"" +
-            "          }," +
-            "          \"style\": \"primary\"," +
-            "          \"action_id\": \"mark_completed\"" +
-            "        }," +
-            "        {" +
-            "          \"type\": \"button\"," +
-            "          \"text\": {" +
-            "            \"type\": \"plain_text\"," +
-            "            \"text\": \"Reschedule\"" +
-            "          }," +
-            "          \"action_id\": \"reschedule\"" +
-            "        }," +
-            "        {" +
-            "          \"type\": \"button\"," +
-            "          \"text\": {" +
-            "            \"type\": \"plain_text\"," +
-            "            \"text\": \"View Details\"" +
-            "          }," +
-            "          \"action_id\": \"view_details\"" +
-            "        }" +
-            "      ]" +
-            "    }" +
-            "  ]" +
-            "}",
-            plainText.replace("\"", "\\\""), // Escape quotes in plain text
-            displayDeviceName,
-            displayDeviceName,
-            displayTaskName,
-            displayUserName,
-            priorityEmoji,
-            displayPriority,
-            displayDueDate,
-            displayTaskId
-        );
-    }
 }

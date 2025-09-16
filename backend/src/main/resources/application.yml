@@ -170,17 +170,12 @@ maintenance:
     enabled: true
     cron: "0 0 2 * * ?"  # Every day at 2:00 AM (before notification scheduler)
 
-# Conversation API Configuration
+# Conversation API Configuration (Slack is the conversation channel)
 conversation:
   api:
-    base-url: "http://20.57.36.66:8100/api/chat"
+    base-url: "http://20.57.36.66:5000/chat"
     max-retries: 3
     retry-delay: 1000  # 1 second
-
-# Slack MCP Configuration
-slack:
-  mcp:
-    endpoint: "http://20.57.36.66:5000/chat"
 
 # Azure OpenAI Configuration
 azure:

@@ -37,12 +37,12 @@ public class ExternalQueryProcessingService {
     private final DeviceNameExtractionService deviceNameExtractionService;
     private final UnifiedPDFService unifiedPDFService;
     private final PDFProcessingService pdfProcessingService;
-    private final SlackNotificationService slackNotificationService;
+    private final ConversationNotificationService conversationNotificationService;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    @Value("${slack.mcp.endpoint:http://20.57.36.66:5000/chat}")
-    private String mcpEndpoint;
+    @Value("${conversation.api.base-url:http://20.57.36.66:5000/chat}")
+    private String conversationApiEndpoint;
 
     @Value("${external.query.organization-id:shiftAIOT-org-2024}")
     private String defaultOrganizationId;
@@ -286,7 +286,7 @@ public class ExternalQueryProcessingService {
             HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(payload, headers);
             
             ResponseEntity<String> response = restTemplate.exchange(
-                mcpEndpoint,
+                conversationApiEndpoint,
                 HttpMethod.POST,
                 requestEntity,
                 String.class
@@ -455,7 +455,7 @@ public class ExternalQueryProcessingService {
             HttpEntity<Map<String, String>> requestEntity = new HttpEntity<>(payload, headers);
             
             ResponseEntity<String> mcpResponse = restTemplate.exchange(
-                mcpEndpoint,
+                conversationApiEndpoint,
                 HttpMethod.POST,
                 requestEntity,
                 String.class
