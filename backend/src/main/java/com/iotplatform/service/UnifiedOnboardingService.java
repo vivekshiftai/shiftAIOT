@@ -67,6 +67,7 @@ public class UnifiedOnboardingService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final UnifiedPDFService unifiedPDFService;
+    private final ConversationNotificationService conversationNotificationService;
     private final ObjectMapper objectMapper;
 
     @Autowired
@@ -152,6 +153,45 @@ public class UnifiedOnboardingService {
             log.info("✅ Device assigned to user: {}", deviceAssignee);
             sendProgressUpdate(progressCallback, "assignment", 40, "Device assigned successfully", 
                               "User will receive notifications and be responsible for maintenance", null, 2, 6, "User Assignment", deviceResponse.getId());
+            
+            // Send device assignment notification to conversation channel (Slack)
+            try {
+                log.info("📱 Sending device assignment notification to conversation channel for device: {} assigned to: {}", 
+                        deviceRequest.getName(), deviceAssignee);
+                
+                // Get assigned user name for better notification
+                String assignedUserName = deviceAssignee;
+                Optional<User> assignedUser = userRepository.findById(deviceAssignee);
+                if (assignedUser.isPresent()) {
+                    assignedUserName = assignedUser.get().getFirstName() + " " + assignedUser.get().getLastName();
+                }
+                
+                // Get assigned by user name
+                String assignedByName = currentUserId;
+                Optional<User> assignedByUser = userRepository.findById(currentUserId);
+                if (assignedByUser.isPresent()) {
+                    assignedByName = assignedByUser.get().getFirstName() + " " + assignedByUser.get().getLastName();
+                }
+                
+                // Send to conversation channel
+                boolean notificationSent = conversationNotificationService.sendDeviceAssignmentNotification(
+                    deviceRequest.getName(),    // deviceName
+                    assignedUserName,          // assignedTo
+                    assignedByName,            // assignedBy
+                    organizationId             // organizationId
+                );
+                
+                if (notificationSent) {
+                    log.info("✅ Device assignment notification sent successfully to conversation channel");
+                } else {
+                    log.warn("⚠️ Failed to send device assignment notification to conversation channel");
+                }
+                
+            } catch (Exception e) {
+                log.error("❌ Error sending device assignment notification to conversation channel: {}", e.getMessage(), e);
+                // Don't fail the onboarding process if notification fails
+            }
+            
         } else {
             log.warn("⚠️ No user assigned to device");
             sendProgressUpdate(progressCallback, "assignment", 40, "Device created without assignment", 

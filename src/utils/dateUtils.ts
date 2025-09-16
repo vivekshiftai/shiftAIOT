@@ -20,12 +20,13 @@ export const formatTimestamp = (timestamp: string | null | undefined): { relativ
     // Handle different timestamp formats
     let date: Date;
     
-    // If it's already a valid ISO string, use it directly
+    // If it's already a valid ISO string with timezone, use it directly
     if (timestamp.includes('T') && timestamp.includes('Z')) {
       date = new Date(timestamp);
-    } else if (timestamp.includes('T')) {
+    } else if (timestamp.includes('T') && !timestamp.includes('Z')) {
       // Handle LocalDateTime format from backend (e.g., "2024-01-15T10:30:00")
-      date = new Date(timestamp + 'Z'); // Add Z to treat as UTC
+      // Treat as local time instead of UTC
+      date = new Date(timestamp);
     } else {
       // Try parsing as is
       date = new Date(timestamp);
@@ -40,7 +41,17 @@ export const formatTimestamp = (timestamp: string | null | undefined): { relativ
       };
     }
 
+    // Additional check for reasonable date range (not too far in past or future)
     const now = new Date();
+    const yearDiff = Math.abs(now.getFullYear() - date.getFullYear());
+    if (yearDiff > 10) {
+      logWarn('DateUtils', 'Timestamp seems unreasonable (too far in past/future)', { timestamp, yearDiff });
+      return {
+        relative: 'Invalid Date',
+        full: 'Invalid Date'
+      };
+    }
+
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
     
     let relative: string;
@@ -80,6 +91,50 @@ export const formatTimestamp = (timestamp: string | null | undefined): { relativ
  */
 export const formatRelativeTime = (timestamp: string | null | undefined): string => {
   return formatTimestamp(timestamp).relative;
+};
+
+/**
+ * Formats a LocalDateTime string from backend to a relative time string
+ * Handles the specific format used by Java LocalDateTime (e.g., "2024-01-15T10:30:00")
+ */
+export const formatLocalDateTime = (localDateTime: string | null | undefined): string => {
+  if (!localDateTime) {
+    return 'Unknown time';
+  }
+
+  try {
+    // Handle LocalDateTime format from Java backend
+    let date: Date;
+    
+    if (localDateTime.includes('T') && !localDateTime.includes('Z')) {
+      // This is a LocalDateTime from Java backend - treat as local time
+      date = new Date(localDateTime);
+    } else {
+      // Fallback to regular parsing
+      date = new Date(localDateTime);
+    }
+
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return 'Invalid time';
+    }
+
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) {
+      return 'Just now';
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes}m ago`;
+    } else if (diffInMinutes < 1440) {
+      return `${Math.floor(diffInMinutes / 60)}h ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  } catch (error) {
+    logError('DateUtils', 'Error formatting LocalDateTime', error instanceof Error ? error : new Error('Unknown error'), { localDateTime });
+    return 'Invalid time';
+  }
 };
 
 /**

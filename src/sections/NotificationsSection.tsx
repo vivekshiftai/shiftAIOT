@@ -110,10 +110,15 @@ export const NotificationsSection: React.FC = () => {
               className="px-3 py-2 border border-light rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 futuristic-input"
             >
               <option value="all">All Types</option>
-              <option value="error">Errors</option>
-              <option value="warning">Warnings</option>
-              <option value="success">Success</option>
-              <option value="info">Info</option>
+              <option value="SECURITY_ALERT">Security Alerts</option>
+              <option value="SAFETY_ALERT">Safety Alerts</option>
+              <option value="MAINTENANCE_REMINDER">Maintenance</option>
+              <option value="DEVICE_ASSIGNMENT">Device Assignment</option>
+              <option value="DEVICE_OFFLINE">Device Status</option>
+              <option value="PERFORMANCE_ALERT">Performance</option>
+              <option value="RULE_TRIGGERED">Rules</option>
+              <option value="TEMPERATURE_ALERT">Sensor Alerts</option>
+              <option value="SYSTEM_UPDATE">System Updates</option>
             </select>
             
             <select

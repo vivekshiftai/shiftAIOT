@@ -145,8 +145,19 @@ export const MaintenanceForm: React.FC<MaintenanceFormProps> = ({
       const user = userStr ? JSON.parse(userStr) : null;
       const organizationId = user?.organizationId || 'default';
 
+      // Map form data to backend expected structure
       const maintenanceData = {
-        ...formData,
+        taskName: formData.taskName,
+        description: formData.description,
+        maintenanceType: formData.maintenanceType,
+        priority: formData.priority,
+        status: formData.status,
+        nextMaintenance: formData.nextMaintenance ? formData.nextMaintenance.split('T')[0] : null, // Convert datetime-local to date only
+        assignedTo: formData.assignedTo,
+        estimatedDuration: formData.estimatedDuration,
+        requiredTools: formData.requiredTools,
+        safetyNotes: formData.safetyNotes,
+        frequency: formData.frequency,
         deviceId: deviceId || maintenance?.deviceId,
         organizationId: organizationId,
         updatedAt: new Date().toISOString()

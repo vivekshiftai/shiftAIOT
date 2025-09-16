@@ -310,10 +310,24 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
     if (!validateForm()) return;
 
     try {
+      // Map frontend form data to backend expected structure
       const taskData = {
-        ...formData,
+        taskName: formData.title, // Map title to taskName
+        description: formData.description,
+        maintenanceType: formData.type === 'preventive' ? 'PREVENTIVE' : 
+                        formData.type === 'corrective' ? 'CORRECTIVE' : 
+                        formData.type === 'emergency' ? 'CORRECTIVE' : // Map emergency to corrective
+                        formData.type === 'routine' ? 'PREVENTIVE' : 'GENERAL', // Map routine to preventive
+        priority: formData.priority,
+        status: 'ACTIVE', // Use proper status enum
+        nextMaintenance: formData.scheduledDate ? formData.scheduledDate.split('T')[0] : null, // Convert datetime-local to date only
+        assignedTo: formData.assignedTo,
+        estimatedDuration: formData.estimatedDuration,
+        requiredTools: formData.requiredTools,
+        safetyNotes: formData.safetyNotes,
+        frequency: formData.frequency,
         deviceId,
-        status: 'scheduled' as const
+        organizationId: 'default' // This should be set from user context
       };
 
       if (editingTask) {

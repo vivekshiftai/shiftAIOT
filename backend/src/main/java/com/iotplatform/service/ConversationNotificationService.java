@@ -114,6 +114,160 @@ public class ConversationNotificationService {
     }
     
     /**
+     * Send a device assignment notification to the conversation channel.
+     * 
+     * @param deviceName The device name
+     * @param assignedTo The user assigned to the device
+     * @param assignedBy The user who made the assignment
+     * @param organizationId The organization ID
+     * @return true if sent successfully, false otherwise
+     */
+    public boolean sendDeviceAssignmentNotification(String deviceName, String assignedTo, String assignedBy, String organizationId) {
+        log.info("Sending device assignment notification for device: {}, assigned to: {}, assigned by: {}", 
+                deviceName, assignedTo, assignedBy);
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                ResponseEntity<String> response = sendDeviceAssignmentWithRetry(deviceName, assignedTo, assignedBy, organizationId, attempt);
+                
+                if (response.getStatusCode().is2xxSuccessful()) {
+                    log.info("Device assignment notification sent successfully on attempt {} for device: {}", 
+                            attempt, deviceName);
+                    return true;
+                } else {
+                    log.warn("Device assignment notification failed on attempt {} with status: {} for device: {}", 
+                            attempt, response.getStatusCode(), deviceName);
+                }
+                
+            } catch (Exception e) {
+                log.error("Error sending device assignment notification on attempt {}: {}", attempt, e.getMessage(), e);
+            }
+
+            // Wait before retry (except on last attempt)
+            if (attempt < maxRetries) {
+                try {
+                    Thread.sleep(retryDelay);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.warn("Interrupted while waiting for retry");
+                    break;
+                }
+            }
+        }
+
+        log.error("Failed to send device assignment notification after {} attempts for device: {}", 
+                maxRetries, deviceName);
+        return false;
+    }
+    
+    /**
+     * Send device assignment notification with retry logic using conversation API.
+     * 
+     * @param deviceName The device name
+     * @param assignedTo The user assigned to the device
+     * @param assignedBy The user who made the assignment
+     * @param organizationId The organization ID
+     * @param attempt Current attempt number
+     * @return ResponseEntity from the API call
+     */
+    private ResponseEntity<String> sendDeviceAssignmentWithRetry(String deviceName, String assignedTo, String assignedBy, String organizationId, int attempt) {
+        String url = conversationApiBaseUrl;
+        
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        
+        // Create structured prompt for device assignment
+        String structuredPrompt = createStructuredDeviceAssignmentPrompt(deviceName, assignedTo, assignedBy, organizationId);
+        
+        // Send the structured prompt directly as the message content
+        String requestPayload = String.format(
+            "{\"message\": \"%s\"}",
+            structuredPrompt.replace("\"", "\\\"").replace("\n", "\\n")
+        );
+        
+        HttpEntity<String> request = new HttpEntity<>(requestPayload, headers);
+        
+        log.debug("Sending device assignment notification attempt {} to URL: {} with prompt: {}", attempt, url, structuredPrompt);
+        
+        return restTemplate.postForEntity(url, request, String.class);
+    }
+    
+    /**
+     * Create a structured prompt for device assignment notifications.
+     * 
+     * @param deviceName The device name
+     * @param assignedTo The user assigned to the device
+     * @param assignedBy The user who made the assignment
+     * @param organizationId The organization ID
+     * @return Structured prompt string
+     */
+    private String createStructuredDeviceAssignmentPrompt(String deviceName, String assignedTo, String assignedBy, String organizationId) {
+        // Generate assignment ID
+        String assignmentId = generateAssignmentId(deviceName, assignedTo);
+        
+        // Format the structured prompt using the same format as maintenance notifications
+        return String.format(
+            "Post a Slack message to channel_id=C092C9RHPKN.\n\n" +
+            "Important: Do not forget to include both plain text and blocks in the same message.\n\n" +
+            "Text: '📱 Device Assignment: %s has been assigned to %s. Please review the assignment details below.'\n\n" +
+            "Blocks:\n" +
+            "1. Header block with good color: '📱 Device Assignment Notification'\n\n" +
+            "2. Section block with fields summarizing the assignment:\n" +
+            "   - Assignment ID: %s\n" +
+            "   - Priority: Low\n" +
+            "   - Category: Device Assignment\n" +
+            "   - Status: Active Assignment\n" +
+            "   - Device: %s\n" +
+            "   - Assigned To: %s\n" +
+            "   - Assigned By: %s\n" +
+            "   - Organization: %s\n" +
+            "   - Timestamp: %s\n\n" +
+            "3. Section block with plain text: 'Description: Device %s has been successfully assigned to %s. The assigned user now has access to manage and monitor this device. Please ensure proper handover procedures are followed.'\n\n" +
+            "4. Context block with additional details:\n" +
+            "   - Source: IoT Platform\n" +
+            "   - Type: Assignment\n" +
+            "   - Severity: Info\n" +
+            "   - Action Required: Device Access Setup\n\n" +
+            "5. Divider block\n\n" +
+            "6. Actions block with three buttons:\n" +
+            "   - 'View Device Details' (primary style)\n" +
+            "   - 'Confirm Assignment' (default style)\n" +
+            "   - 'Transfer Device' (default style)\n\n" +
+            "Ensure that the final Slack message contains BOTH the plain text and the blocks together.",
+            deviceName,
+            assignedTo,
+            assignmentId,
+            deviceName,
+            assignedTo,
+            assignedBy,
+            organizationId,
+            java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a z")),
+            deviceName,
+            assignedTo
+        );
+    }
+    
+    /**
+     * Generate an assignment ID from device name and assigned user.
+     * 
+     * @param deviceName The device name
+     * @param assignedTo The assigned user
+     * @return Generated assignment ID
+     */
+    private String generateAssignmentId(String deviceName, String assignedTo) {
+        if (deviceName == null || assignedTo == null) {
+            return "DA-" + System.currentTimeMillis();
+        }
+        
+        // Create a short ID from device name and assigned user
+        String deviceShort = deviceName.replaceAll("[^A-Za-z0-9]", "").substring(0, Math.min(4, deviceName.length()));
+        String userShort = assignedTo.replaceAll("[^A-Za-z0-9]", "").substring(0, Math.min(4, assignedTo.length()));
+        
+        return "DA-" + deviceShort.toUpperCase() + "-" + userShort.toUpperCase() + "-" + 
+               java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("MMdd"));
+    }
+
+    /**
      * Send a custom message to the conversation channel.
      * 
      * @param message The custom message to send
@@ -341,7 +495,7 @@ public class ConversationNotificationService {
             notification.getPriority(),
             notification.getDeviceName(),
             notification.getAssignedTo(),
-            java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a z")),
+            java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a z")),
             notification.getDeviceName(),
             notification.getTask()
         );
@@ -394,7 +548,7 @@ public class ConversationNotificationService {
             reminderNumber,
             notification.getDeviceName(),
             notification.getAssignedTo(),
-            java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a z")),
+            java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Kolkata")).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm a z")),
             reminderNumber,
             notification.getDeviceName(),
             notification.getTask()

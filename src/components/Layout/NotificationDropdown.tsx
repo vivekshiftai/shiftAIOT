@@ -38,11 +38,11 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     };
   }, [isOpen, onToggle]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadNotifications = notifications.filter(n => !n.read);
+  const unreadCount = unreadNotifications.length;
   
   // Get the most critical notification color for the bell icon
   const getBellColor = () => {
-    const unreadNotifications = notifications.filter(n => !n.read);
     if (unreadNotifications.length === 0) return 'text-slate-600';
     
     // Priority order: Critical > Performance > Maintenance > Device > Rules > Sensor > System
@@ -120,16 +120,17 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
             </div>
           </div>
 
-          {/* Notifications List */}
+          {/* Notifications List - Only show unread notifications */}
           <div className="max-h-64 overflow-y-auto">
-            {notifications.length === 0 ? (
+            {unreadNotifications.length === 0 ? (
               <div className="p-6 text-center">
                 <Bell className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No notifications</p>
+                <p className="text-sm text-gray-500">No unread notifications</p>
+                <p className="text-xs text-gray-400 mt-1">All caught up!</p>
               </div>
             ) : (
               <div className="p-2">
-                {notifications.map((notification) => (
+                {unreadNotifications.map((notification) => (
                   <div key={notification.id} className="mb-1">
                     <CleanNotificationItem
                       notification={notification}
@@ -142,7 +143,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
           </div>
 
           {/* Simple Footer */}
-          {notifications.length > 0 && (
+          {unreadNotifications.length > 0 && (
             <div className="p-3 border-t border-gray-200">
               <button 
                 onClick={handleViewAllNotifications}

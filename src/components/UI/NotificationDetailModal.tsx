@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Calendar, User, Cpu, AlertTriangle, CheckCircle, Wrench, Zap, Info } from 'lucide-react';
 import { Notification } from '../../types';
-import { formatRelativeTime } from '../../utils/dateUtils';
+import { formatRelativeTime, formatLocalDateTime } from '../../utils/dateUtils';
 
 interface NotificationDetailModalProps {
   notification: Notification | null;
@@ -111,7 +111,7 @@ export const NotificationDetailModal: React.FC<NotificationDetailModalProps> = (
                 <div className="flex items-center gap-4 text-sm text-gray-600">
                   <span className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
-                    {formatRelativeTime(notification.createdAt)}
+                    {formatLocalDateTime(notification.createdAt)}
                   </span>
                   <span className="px-2 py-1 bg-white rounded-full text-xs font-medium">
                     {formatCategoryName(notification.category)}
