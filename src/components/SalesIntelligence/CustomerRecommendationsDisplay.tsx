@@ -241,7 +241,7 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
 
         {/* Tab Content */}
         <div className="p-4 bg-gray-100">
-          <div className="space-y-6">
+          <div className="space-y-6 bg-white rounded-lg border border-gray-200">
             {getRecommendationsForTab().length === 0 ? (
               <div className="text-center py-8 bg-white rounded-lg border border-gray-200">
                 <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full ${getTabColor()}`}>
