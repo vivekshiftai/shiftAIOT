@@ -678,6 +678,25 @@ export const DeviceDetailsSection: React.FC = () => {
     setImageViewerInitialIndex(0);
   };
 
+  const formatResponseText = (text: string): string => {
+    // Convert line breaks to HTML
+    let formatted = text.replace(/\n/g, '<br>');
+    
+    // Handle bold text (**text**)
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // Handle italic text (*text*)
+    formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    
+    // Handle code blocks
+    formatted = formatted.replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>');
+    
+    // Handle inline code
+    formatted = formatted.replace(/`(.*?)`/g, '<code>$1</code>');
+    
+    return formatted;
+  };
+
   if (!device) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -1396,7 +1415,10 @@ export const DeviceDetailsSection: React.FC = () => {
                           : 'bg-white text-slate-800 border border-slate-200'
                       }`}
                     >
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
+                      <div 
+                        className="text-sm leading-relaxed break-words"
+                        dangerouslySetInnerHTML={{ __html: formatResponseText(message.content) }}
+                      />
                       
                       {/* Display Images */}
                       {message.images && message.images.length > 0 && (

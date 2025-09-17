@@ -40,6 +40,25 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const formatResponseText = (text: string): string => {
+    // Convert line breaks to HTML
+    let formatted = text.replace(/\n/g, '<br>');
+    
+    // Handle bold text (**text**)
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // Handle italic text (*text*)
+    formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    
+    // Handle code blocks
+    formatted = formatted.replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>');
+    
+    // Handle inline code
+    formatted = formatted.replace(/`(.*?)`/g, '<code>$1</code>');
+    
+    return formatted;
+  };
+
   // Load chat history on component mount
   useEffect(() => {
     const loadChatHistory = async () => {
@@ -209,9 +228,10 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
                       {message.timestamp.toLocaleTimeString()}
                     </span>
                   </div>
-                  <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {message.content}
-                  </div>
+                  <div 
+                    className="text-sm leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: formatResponseText(message.content) }}
+                  />
                   
                   {/* Display Images */}
                   {message.images && message.images.length > 0 && (
