@@ -253,9 +253,9 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
                 </p>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-6 rounded-lg border bg-gray-200">
                 {getRecommendationsForTab().map((recommendation, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div key={index} className="border border-gray-500 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="mb-4">
                       <h4 className="text-lg font-semibold text-gray-900 mb-2">
                         {recommendation.ProductName} (ID: {recommendation.CustomerCatalogueItemID})
