@@ -255,7 +255,7 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
             ) : (
               <div className="space-y-6">
                 {getRecommendationsForTab().map((recommendation, index) => (
-                  <div key={index} className={`rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200 ${
+                  <div key={index} className={`rounded-lg p-4 hover:shadow-md transition-shadow border  ${
                     index % 2 === 0 ? 'bg-pink-100' : 'bg-purple-100'
                   }`}>
                     <div className={`mb-4 rounded-lg p-3 ${
