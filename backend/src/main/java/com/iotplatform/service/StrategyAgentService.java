@@ -25,7 +25,7 @@ public class StrategyAgentService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    @Value("${strategy.agent.base-url:http://20.57.36.66:8002}")
+    @Value("${strategy.agent.base-url:http://20.57.36.66:8003}")
     private String strategyAgentBaseUrl;
 
     @Value("${strategy.agent.timeout:30000}")

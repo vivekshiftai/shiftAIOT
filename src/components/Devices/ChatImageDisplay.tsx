@@ -154,7 +154,7 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
               <div className="px-3 py-2 bg-gray-100 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-800 truncate">
-                    {getDisplayImageName(image.filename, index)}
+                    {image.filename}
                   </p>
                   <p className="text-xs text-gray-500">
                     {formatFileSize(image.size)} • {image.mime_type}
@@ -211,7 +211,7 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
                   >
                     <img
                       src={`data:${image.mime_type || 'image/png'};base64,${image.data}`}
-                      alt={getDisplayImageName(image.filename, index)}
+                      alt={image.filename}
                       className={`w-full h-auto object-contain rounded transition-opacity hover:opacity-90 ${
                         isExpanded ? 'max-h-80' : 'max-h-24'
                       }`}
