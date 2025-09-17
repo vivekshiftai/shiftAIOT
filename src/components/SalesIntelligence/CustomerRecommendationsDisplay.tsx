@@ -268,7 +268,7 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
                         Quantity Required: {recommendation.QuantityRequired} | 
                         Ingredients: {recommendation.Ingredients?.join(', ')}
                       </p>
-                      <p className="text-sm font-medium font-semibold text-green-700">
+                      <p className="text-sm font-medium font-semibold text-green-900">
                         Presents {recommendation.CrossSell?.length || 0} cross-sell opportunities:
                       </p>
                     </div>
