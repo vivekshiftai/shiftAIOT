@@ -62,7 +62,7 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 bg-gray-50 p-6 rounded-lg">
       {/* Left Column - Customer Information (25% width) */}
       <div className="lg:col-span-1 space-y-4">
         {/* Customer Information Card */}
@@ -134,7 +134,7 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
               <CheckCircle className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Accepted</p>
+              <p className="text-sm font-medium text-gray-600">Recommendation</p>
               <p className="text-2xl font-bold text-green-600">{customerRec.Summary?.TotalCrossSell || 0}</p>
             </div>
           </div>
@@ -146,7 +146,7 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
               <X className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-600">Rejected</p>
+              <p className="text-sm font-medium text-gray-600">Needs Review</p>
               <p className="text-2xl font-bold text-red-600">{customerRec.Summary?.TotalRejected || 0}</p>
             </div>
           </div>
@@ -214,7 +214,7 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Top Matches ({customerRec.Summary?.TotalCrossSell || 0})
+              Top Recommendations ({customerRec.Summary?.TotalCrossSell || 0})
             </button>
             <button
               onClick={() => handleTabChange('rejected')}
