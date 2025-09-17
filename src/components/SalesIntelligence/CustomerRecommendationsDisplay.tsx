@@ -255,8 +255,8 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
             ) : (
               <div className="space-y-6">
                 {getRecommendationsForTab().map((recommendation, index) => (
-                  <div key={index} className={`border border-gray-300 rounded-lg p-4 hover:shadow-md transition-shadow ${
-                    index % 2 === 0 ? 'bg-blue-500' : 'bg-green-500'
+                  <div key={index} className={`bg-white rounded-lg p-4 hover:shadow-md transition-shadow ${
+                    index % 2 === 0 ? 'border-4 border-pink-500' : 'border-4 border-purple-500'
                   }`}>
                     <div className="mb-4 bg-white">
                       <h4 className="text-lg font-semibold text-gray-900 mb-2">
