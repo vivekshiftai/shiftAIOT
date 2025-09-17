@@ -256,10 +256,10 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
               <div className="space-y-6">
                 {getRecommendationsForTab().map((recommendation, index) => (
                   <div key={index} className={`rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200 ${
-                    index % 2 === 0 ? 'bg-pink-75' : 'bg-purple-75'
+                    index % 2 === 0 ? 'bg-pink-90' : 'bg-purple-90'
                   }`}>
                     <div className={`mb-4 rounded-lg p-3 ${
-                      index % 2 === 0 ? 'bg-pink-75' : 'bg-purple-75'
+                      index % 2 === 0 ? 'bg-pink-90' : 'bg-purple-90'
                     }`}>
                       <h4 className="text-lg font-semibold text-gray-900 mb-2">
                         {recommendation.ProductName} (ID: {recommendation.CustomerCatalogueItemID})
