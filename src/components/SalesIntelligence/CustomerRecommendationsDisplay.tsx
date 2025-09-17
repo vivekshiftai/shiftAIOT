@@ -258,7 +258,9 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
                   <div key={index} className={`rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200 ${
                     index % 2 === 0 ? 'bg-pink-50' : 'bg-purple-50'
                   }`}>
-                    <div className="mb-4 bg-white">
+                    <div className={`mb-4 rounded-lg p-3 ${
+                      index % 2 === 0 ? 'bg-pink-100' : 'bg-purple-100'
+                    }`}>
                       <h4 className="text-lg font-semibold text-gray-900 mb-2">
                         {recommendation.ProductName} (ID: {recommendation.CustomerCatalogueItemID})
                       </h4>
