@@ -1429,10 +1429,14 @@ export const DeviceDetailsSection: React.FC = () => {
                               <div key={index} className="relative group">
                                 <img
                                   src={`data:${image.mime_type};base64,${image.data}`}
-                                  alt={`Image ${index + 1}`}
+                                  alt={image.filename || `Image ${index + 1}`}
                                   className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
                                   onClick={() => openImageViewer(message.images!, index)}
                                 />
+                                {/* Filename overlay */}
+                                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs p-2 rounded-b-lg">
+                                  <p className="truncate">{image.filename || `Image ${index + 1}`}</p>
+                                </div>
                               </div>
                             ))}
                           </div>
