@@ -1,10 +1,7 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Bell, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useIoT } from '../../contexts/IoTContext';
-import { Notification } from '../../types';
-import { CleanNotificationItem } from './CleanNotificationItem';
-import { NotificationDetailModal } from '../UI/NotificationDetailModal';
 
 interface NotificationDropdownProps {
   isOpen: boolean;
@@ -15,11 +12,9 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   isOpen, 
   onToggle 
 }) => {
-  const { notifications, markNotificationAsRead } = useIoT();
+  const { notifications } = useIoT();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -62,22 +57,6 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
     return 'text-blue-600';
   };
 
-  const handleNotificationClick = async (notification: Notification) => {
-    // Mark as read first
-    await markNotificationAsRead(notification.id);
-    
-    // Open detail modal
-    setSelectedNotification(notification);
-    setIsDetailModalOpen(true);
-    
-    // Close the dropdown
-    onToggle();
-  };
-
-  const handleCloseDetailModal = () => {
-    setIsDetailModalOpen(false);
-    setSelectedNotification(null);
-  };
 
   const handleViewAllNotifications = () => {
     onToggle(); // Close the dropdown
@@ -120,7 +99,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
             </div>
           </div>
 
-          {/* Notifications List - Only show unread notifications */}
+          {/* Notifications List - Simple titles only */}
           <div className="max-h-64 overflow-y-auto">
             {unreadNotifications.length === 0 ? (
               <div className="p-6 text-center">
@@ -129,13 +108,16 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                 <p className="text-xs text-gray-400 mt-1">All caught up!</p>
               </div>
             ) : (
-              <div className="p-2">
+              <div className="divide-y divide-gray-100">
                 {unreadNotifications.map((notification) => (
-                  <div key={notification.id} className="mb-1">
-                    <CleanNotificationItem
-                      notification={notification}
-                      onClick={handleNotificationClick}
-                    />
+                  <div 
+                    key={notification.id} 
+                    className="px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={handleViewAllNotifications}
+                  >
+                    <p className="text-sm text-gray-900 font-medium truncate">
+                      {notification.title}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -145,23 +127,16 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
           {/* Simple Footer */}
           {unreadNotifications.length > 0 && (
             <div className="p-3 border-t border-gray-200">
-              <button 
+              <span 
                 onClick={handleViewAllNotifications}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors"
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium cursor-pointer transition-colors"
               >
-                View all notifications
-              </button>
+                View all notifications....
+              </span>
             </div>
           )}
         </div>
       )}
-
-      {/* Notification Detail Modal */}
-      <NotificationDetailModal
-        notification={selectedNotification}
-        isOpen={isDetailModalOpen}
-        onClose={handleCloseDetailModal}
-      />
     </div>
   );
 };

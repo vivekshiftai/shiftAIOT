@@ -19,7 +19,8 @@ import {
   Zap,
   Wrench,
   Activity,
-  User
+  User,
+  Bell
 } from 'lucide-react';
 
 export const DashboardSection: React.FC = () => {
@@ -292,6 +293,27 @@ export const DashboardSection: React.FC = () => {
     };
   }, [devices, rulesCount, maintenanceCount, usersCount, upcomingMaintenance, todayMaintenance]);
 
+  // Filter upcoming maintenance notifications (current date or future dates)
+  const upcomingMaintenanceNotifications = useMemo(() => {
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+    
+    return upcomingMaintenance.filter(maintenance => {
+      if (!maintenance.nextMaintenance) return false;
+      
+      try {
+        const maintenanceDate = new Date(maintenance.nextMaintenance);
+        maintenanceDate.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+        
+        // Include maintenance that is scheduled for today or future dates
+        return maintenanceDate.getTime() >= currentDate.getTime();
+      } catch (error) {
+        logError('Dashboard', 'Error parsing maintenance date', error instanceof Error ? error : new Error('Unknown error'));
+        return false;
+      }
+    }).slice(0, 5); // Show only first 5 notifications
+  }, [upcomingMaintenance]);
+
   // Handle maintenance card click
   const handleMaintenanceClick = () => {
     navigate('/device-care?tab=maintenance');
@@ -338,6 +360,8 @@ export const DashboardSection: React.FC = () => {
 
   // Navigation handlers
   const handleNavigateDevices = () => navigate('/devices');
+  const handleNavigateUsers = () => navigate('/users');
+  const handleNavigateRules = () => navigate('/device-care');
 
   if (loading) {
     return (
@@ -408,7 +432,8 @@ export const DashboardSection: React.FC = () => {
           subtitle={usersLoading ? 'Loading...' : (usersStats ? `${usersStats.activeUsers || 0} active, ${usersStats.adminUsers || 0} admins` : 'Registered users')}
           icon={User}
           color="green"
-          className="animate-fade-in"
+          onClick={handleNavigateUsers}
+          className="hover-lift animate-fade-in cursor-pointer"
         />
         <StatsCard
           title="Total Rules"
@@ -416,7 +441,8 @@ export const DashboardSection: React.FC = () => {
           subtitle="Automation rules"
           icon={Zap}
           color="purple"
-          className="animate-fade-in"
+          onClick={handleNavigateRules}
+          className="hover-lift animate-fade-in cursor-pointer"
         />
         <StatsCard
           title="Total Maintenance"
@@ -618,6 +644,89 @@ export const DashboardSection: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Upcoming Maintenance Notifications */}
+      {upcomingMaintenanceNotifications.length > 0 && (
+        <div className="card p-6 border-l-4 border-l-blue-400 bg-blue-50">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <Bell className="w-5 h-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-blue-800">
+                Upcoming Maintenance Notifications
+              </h3>
+              <p className="text-blue-700 text-sm">
+                {upcomingMaintenanceNotifications.length} maintenance task{upcomingMaintenanceNotifications.length > 1 ? 's' : ''} scheduled
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMaintenanceClick}
+              className="border-blue-300 text-blue-700 hover:bg-blue-100"
+            >
+              View All
+            </Button>
+          </div>
+          
+          <div className="space-y-3">
+            {upcomingMaintenanceNotifications.map((maintenance) => (
+              <div 
+                key={maintenance.id}
+                className="bg-white p-4 rounded-lg border border-blue-200 hover:border-blue-300 transition-colors cursor-pointer"
+                onClick={handleMaintenanceClick}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    {/* Task Name - Line 1 */}
+                    <h4 className="font-semibold text-gray-900 text-base mb-2 truncate">
+                      {maintenance.taskName || maintenance.componentName || 'Maintenance Task'}
+                    </h4>
+                    
+                    {/* Status - Line 2 */}
+                    <div className="mb-3">
+                      <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                        maintenance.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                        maintenance.status === 'ACTIVE' ? 'bg-blue-100 text-blue-700' :
+                        maintenance.status === 'OVERDUE' ? 'bg-red-100 text-red-700' :
+                        maintenance.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {maintenance.status === 'COMPLETED' ? 'Completed' : 
+                         maintenance.status === 'ACTIVE' ? 'In Progress' :
+                         maintenance.status === 'OVERDUE' ? 'Overdue' :
+                         maintenance.status === 'PENDING' ? 'Pending' :
+                         maintenance.status || 'Unknown'}
+                      </span>
+                    </div>
+                    
+                    {/* Description - Truncated */}
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                      {maintenance.description 
+                        ? maintenance.description.length > 100 
+                          ? `${maintenance.description.substring(0, 100)}...`
+                          : maintenance.description
+                        : `Scheduled maintenance for ${maintenance.deviceName || 'device'}. Regular maintenance task to ensure optimal performance and prevent potential issues.`
+                      }
+                    </p>
+                    
+                    {/* Additional Info */}
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>
+                        📅 Due: {formatMaintenanceDate(maintenance.nextMaintenance)}
+                      </span>
+                      <span>
+                        👤 {userNamesLoading ? 'Loading...' : getAssigneeDisplayName(maintenance.assignedTo)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
