@@ -240,7 +240,7 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
         </div>
 
         {/* Tab Content */}
-        <div className="p-4">
+        <div className="p-4 bg-gray-50">
           <div className="space-y-6">
             {getRecommendationsForTab().length === 0 ? (
               <div className="text-center py-8 bg-gray-50 rounded-lg">
