@@ -224,6 +224,39 @@ public class MaintenanceScheduleService {
         log.info("Found {} upcoming maintenance tasks for organization: {}", upcomingMaintenance.size(), organizationId);
         return upcomingMaintenance;
     }
+
+    /**
+     * Get upcoming maintenance tasks from today onwards (>= current date) for notifications.
+     */
+    public List<DeviceMaintenance> getUpcomingMaintenanceFromToday(String organizationId) {
+        log.info("Fetching upcoming maintenance tasks from today onwards for organization: {}", organizationId);
+        
+        List<DeviceMaintenance> allMaintenance = deviceMaintenanceRepository.findByOrganizationId(organizationId);
+        LocalDate today = LocalDate.now();
+        
+        log.info("Found {} total maintenance tasks for organization: {}", allMaintenance.size(), organizationId);
+        log.info("Filtering for maintenance tasks due today or later (>= {})", today);
+        
+        List<DeviceMaintenance> upcomingFromToday = allMaintenance.stream()
+                .filter(maintenance -> {
+                    boolean hasNextMaintenance = maintenance.getNextMaintenance() != null;
+                    boolean isDueFromToday = hasNextMaintenance && 
+                        !maintenance.getNextMaintenance().isBefore(today); // >= today
+                    boolean isActive = maintenance.getStatus() == DeviceMaintenance.Status.ACTIVE || 
+                                     maintenance.getStatus() == DeviceMaintenance.Status.PENDING;
+                    
+                    log.debug("Maintenance task '{}': nextMaintenance={}, hasNextMaintenance={}, isDueFromToday={}, isActive={}", 
+                             maintenance.getTaskName(), maintenance.getNextMaintenance(), hasNextMaintenance, isDueFromToday, isActive);
+                    
+                    return hasNextMaintenance && isDueFromToday && isActive;
+                })
+                .sorted((m1, m2) -> m1.getNextMaintenance().compareTo(m2.getNextMaintenance())) // Sort by date ascending
+                .collect(java.util.stream.Collectors.toList());
+        
+        log.info("Returning {} upcoming maintenance tasks from today onwards for organization: {}", 
+                upcomingFromToday.size(), organizationId);
+        return upcomingFromToday;
+    }
     
     /**
      * Get total maintenance count for an organization.

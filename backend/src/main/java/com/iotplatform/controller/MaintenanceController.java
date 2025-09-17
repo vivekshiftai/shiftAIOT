@@ -566,6 +566,36 @@ public class MaintenanceController {
     }
 
     /**
+     * Get upcoming maintenance tasks from today onwards (>= current date) for notifications.
+     */
+    @GetMapping("/upcoming-from-today")
+    @PreAuthorize("hasAuthority('MAINTENANCE_READ')")
+    public ResponseEntity<List<DeviceMaintenance>> getUpcomingMaintenanceFromToday(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        if (userDetails == null || userDetails.getUser() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        try {
+            log.info("Fetching upcoming maintenance tasks from today onwards for organization: {} by user: {}", 
+                    userDetails.getUser().getOrganizationId(), userDetails.getUsername());
+
+            String organizationId = userDetails.getUser().getOrganizationId();
+            List<DeviceMaintenance> upcomingFromToday = maintenanceScheduleService.getUpcomingMaintenanceFromToday(organizationId);
+            
+            log.info("Returning {} upcoming maintenance tasks from today onwards for organization: {}", 
+                    upcomingFromToday.size(), organizationId);
+
+            return ResponseEntity.ok(upcomingFromToday);
+
+        } catch (Exception e) {
+            log.error("Error fetching upcoming maintenance tasks from today onwards", e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    /**
      * Get day-wise maintenance tasks grouped by date ranges
      */
     @GetMapping("/daywise")

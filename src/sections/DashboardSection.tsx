@@ -256,13 +256,51 @@ export const DashboardSection: React.FC = () => {
           logError('Dashboard', 'Failed to fetch users count via fallback', fallbackError instanceof Error ? fallbackError : new Error('Unknown error'));
           setUsersCount(0);
         }
-      } finally {
-        setUsersLoading(false);
-      }
-    };
+       } finally {
+         setUsersLoading(false);
+       }
 
-    // Initial fetch
-    fetchRealTimeData();
+       // Fetch upcoming maintenance notifications (from today onwards)
+       try {
+         logInfo('Dashboard', 'Fetching upcoming maintenance notifications...');
+         const upcomingNotificationsResponse = await maintenanceAPI.getUpcomingFromToday();
+         
+         if (upcomingNotificationsResponse.data) {
+           // Limit to 5 most recent notifications
+           const notifications = Array.isArray(upcomingNotificationsResponse.data) 
+             ? upcomingNotificationsResponse.data.slice(0, 5)
+             : [];
+           
+           setUpcomingMaintenanceNotifications(notifications);
+           logInfo('Dashboard', 'Upcoming maintenance notifications fetched successfully', { 
+             count: notifications.length 
+           });
+         }
+       } catch (error) {
+         logError('Dashboard', 'Failed to fetch upcoming maintenance notifications, falling back to existing data', error instanceof Error ? error : new Error('Unknown error'));
+         
+         // Fallback: Filter existing upcomingMaintenance data on frontend
+         const currentDate = new Date();
+         currentDate.setHours(0, 0, 0, 0);
+         
+         const fallbackNotifications = upcomingMaintenance.filter(maintenance => {
+           if (!maintenance.nextMaintenance) return false;
+           
+           try {
+             const maintenanceDate = new Date(maintenance.nextMaintenance);
+             maintenanceDate.setHours(0, 0, 0, 0);
+             return maintenanceDate.getTime() >= currentDate.getTime();
+           } catch (error) {
+             return false;
+           }
+         }).slice(0, 5);
+         
+         setUpcomingMaintenanceNotifications(fallbackNotifications);
+       }
+     };
+
+     // Initial fetch
+     fetchRealTimeData();
 
     // Set up periodic refresh every 30 seconds
     const intervalId = setInterval(() => {
@@ -293,26 +331,8 @@ export const DashboardSection: React.FC = () => {
     };
   }, [devices, rulesCount, maintenanceCount, usersCount, upcomingMaintenance, todayMaintenance]);
 
-  // Filter upcoming maintenance notifications (current date or future dates)
-  const upcomingMaintenanceNotifications = useMemo(() => {
-    const currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
-    
-    return upcomingMaintenance.filter(maintenance => {
-      if (!maintenance.nextMaintenance) return false;
-      
-      try {
-        const maintenanceDate = new Date(maintenance.nextMaintenance);
-        maintenanceDate.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
-        
-        // Include maintenance that is scheduled for today or future dates
-        return maintenanceDate.getTime() >= currentDate.getTime();
-      } catch (error) {
-        logError('Dashboard', 'Error parsing maintenance date', error instanceof Error ? error : new Error('Unknown error'));
-        return false;
-      }
-    }).slice(0, 5); // Show only first 5 notifications
-  }, [upcomingMaintenance]);
+  // State for upcoming maintenance notifications (fetched separately)
+  const [upcomingMaintenanceNotifications, setUpcomingMaintenanceNotifications] = useState<any[]>([]);
 
   // Handle maintenance card click
   const handleMaintenanceClick = () => {
