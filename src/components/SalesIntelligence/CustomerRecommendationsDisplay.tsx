@@ -253,7 +253,7 @@ export const CustomerRecommendationsDisplay: React.FC<CustomerRecommendationsDis
                 </p>
               </div>
             ) : (
-              <div className="space-y-6 bg-gray-200 rounded-lg">
+              <div className="space-y-6">
                 {getRecommendationsForTab().map((recommendation, index) => (
                   <div key={index} className="border border-gray-300 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="mb-4 bg-white">
