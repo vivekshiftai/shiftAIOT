@@ -14,6 +14,7 @@ import { formatKnowledgeBaseResponse, getUserDisplayName } from '../utils/respon
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/knowledge.css';
 import { knowledgeAPI } from '../services/api';
+import { ImageViewer } from '../components/UI/ImageViewer';
 
 // Updated interface to match UnifiedPDF API response
 interface UnifiedPDF {
@@ -85,6 +86,11 @@ export const KnowledgeSection: React.FC = () => {
 
   const [querySuggestions, setQuerySuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Image viewer state
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [imageViewerImages, setImageViewerImages] = useState<PDFImage[]>([]);
+  const [imageViewerInitialIndex, setImageViewerInitialIndex] = useState(0);
 
   // Refs for scrolling
   const chatMessagesRef = useRef<HTMLDivElement>(null);
@@ -378,6 +384,23 @@ export const KnowledgeSection: React.FC = () => {
     setTimeout(() => setShowSuggestions(false), 200);
   };
 
+  // Function to open image viewer
+  const openImageViewer = (images: PDFImage[], initialIndex: number = 0) => {
+    logInfo('Knowledge', 'Opening image viewer', { 
+      imageCount: images.length, 
+      initialIndex 
+    });
+    setImageViewerImages(images);
+    setImageViewerInitialIndex(initialIndex);
+    setImageViewerOpen(true);
+  };
+
+  const closeImageViewer = () => {
+    setImageViewerOpen(false);
+    setImageViewerImages([]);
+    setImageViewerInitialIndex(0);
+  };
+
 
 
 
@@ -640,21 +663,7 @@ export const KnowledgeSection: React.FC = () => {
                                 src={`data:${image.mime_type};base64,${image.data}`}
                                 alt={`Image ${index + 1}`}
                                 className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => {
-                                  const newWindow = window.open();
-                                  if (newWindow) {
-                                    newWindow.document.write(`
-                                      <html>
-                                        <head><title>Image ${index + 1}</title></head>
-                                        <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f0f0f0;">
-                                          <img src="data:${image.mime_type};base64,${image.data}" 
-                                               alt="Image ${index + 1}" 
-                                               style="max-width:90%;max-height:90%;object-fit:contain;box-shadow:0 4px 20px rgba(0,0,0,0.3);border-radius:8px;">
-                                        </body>
-                                      </html>
-                                    `);
-                                  }
-                                }}
+                                onClick={() => openImageViewer(message.images!, index)}
                               />
                             </div>
                           ))}
@@ -1029,6 +1038,14 @@ export const KnowledgeSection: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Image Viewer Modal */}
+      <ImageViewer
+        images={imageViewerImages}
+        isOpen={imageViewerOpen}
+        onClose={closeImageViewer}
+        initialIndex={imageViewerInitialIndex}
+      />
     </div>
   );
 };

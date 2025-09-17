@@ -48,6 +48,7 @@ import { validateDeviceUpdate, sanitizeDeviceData, getChangedFields } from '../u
 import { TabLoadingScreen, DataLoadingState, LoadingSpinner } from '../components/Loading/LoadingComponents';
 import { tokenService } from '../services/tokenService';
 import { PDFImage } from '../services/chatService';
+import { ImageViewer } from '../components/UI/ImageViewer';
 
 interface DocumentationInfo {
   deviceId: string;
@@ -274,6 +275,11 @@ export const DeviceDetailsSection: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+
+  // Image viewer state
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [imageViewerImages, setImageViewerImages] = useState<PDFImage[]>([]);
+  const [imageViewerInitialIndex, setImageViewerInitialIndex] = useState(0);
 
   const device = devices.find(d => d.id === deviceId);
   
@@ -653,6 +659,23 @@ export const DeviceDetailsSection: React.FC = () => {
     } finally {
       setDownloading(null);
     }
+  };
+
+  // Image viewer functions
+  const openImageViewer = (images: PDFImage[], initialIndex: number = 0) => {
+    logInfo('DeviceDetails', 'Opening image viewer', { 
+      imageCount: images.length, 
+      initialIndex 
+    });
+    setImageViewerImages(images);
+    setImageViewerInitialIndex(initialIndex);
+    setImageViewerOpen(true);
+  };
+
+  const closeImageViewer = () => {
+    setImageViewerOpen(false);
+    setImageViewerImages([]);
+    setImageViewerInitialIndex(0);
   };
 
   if (!device) {
@@ -1375,7 +1398,7 @@ export const DeviceDetailsSection: React.FC = () => {
                     >
                       <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
                       
-                      {/* Display Images - Using same implementation as Knowledge Section */}
+                      {/* Display Images */}
                       {message.images && message.images.length > 0 && (
                         <div className="mt-3 space-y-2">
                           <p className="text-xs font-medium text-gray-500">📷 Related Images:</p>
@@ -1386,21 +1409,7 @@ export const DeviceDetailsSection: React.FC = () => {
                                   src={`data:${image.mime_type};base64,${image.data}`}
                                   alt={`Image ${index + 1}`}
                                   className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
-                                  onClick={() => {
-                                    const newWindow = window.open();
-                                    if (newWindow) {
-                                      newWindow.document.write(`
-                                        <html>
-                                          <head><title>Image ${index + 1}</title></head>
-                                          <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f0f0f0;">
-                                            <img src="data:${image.mime_type};base64,${image.data}" 
-                                                 alt="Image ${index + 1}" 
-                                                 style="max-width:90%;max-height:90%;object-fit:contain;box-shadow:0 4px 20px rgba(0,0,0,0.3);border-radius:8px;">
-                                          </body>
-                                        </html>
-                                      `);
-                                    }
-                                  }}
+                                  onClick={() => openImageViewer(message.images!, index)}
                                 />
                               </div>
                             ))}
@@ -1657,6 +1666,13 @@ export const DeviceDetailsSection: React.FC = () => {
         </div>
       </div>
 
+      {/* Image Viewer Modal */}
+      <ImageViewer
+        images={imageViewerImages}
+        isOpen={imageViewerOpen}
+        onClose={closeImageViewer}
+        initialIndex={imageViewerInitialIndex}
+      />
 
     </div>
   );

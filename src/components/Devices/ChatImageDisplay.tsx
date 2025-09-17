@@ -3,6 +3,7 @@ import { Download, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { PDFImage } from '../../services/chatService';
 import { logInfo, logError } from '../../utils/logger';
 import { getDisplayImageName } from '../../utils/imageUtils';
+import { ImageViewer } from '../UI/ImageViewer';
 
 interface ChatImageDisplayProps {
   images: PDFImage[];
@@ -12,6 +13,11 @@ interface ChatImageDisplayProps {
 export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, className = '' }) => {
   const [expandedImages, setExpandedImages] = useState<Set<string>>(new Set());
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  
+  // Image viewer state
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [imageViewerImages, setImageViewerImages] = useState<PDFImage[]>([]);
+  const [imageViewerInitialIndex, setImageViewerInitialIndex] = useState(0);
 
   // Debug logging
   React.useEffect(() => {
@@ -50,6 +56,23 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
   const handleImageError = (filename: string) => {
     logError('ChatImageDisplay', `Image failed to load: ${filename}`, new Error(`Image load failed for ${filename}`));
     setImageErrors(prev => new Set(prev).add(filename));
+  };
+
+  // Image viewer functions
+  const openImageViewer = (images: PDFImage[], initialIndex: number = 0) => {
+    logInfo('ChatImageDisplay', 'Opening image viewer', { 
+      imageCount: images.length, 
+      initialIndex 
+    });
+    setImageViewerImages(images);
+    setImageViewerInitialIndex(initialIndex);
+    setImageViewerOpen(true);
+  };
+
+  const closeImageViewer = () => {
+    setImageViewerOpen(false);
+    setImageViewerImages([]);
+    setImageViewerInitialIndex(0);
   };
 
   const downloadImage = (image: PDFImage, index: number) => {
@@ -150,6 +173,13 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
                     )}
                   </button>
                   <button
+                    onClick={() => openImageViewer(validImages, index)}
+                    className="px-2 py-1 text-xs bg-primary-100 text-primary-700 hover:bg-primary-200 rounded transition-colors"
+                    title="View full size with navigation"
+                  >
+                    Full Size
+                  </button>
+                  <button
                     onClick={() => downloadImage(image, index)}
                     className="p-1 hover:bg-gray-200 rounded transition-colors"
                     title="Download image"
@@ -172,13 +202,17 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
                     <span className="text-sm">No image data available</span>
                   </div>
                 ) : (
-                  <div className={`transition-all duration-300 ${
-                    isExpanded ? 'max-h-96' : 'max-h-32'
-                  } overflow-hidden`}>
+                  <div 
+                    className={`transition-all duration-300 cursor-pointer ${
+                      isExpanded ? 'max-h-96' : 'max-h-32'
+                    } overflow-hidden`}
+                    onClick={() => openImageViewer(validImages, index)}
+                    title="Click to view full size"
+                  >
                     <img
                       src={`data:${image.mime_type || 'image/png'};base64,${image.data}`}
                       alt={getDisplayImageName(image.filename, index)}
-                      className={`w-full h-auto object-contain rounded ${
+                      className={`w-full h-auto object-contain rounded transition-opacity hover:opacity-90 ${
                         isExpanded ? 'max-h-80' : 'max-h-24'
                       }`}
                       onError={() => handleImageError(image.filename)}
@@ -192,6 +226,14 @@ export const ChatImageDisplay: React.FC<ChatImageDisplayProps> = ({ images, clas
           );
         })}
       </div>
+      
+      {/* Image Viewer Modal */}
+      <ImageViewer
+        images={imageViewerImages}
+        isOpen={imageViewerOpen}
+        onClose={closeImageViewer}
+        initialIndex={imageViewerInitialIndex}
+      />
     </div>
   );
 };
