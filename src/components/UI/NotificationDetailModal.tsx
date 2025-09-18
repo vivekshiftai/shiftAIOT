@@ -2,6 +2,8 @@ import React from 'react';
 import { X, Calendar, User, Cpu, AlertTriangle, CheckCircle, Wrench, Zap, Info } from 'lucide-react';
 import { Notification } from '../../types';
 import { formatRelativeTime, formatLocalDateTime } from '../../utils/dateUtils';
+import { useIoT } from '../../contexts/IoTContext';
+import { useUserDisplayName } from '../../hooks/useUserDisplayName';
 
 interface NotificationDetailModalProps {
   notification: Notification | null;
@@ -14,7 +16,15 @@ export const NotificationDetailModal: React.FC<NotificationDetailModalProps> = (
   isOpen,
   onClose
 }) => {
+  const { devices } = useIoT();
+  const { displayName: userName, loading: userNameLoading } = useUserDisplayName(notification?.userId);
+
   if (!isOpen || !notification) return null;
+
+  // Get device name from devices context
+  const deviceName = notification.deviceId 
+    ? devices.find(device => device.id === notification.deviceId)?.name 
+    : null;
 
   const getNotificationIcon = (category: Notification['category']) => {
     switch (category) {
@@ -153,9 +163,14 @@ export const NotificationDetailModal: React.FC<NotificationDetailModalProps> = (
                   <Cpu className="w-4 h-4 text-gray-500" />
                   <h4 className="text-sm font-medium text-gray-700">Device</h4>
                 </div>
-                <p className="text-sm text-gray-900 font-mono">
-                  {notification.deviceId}
+                <p className="text-sm text-gray-900 font-semibold">
+                  {deviceName || notification.deviceId}
                 </p>
+                {deviceName && (
+                  <p className="text-xs text-gray-500 font-mono mt-1">
+                    ID: {notification.deviceId}
+                  </p>
+                )}
               </div>
             )}
 
@@ -165,9 +180,14 @@ export const NotificationDetailModal: React.FC<NotificationDetailModalProps> = (
                   <User className="w-4 h-4 text-gray-500" />
                   <h4 className="text-sm font-medium text-gray-700">User</h4>
                 </div>
-                <p className="text-sm text-gray-900 font-mono">
-                  {notification.userId}
+                <p className="text-sm text-gray-900 font-semibold">
+                  {userNameLoading ? 'Loading...' : (userName || notification.userId)}
                 </p>
+                {userName && (
+                  <p className="text-xs text-gray-500 font-mono mt-1">
+                    ID: {notification.userId}
+                  </p>
+                )}
               </div>
             )}
 
