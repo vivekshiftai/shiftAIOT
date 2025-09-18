@@ -392,7 +392,7 @@ const RulesPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="section-header">Automation Rules</h2>
-          <p className="section-subtitle">Manage IoT automation rules</p>
+          <p className="section-subtitle">Manage automation rules</p>
         </div>
         <Button
           onClick={() => {
