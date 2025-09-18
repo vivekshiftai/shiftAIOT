@@ -37,6 +37,9 @@ export const DashboardSection: React.FC = () => {
   const [usersLoading, setUsersLoading] = useState(true);
   const [usersStats, setUsersStats] = useState<any>(null);
 
+  // State for upcoming maintenance notifications (fetched separately)
+  const [upcomingMaintenanceNotifications, setUpcomingMaintenanceNotifications] = useState<any[]>([]);
+
   // Get unique user IDs from maintenance tasks for fetching user names
   const assigneeIds = useMemo(() => {
     const allTasks = [...upcomingMaintenance, ...todayMaintenance, ...upcomingMaintenanceNotifications];
@@ -330,9 +333,6 @@ export const DashboardSection: React.FC = () => {
       completedMaintenance: 0 // This would need to be calculated from completed tasks
     };
   }, [devices, rulesCount, maintenanceCount, usersCount, upcomingMaintenance, todayMaintenance]);
-
-  // State for upcoming maintenance notifications (fetched separately)
-  const [upcomingMaintenanceNotifications, setUpcomingMaintenanceNotifications] = useState<any[]>([]);
 
   // Handle maintenance card click
   const handleMaintenanceClick = () => {
