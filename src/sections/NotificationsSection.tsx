@@ -188,12 +188,12 @@ export const NotificationsSection: React.FC = () => {
           <>
 
             {/* Date-wise Grouped Notifications */}
-            <div className="space-y-6">
+            <div className="space-y-8">
               {/* Today's Notifications */}
               {groupedNotifications.today.length > 0 && (
-                <div>
-                  <div className="px-6 py-3 bg-blue-50 border-b border-blue-100">
-                    <h3 className="text-sm font-semibold text-blue-800">Today ({groupedNotifications.today.length})</h3>
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="px-6 py-4 bg-blue-600 text-white">
+                    <h3 className="text-lg font-bold">📅 Today ({groupedNotifications.today.length})</h3>
                   </div>
                   <div className="divide-y divide-slate-200">
                     {groupedNotifications.today.map((notification) => (
@@ -209,9 +209,9 @@ export const NotificationsSection: React.FC = () => {
 
               {/* Yesterday's Notifications */}
               {groupedNotifications.yesterday.length > 0 && (
-                <div>
-                  <div className="px-6 py-3 bg-yellow-50 border-b border-yellow-100">
-                    <h3 className="text-sm font-semibold text-yellow-800">Yesterday ({groupedNotifications.yesterday.length})</h3>
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="px-6 py-4 bg-yellow-600 text-white">
+                    <h3 className="text-lg font-bold">🕒 Yesterday ({groupedNotifications.yesterday.length})</h3>
                   </div>
                   <div className="divide-y divide-slate-200">
                     {groupedNotifications.yesterday.map((notification) => (
@@ -227,9 +227,9 @@ export const NotificationsSection: React.FC = () => {
 
               {/* Past Notifications */}
               {groupedNotifications.past.length > 0 && (
-                <div>
-                  <div className="px-6 py-3 bg-gray-50 border-b border-gray-100">
-                    <h3 className="text-sm font-semibold text-gray-800">Past Messages ({groupedNotifications.past.length})</h3>
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                  <div className="px-6 py-4 bg-gray-600 text-white">
+                    <h3 className="text-lg font-bold">📂 Past Messages ({groupedNotifications.past.length})</h3>
                   </div>
                   <div className="divide-y divide-slate-200">
                     {groupedNotifications.past.map((notification) => (
