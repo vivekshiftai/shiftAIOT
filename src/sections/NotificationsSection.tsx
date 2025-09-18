@@ -188,14 +188,14 @@ export const NotificationsSection: React.FC = () => {
           <>
 
             {/* Date-wise Grouped Notifications */}
-            <div className="space-y-8">
+            <div className="space-y-8 px-4">
               {/* Today's Notifications */}
               {groupedNotifications.today.length > 0 && (
-                <div>
-                  <div className="pb-3 border-b-2 border-blue-600">
-                    <h3 className="text-lg font-bold text-blue-600">📅 Today ({groupedNotifications.today.length})</h3>
+                <div className="px-4 py-6">
+                  <div className="pb-4 border-b-2 border-pink-500">
+                    <h3 className="text-lg font-bold text-pink-600">📅 Today ({groupedNotifications.today.length})</h3>
                   </div>
-                  <div className="mt-4 divide-y divide-slate-200">
+                  <div className="mt-6 divide-y divide-slate-200">
                     {groupedNotifications.today.map((notification) => (
                       <CleanNotificationItem
                         key={notification.id}
@@ -209,11 +209,11 @@ export const NotificationsSection: React.FC = () => {
 
               {/* Yesterday's Notifications */}
               {groupedNotifications.yesterday.length > 0 && (
-                <div>
-                  <div className="pb-3 border-b-2 border-yellow-600">
-                    <h3 className="text-lg font-bold text-yellow-600">🕒 Yesterday ({groupedNotifications.yesterday.length})</h3>
+                <div className="px-4 py-6">
+                  <div className="pb-4 border-b-2 border-pink-500">
+                    <h3 className="text-lg font-bold text-pink-600">🕒 Yesterday ({groupedNotifications.yesterday.length})</h3>
                   </div>
-                  <div className="mt-4 divide-y divide-slate-200">
+                  <div className="mt-6 divide-y divide-slate-200">
                     {groupedNotifications.yesterday.map((notification) => (
                       <CleanNotificationItem
                         key={notification.id}
@@ -227,11 +227,11 @@ export const NotificationsSection: React.FC = () => {
 
               {/* Past Notifications */}
               {groupedNotifications.past.length > 0 && (
-                <div>
-                  <div className="pb-3 border-b-2 border-gray-600">
-                    <h3 className="text-lg font-bold text-gray-600">📂 Past Messages ({groupedNotifications.past.length})</h3>
+                <div className="px-4 py-6">
+                  <div className="pb-4 border-b-2 border-pink-500">
+                    <h3 className="text-lg font-bold text-pink-600">📂 Past Messages ({groupedNotifications.past.length})</h3>
                   </div>
-                  <div className="mt-4 divide-y divide-slate-200">
+                  <div className="mt-6 divide-y divide-slate-200">
                     {groupedNotifications.past.map((notification) => (
                       <CleanNotificationItem
                         key={notification.id}
