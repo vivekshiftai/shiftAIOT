@@ -236,16 +236,16 @@ export const CleanNotificationItem: React.FC<CleanNotificationItemProps> = ({
             {/* Footer Info */}
             <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
               <div className="flex items-center gap-4">
-                <span className="flex items-center gap-1">
+                {/* <span className="flex items-center gap-1">
                   <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
                   ID: {notification.id?.substring(0, 8) || 'N/A'}
-                </span>
-                {notification.deviceId && (
+                </span> */}
+                {/* {notification.deviceId && (
                   <span className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
                     Device: {notification.deviceId.substring(0, 8)}
                   </span>
-                )}
+                )} */}
               </div>
               <div className="flex items-center gap-1 text-blue-600 group-hover:text-blue-700 transition-colors">
                 <span className="font-medium">View details</span>

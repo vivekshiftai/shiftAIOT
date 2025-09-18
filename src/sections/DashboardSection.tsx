@@ -505,165 +505,6 @@ export const DashboardSection: React.FC = () => {
         </div>
       )}
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Device Activity - 50% */}
-        <div className="lg:col-span-1">
-          <div className="card p-6 animate-fade-in">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-xl font-semibold text-primary">
-                  Device Activity
-                </h3>
-                <p className="text-secondary text-sm">
-                  Real-time monitoring
-                </p>
-              </div>
-              
-              <div className="flex items-center gap-1">
-                {['24h', '7d'].map((range) => (
-                  <button
-                    key={range}
-                    onClick={() => setSelectedTimeRange(range)}
-                    className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                      selectedTimeRange === range
-                        ? 'bg-primary-300 text-white'
-                        : 'text-secondary hover:bg-secondary hover:text-primary'
-                    }`}
-                  >
-                    {range}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            <div className="h-32 flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Activity className="w-6 h-6 text-primary-600" />
-                </div>
-                <h4 className="text-sm font-semibold text-primary mb-1">
-                  Activity Monitor
-                </h4>
-                <p className="text-secondary text-xs">
-                  Telemetry data pending
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Upcoming Maintenance - 50% */}
-        <div className="lg:col-span-1">
-          <div className="card p-6 h-full">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-xl font-semibold text-primary">
-                  Upcoming Maintenance
-                </h3>
-                <p className="text-secondary">
-                  All upcoming maintenance tasks
-                </p>
-              </div>
-              <div className="text-right">
-                <Wrench className="w-5 h-5 text-secondary mb-1" />
-                <p className="text-xs text-secondary">
-                  {upcomingMaintenance.length} of {maintenanceCount} total
-                </p>
-              </div>
-            </div>
-
-            <div className="max-h-96 overflow-y-auto">
-              {upcomingMaintenance.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="sticky top-0 bg-white border-b border-light">
-                      <tr>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-secondary uppercase tracking-wider">
-                          Task Title
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-secondary uppercase tracking-wider">
-                          Assignee
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-secondary uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="text-left py-3 px-4 text-xs font-semibold text-secondary uppercase tracking-wider">
-                          Due Date
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-light">
-                      {upcomingMaintenance.map((item) => (
-                        <tr
-                          key={item.id}
-                          className="hover:bg-secondary transition-colors cursor-pointer"
-                          onClick={handleMaintenanceClick}
-                        >
-                          <td className="py-3 px-4">
-                            <div className="text-sm font-medium text-primary">
-                              {item.taskName || item.componentName}
-                            </div>
-                            <div className="text-xs text-secondary">
-                              {item.deviceName || 'Device maintenance'}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="text-sm text-secondary">
-                              {userNamesLoading ? 'Loading...' : getAssigneeDisplayName(item.assignedTo)}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              item.status === 'COMPLETED' ? 'bg-success-100 text-success-700' :
-                              item.status === 'ACTIVE' ? 'bg-primary-100 text-primary-700' :
-                              item.status === 'OVERDUE' ? 'bg-error-100 text-error-700' :
-                              item.status === 'PENDING' ? 'bg-warning-100 text-warning-700' :
-                              item.status === 'CANCELLED' ? 'bg-neutral-100 text-neutral-700' :
-                              'bg-neutral-100 text-neutral-700'
-                            }`}>
-                              {item.status === 'COMPLETED' ? 'Done' : 
-                               item.status === 'ACTIVE' ? 'Active' :
-                               item.status === 'OVERDUE' ? 'Overdue' :
-                               item.status === 'PENDING' ? 'Pending' :
-                               item.status === 'CANCELLED' ? 'Cancelled' : 
-                               item.status || 'Unknown'}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="text-sm text-secondary">
-                              {formatMaintenanceDate(item.nextMaintenance)}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Clock className="w-12 h-12 text-secondary mx-auto mb-4" />
-                  <p className="text-secondary text-sm">
-                    No upcoming maintenance scheduled
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-light">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-secondary hover:text-primary"
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-                onClick={handleMaintenanceClick}
-              >
-                View All Maintenance
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Upcoming Maintenance Notifications */}
       {upcomingMaintenanceNotifications.length > 0 && (
@@ -690,60 +531,47 @@ export const DashboardSection: React.FC = () => {
             </Button>
           </div>
           
-          <div className="space-y-3">
-            {upcomingMaintenanceNotifications.map((maintenance) => (
-              <div 
-                key={maintenance.id}
-                className="bg-white p-4 rounded-lg border border-blue-200 hover:border-blue-300 transition-colors cursor-pointer"
-                onClick={handleMaintenanceClick}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    {/* Task Name - Line 1 */}
-                    <h4 className="font-semibold text-gray-900 text-base mb-2 truncate">
-                      {maintenance.taskName || maintenance.componentName || 'Maintenance Task'}
-                    </h4>
-                    
-                    {/* Status - Line 2 */}
-                    <div className="mb-3">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                        maintenance.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                        maintenance.status === 'ACTIVE' ? 'bg-blue-100 text-blue-700' :
-                        maintenance.status === 'OVERDUE' ? 'bg-red-100 text-red-700' :
-                        maintenance.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {maintenance.status === 'COMPLETED' ? 'Completed' : 
-                         maintenance.status === 'ACTIVE' ? 'In Progress' :
-                         maintenance.status === 'OVERDUE' ? 'Overdue' :
-                         maintenance.status === 'PENDING' ? 'Pending' :
-                         maintenance.status || 'Unknown'}
-                      </span>
-                    </div>
-                    
-                    {/* Description - Truncated */}
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                      {maintenance.description 
-                        ? maintenance.description.length > 100 
-                          ? `${maintenance.description.substring(0, 100)}...`
-                          : maintenance.description
-                        : `Scheduled maintenance for ${maintenance.deviceName || 'device'}. Regular maintenance task to ensure optimal performance and prevent potential issues.`
-                      }
-                    </p>
-                    
-                    {/* Additional Info */}
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>
-                        📅 Due: {formatMaintenanceDate(maintenance.nextMaintenance)}
-                      </span>
-                      <span>
-                        👤 {userNamesLoading ? 'Loading...' : getAssigneeDisplayName(maintenance.assignedTo)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="bg-white rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-blue-100 border-b border-blue-200">
+                <tr>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-blue-800">Task Name</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-blue-800">Device Name</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-blue-800">Username</th>
+                  <th className="text-left py-3 px-4 text-sm font-semibold text-blue-800">Due Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {upcomingMaintenanceNotifications.map((maintenance) => (
+                  <tr
+                    key={maintenance.id}
+                    className="hover:bg-blue-50 transition-colors cursor-pointer"
+                    onClick={handleMaintenanceClick}
+                  >
+                    <td className="py-3 px-4">
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {maintenance.taskName || maintenance.componentName || 'Maintenance Task'}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="text-sm text-gray-700">
+                        {maintenance.deviceName || 'Unknown Device'}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="text-sm text-gray-700">
+                        {userNamesLoading ? 'Loading...' : getAssigneeDisplayName(maintenance.assignedTo)}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="text-sm text-gray-700">
+                        {formatMaintenanceDate(maintenance.nextMaintenance)}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
