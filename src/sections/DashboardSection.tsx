@@ -39,10 +39,10 @@ export const DashboardSection: React.FC = () => {
 
   // Get unique user IDs from maintenance tasks for fetching user names
   const assigneeIds = useMemo(() => {
-    const allTasks = [...upcomingMaintenance, ...todayMaintenance];
+    const allTasks = [...upcomingMaintenance, ...todayMaintenance, ...upcomingMaintenanceNotifications];
     const uniqueIds = [...new Set(allTasks.map(task => task.assignedTo).filter(Boolean))];
     return uniqueIds;
-  }, [upcomingMaintenance, todayMaintenance]);
+  }, [upcomingMaintenance, todayMaintenance, upcomingMaintenanceNotifications]);
 
   // Fetch user display names
   const { displayNames, loading: userNamesLoading } = useUserDisplayNames(assigneeIds);
