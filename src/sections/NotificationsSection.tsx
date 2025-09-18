@@ -33,6 +33,43 @@ export const NotificationsSection: React.FC = () => {
     return matchesSearch && matchesType && matchesStatus;
   }), [notifications, searchTerm, typeFilter, statusFilter]);
 
+  // Group notifications by date
+  const groupedNotifications = useMemo(() => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // Reset time to compare only dates
+    today.setHours(0, 0, 0, 0);
+    yesterday.setHours(0, 0, 0, 0);
+    
+    const groups = {
+      today: [] as Notification[],
+      yesterday: [] as Notification[],
+      past: [] as Notification[]
+    };
+    
+    filteredNotifications.forEach(notification => {
+      const notificationDate = new Date(notification.createdAt);
+      notificationDate.setHours(0, 0, 0, 0);
+      
+      if (notificationDate.getTime() === today.getTime()) {
+        groups.today.push(notification);
+      } else if (notificationDate.getTime() === yesterday.getTime()) {
+        groups.yesterday.push(notification);
+      } else {
+        groups.past.push(notification);
+      }
+    });
+    
+    // Sort each group by creation time (newest first)
+    groups.today.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    groups.yesterday.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    groups.past.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    return groups;
+  }, [filteredNotifications]);
+
   const unreadCount = notifications.filter(n => !n.read).length;
   const totalCount = notifications.length;
 
@@ -150,15 +187,61 @@ export const NotificationsSection: React.FC = () => {
         ) : (
           <>
 
-            {/* Clean Notifications */}
-            <div className="divide-y divide-slate-200">
-              {filteredNotifications.map((notification) => (
-                <CleanNotificationItem
-                  key={notification.id}
-                  notification={notification}
-                  onClick={handleNotificationClick}
-                />
-              ))}
+            {/* Date-wise Grouped Notifications */}
+            <div className="space-y-6">
+              {/* Today's Notifications */}
+              {groupedNotifications.today.length > 0 && (
+                <div>
+                  <div className="px-6 py-3 bg-blue-50 border-b border-blue-100">
+                    <h3 className="text-sm font-semibold text-blue-800">Today ({groupedNotifications.today.length})</h3>
+                  </div>
+                  <div className="divide-y divide-slate-200">
+                    {groupedNotifications.today.map((notification) => (
+                      <CleanNotificationItem
+                        key={notification.id}
+                        notification={notification}
+                        onClick={handleNotificationClick}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Yesterday's Notifications */}
+              {groupedNotifications.yesterday.length > 0 && (
+                <div>
+                  <div className="px-6 py-3 bg-yellow-50 border-b border-yellow-100">
+                    <h3 className="text-sm font-semibold text-yellow-800">Yesterday ({groupedNotifications.yesterday.length})</h3>
+                  </div>
+                  <div className="divide-y divide-slate-200">
+                    {groupedNotifications.yesterday.map((notification) => (
+                      <CleanNotificationItem
+                        key={notification.id}
+                        notification={notification}
+                        onClick={handleNotificationClick}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Past Notifications */}
+              {groupedNotifications.past.length > 0 && (
+                <div>
+                  <div className="px-6 py-3 bg-gray-50 border-b border-gray-100">
+                    <h3 className="text-sm font-semibold text-gray-800">Past Messages ({groupedNotifications.past.length})</h3>
+                  </div>
+                  <div className="divide-y divide-slate-200">
+                    {groupedNotifications.past.map((notification) => (
+                      <CleanNotificationItem
+                        key={notification.id}
+                        notification={notification}
+                        onClick={handleNotificationClick}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
