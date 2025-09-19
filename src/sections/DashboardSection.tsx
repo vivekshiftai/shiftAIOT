@@ -9,6 +9,7 @@ import Button from '../components/UI/Button';
 
 import { maintenanceAPI, ruleAPI, userAPI } from '../services/api';
 import { logError, logInfo } from '../utils/logger';
+import { cacheService, CacheConfigs } from '../utils/cacheService';
 
 import { 
   Clock,
@@ -77,23 +78,26 @@ export const DashboardSection: React.FC = () => {
           setTimeout(() => reject(new Error('Maintenance API timeout')), 10000); // 10 second timeout
         });
         
-        // Fetch all maintenance tasks for total count
-        const allMaintenanceResponse = await Promise.race([
-          maintenanceAPI.getAll(),
-          timeoutPromise
-        ]) as any;
+        // Fetch all maintenance tasks for total count with caching
+        const allMaintenanceResponse = await cacheService.cachedApiCall(
+          'dashboard_all_maintenance',
+          () => Promise.race([maintenanceAPI.getAll(), timeoutPromise]),
+          CacheConfigs.SHORT // 2 minute cache for dashboard data
+        ) as any;
         
-        // Fetch upcoming maintenance tasks for the upcoming section
-        const upcomingMaintenanceResponse = await Promise.race([
-          maintenanceAPI.getUpcoming(),
-          timeoutPromise
-        ]) as any;
+        // Fetch upcoming maintenance tasks for the upcoming section with caching
+        const upcomingMaintenanceResponse = await cacheService.cachedApiCall(
+          'dashboard_upcoming_maintenance',
+          () => Promise.race([maintenanceAPI.getUpcoming(), timeoutPromise]),
+          CacheConfigs.SHORT // 2 minute cache
+        ) as any;
         
-        // Fetch today's maintenance tasks
-        const todayMaintenanceResponse = await Promise.race([
-          maintenanceAPI.getToday(),
-          timeoutPromise
-        ]) as any;
+        // Fetch today's maintenance tasks with caching
+        const todayMaintenanceResponse = await cacheService.cachedApiCall(
+          'dashboard_today_maintenance',
+          () => Promise.race([maintenanceAPI.getToday(), timeoutPromise]),
+          CacheConfigs.SHORT // 2 minute cache
+        ) as any;
         
         logInfo('Dashboard', 'Maintenance API responses received', { 
           allMaintenanceStatus: allMaintenanceResponse.status,
@@ -222,21 +226,29 @@ export const DashboardSection: React.FC = () => {
         setMaintenanceLoading(false);
       }
 
-      try {
-        // Fetch rules count
-        const rulesResponse = await ruleAPI.getAll();
-        const totalRules = rulesResponse.data?.length || 0;
-        setRulesCount(totalRules);
-        logInfo('Dashboard', 'Rules data fetched successfully', { totalRules });
-      } catch (error) {
-        logError('Dashboard', 'Failed to fetch rules count', error instanceof Error ? error : new Error('Unknown error'));
-        setRulesCount(0);
-      }
+       try {
+         // Fetch rules count with caching
+         const rulesResponse = await cacheService.cachedApiCall(
+           'dashboard_rules_count',
+           () => ruleAPI.getAll(),
+           CacheConfigs.MEDIUM // 5 minute cache for rules
+         );
+         const totalRules = rulesResponse.data?.length || 0;
+         setRulesCount(totalRules);
+         logInfo('Dashboard', 'Rules data fetched successfully', { totalRules });
+       } catch (error) {
+         logError('Dashboard', 'Failed to fetch rules count', error instanceof Error ? error : new Error('Unknown error'));
+         setRulesCount(0);
+       }
 
       try {
-        // Fetch users count - using the stats endpoint for better performance
+        // Fetch users count - using the stats endpoint for better performance with caching
         setUsersLoading(true);
-        const usersStatsResponse = await userAPI.getStats();
+        const usersStatsResponse = await cacheService.cachedApiCall(
+          'dashboard_users_stats',
+          () => userAPI.getStats(),
+          CacheConfigs.LONG // 15 minute cache for user stats
+        );
         const totalUsers = usersStatsResponse.data?.totalUsers || 0;
         setUsersCount(totalUsers);
         setUsersStats(usersStatsResponse.data);
@@ -305,11 +317,11 @@ export const DashboardSection: React.FC = () => {
      // Initial fetch
      fetchRealTimeData();
 
-    // Set up periodic refresh every 30 seconds
+    // Set up periodic refresh every 5 minutes (much less frequent)
     const intervalId = setInterval(() => {
-      logInfo('Dashboard', 'Refreshing real-time data...');
+      logInfo('Dashboard', 'Periodic refresh of maintenance data...');
       fetchRealTimeData();
-    }, 30000); // 30 seconds
+    }, 5 * 60 * 1000); // 5 minutes
 
     // Cleanup interval on component unmount
     return () => {

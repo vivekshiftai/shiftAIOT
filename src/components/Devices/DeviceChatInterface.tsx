@@ -236,15 +236,24 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
                   <div 
                     className="text-sm leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: formatResponseText(message.content, message.images) }}
+                    onClick={(e) => {
+                      // Handle inline image clicks to open in ImageViewer
+                      const target = e.target as HTMLElement;
+                      if (target.tagName === 'IMG' && target.classList.contains('inline-response-image')) {
+                        const filename = target.getAttribute('data-filename');
+                        if (filename && message.images) {
+                          const imageIndex = message.images.findIndex(img => img.filename === filename);
+                          if (imageIndex !== -1) {
+                            // Open ImageViewer with the clicked image
+                            // Note: You'll need to add ImageViewer state to this component
+                            console.log('Open image viewer for:', filename, 'at index:', imageIndex);
+                          }
+                        }
+                      }
+                    }}
                   />
                   
-                  {/* Display Images */}
-                  {message.images && message.images.length > 0 && (
-                    <ChatImageDisplay 
-                      images={message.images} 
-                      className="mt-3"
-                    />
-                  )}
+                  {/* Images are now displayed inline in the text above - no separate gallery needed */}
                   
                   {/* Display Tables */}
                   {message.tables && message.tables.length > 0 && (

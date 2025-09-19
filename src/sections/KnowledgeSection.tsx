@@ -657,28 +657,7 @@ export const KnowledgeSection: React.FC = () => {
                       </div>
                     )}
                     
-                    {/* Display Images */}
-                    {message.images && message.images.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        <p className="text-xs font-medium text-gray-500">📷 Related Images:</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          {message.images.map((image, index) => (
-                            <div key={index} className="relative group">
-                              <img
-                                src={`data:${image.mime_type};base64,${image.data}`}
-                                alt={image.filename || `Image ${index + 1}`}
-                                className="w-full h-24 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => openImageViewer(message.images!, index)}
-                              />
-                              {/* Filename overlay */}
-                              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-70 text-white text-xs p-2 rounded-b-lg">
-                                <p className="truncate">{image.filename || `Image ${index + 1}`}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {/* Images are now displayed inline in the text above - no separate gallery needed */}
                     
                     {/* Display Tables */}
                     {message.tables && message.tables.length > 0 && (

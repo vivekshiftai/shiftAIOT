@@ -54,9 +54,9 @@ export function processImagePlaceholders(responseText: string, images: PDFImage[
     );
 
     if (matchingImage) {
-      // Replace the placeholder with a more user-friendly reference
-      const imageReference = `📷 Image ${index + 1}: ${filename}`;
-      processedText = processedText.replace(fullMatch, imageReference);
+      // Replace the placeholder with actual inline image HTML
+      const inlineImageHTML = createInlineImageHTML(matchingImage, '300px');
+      processedText = processedText.replace(fullMatch, inlineImageHTML);
       
       imageReferences.push({
         filename,
@@ -96,12 +96,13 @@ export function processImagePlaceholders(responseText: string, images: PDFImage[
  * @param maxWidth Maximum width for the inline image
  * @returns HTML string for the image
  */
-export function createInlineImageHTML(image: PDFImage, maxWidth: string = '200px'): string {
-  return `<img src="data:${image.mime_type};base64,${image.data}" 
-               alt="${image.filename}" 
-               style="max-width: ${maxWidth}; height: auto; border-radius: 8px; margin: 8px 0; cursor: pointer;" 
-               class="inline-response-image" 
-               data-filename="${image.filename}" />`;
+export function createInlineImageHTML(image: PDFImage, maxWidth: string = '300px'): string {
+  return `<div style="margin: 16px 0; text-align: center;">
+            <img src="data:${image.mime_type};base64,${image.data}" 
+                 alt="${image.filename}" 
+                 style="max-width: ${maxWidth}; height: auto; border-radius: 8px; border: 1px solid #d1d5db; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); display: inline-block;" 
+                 class="inline-response-image" />
+          </div>`;
 }
 
 /**
