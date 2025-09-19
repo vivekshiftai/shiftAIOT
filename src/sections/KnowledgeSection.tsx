@@ -16,6 +16,7 @@ import '../styles/knowledge.css';
 import { knowledgeAPI } from '../services/api';
 import { ImageViewer } from '../components/UI/ImageViewer';
 import { processImagePlaceholders } from '../utils/imageResponseProcessor';
+import { useSectionState } from '../hooks/useSectionState';
 
 // Updated interface to match UnifiedPDF API response
 interface UnifiedPDF {
@@ -70,14 +71,17 @@ export const KnowledgeSection: React.FC = () => {
   const [devices] = useState<Device[]>([]);
   const [selectedDeviceForUpload, setSelectedDeviceForUpload] = useState<string>('');
   const [showDeviceSelector, setShowDeviceSelector] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      type: 'assistant',
-      content: 'Hello! I\'m your AI assistant for machines.\n\n**How to use:**\n1. Select a machine from the "AI Ready Machines" panel on the right\n2. Ask questions about that machine\n\n\n**Available machines with Device Guides will appear on the right. Select one to get started!**',
-      timestamp: new Date()
-    }
-  ]);
+  // Persistent chat messages that survive navigation
+  const [sectionState, setSectionState] = useSectionState('knowledge_base', {
+    chatMessages: [
+      {
+        id: '1',
+        type: 'assistant',
+        content: 'Hello! I\'m your AI assistant for machines.\n\n**How to use:**\n1. Select a machine from the "AI Ready Machines" panel on the right\n2. Ask questions about that machine\n\n\n**Available machines with Device Guides will appear on the right. Select one to get started!**',
+        timestamp: new Date()
+      }
+    ] as ChatMessage[]
+  });
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -102,7 +106,7 @@ export const KnowledgeSection: React.FC = () => {
     if (chatMessagesRef.current) {
       chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
     }
-  }, [chatMessages]);
+  }, [sectionState.chatMessages]);
 
   // Simple function to load query suggestions (optional)
   const loadQuerySuggestions = async () => {
@@ -239,7 +243,10 @@ export const KnowledgeSection: React.FC = () => {
       timestamp: new Date()
     };
 
-    setChatMessages((prev: ChatMessage[]) => [...prev, userMessage]);
+    setSectionState(prev => ({
+      ...prev,
+      chatMessages: [...prev.chatMessages, userMessage]
+    }));
     setNewMessage('');
     setIsTyping(true);
 
@@ -299,7 +306,10 @@ export const KnowledgeSection: React.FC = () => {
               processing_time: queryResponse.processing_time,
               queryType: 'PDF'
             };
-            setChatMessages((prev: ChatMessage[]) => [...prev, assistantMessage]);
+            setSectionState(prev => ({
+              ...prev,
+              chatMessages: [...prev.chatMessages, assistantMessage]
+            }));
           } catch (queryError) {
             logError('Knowledge', `Failed to query documentation for device "${selectedDevice.name}"`, queryError instanceof Error ? queryError : new Error('Unknown error'));
             
@@ -311,7 +321,10 @@ export const KnowledgeSection: React.FC = () => {
               timestamp: new Date(),
               queryType: 'UNKNOWN'
             };
-            setChatMessages((prev: ChatMessage[]) => [...prev, fallbackMessage]);
+            setSectionState(prev => ({
+              ...prev,
+              chatMessages: [...prev.chatMessages, fallbackMessage]
+            }));
           }
         } else {
           // No Device Guides available for this device
@@ -322,7 +335,10 @@ export const KnowledgeSection: React.FC = () => {
             timestamp: new Date(),
             queryType: 'UNKNOWN'
           };
-          setChatMessages((prev: ChatMessage[]) => [...prev, noPDFMessage]);
+          setSectionState(prev => ({
+            ...prev,
+            chatMessages: [...prev.chatMessages, noPDFMessage]
+          }));
         }
       } else {
         // No device selected - show helpful message
@@ -333,7 +349,10 @@ export const KnowledgeSection: React.FC = () => {
           timestamp: new Date(),
           queryType: 'UNKNOWN'
         };
-        setChatMessages((prev: ChatMessage[]) => [...prev, noDeviceMessage]);
+        setSectionState(prev => ({
+          ...prev,
+          chatMessages: [...prev.chatMessages, noDeviceMessage]
+        }));
       }
     } catch (error) {
       logError('Knowledge', 'Failed to send message', error instanceof Error ? error : new Error('Unknown error'));
@@ -344,7 +363,10 @@ export const KnowledgeSection: React.FC = () => {
         timestamp: new Date(),
         queryType: 'UNKNOWN'
       };
-      setChatMessages((prev: ChatMessage[]) => [...prev, errorMessage]);
+      setSectionState(prev => ({
+        ...prev,
+        chatMessages: [...prev.chatMessages, errorMessage]
+      }));
     } finally {
       setIsTyping(false);
     }
@@ -471,7 +493,10 @@ export const KnowledgeSection: React.FC = () => {
             content: uploadResponse.data.message || `✅ Device Guide "${newDocument.name}" uploaded successfully. We're processing your document in the background. You'll receive a notification when it's ready for AI chat queries.`,
           timestamp: new Date()
         };
-        setChatMessages((prev: ChatMessage[]) => [...prev, successMessage]);
+        setSectionState(prev => ({
+          ...prev,
+          chatMessages: [...prev.chatMessages, successMessage]
+        }));
 
         // Reset device selector
         setShowDeviceSelector(false);
@@ -557,7 +582,7 @@ export const KnowledgeSection: React.FC = () => {
             ref={chatMessagesRef}
             className="knowledge-chat-messages p-6 space-y-6"
           >
-            {chatMessages.map((message) => (
+            {sectionState.chatMessages.map((message) => (
               <div
                 key={message.id}
                 className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -762,7 +787,7 @@ export const KnowledgeSection: React.FC = () => {
               {/* Quick Actions */}
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => setNewMessage('How do I install this machine and how to start it and stop it? Explain me the complete setup process.')}
+                  onClick={() => setNewMessage('How do I install this machine and how to start it and stop it?')}
                   className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
                 >
                   Setup Guide
@@ -907,7 +932,10 @@ export const KnowledgeSection: React.FC = () => {
                         timestamp: new Date(),
                         queryType: 'PDF'
                       };
-                      setChatMessages((prev: ChatMessage[]) => [...prev, deviceSelectionMessage]);
+                      setSectionState(prev => ({
+                        ...prev,
+                        chatMessages: [...prev.chatMessages, deviceSelectionMessage]
+                      }));
                     }}
                   >
                     <div className="flex items-start justify-between">

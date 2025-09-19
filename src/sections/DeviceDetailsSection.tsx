@@ -1556,7 +1556,7 @@ export const DeviceDetailsSection: React.FC = () => {
               {devicePDFs && devicePDFs.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
                   <button
-                    onClick={() => setNewMessage('How do I install this machine and how to start it and stop it? Explain me the complete setup process.')}
+                    onClick={() => setNewMessage('How do I install this machine and how to start it and stop it?')}
                     className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
                   >
                     Setup Guide

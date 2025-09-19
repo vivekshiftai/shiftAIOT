@@ -102,6 +102,17 @@ export class ChatService {
       if (!response.ok) {
         const errorText = await response.text();
         logError('ChatService', `PDF query failed: ${response.status} - ${errorText}`);
+        
+        // Check if this is an Azure OpenAI content filter error
+        if (errorText.includes('content_filter') || 
+            errorText.includes('ResponsibleAIPolicyViolation') ||
+            errorText.includes('content management policy') ||
+            errorText.includes('jailbreak') ||
+            errorText.includes('content_filter_result')) {
+          
+          throw new Error('An error occurred, please try again.');
+        }
+        
         throw new Error(`PDF query failed: ${response.status} ${response.statusText}`);
       }
 
@@ -118,6 +129,20 @@ export class ChatService {
 
     } catch (error) {
       logError('ChatService', 'PDF query failed', error instanceof Error ? error : new Error('Unknown error'));
+      
+      // Check if this is an Azure OpenAI content filter error
+      if (error instanceof Error) {
+        const errorMessage = error.message;
+        
+        if (errorMessage.includes('content_filter') || 
+            errorMessage.includes('ResponsibleAIPolicyViolation') ||
+            errorMessage.includes('content management policy') ||
+            errorMessage.includes('An error occurred, please try again')) {
+          
+          throw new Error('An error occurred, please try again.');
+        }
+      }
+      
       throw error;
     }
   }

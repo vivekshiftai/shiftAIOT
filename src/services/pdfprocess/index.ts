@@ -375,6 +375,25 @@ export class PDFProcessingService {
 
     } catch (error) {
       console.error('PDF query from backend failed:', error);
+      
+      // Check if this is an Azure OpenAI content filter error
+      if (error instanceof Error) {
+        const errorMessage = error.message;
+        const errorString = JSON.stringify(error);
+        
+        // Check for content filter errors
+        if (errorMessage.includes('content_filter') || 
+            errorMessage.includes('ResponsibleAIPolicyViolation') ||
+            errorMessage.includes('content management policy') ||
+            errorString.includes('jailbreak') ||
+            errorString.includes('content_filter_result')) {
+          
+          // Create a user-friendly error for content filter issues
+          const friendlyError = new Error('An error occurred, please try again.');
+          throw friendlyError;
+        }
+      }
+      
       throw error;
     }
   }
