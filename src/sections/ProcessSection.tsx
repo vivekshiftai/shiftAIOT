@@ -116,7 +116,7 @@ export const ProcessSection: React.FC = () => {
             </button>
           </div>
         </div>
-      
+
       {/* Process Grid - Full Width Like Smart Assets */}
       {filteredProcesses.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-neutral-200">

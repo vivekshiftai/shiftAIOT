@@ -307,7 +307,6 @@ export const DevicesSection: React.FC = () => {
             </select>
           </div>
         </div>
-      </div>
 
       {/* Device Grid */}
       <div className="grid grid-cols-1 gap-6">
