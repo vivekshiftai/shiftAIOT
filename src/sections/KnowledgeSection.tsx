@@ -592,7 +592,7 @@ export const KnowledgeSection: React.FC = () => {
                           message.queryType === 'LLM_ANSWER' ? 'bg-warning-100 text-warning-700' :
                           'bg-neutral-100 text-neutral-700'
                         }`}>
-                          {message.queryType === 'PDF' ? '📄' : message.queryType === 'DATABASE' ? '📊' : '🤖'} {message.queryType}
+                          {message.queryType === 'PDF' ? '📄' : message.queryType === 'DATABASE' ? '📊' : '🤖'} {message.queryType === 'PDF' ? 'Knowledge Base' : message.queryType}
                         </span>
                         {message.rowCount && (
                           <span className="text-xs text-gray-500">
