@@ -25,7 +25,7 @@ export const ProcessSection: React.FC = () => {
     },
     {
       id: 'vendor-intelligence',
-      name: 'Sales Process Vendor Intelligence',
+      name: 'Vendor Intelligence',
       description: 'Advanced vendor analysis and procurement optimization (Coming Soon)',
       icon: Brain,
       color: 'gray',
