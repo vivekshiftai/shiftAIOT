@@ -794,6 +794,8 @@ export class StrategyAgentService {
     force_regenerate: boolean;
     timestamp: number;
     source: string;
+    total_customers?: number;
+    successful_customers?: number;
   }> {
     try {
       logInfo('StrategyAgent', 'Regenerating recommendations for all customers from backend', { forceRegenerate });

@@ -164,18 +164,23 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
       const result = await StrategyAgentService.regenerateAllRecommendations(true);
       
       if (result.success === true) {
-        setRegenerationMessage('🔄 Sales Intelligence refresh process started successfully! The system is now refreshing recommendations for all customers. This process may take several minutes to complete.');
-        logInfo('Process', 'All customers regeneration triggered successfully via Refresh Intelligence - external service returned success: true', { 
+        // External service completed successfully and returned data immediately
+        setShowSuccessMessage(true);
+        setRegenerationMessage('🎉 Sales Intelligence refresh completed successfully! The recommendations have been updated in the system. You can now generate new reports to see the latest data.');
+        setIsRegeneratingData(false);
+        
+        logInfo('Process', 'Sales Intelligence refresh completed successfully - external service returned success: true with data', { 
           success: result.success,
-          message: result.message 
+          message: result.message,
+          totalCustomers: result.total_customers,
+          successfulCustomers: result.successful_customers
         });
         
         // Clear existing recommendations since they're being regenerated
         setRecommendations(null);
         setAllRecommendations(null);
         
-        // Start polling for completion
-        await pollForCompletion();
+        // No need to poll - the process is already complete
         
       } else {
         // External service did not return success: true
