@@ -127,59 +127,65 @@ export const ProcessSection: React.FC = () => {
                 <div
                   key={process.id}
                   onClick={() => handleProcessSelect(process.id)}
-                  className={`rounded-xl border p-6 transition-all duration-300 ${
+                  className={`bg-white rounded-xl shadow-sm border border-neutral-200 transition-all cursor-pointer group overflow-hidden ${
                     isEnabled 
-                      ? 'bg-white border-neutral-200 hover:shadow-lg hover:border-primary-300 cursor-pointer group'
-                      : 'bg-gray-100 border-gray-300 cursor-not-allowed opacity-60'
+                      ? 'hover:shadow-md hover:border-primary-300'
+                      : 'opacity-60 cursor-not-allowed bg-gray-50 border-gray-300'
                   }`}
                 >
-                  <div className="flex items-start gap-4">
-                    <div className={`p-3 rounded-xl ${
-                      isEnabled 
-                        ? 'bg-primary-50 group-hover:bg-primary-100' 
-                        : 'bg-gray-200'
-                    } transition-colors`}>
-                      <IconComponent className={`w-6 h-6 ${
-                        isEnabled ? 'text-primary-600' : 'text-gray-400'
-                      }`} />
+                  {/* Card Content */}
+                  <div className="p-4 sm:p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-start gap-4 flex-1">
+                        <div className={`p-3 rounded-xl ${
+                          isEnabled 
+                            ? 'bg-primary-50 group-hover:bg-primary-100' 
+                            : 'bg-gray-200'
+                        } transition-colors`}>
+                          <IconComponent className={`w-6 h-6 ${
+                            isEnabled ? 'text-primary-600' : 'text-gray-400'
+                          }`} />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <h3 className={`text-lg font-semibold mb-2 ${
+                            isEnabled 
+                              ? 'text-neutral-800 group-hover:text-primary-600' 
+                              : 'text-gray-500'
+                          } transition-colors`}>
+                            {process.name}
+                          </h3>
+                          
+                          <p className={`text-sm ${
+                            isEnabled ? 'text-neutral-600' : 'text-gray-400'
+                          }`}>
+                            {process.description}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className={`${
+                        isEnabled ? 'text-neutral-400 group-hover:text-primary-600' : 'text-gray-300'
+                      } transition-colors`}>
+                        <TrendingUp className="w-5 h-5" />
+                      </div>
                     </div>
                     
-                    <div className="flex-1">
-                      <h3 className={`text-lg font-semibold mb-2 ${
-                        isEnabled 
-                          ? 'text-neutral-800 group-hover:text-primary-600' 
-                          : 'text-gray-500'
-                      } transition-colors`}>
-                        {process.name}
-                      </h3>
-                      
-                      <p className={`text-sm ${
-                        isEnabled ? 'text-neutral-600' : 'text-gray-400'
-                      }`}>
-                        {process.description}
-                      </p>
-                      
-                      {!isEnabled && (
-                        <div className="mt-3">
+                    {/* Status Badge */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        {!isEnabled && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-600">
                             Coming Soon
                           </span>
-                        </div>
-                      )}
-                      
-                      {isEnabled && (
-                        <div className="mt-3">
+                        )}
+                        
+                        {isEnabled && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                             Available
                           </span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className={`${
-                      isEnabled ? 'text-neutral-400 group-hover:text-primary-600' : 'text-gray-300'
-                    } transition-colors`}>
-                      <TrendingUp className="w-5 h-5" />
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -20,9 +20,9 @@ interface SidebarProps {
 const menuItems = [
   { id: 'dashboard', label: 'Command Center', icon: BarChart3, path: '/dashboard' },
   { id: 'devices', label: 'Smart Assets', icon: Cpu, path: '/devices' },
-  { id: 'analytics', label: 'Intelligence', icon: BarChart3, path: '/analytics' },
-  { id: 'knowledge', label: 'Knowledge Base', icon: Brain, path: '/knowledge' },
   { id: 'process', label: 'Smart Process', icon: Send, path: '/process' },
+  // { id: 'analytics', label: 'Intelligence', icon: BarChart3, path: '/analytics' },
+  { id: 'knowledge', label: 'Knowledge Base', icon: Brain, path: '/knowledge' },
   { id: 'notifications', label: 'Notifications', icon: Bell, path: '/notifications' },
   { id: 'users', label: 'Users', icon: User, path: '/users' },
 ];
