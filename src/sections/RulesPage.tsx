@@ -760,7 +760,7 @@ const RulesPage: React.FC = () => {
       ) : (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full">
+            <table className="min-w-full border-0">
               <thead className="bg-gray-100">
                 <tr>
                   <SortableHeader column="taskName">
@@ -786,9 +786,9 @@ const RulesPage: React.FC = () => {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white">
+              <tbody className="bg-white divide-y-0">
                 {filteredMaintenance.map((task) => (
-                  <tr key={task.id} className="hover:bg-gray-50">
+                  <tr key={task.id} className="hover:bg-gray-50 border-0">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{task.taskName}</div>
