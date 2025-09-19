@@ -85,7 +85,7 @@ const RulesPage: React.FC = () => {
   // Sortable header component
   const SortableHeader = ({ column, children }: { column: typeof maintenanceSortBy; children: React.ReactNode }) => (
     <th 
-      className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+      className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors border-0"
       onClick={() => handleMaintenanceSort(column)}
     >
       <div className="flex items-center gap-2">
@@ -760,7 +760,7 @@ const RulesPage: React.FC = () => {
       ) : (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full border-0">
+            <table className="min-w-full border-0" style={{borderCollapse: 'separate', borderSpacing: '0'}}>
               <thead className="bg-gray-100">
                 <tr>
                   <SortableHeader column="taskName">
@@ -781,7 +781,7 @@ const RulesPage: React.FC = () => {
                   <SortableHeader column="deviceName">
                     Device
                   </SortableHeader>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-0">
                     Actions
                   </th>
                 </tr>
@@ -789,7 +789,7 @@ const RulesPage: React.FC = () => {
               <tbody className="bg-white divide-y-0">
                 {filteredMaintenance.map((task) => (
                   <tr key={task.id} className="hover:bg-gray-50 border-0">
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap border-0">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{task.taskName}</div>
                         {task.description && (
@@ -797,26 +797,26 @@ const RulesPage: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap border-0">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
                         {task.status.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap border-0">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
                         {task.priority}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-0">
                       {new Date(task.nextMaintenance).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize border-0">
                       {task.frequency}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-0">
                       {task.deviceName || getDeviceName(task.deviceId)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium border-0">
                       <div className="flex items-center gap-2">
                         {/* <Button
                           variant="ghost"

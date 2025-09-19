@@ -469,44 +469,44 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden">
-            <table className="w-full border-collapse">
-              <thead className="bg-gray-100 border-b-2 border-gray-300">
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <table className="w-full border-0" style={{borderCollapse: 'separate', borderSpacing: '0'}}>
+              <thead className="bg-gray-100">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300 w-1/3">Task Name</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Frequency</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Status</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Priority</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-r border-gray-300">Actions</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-12"></th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-0 w-1/3">Task Name</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-0">Frequency</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-0">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-0">Priority</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-0">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-0 w-12"></th>
                 </tr>
               </thead>
               <tbody className="bg-white">
                 {filteredTasks.map((task) => (
                   <React.Fragment key={task.id}>
                     <tr 
-                      className={`hover:bg-gray-50 cursor-pointer border-b border-gray-200 ${
+                      className={`hover:bg-gray-50 cursor-pointer border-0 ${
                         task.status === 'completed' ? 'opacity-60' : ''
                       }`}
                       onClick={() => toggleRowExpansion(task.id)}
                     >
-                      <td className="px-6 py-4 text-sm text-gray-900 border-r border-gray-200 font-medium">
+                      <td className="px-6 py-4 text-sm text-gray-900 border-0 font-medium">
                         {truncateText(task.title)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 border-r border-gray-200">
+                      <td className="px-6 py-4 text-sm text-gray-600 border-0">
                         {task.frequency || 'Not specified'}
                       </td>
-                      <td className="px-6 py-4 text-sm border-r border-gray-200">
+                      <td className="px-6 py-4 text-sm border-0">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
                           {task.status.replace('_', ' ').toUpperCase()}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm border-r border-gray-200">
+                      <td className="px-6 py-4 text-sm border-0">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
                           {task.priority}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm border-r border-gray-200">
+                      <td className="px-6 py-4 text-sm border-0">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={(e) => {
@@ -530,7 +530,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
                           </button>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-400 text-center">
+                      <td className="px-6 py-4 text-sm text-gray-400 text-center border-0">
                         <span className="text-lg font-bold">
                           {expandedRows.has(task.id) ? '▲' : '▼'}
                         </span>
@@ -538,7 +538,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
                     </tr>
                     {expandedRows.has(task.id) && (
                       <tr>
-                        <td colSpan={6} className="px-6 py-6 bg-gray-50 border-b border-gray-200">
+                        <td colSpan={6} className="px-6 py-6 bg-gray-50 border-0">
                           <div className="space-y-3">
                             <div>
                               <h5 className="font-medium text-gray-800 mb-1">Description:</h5>
@@ -594,7 +594,7 @@ const DeviceMaintenanceDisplay: React.FC<DeviceMaintenanceDisplayProps> = ({ dev
                                 )}
                               </div>
                             )}
-                            <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-200">
+                            <div className="flex items-center gap-4 text-xs text-gray-500 pt-2">
                               <span>Frequency: {task.frequency || 'Not specified'}</span>
                               <span>Created: {formatDate(task.createdAt)}</span>
                             </div>
