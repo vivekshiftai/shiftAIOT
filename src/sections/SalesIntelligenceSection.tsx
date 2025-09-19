@@ -159,7 +159,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
 
     try {
       logInfo('Process', 'Starting regeneration for all customers via Refresh Intelligence');
-      setRegenerationMessage('🔄 Starting Sales Intelligence refresh process... Please wait while we contact the external service.');
+      setRegenerationMessage('🔄 Starting Sales Intelligence refresh process...');
       
       const result = await StrategyAgentService.regenerateAllRecommendations(true);
       
