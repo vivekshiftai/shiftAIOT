@@ -10,11 +10,11 @@ import {
 } from 'lucide-react';
 import { chatService, ChatMessage } from '../../services/chatService';
 import { logInfo, logError } from '../../utils/logger';
-import ChatImageDisplay from './ChatImageDisplay';
 import ChatTableDisplay from './ChatTableDisplay';
 import { formatKnowledgeBaseResponse, getUserDisplayName } from '../../utils/responseTemplates';
 import { useAuth } from '../../contexts/AuthContext';
 import { processImagePlaceholders } from '../../utils/imageResponseProcessor';
+import { ImageViewer } from '../UI/ImageViewer';
 
 interface DeviceChatInterfaceProps {
   deviceName: string;
@@ -36,6 +36,11 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Image viewer state
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [imageViewerImages, setImageViewerImages] = useState<any[]>([]);
+  const [imageViewerInitialIndex, setImageViewerInitialIndex] = useState(0);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -62,6 +67,19 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     formatted = formatted.replace(/`(.*?)`/g, '<code>$1</code>');
     
     return formatted;
+  };
+
+  // Image viewer functions
+  const openImageViewer = (images: any[], initialIndex: number = 0) => {
+    setImageViewerImages(images);
+    setImageViewerInitialIndex(initialIndex);
+    setImageViewerOpen(true);
+  };
+
+  const closeImageViewer = () => {
+    setImageViewerOpen(false);
+    setImageViewerImages([]);
+    setImageViewerInitialIndex(0);
   };
 
   // Load chat history on component mount
@@ -244,9 +262,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
                         if (filename && message.images) {
                           const imageIndex = message.images.findIndex(img => img.filename === filename);
                           if (imageIndex !== -1) {
-                            // Open ImageViewer with the clicked image
-                            // Note: You'll need to add ImageViewer state to this component
-                            console.log('Open image viewer for:', filename, 'at index:', imageIndex);
+                            openImageViewer(message.images, imageIndex);
                           }
                         }
                       }
@@ -346,6 +362,14 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Image Viewer Modal */}
+      <ImageViewer
+        images={imageViewerImages}
+        isOpen={imageViewerOpen}
+        onClose={closeImageViewer}
+        initialIndex={imageViewerInitialIndex}
+      />
 
     </div>
   );

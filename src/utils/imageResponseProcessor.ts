@@ -96,13 +96,8 @@ export function processImagePlaceholders(responseText: string, images: PDFImage[
  * @param maxWidth Maximum width for the inline image
  * @returns HTML string for the image
  */
-export function createInlineImageHTML(image: PDFImage, maxWidth: string = '300px'): string {
-  return `<div style="margin: 16px 0; text-align: center;">
-            <img src="data:${image.mime_type};base64,${image.data}" 
-                 alt="${image.filename}" 
-                 style="max-width: ${maxWidth}; height: auto; border-radius: 8px; border: 1px solid #d1d5db; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); display: inline-block;" 
-                 class="inline-response-image" />
-          </div>`;
+export function createInlineImageHTML(image: PDFImage, maxWidth: string = '96px'): string {
+  return `<div style="margin: 8px 0; text-align: center;"><img src="data:${image.mime_type};base64,${image.data}" alt="${image.filename}" style="width: 96px; height: 96px; object-fit: cover; border-radius: 8px; border: 1px solid #d1d5db; cursor: pointer; display: block; margin: 0 auto;" class="inline-response-image hover:opacity-90 transition-opacity" data-filename="${image.filename}" /></div>`;
 }
 
 /**

@@ -605,6 +605,19 @@ export const KnowledgeSection: React.FC = () => {
                     <div 
                       className="text-sm leading-relaxed"
                       dangerouslySetInnerHTML={{ __html: formatResponseText(message.content, message.images) }}
+                      onClick={(e) => {
+                        // Handle inline image clicks to open in ImageViewer
+                        const target = e.target as HTMLElement;
+                        if (target.tagName === 'IMG' && target.classList.contains('inline-response-image')) {
+                          const filename = target.getAttribute('data-filename');
+                          if (filename && message.images) {
+                            const imageIndex = message.images.findIndex(img => img.filename === filename);
+                            if (imageIndex !== -1) {
+                              openImageViewer(message.images, imageIndex);
+                            }
+                          }
+                        }
+                      }}
                     />
                     
                     {/* Database Results Table */}
