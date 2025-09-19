@@ -7,6 +7,7 @@ import { Device, Rule, Notification, TelemetryData, Status } from '../types';
 import { tokenService } from '../services/tokenService';
 import { NotificationService } from '../services/notificationService';
 import { useAuth } from './AuthContext';
+import { cacheService, CacheConfigs } from '../utils/cacheService';
 
 interface IoTContextType {
   devices: Device[];
@@ -28,6 +29,7 @@ interface IoTContextType {
   refreshData: () => Promise<void>;
   refreshDevices: () => Promise<void>;
   refreshRules: () => Promise<void>;
+  clearCache: () => void;
   createDevice: (device: Partial<Device>) => Promise<void>;
   assignDeviceToUser: (deviceId: string, userId: string) => Promise<void>;
   deleteDevice: (deviceId: string) => Promise<void>;
@@ -164,7 +166,21 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
   }, [user?.id, authLoading]); // Only depend on user.id and authLoading to prevent unnecessary re-runs
 
   const loadData = async () => {
-    logInfo('IoT', 'Starting data loading process');
+    // Check if we already have cached data to avoid unnecessary loading
+    const hasCachedDevices = cacheService.has(`devices_${user?.id}`);
+    const hasCachedRules = cacheService.has(`rules_${user?.id}`);
+    
+    if (hasCachedDevices && hasCachedRules && devices.length > 0) {
+      logInfo('IoT', 'Data already cached and loaded, skipping fetch');
+      setLoading(false);
+      return;
+    }
+    
+    logInfo('IoT', 'Starting data loading process', { 
+      hasCachedDevices, 
+      hasCachedRules, 
+      devicesLoaded: devices.length > 0 
+    });
     setLoading(true);
     setError(null);
 
@@ -176,17 +192,19 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       // Load all data from backend independently to handle partial failures
       logInfo('IoT', 'Starting to load data from backend...');
       
-      // Load devices first (most important)
+      // Load devices first (most important) with caching
       try {
-        logInfo('IoT', 'About to call deviceAPI.getAll()');
-        logInfo('IoT', `Current API base URL: ${getApiConfig().BACKEND_BASE_URL}`);
-        logInfo('IoT', `Current token: ${localStorage.getItem('token') ? 'exists' : 'not found'}`);
+        logInfo('IoT', 'Loading devices with cache...');
         
-        const devicesRes = await deviceAPI.getAll();
-        logInfo('IoT', 'Raw device response', devicesRes);
+        const devicesRes = await cacheService.cachedApiCall(
+          `devices_${user?.id}`,
+          () => deviceAPI.getAll(),
+          CacheConfigs.MEDIUM // 5 minute cache
+        );
+        
+        logInfo('IoT', 'Devices loaded (cached or fresh)', devicesRes);
         
         if (devicesRes.data) {
-          logInfo('IoT', 'Setting devices', devicesRes.data);
           // Deduplicate devices by ID to prevent duplicates
           const uniqueDevices = devicesRes.data.filter((device: Device, index: number, self: Device[]) => 
             index === self.findIndex(d => d.id === device.id)
@@ -202,10 +220,15 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
         setDevices([]);
       }
 
-      // Load rules (optional) - skip if endpoint doesn't exist
+      // Load rules (optional) with caching
       try {
-        const rulesRes = await ruleAPI.getAll();
-        logInfo('IoT', 'Raw rules response', rulesRes);
+        const rulesRes = await cacheService.cachedApiCall(
+          `rules_${user?.id}`,
+          () => ruleAPI.getAll(),
+          CacheConfigs.MEDIUM // 5 minute cache
+        );
+        
+        logInfo('IoT', 'Rules loaded (cached or fresh)', rulesRes);
         
         if (rulesRes.data) {
           setRules(rulesRes.data);
@@ -347,6 +370,8 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       logInfo('IoT', 'Creating rule', { ruleName: rule.name, deviceId: rule.deviceId });
       const response = await ruleAPI.create(rule);
       logInfo('IoT', 'Rule created successfully', { ruleId: response.data?.id });
+      // Clear rules cache since we added a new rule
+      cacheService.remove(`rules_${user?.id}`);
       await refreshRules();
     } catch (error) {
       logError('IoT', 'Failed to create rule', error instanceof Error ? error : new Error('Unknown error'));
@@ -390,15 +415,28 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     }
   };
 
+  const clearCache = () => {
+    logInfo('IoT', 'Clearing all cache data');
+    cacheService.clearAll();
+  };
+
   const refreshData = async () => {
-    logInfo('IoT', 'Refreshing all data');
+    logInfo('IoT', 'Manually refreshing data - clearing cache first');
+    // Clear cache before refreshing to force fresh data
+    cacheService.remove(`devices_${user?.id}`);
+    cacheService.remove(`rules_${user?.id}`);
     await loadData();
   };
 
   const refreshDevices = async () => {
     try {
-      logInfo('IoT', 'Refreshing devices');
-      const response = await deviceAPI.getAll();
+      logInfo('IoT', 'Refreshing devices with navigation-aware caching');
+      
+      const response = await cacheService.navigationCachedApiCall(
+        `devices_${user?.id}`,
+        () => deviceAPI.getAll(),
+        true // Mark as navigation to use shorter cache
+      );
       if (response.data) {
         setDevices(response.data);
         logInfo('IoT', 'Devices refreshed successfully', { count: response.data.length });
@@ -410,8 +448,15 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
 
   const refreshRules = async () => {
     try {
-      logInfo('IoT', 'Refreshing rules');
-      const response = await ruleAPI.getAll();
+      logInfo('IoT', 'Manually refreshing rules - clearing cache first');
+      // Clear rules cache before refreshing
+      cacheService.remove(`rules_${user?.id}`);
+      
+      const response = await cacheService.cachedApiCall(
+        `rules_${user?.id}`,
+        () => ruleAPI.getAll(),
+        CacheConfigs.MEDIUM
+      );
       if (response.data) {
         setRules(response.data);
         logInfo('IoT', 'Rules refreshed successfully', { count: response.data.length });
@@ -594,6 +639,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
       refreshData,
       refreshDevices,
       refreshRules,
+      clearCache,
       createDevice,
       assignDeviceToUser,
       deleteDevice,

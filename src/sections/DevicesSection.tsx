@@ -34,18 +34,9 @@ export const DevicesSection: React.FC = () => {
 
   // Load data only when component mounts
   useEffect(() => {
-    logInfo('DevicesSection', 'Component mounted - data loaded from IoT context');
-    // Refresh devices when component mounts to ensure we have the latest data
-    const refreshDevicesOnMount = async () => {
-      try {
-        await refreshDevices();
-        logInfo('DevicesSection', 'Devices refreshed on component mount');
-      } catch (error) {
-        logError('DevicesSection', 'Failed to refresh devices on mount', error instanceof Error ? error : new Error('Unknown error'));
-      }
-    };
-    refreshDevicesOnMount();
-  }, [refreshDevices]);
+    logInfo('DevicesSection', 'Component mounted - using cached data from IoT context');
+    // No need to refresh - IoT context already loads devices with caching
+  }, []);
 
   // Note: Removed handleSectionClick to prevent unnecessary device refreshing
   // Devices are now loaded once from IoT context and don't need manual refreshing
@@ -59,18 +50,12 @@ export const DevicesSection: React.FC = () => {
     if (search) setSearchTerm(search);
   }, [location.search]);
 
-  // Refresh devices when navigating to devices section
+  // Refresh data when navigating to devices section
   useEffect(() => {
     if (location.pathname === '/devices') {
-      const refreshOnNavigation = async () => {
-        try {
-          await refreshDevices();
-          logInfo('DevicesSection', 'Devices refreshed on navigation to devices section');
-        } catch (error) {
-          logError('DevicesSection', 'Failed to refresh devices on navigation', error instanceof Error ? error : new Error('Unknown error'));
-        }
-      };
-      refreshOnNavigation();
+      logInfo('DevicesSection', 'Navigated to devices section - triggering data refresh');
+      // Trigger a fresh data load on navigation to ensure current data
+      refreshDevices();
     }
   }, [location.pathname, refreshDevices]);
 
