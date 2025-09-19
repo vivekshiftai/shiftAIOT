@@ -1525,7 +1525,7 @@ export const DeviceDetailsSection: React.FC = () => {
                       <p className={`text-xs mt-1 ${
                         message.type === 'user' ? 'text-primary-100' : 'text-slate-500'
                       }`}>
-                        {message.timestamp.toLocaleTimeString()}
+                        {new Date(message.timestamp).toLocaleTimeString()}
                       </p>
                     </div>
                   </div>

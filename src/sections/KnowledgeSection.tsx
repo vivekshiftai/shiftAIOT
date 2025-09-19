@@ -731,7 +731,7 @@ export const KnowledgeSection: React.FC = () => {
                     <p className={`text-xs mt-2 ${
                       message.type === 'user' ? 'text-primary-100' : 'text-neutral-500'
                     }`}>
-                      {message.timestamp.toLocaleTimeString()}
+                      {new Date(message.timestamp).toLocaleTimeString()}
                     </p>
                   </div>
                 </div>

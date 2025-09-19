@@ -248,7 +248,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
                       {message.type === 'user' ? 'You' : 'AI Assistant'}
                     </span>
                     <span className="text-xs opacity-50">
-                      {message.timestamp.toLocaleTimeString()}
+                      {new Date(message.timestamp).toLocaleTimeString()}
                     </span>
                   </div>
                   <div 
