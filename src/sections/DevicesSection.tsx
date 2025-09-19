@@ -246,8 +246,7 @@ export const DevicesSection: React.FC = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-6">
-        <div className="flex flex-col lg:flex-row gap-4">
+      <div className="flex flex-col lg:flex-row gap-4">
           {/* Search Bar */}
           <div className="flex-1">
             <div className="relative">

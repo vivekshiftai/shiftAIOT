@@ -11,6 +11,7 @@ import { SalesIntelligenceSection } from './SalesIntelligenceSection';
 
 export const ProcessSection: React.FC = () => {
   const [selectedProcess, setSelectedProcess] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Available smart processes
   const availableProcesses = [
@@ -41,6 +42,12 @@ export const ProcessSection: React.FC = () => {
       setSelectedProcess(processId);
     }
   };
+
+  // Filter processes based on search term
+  const filteredProcesses = availableProcesses.filter(process =>
+    process.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    process.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   // Handle back to process selection
   const handleBackToProcesses = () => {
@@ -75,8 +82,7 @@ export const ProcessSection: React.FC = () => {
       </div>
       
       {/* Search and Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-6">
-        <div className="flex flex-col lg:flex-row gap-4">
+      <div className="flex flex-col lg:flex-row gap-4">
           
           {/* Search */}
           <div className="relative flex-1">
@@ -84,8 +90,9 @@ export const ProcessSection: React.FC = () => {
             <input
               type="text"
               placeholder="Search sales processes..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              disabled
             />
           </div>
           
@@ -109,11 +116,27 @@ export const ProcessSection: React.FC = () => {
             </button>
           </div>
         </div>
-      </div>
       
       {/* Process Grid - Full Width Like Smart Assets */}
-      <div className="grid grid-cols-1 gap-6">
-        {availableProcesses.map((process) => {
+      {filteredProcesses.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-neutral-200">
+          <div className="w-20 h-20 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Search className="w-10 h-10 text-neutral-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-neutral-700 mb-3">No processes found</h3>
+          <p className="text-neutral-500 mb-8 max-w-md mx-auto">
+            No processes match your search criteria. Try a different search term.
+          </p>
+          <button 
+            onClick={() => setSearchTerm('')}
+            className="px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-medium shadow-sm"
+          >
+            Clear Search
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6">
+          {filteredProcesses.map((process) => {
           const IconComponent = process.icon;
           const isEnabled = process.enabled;
           
@@ -183,9 +206,10 @@ export const ProcessSection: React.FC = () => {
                 </div>
               </div>
             </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
