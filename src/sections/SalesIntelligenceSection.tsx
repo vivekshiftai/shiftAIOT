@@ -159,13 +159,16 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
 
     try {
       logInfo('Process', 'Starting regeneration for all customers via Refresh Intelligence');
-      setRegenerationMessage('🔄 Sales Intelligence refresh process started for all customers... This will take some time. Please wait.');
+      setRegenerationMessage('🔄 Starting Sales Intelligence refresh process... Please wait while we contact the external service.');
       
       const result = await StrategyAgentService.regenerateAllRecommendations(true);
       
-      if (result.success) {
+      if (result.success === true) {
         setRegenerationMessage('🔄 Sales Intelligence refresh process started successfully! The system is now refreshing recommendations for all customers. This process may take several minutes to complete.');
-        logInfo('Process', 'All customers regeneration triggered successfully via Refresh Intelligence', result);
+        logInfo('Process', 'All customers regeneration triggered successfully via Refresh Intelligence - external service returned success: true', { 
+          success: result.success,
+          message: result.message 
+        });
         
         // Clear existing recommendations since they're being regenerated
         setRecommendations(null);
@@ -175,9 +178,12 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
         await pollForCompletion();
         
       } else {
-        setError(result.message || 'Failed to start Sales Intelligence refresh process');
+        // External service did not return success: true
+        const errorMsg = result.message || 'External service did not return success status';
+        setError(`Failed to start Sales Intelligence refresh process: ${errorMsg}`);
         setRegenerationMessage('');
         setIsRegeneratingData(false);
+        logError('Process', 'External service did not return success: true', new Error(`Service response: ${JSON.stringify(result)}`));
       }
     } catch (error) {
       logError('Process', 'Failed to refresh Sales Intelligence', error instanceof Error ? error : new Error('Unknown error'));
@@ -204,12 +210,20 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
       try {
         const statusResult = await StrategyAgentService.checkRegenerationStatus();
         
-        if (statusResult.success && statusResult.is_completed) {
-          // Regeneration completed successfully
+        if (statusResult.success === true && statusResult.is_completed === true) {
+          // Regeneration completed successfully - only show success message when service returns success: true
           setShowSuccessMessage(true);
-          setRegenerationMessage('🎉 Sales Intelligence refresh completed successfully! You can now access the updated recommendations.');
+          setRegenerationMessage('🎉 Sales Intelligence refresh completed successfully! The recommendations have been updated in the system. You can now generate new reports to see the latest data.');
           setIsRegeneratingData(false);
-          logInfo('Process', 'Sales Intelligence refresh completed successfully');
+          
+          // Clear any existing recommendations to prevent showing old data
+          setRecommendations(null);
+          setAllRecommendations(null);
+          
+          logInfo('Process', 'Sales Intelligence refresh completed successfully - external service returned success: true', { 
+            success: statusResult.success, 
+            is_completed: statusResult.is_completed 
+          });
           return;
         } else if (statusResult.success && !statusResult.is_completed) {
           // Still in progress
@@ -220,10 +234,12 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
           // Continue polling
           setTimeout(poll, pollInterval);
         } else {
-          // Error occurred
-          setError(statusResult.message || 'Failed to check regeneration status');
+          // External service did not return success: true or other error occurred
+          const errorMsg = statusResult.message || 'External service did not return success status during polling';
+          setError(`Regeneration status check failed: ${errorMsg}`);
           setRegenerationMessage('');
           setIsRegeneratingData(false);
+          logError('Process', 'External service polling did not return success: true', new Error(`Status response: ${JSON.stringify(statusResult)}`));
         }
       } catch (error) {
         logError('Process', 'Failed to check regeneration status', error instanceof Error ? error : new Error('Unknown error'));
@@ -474,11 +490,25 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
                   {showSuccessMessage ? 'Success!' : 'Sales Intelligence Status'}
                 </p>
               </div>
-              <p className={`text-sm mt-1 ${
-                showSuccessMessage ? 'text-green-700' : 'text-blue-700'
-              }`}>
-                {regenerationMessage}
-              </p>
+              <div className="flex items-start justify-between">
+                <p className={`text-sm mt-1 ${
+                  showSuccessMessage ? 'text-green-700' : 'text-blue-700'
+                }`}>
+                  {regenerationMessage}
+                </p>
+                {showSuccessMessage && (
+                  <button
+                    onClick={() => {
+                      setShowSuccessMessage(false);
+                      setRegenerationMessage('');
+                    }}
+                    className="ml-4 text-green-600 hover:text-green-800 transition-colors"
+                    title="Dismiss"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
               {!showSuccessMessage && (
                 <div className="mt-3 bg-blue-100 rounded-lg p-3 border-l-4 border-blue-400">
                   <p className="text-sm text-blue-800 font-medium">
@@ -490,7 +520,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
           )}
 
           {/* Single Customer Recommendations */}
-          {recommendations && (
+          {recommendations && !showSuccessMessage && (
             <CustomerRecommendationsDisplay
               customerRec={recommendations}
             />
@@ -526,7 +556,7 @@ export const SalesIntelligenceSection: React.FC<SalesIntelligenceSectionProps> =
 
 
           {/* All Customer Recommendations with Tabs */}
-          {allRecommendations && (
+          {allRecommendations && !showSuccessMessage && (
             <div className="space-y-6">
               {/* Customer Tabs Header */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200">

@@ -706,7 +706,8 @@ export const KnowledgeSection: React.FC = () => {
                     )}
                     
                     {/* Display Chunks Used */}
-                    {message.chunks_used && message.chunks_used.length > 0 && (
+                    {/* Sources Used section commented out as requested */}
+                    {/* {message.chunks_used && message.chunks_used.length > 0 && (
                       <div className="mt-3">
                         <p className="text-xs font-medium text-gray-500 mb-2">📄 Sources Used:</p>
                         <div className="space-y-2">
@@ -718,7 +719,7 @@ export const KnowledgeSection: React.FC = () => {
                           ))}
                         </div>
                       </div>
-                    )}
+                    )} */}
                     
                     {/* Display Processing Time */}
                     {message.processing_time && (

@@ -185,6 +185,60 @@ export class CacheService {
     
     return this.cachedApiCall(key, apiCall, config, isNavigation);
   }
+
+  /**
+   * Cache section state (tab selections, form data, etc.)
+   */
+  setSectionState<T>(sectionId: string, userId: string, state: T): void {
+    const key = `section_state_${sectionId}_${userId}`;
+    this.set(key, state, CacheConfigs.SESSION);
+    logInfo('Cache', `Section state cached for ${sectionId}`, { userId });
+  }
+
+  /**
+   * Get cached section state
+   */
+  getSectionState<T>(sectionId: string, userId: string): T | null {
+    const key = `section_state_${sectionId}_${userId}`;
+    return this.get<T>(key);
+  }
+
+  /**
+   * Cache section data (API responses, computed data, etc.)
+   */
+  setSectionData<T>(sectionId: string, dataKey: string, userId: string, data: T, config: CacheConfig = CacheConfigs.MEDIUM): void {
+    const key = `section_data_${sectionId}_${dataKey}_${userId}`;
+    this.set(key, data, config);
+    logInfo('Cache', `Section data cached for ${sectionId}:${dataKey}`, { userId });
+  }
+
+  /**
+   * Get cached section data
+   */
+  getSectionData<T>(sectionId: string, dataKey: string, userId: string): T | null {
+    const key = `section_data_${sectionId}_${dataKey}_${userId}`;
+    return this.get<T>(key);
+  }
+
+  /**
+   * Clear all cached data for a specific section
+   */
+  clearSectionCache(sectionId: string, userId: string): void {
+    const stateKey = `section_state_${sectionId}_${userId}`;
+    const dataKeyPrefix = `section_data_${sectionId}_`;
+    
+    this.remove(stateKey);
+    
+    // Remove all data keys for this section
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(this.keyPrefix + dataKeyPrefix)) {
+        localStorage.removeItem(key);
+      }
+    }
+    
+    logInfo('Cache', `Cleared all cache for section ${sectionId}`, { userId });
+  }
 }
 
 // Export singleton instance
@@ -196,4 +250,5 @@ export const CacheConfigs = {
   MEDIUM: { ttl: 5 * 60 * 1000 }, // 5 minutes  
   LONG: { ttl: 15 * 60 * 1000 }, // 15 minutes
   VERY_LONG: { ttl: 60 * 60 * 1000 }, // 1 hour
+  SESSION: { ttl: 24 * 60 * 60 * 1000 } // 24 hours for session data like tab states
 };

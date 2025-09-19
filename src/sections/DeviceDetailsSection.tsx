@@ -50,6 +50,7 @@ import { tokenService } from '../services/tokenService';
 import { PDFImage } from '../services/chatService';
 import { ImageViewer } from '../components/UI/ImageViewer';
 import { processImagePlaceholders } from '../utils/imageResponseProcessor';
+import { useSectionState, useSectionData } from '../hooks/useSectionState';
 
 interface DocumentationInfo {
   deviceId: string;
@@ -242,30 +243,36 @@ export const DeviceDetailsSection: React.FC = () => {
   const { devices, updateDeviceStatus } = useIoT();
   const { hasPermission, user } = useAuth();
   
-  const [activeTab, setActiveTab] = useState('device-info');
+  // Persistent state that survives tab switching
+  const [sectionState, setSectionState] = useSectionState(`device_${deviceId}`, {
+    activeTab: 'device-info',
+    chatMessages: [
+      {
+        id: '1',
+        type: 'assistant',
+        content: 'Hello! I\'m here to help you with information about this device. What would you like to know?',
+        timestamp: new Date()
+      }
+    ] as ChatMessage[]
+  });
+
+  // Persistent data cache
+  const [documentationInfo, saveDocumentationInfo] = useSectionData<DocumentationInfo>(`device_${deviceId}`, 'documentation');
+  const [devicePDFs, saveDevicePDFs] = useSectionData<UnifiedPDF[]>(`device_${deviceId}`, 'pdfs', []);
+  const [deviceStats, saveDeviceStats] = useSectionData<DeviceStats>(`device_${deviceId}`, 'stats');
+  const [maintenanceHistory, saveMaintenanceHistory] = useSectionData<MaintenanceTask[]>(`device_${deviceId}`, 'maintenance', []);
+  const [deviceRules, saveDeviceRules] = useSectionData<any[]>(`device_${deviceId}`, 'rules', []);
+  const [safetyPrecautions, saveSafetyPrecautions] = useSectionData<any[]>(`device_${deviceId}`, 'safety', []);
+
+  // Non-persistent state (UI state that should reset)
   const [isTabLoading, setIsTabLoading] = useState(false);
-  const [documentationInfo, setDocumentationInfo] = useState<DocumentationInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
-  const [devicePDFs, setDevicePDFs] = useState<UnifiedPDF[]>([]);
-  // selectedPDF state removed - we automatically use the first available PDF
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      type: 'assistant',
-      content: 'Hello! I\'m here to help you with information about this device. What would you like to know?',
-      timestamp: new Date()
-    }
-  ]);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [initialChatMessage, setInitialChatMessage] = useState<string | null>(null);
   
-  // Real-time data states
-  const [deviceStats, setDeviceStats] = useState<DeviceStats | null>(null);
-  const [maintenanceHistory, setMaintenanceHistory] = useState<MaintenanceTask[]>([]);
-  const [deviceRules, setDeviceRules] = useState<any[]>([]);
-  const [safetyPrecautions, setSafetyPrecautions] = useState<any[]>([]);
+  // Non-persistent real-time state
   const [lastSeen, setLastSeen] = useState<string>('');
   const [isRealTimeLoading, setIsRealTimeLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -311,10 +318,10 @@ export const DeviceDetailsSection: React.FC = () => {
         );
         const stats = await Promise.race([statsPromise, timeoutPromise]) as any;
         // Device stats loaded successfully
-        setDeviceStats(stats);
+        saveDeviceStats(stats);
       } catch (error) {
         logWarn('DeviceDetails', 'Failed to fetch device stats', { error: error instanceof Error ? error.message : 'Unknown error' });
-        setDeviceStats(null);
+        // Don't save null stats, keep existing cached data
       }
       
       // Fetch detailed data with better error handling and timeouts
@@ -353,9 +360,9 @@ export const DeviceDetailsSection: React.FC = () => {
         updatedAt: task.updatedAt || task.updated_at || new Date().toISOString()
       }));
       
-      setDeviceRules(rulesData);
-      setMaintenanceHistory(transformedMaintenanceData);
-      setSafetyPrecautions(safetyData);
+      saveDeviceRules(rulesData);
+      saveMaintenanceHistory(transformedMaintenanceData);
+      saveSafetyPrecautions(safetyData);
       
       // Update last seen timestamp
       setLastSeen(new Date().toISOString());
@@ -420,7 +427,7 @@ export const DeviceDetailsSection: React.FC = () => {
             processingTime: pdfRef.processingTime
           }));
           
-          setDevicePDFs(filteredPDFs);
+          saveDevicePDFs(filteredPDFs);
           setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!`);
           
           logInfo('DeviceDetails', 'Device PDFs loaded successfully from device PDF results', { 
@@ -473,7 +480,7 @@ export const DeviceDetailsSection: React.FC = () => {
               processingTime: doc.processingTime
             }));
             
-            setDevicePDFs(filteredPDFs);
+            saveDevicePDFs(filteredPDFs);
             setInitialChatMessage(`I have access to ${filteredPDFs.length} PDF document(s) related to ${device.name}. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!`);
             
             logInfo('DeviceDetails', 'Device PDFs loaded successfully from knowledge documents', { 
@@ -532,7 +539,7 @@ export const DeviceDetailsSection: React.FC = () => {
               processingTime: doc.processingTime
             }));
             
-            setDevicePDFs(filteredPDFs);
+            saveDevicePDFs(filteredPDFs);
             setInitialChatMessage(`I found ${filteredPDFs.length} PDF document(s) that might be related to ${device.name}. Ask me anything about setup, maintenance, troubleshooting, specifications, or any other device-related questions!`);
             
             logInfo('DeviceDetails', 'Device PDFs loaded from general documents with filtering', { 
@@ -549,14 +556,14 @@ export const DeviceDetailsSection: React.FC = () => {
       }
       
       // No PDFs found in local database
-      setDevicePDFs([]);
+      saveDevicePDFs([]);
       setInitialChatMessage(`I don't have any PDF documents specifically associated with ${device.name} in the local database. To enable AI-powered assistance, upload device manuals, datasheets, or other documentation in the Knowledge Base section.`);
       
       logInfo('DeviceDetails', 'No PDFs found for device in local database', { deviceId: device.id });
       
     } catch (error) {
       logError('DeviceDetails', 'Failed to load PDFs from local database', error instanceof Error ? error : new Error('Unknown error'));
-      setDevicePDFs([]);
+      saveDevicePDFs([]);
       setInitialChatMessage(`I don't have access to PDF documents for ${device.name} at the moment. Please try again later.`);
     }
   };
@@ -570,12 +577,12 @@ export const DeviceDetailsSection: React.FC = () => {
         setTimeout(() => reject(new Error('Documentation timeout')), 5000)
       );
       const response = await Promise.race([docPromise, timeoutPromise]) as any;
-      setDocumentationInfo(response.data);
+      saveDocumentationInfo(response.data);
               // Documentation info loaded successfully
     } catch (error) {
       logError('DeviceDetails', 'Failed to fetch documentation info', error instanceof Error ? error : new Error('Unknown error'));
       // Set empty documentation info on error
-      setDocumentationInfo(null);
+      // Don't save null documentation, keep existing cached data
     }
   };
 
@@ -641,7 +648,7 @@ export const DeviceDetailsSection: React.FC = () => {
 
   const handleTabChange = (tabId: string) => {
     setIsTabLoading(true);
-    setActiveTab(tabId);
+    setSectionState(prev => ({ ...prev, activeTab: tabId }));
     // Simulate loading for better UX
     setTimeout(() => setIsTabLoading(false), 100);
   };
@@ -931,7 +938,10 @@ export const DeviceDetailsSection: React.FC = () => {
         content: 'I apologize, but I need you to log in again to continue our conversation. Please refresh the page and log in.',
         timestamp: new Date()
       };
-      setChatMessages(prev => [...prev, errorMessage]);
+      setSectionState(prev => ({
+        ...prev,
+        chatMessages: [...prev.chatMessages, errorMessage]
+      }));
       return;
     }
 
@@ -942,13 +952,16 @@ export const DeviceDetailsSection: React.FC = () => {
       timestamp: new Date()
     };
 
-    setChatMessages(prev => [...prev, userMessage]);
+    setSectionState(prev => ({
+      ...prev,
+      chatMessages: [...prev.chatMessages, userMessage]
+    }));
     setNewMessage('');
     setIsTyping(true);
 
     try {
       // Automatically use the first available PDF if we have any
-      const pdfToUse = devicePDFs.length > 0 ? devicePDFs[0] : null;
+      const pdfToUse = devicePDFs && devicePDFs.length > 0 ? devicePDFs[0] : null;
       
       if (pdfToUse) {
         try {
@@ -1045,7 +1058,10 @@ export const DeviceDetailsSection: React.FC = () => {
             chunks_used: queryResponse.chunks_used || [],
             processing_time: queryResponse.processing_time
           };
-          setChatMessages(prev => [...prev, assistantMessage]);
+          setSectionState(prev => ({
+            ...prev,
+            chatMessages: [...prev.chatMessages, assistantMessage]
+          }));
         } catch (queryError) {
           logError('DeviceDetails', 'Failed to query PDF', queryError instanceof Error ? queryError : new Error('Unknown error'));
           
@@ -1076,17 +1092,23 @@ export const DeviceDetailsSection: React.FC = () => {
             content: errorContent,
             timestamp: new Date()
           };
-          setChatMessages(prev => [...prev, errorMessage]);
+          setSectionState(prev => ({
+        ...prev,
+        chatMessages: [...prev.chatMessages, errorMessage]
+      }));
         }
       } else {
         // Generate a general response about the device
         const aiResponse: ChatMessage = {
           id: (Date.now() + 1).toString(),
           type: 'assistant',
-          content: `I understand you're asking about "${userMessage.content}" for the ${device?.name} device. ${devicePDFs.length > 0 ? `I found ${devicePDFs.length} PDF document(s) related to this device. Would you like me to search through them for specific information?` : 'I don\'t have any PDF documents specifically associated with this device, but I can help you with general device information.'}`,
+          content: `I understand you're asking about "${userMessage.content}" for the ${device?.name} device. ${devicePDFs && devicePDFs.length > 0 ? `I found ${devicePDFs.length} PDF document(s) related to this device. Would you like me to search through them for specific information?` : 'I don\'t have any PDF documents specifically associated with this device, but I can help you with general device information.'}`,
           timestamp: new Date()
         };
-        setChatMessages(prev => [...prev, aiResponse]);
+        setSectionState(prev => ({
+          ...prev,
+          chatMessages: [...prev.chatMessages, aiResponse]
+        }));
       }
     } catch (error) {
       logError('DeviceDetails', 'Failed to send message', error instanceof Error ? error : new Error('Unknown error'));
@@ -1096,14 +1118,17 @@ export const DeviceDetailsSection: React.FC = () => {
         content: 'I apologize, but I encountered an error while processing your request. Please try again.',
         timestamp: new Date()
       };
-      setChatMessages(prev => [...prev, errorMessage]);
+      setSectionState(prev => ({
+        ...prev,
+        chatMessages: [...prev.chatMessages, errorMessage]
+      }));
     } finally {
       setIsTyping(false);
     }
   };
 
   const renderTabContent = () => {
-    switch (activeTab) {
+    switch (sectionState.activeTab) {
       case 'device-info':
         return (
           <div className="space-y-8">
@@ -1278,7 +1303,7 @@ export const DeviceDetailsSection: React.FC = () => {
             )}
 
             {/* Tab Loading State */}
-            {isTabLoading && activeTab === 'maintenance' && (
+            {isTabLoading && sectionState.activeTab === 'maintenance' && (
               <DataLoadingState message="Loading maintenance information..." />
             )}
 
@@ -1321,7 +1346,7 @@ export const DeviceDetailsSection: React.FC = () => {
             )}
 
             {/* Tab Loading State */}
-            {isTabLoading && activeTab === 'safety' && (
+            {isTabLoading && sectionState.activeTab === 'safety' && (
               <DataLoadingState message="Loading safety information..." />
             )}
 
@@ -1359,7 +1384,7 @@ export const DeviceDetailsSection: React.FC = () => {
             )}
             
             {/* AI Chat Ready Banner - Simple and Clean */}
-            {devicePDFs.length > 0 && (
+            {devicePDFs && devicePDFs.length > 0 && (
               <div className="mb-4 p-3 bg-success-50 rounded-lg border border-success-200">
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-success-600" />
@@ -1368,7 +1393,7 @@ export const DeviceDetailsSection: React.FC = () => {
               </div>
             )}
             
-            {devicePDFs.length === 0 && (
+            {(!devicePDFs || devicePDFs.length === 0) && (
               <div className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
@@ -1400,7 +1425,7 @@ export const DeviceDetailsSection: React.FC = () => {
 
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto space-y-4 p-4 bg-slate-50 rounded-lg min-h-0 max-h-[calc(100vh-350px)] sm:max-h-[calc(100vh-330px)] lg:max-h-[calc(100vh-310px)]">
-              {chatMessages.map((message) => (
+              {sectionState.chatMessages.map((message) => (
                 <div
                   key={message.id}
                   className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -1474,7 +1499,8 @@ export const DeviceDetailsSection: React.FC = () => {
                       )}
                       
                       {/* Display Chunks Used - Using same implementation as Knowledge Section */}
-                      {message.chunks_used && message.chunks_used.length > 0 && (
+                      {/* Sources Used section commented out as requested */}
+                      {/* {message.chunks_used && message.chunks_used.length > 0 && (
                         <div className="mt-3">
                           <p className="text-xs font-medium text-gray-500 mb-2">📄 Sources Used:</p>
                           <div className="space-y-2">
@@ -1486,7 +1512,7 @@ export const DeviceDetailsSection: React.FC = () => {
                             ))}
                           </div>
                         </div>
-                      )}
+                      )} */}
                       
                       {/* Display Processing Time - Using same implementation as Knowledge Section */}
                       {message.processing_time && (
@@ -1526,7 +1552,7 @@ export const DeviceDetailsSection: React.FC = () => {
             {/* Chat Input - Fixed at bottom */}
             <div className="flex-shrink-0 bg-white border-t border-slate-200 p-3 sm:p-4">
               {/* Quick Actions - Above search bar */}
-              {devicePDFs.length > 0 && (
+              {devicePDFs && devicePDFs.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3">
                   <button
                     onClick={() => setNewMessage('How do I install this machine and how to start it and stop it? Explain me the complete setup process.')}
@@ -1650,17 +1676,17 @@ export const DeviceDetailsSection: React.FC = () => {
                 }
               }}
               role="tab"
-              aria-selected={activeTab === tab.id}
+              aria-selected={sectionState.activeTab === tab.id}
               aria-controls={`tabpanel-${tab.id}`}
               className={`flex items-center gap-3 px-6 py-4 border-b-2 font-medium whitespace-nowrap transition-all duration-300 hover:bg-slate-50 relative focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                activeTab === tab.id
+                sectionState.activeTab === tab.id
                   ? 'border-primary-500 text-primary-600 bg-primary-50 shadow-sm'
                   : 'border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300'
               }`}
             >
-              <tab.icon className={`w-5 h-5 transition-colors duration-200 ${activeTab === tab.id ? 'text-primary-600' : 'text-slate-500'}`} />
+              <tab.icon className={`w-5 h-5 transition-colors duration-200 ${sectionState.activeTab === tab.id ? 'text-primary-600' : 'text-slate-500'}`} />
               <span className="font-semibold">{tab.label}</span>
-              {activeTab === tab.id && (
+              {sectionState.activeTab === tab.id && (
                 <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-primary-500 rounded-t-full"></div>
               )}
             </button>
@@ -1673,8 +1699,8 @@ export const DeviceDetailsSection: React.FC = () => {
         <div 
           className="p-6"
           role="tabpanel"
-          id={`tabpanel-${activeTab}`}
-          aria-labelledby={`tab-${activeTab}`}
+          id={`tabpanel-${sectionState.activeTab}`}
+          aria-labelledby={`tab-${sectionState.activeTab}`}
         >
           {isTabLoading ? (
             <div className="flex items-center justify-center py-12">
