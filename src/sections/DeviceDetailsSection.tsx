@@ -1023,7 +1023,8 @@ export const DeviceDetailsSection: React.FC = () => {
             );
             
             if (validImages.length > 0) {
-              enhancedContent += `\n\n📸 I found ${validImages.length} image(s) related to your query. You can view them below.`;
+              // Image announcement message commented out since images are now inline
+              // enhancedContent += `\n\n📸 I found ${validImages.length} image(s) related to your query. You can view them below.`;
               // Use only valid images
               queryResponse.images = validImages;
             } else {
