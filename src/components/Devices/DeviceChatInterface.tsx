@@ -14,6 +14,7 @@ import ChatImageDisplay from './ChatImageDisplay';
 import ChatTableDisplay from './ChatTableDisplay';
 import { formatKnowledgeBaseResponse, getUserDisplayName } from '../../utils/responseTemplates';
 import { useAuth } from '../../contexts/AuthContext';
+import { processImagePlaceholders } from '../../utils/imageResponseProcessor';
 
 interface DeviceChatInterfaceProps {
   deviceName: string;
@@ -40,9 +41,13 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const formatResponseText = (text: string): string => {
+  const formatResponseText = (text: string, images: any[] = []): string => {
+    // First, process image placeholders
+    const imageProcessed = processImagePlaceholders(text, images);
+    let formatted = imageProcessed.processedText;
+    
     // Convert line breaks to HTML
-    let formatted = text.replace(/\n/g, '<br>');
+    formatted = formatted.replace(/\n/g, '<br>');
     
     // Handle bold text (**text**)
     formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
@@ -230,7 +235,7 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
                   </div>
                   <div 
                     className="text-sm leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: formatResponseText(message.content) }}
+                    dangerouslySetInnerHTML={{ __html: formatResponseText(message.content, message.images) }}
                   />
                   
                   {/* Display Images */}

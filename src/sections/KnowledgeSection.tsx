@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import '../styles/knowledge.css';
 import { knowledgeAPI } from '../services/api';
 import { ImageViewer } from '../components/UI/ImageViewer';
+import { processImagePlaceholders } from '../utils/imageResponseProcessor';
 
 // Updated interface to match UnifiedPDF API response
 interface UnifiedPDF {
@@ -349,9 +350,13 @@ export const KnowledgeSection: React.FC = () => {
     }
   };
 
-  const formatResponseText = (text: string): string => {
+  const formatResponseText = (text: string, images: any[] = []): string => {
+    // First, process image placeholders
+    const imageProcessed = processImagePlaceholders(text, images);
+    let formatted = imageProcessed.processedText;
+    
     // Convert line breaks to HTML
-    let formatted = text.replace(/\n/g, '<br>');
+    formatted = formatted.replace(/\n/g, '<br>');
     
     // Handle bold text (**text**)
     formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
@@ -599,7 +604,7 @@ export const KnowledgeSection: React.FC = () => {
                     
                     <div 
                       className="text-sm leading-relaxed"
-                      dangerouslySetInnerHTML={{ __html: formatResponseText(message.content) }}
+                      dangerouslySetInnerHTML={{ __html: formatResponseText(message.content, message.images) }}
                     />
                     
                     {/* Database Results Table */}

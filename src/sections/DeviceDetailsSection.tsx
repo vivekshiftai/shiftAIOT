@@ -49,6 +49,7 @@ import { TabLoadingScreen, DataLoadingState, LoadingSpinner } from '../component
 import { tokenService } from '../services/tokenService';
 import { PDFImage } from '../services/chatService';
 import { ImageViewer } from '../components/UI/ImageViewer';
+import { processImagePlaceholders } from '../utils/imageResponseProcessor';
 
 interface DocumentationInfo {
   deviceId: string;
@@ -678,9 +679,13 @@ export const DeviceDetailsSection: React.FC = () => {
     setImageViewerInitialIndex(0);
   };
 
-  const formatResponseText = (text: string): string => {
+  const formatResponseText = (text: string, images: any[] = []): string => {
+    // First, process image placeholders
+    const imageProcessed = processImagePlaceholders(text, images);
+    let formatted = imageProcessed.processedText;
+    
     // Convert line breaks to HTML
-    let formatted = text.replace(/\n/g, '<br>');
+    formatted = formatted.replace(/\n/g, '<br>');
     
     // Handle bold text (**text**)
     formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
@@ -1417,7 +1422,7 @@ export const DeviceDetailsSection: React.FC = () => {
                     >
                       <div 
                         className="text-sm leading-relaxed break-words"
-                        dangerouslySetInnerHTML={{ __html: formatResponseText(message.content) }}
+                        dangerouslySetInnerHTML={{ __html: formatResponseText(message.content, message.images) }}
                       />
                       
                       {/* Display Images */}
