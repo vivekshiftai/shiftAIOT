@@ -67,6 +67,11 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
 
   const currentImage = images[currentIndex];
 
+  // Safety check: if currentImage is undefined, don't render
+  if (!currentImage) {
+    return null;
+  }
+
   const goToNext = () => {
     setCurrentIndex((prev) => (prev + 1) % images.length);
     setZoom(1);
@@ -97,9 +102,11 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
   };
 
   const downloadImage = () => {
+    if (!currentImage) return;
+    
     const link = document.createElement('a');
     link.href = `data:${currentImage.mime_type};base64,${currentImage.data}`;
-    link.download = `image-${currentIndex + 1}.${currentImage.mime_type.split('/')[1]}`;
+    link.download = `image-${currentIndex + 1}.${currentImage.mime_type?.split('/')[1] || 'jpg'}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -113,7 +120,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
           <span className="text-sm font-medium">
             Image {currentIndex + 1} of {images.length}
           </span>
-          {currentImage.page && (
+          {currentImage?.page && (
             <span className="text-sm text-gray-300">
               • Page {currentImage.page}
             </span>
@@ -224,7 +231,7 @@ export const ImageViewer: React.FC<ImageViewerProps> = ({
           />
           
           {/* Image Description */}
-          {currentImage.description && (
+          {currentImage?.description && (
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-70 text-white px-4 py-2 rounded-lg text-sm max-w-md text-center">
               {currentImage.description}
             </div>
