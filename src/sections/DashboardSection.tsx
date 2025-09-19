@@ -317,15 +317,12 @@ export const DashboardSection: React.FC = () => {
      // Initial fetch
      fetchRealTimeData();
 
-    // Set up periodic refresh every 5 minutes (much less frequent)
-    const intervalId = setInterval(() => {
-      logInfo('Dashboard', 'Periodic refresh of maintenance data...');
-      fetchRealTimeData();
-    }, 5 * 60 * 1000); // 5 minutes
-
-    // Cleanup interval on component unmount
+    // Removed periodic refresh interval to prevent excessive API calls
+    // Data will be refreshed through caching mechanism and user navigation
+    
+    // Cleanup function (no interval to clear)
     return () => {
-      clearInterval(intervalId);
+      // No cleanup needed
     };
   }, []);
 

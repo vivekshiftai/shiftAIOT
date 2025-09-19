@@ -57,7 +57,8 @@ export const DevicesSection: React.FC = () => {
       // Trigger a fresh data load on navigation to ensure current data
       refreshDevices();
     }
-  }, [location.pathname, refreshDevices]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]); // Only depend on pathname, not refreshDevices to prevent infinite loops
 
   const filteredDevices = useMemo(() => {
     const base = devices.filter(device => {

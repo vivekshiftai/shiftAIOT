@@ -180,7 +180,7 @@ export class CacheService {
     isNavigation: boolean = false
   ): Promise<T> {
     const config = isNavigation 
-      ? { ttl: 30 * 1000 } // 30 seconds for navigation
+      ? { ttl: 2 * 60 * 1000 } // 2 minutes for navigation (increased from 30 seconds)
       : { ttl: DEFAULT_TTL }; // 5 minutes for normal use
     
     return this.cachedApiCall(key, apiCall, config, isNavigation);

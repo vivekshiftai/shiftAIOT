@@ -67,6 +67,37 @@ const RulesPage: React.FC = () => {
   // Common state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
+  
+  // Maintenance sorting state
+  const [maintenanceSortBy, setMaintenanceSortBy] = useState<'taskName' | 'status' | 'priority' | 'nextMaintenance' | 'frequency' | 'deviceName'>('nextMaintenance');
+  const [maintenanceSortOrder, setMaintenanceSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  // Handle maintenance header click for sorting
+  const handleMaintenanceSort = (column: typeof maintenanceSortBy) => {
+    if (maintenanceSortBy === column) {
+      setMaintenanceSortOrder(maintenanceSortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setMaintenanceSortBy(column);
+      setMaintenanceSortOrder('asc');
+    }
+  };
+
+  // Sortable header component
+  const SortableHeader = ({ column, children }: { column: typeof maintenanceSortBy; children: React.ReactNode }) => (
+    <th 
+      className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-200 transition-colors"
+      onClick={() => handleMaintenanceSort(column)}
+    >
+      <div className="flex items-center gap-2">
+        {children}
+        {maintenanceSortBy === column && (
+          <span className="text-blue-600">
+            {maintenanceSortOrder === 'asc' ? '↑' : '↓'}
+          </span>
+        )}
+      </div>
+    </th>
+  );
 
   const { user } = useAuth();
   const { devices } = useIoT();
@@ -260,14 +291,53 @@ const RulesPage: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const filteredMaintenance = maintenanceTasks.filter(task => {
-    const matchesSearch = (task.taskName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                         (task.description?.toLowerCase() || '').includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || 
-                         (filterStatus === 'active' && task.status !== 'COMPLETED') ||
-                         (filterStatus === 'inactive' && task.status === 'COMPLETED');
-    return matchesSearch && matchesStatus;
-  });
+  const filteredMaintenance = maintenanceTasks
+    .filter(task => {
+      const matchesSearch = (task.taskName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                           (task.description?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+      const matchesStatus = filterStatus === 'all' || 
+                           (filterStatus === 'active' && task.status !== 'COMPLETED') ||
+                           (filterStatus === 'inactive' && task.status === 'COMPLETED');
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      let aValue: any, bValue: any;
+      
+      switch (maintenanceSortBy) {
+        case 'taskName':
+          aValue = (a.taskName || '').toLowerCase();
+          bValue = (b.taskName || '').toLowerCase();
+          break;
+        case 'status':
+          aValue = a.status || '';
+          bValue = b.status || '';
+          break;
+        case 'priority':
+          // Sort by priority level: critical > high > medium > low
+          const priorityOrder = { 'critical': 4, 'high': 3, 'medium': 2, 'low': 1 };
+          aValue = priorityOrder[a.priority?.toLowerCase() as keyof typeof priorityOrder] || 0;
+          bValue = priorityOrder[b.priority?.toLowerCase() as keyof typeof priorityOrder] || 0;
+          break;
+        case 'nextMaintenance':
+          aValue = new Date(a.nextMaintenance || 0).getTime();
+          bValue = new Date(b.nextMaintenance || 0).getTime();
+          break;
+        case 'frequency':
+          aValue = (a.frequency || '').toLowerCase();
+          bValue = (b.frequency || '').toLowerCase();
+          break;
+        case 'deviceName':
+          aValue = (a.deviceName || getDeviceName(a.deviceId) || '').toLowerCase();
+          bValue = (b.deviceName || getDeviceName(b.deviceId) || '').toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+      
+      if (aValue < bValue) return maintenanceSortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return maintenanceSortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   const filteredSafety = safetyPrecautions.filter(precaution => {
     const matchesSearch = (precaution.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -610,6 +680,28 @@ const RulesPage: React.FC = () => {
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
+          
+          {/* Maintenance Sorting Controls */}
+          <select
+            value={maintenanceSortBy}
+            onChange={(e) => setMaintenanceSortBy(e.target.value as any)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="nextMaintenance">Sort by Due Date</option>
+            <option value="taskName">Sort by Task Name</option>
+            <option value="status">Sort by Status</option>
+            <option value="priority">Sort by Priority</option>
+            <option value="frequency">Sort by Frequency</option>
+            <option value="deviceName">Sort by Device</option>
+          </select>
+          
+          <button
+            onClick={() => setMaintenanceSortOrder(maintenanceSortOrder === 'asc' ? 'desc' : 'asc')}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+            title={`Sort ${maintenanceSortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
+          >
+            {maintenanceSortOrder === 'asc' ? '↑' : '↓'}
+          </button>
         </div>
       </div>
       
@@ -671,24 +763,24 @@ const RulesPage: React.FC = () => {
             <table className="min-w-full">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <SortableHeader column="taskName">
                     Task Name
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  </SortableHeader>
+                  <SortableHeader column="status">
                     Status
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  </SortableHeader>
+                  <SortableHeader column="priority">
                     Priority
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  </SortableHeader>
+                  <SortableHeader column="nextMaintenance">
                     Next Maintenance
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  </SortableHeader>
+                  <SortableHeader column="frequency">
                     Frequency
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  </SortableHeader>
+                  <SortableHeader column="deviceName">
                     Device
-                  </th>
+                  </SortableHeader>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>

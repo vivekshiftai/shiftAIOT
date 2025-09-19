@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { deviceAPI, ruleAPI, notificationAPI } from '../services/api';
 // import { unifiedOnboardingService } from '../services/unifiedOnboardingService'; // Not used in this context
 import { getApiConfig } from '../config/api';
@@ -72,22 +72,32 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
 
     const loadNotifications = async () => {
       try {
+        // Use cached API call for notifications to prevent frequent requests
+        const cachedNotifications = cacheService.get(`notifications_${user.id}`);
+        if (cachedNotifications) {
+          logInfo('IoT', 'Using cached notifications, skipping API call');
+          setNotifications(Array.isArray(cachedNotifications) ? cachedNotifications : []);
+          return;
+        }
+        
         await notificationService.loadFromDatabase();
       } catch (error) {
         logError('IoT', 'Failed to load notifications', error instanceof Error ? error : new Error('Unknown error'));
       }
     };
 
-    // Load initial notifications
+    // Load initial notifications only once
     loadNotifications();
 
     // Subscribe to notification service updates
     const unsubscribe = notificationService.subscribe((newNotifications) => {
       setNotifications(newNotifications);
+      // Cache the notifications
+      cacheService.set(`notifications_${user.id}`, newNotifications, CacheConfigs.MEDIUM);
     });
 
     return unsubscribe;
-  }, [notificationService, user]);
+  }, [user?.id]); // Only depend on user.id, not the entire user object or notificationService
 
   // Load data from backend when user is authenticated - only once per user session
   useEffect(() => {
@@ -420,15 +430,15 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     cacheService.clearAll();
   };
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     logInfo('IoT', 'Manually refreshing data - clearing cache first');
     // Clear cache before refreshing to force fresh data
     cacheService.remove(`devices_${user?.id}`);
     cacheService.remove(`rules_${user?.id}`);
     await loadData();
-  };
+  }, [user?.id]);
 
-  const refreshDevices = async () => {
+  const refreshDevices = useCallback(async () => {
     try {
       logInfo('IoT', 'Refreshing devices with navigation-aware caching');
       
@@ -444,9 +454,9 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     } catch (error) {
       logError('IoT', 'Failed to refresh devices', error instanceof Error ? error : new Error('Unknown error'));
     }
-  };
+  }, [user?.id]);
 
-  const refreshRules = async () => {
+  const refreshRules = useCallback(async () => {
     try {
       logInfo('IoT', 'Manually refreshing rules - clearing cache first');
       // Clear rules cache before refreshing
@@ -464,7 +474,7 @@ export const IoTProvider: React.FC<IoTProviderProps> = ({ children }) => {
     } catch (error) {
       logError('IoT', 'Failed to refresh rules', error instanceof Error ? error : new Error('Unknown error'));
     }
-  };
+  }, [user?.id]);
 
   const createDevice = async (device: Partial<Device>) => {
     try {

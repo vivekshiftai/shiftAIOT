@@ -128,7 +128,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const MainAppLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { loading: iotLoading, refreshDevices } = useIoT();
+  const { loading: iotLoading } = useIoT();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -151,16 +151,12 @@ const MainAppLayout: React.FC = () => {
   const section = getCurrentSection();
 
   const handleSectionChange = async (section: string) => {
-    // Refresh devices when navigating to devices section
-    if (section === 'devices') {
-      try {
-        await refreshDevices();
-        logInfo('App', 'Devices refreshed on navigation to devices section');
-      } catch (error) {
-        logError('App', 'Failed to refresh devices on navigation', error instanceof Error ? error : new Error('Unknown error'));
-      }
-    }
+    // Navigate first, let individual sections handle their own data loading
     navigate(`/${section}`);
+    
+    // Remove automatic refresh on navigation to prevent excessive API calls
+    // Individual sections will handle their own caching and data loading
+    logInfo('App', `Navigated to section: ${section}`);
   };
 
   // Show loading screen while IoT data is being loaded

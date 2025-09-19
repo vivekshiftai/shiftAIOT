@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { 
-  BarChart3
+  BarChart3,
+  Plus,
+  Search,
+  Filter,
+  Brain,
+  TrendingUp
 } from 'lucide-react';
 import { SalesIntelligenceSection } from './SalesIntelligenceSection';
 
@@ -14,14 +19,27 @@ export const ProcessSection: React.FC = () => {
       name: 'Sales Intelligence',
       description: 'AI-powered cross-sell recommendations and analysis',
       icon: BarChart3,
-      color: 'blue'
+      color: 'blue',
+      enabled: true
+    },
+    {
+      id: 'vendor-intelligence',
+      name: 'Sales Process Vendor Intelligence',
+      description: 'Advanced vendor analysis and procurement optimization (Coming Soon)',
+      icon: Brain,
+      color: 'gray',
+      enabled: false
     }
     // Future processes can be added here
   ];
 
   // Handle process selection
   const handleProcessSelect = (processId: string) => {
-    setSelectedProcess(processId);
+    // Only allow selection if process is enabled
+    const process = availableProcesses.find(p => p.id === processId);
+    if (process?.enabled) {
+      setSelectedProcess(processId);
+    }
   };
 
   // Handle back to process selection
@@ -40,9 +58,20 @@ export const ProcessSection: React.FC = () => {
       {/* Smart Process Header */}
       <div className="knowledge-fixed-header flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
-            <div>
+          <div>
             <h1 className="page-header">Smart Process</h1>
-            <p className="page-subtitle">Select a smart process to get started</p>
+            <p className="page-subtitle">Monitor and manage your sales processes</p>
+          </div>
+          
+          <div className="flex gap-2">
+            <button 
+              disabled
+              className="flex items-center gap-2 px-4 py-2 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed opacity-50"
+              title="Add Process feature coming soon"
+            >
+              <Plus className="w-4 h-4" />
+              Add Process
+            </button>
           </div>
         </div>
       </div>
@@ -51,35 +80,112 @@ export const ProcessSection: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           
-          {/* Process Selection */}
-          <div className="space-y-6">
-            <div className="w-full">
-              {availableProcesses.map((process) => {
-                const IconComponent = process.icon;
-                return (
-                  <div
-                    key={process.id}
-                    onClick={() => handleProcessSelect(process.id)}
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 rounded-lg transition-colors">
-                        <IconComponent className="w-6 h-6 text-primary-600" />
-                </div>
-                      <div className="flex-1">
-                        <h3 className="subsection-header group-hover:text-blue-600 transition-colors">
-                          {process.name}
-                        </h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {process.description}
-                        </p>
-                  </div>
+          {/* Search and Filters */}
+          <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-4 sm:p-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              
+              {/* Search */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search sales processes..."
+                  className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  disabled
+                />
+              </div>
+              
+              {/* Filters */}
+              <div className="flex gap-2">
+                <select 
+                  className="px-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-gray-100 text-gray-500 cursor-not-allowed"
+                  disabled
+                >
+                  <option>All Status</option>
+                  <option>Active</option>
+                  <option>Inactive</option>
+                </select>
+                
+                <button 
+                  disabled
+                  className="p-2 text-neutral-400 bg-gray-100 rounded-lg cursor-not-allowed"
+                  title="Filters coming soon"
+                >
+                  <Filter className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Process Grid - Full Width Like Smart Assets */}
+          <div className="grid grid-cols-1 gap-6">
+            {availableProcesses.map((process) => {
+              const IconComponent = process.icon;
+              const isEnabled = process.enabled;
+              
+              return (
+                <div
+                  key={process.id}
+                  onClick={() => handleProcessSelect(process.id)}
+                  className={`rounded-xl border p-6 transition-all duration-300 ${
+                    isEnabled 
+                      ? 'bg-white border-neutral-200 hover:shadow-lg hover:border-primary-300 cursor-pointer group'
+                      : 'bg-gray-100 border-gray-300 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`p-3 rounded-xl ${
+                      isEnabled 
+                        ? 'bg-primary-50 group-hover:bg-primary-100' 
+                        : 'bg-gray-200'
+                    } transition-colors`}>
+                      <IconComponent className={`w-6 h-6 ${
+                        isEnabled ? 'text-primary-600' : 'text-gray-400'
+                      }`} />
+                    </div>
+                    
+                    <div className="flex-1">
+                      <h3 className={`text-lg font-semibold mb-2 ${
+                        isEnabled 
+                          ? 'text-neutral-800 group-hover:text-primary-600' 
+                          : 'text-gray-500'
+                      } transition-colors`}>
+                        {process.name}
+                      </h3>
+                      
+                      <p className={`text-sm ${
+                        isEnabled ? 'text-neutral-600' : 'text-gray-400'
+                      }`}>
+                        {process.description}
+                      </p>
+                      
+                      {!isEnabled && (
+                        <div className="mt-3">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-600">
+                            Coming Soon
+                          </span>
+                        </div>
+                      )}
+                      
+                      {isEnabled && (
+                        <div className="mt-3">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Available
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className={`${
+                      isEnabled ? 'text-neutral-400 group-hover:text-primary-600' : 'text-gray-300'
+                    } transition-colors`}>
+                      <TrendingUp className="w-5 h-5" />
                     </div>
                   </div>
-                );
-              })}
-                  </div>
                 </div>
+              );
+            })}
+          </div>
                 
         </div>
       </div>
