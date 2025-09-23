@@ -74,7 +74,10 @@ export const ChatFeedbackButtons: React.FC<ChatFeedbackButtonsProps> = ({
   };
 
   return (
-    <div className={`flex items-center gap-2 ${className}`} style={{ border: '1px solid red', padding: '4px' }}>
+    <div className={`flex items-center gap-2 ${className}`} style={{ border: '3px solid red', padding: '8px', backgroundColor: 'orange' }}>
+      <div style={{ color: 'black', fontSize: '10px', marginBottom: '4px' }}>
+        DEBUG: ChatFeedbackButtons rendered for message {messageId}
+      </div>
       {/* Like Button */}
       <button
         onClick={() => handleFeedback('like')}

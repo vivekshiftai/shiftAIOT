@@ -805,19 +805,20 @@ export const KnowledgeSection: React.FC = () => {
                     )}
                     
                     {/* Feedback Buttons for Assistant Messages */}
-                    {true && (
-                      <div className="mt-3 pt-2 border-t border-gray-100" style={{ border: '2px solid blue', padding: '8px' }}>
-                        <div style={{ color: 'red', fontSize: '12px', marginBottom: '4px' }}>
-                          DEBUG: Feedback buttons for message {message.id}
-                        </div>
-                        <ChatFeedbackButtons
-                          messageId={message.id}
-                          onFeedback={handleFeedback}
-                          onRegenerate={handleRegenerate}
-                          disabled={isTyping}
-                        />
+                    <div className="mt-3 pt-2 border-t border-gray-100" style={{ border: '2px solid blue', padding: '8px', backgroundColor: 'yellow' }}>
+                      <div style={{ color: 'red', fontSize: '12px', marginBottom: '4px' }}>
+                        DEBUG: Message type: {message.type}, ID: {message.id}
                       </div>
-                    )}
+                      <div style={{ color: 'red', fontSize: '12px', marginBottom: '4px' }}>
+                        DEBUG: Should show buttons: {message.type === 'assistant' ? 'YES' : 'NO'}
+                      </div>
+                      <ChatFeedbackButtons
+                        messageId={message.id}
+                        onFeedback={handleFeedback}
+                        onRegenerate={handleRegenerate}
+                        disabled={isTyping}
+                      />
+                    </div>
                     
                     <p className={`text-xs mt-2 ${
                       message.type === 'user' ? 'text-primary-100' : 'text-neutral-500'
