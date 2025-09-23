@@ -1,6 +1,6 @@
 import { logInfo, logError } from '../utils/logger';
 import { tokenService } from './tokenService';
-import config from '../config';
+import { getApiConfig } from '../config/api';
 
 export interface ChatMessage {
   id: string;
@@ -66,6 +66,7 @@ export class ChatFeedbackService {
   private baseUrl: string;
 
   constructor() {
+    const config = getApiConfig();
     this.baseUrl = config.BACKEND_BASE_URL;
   }
 
