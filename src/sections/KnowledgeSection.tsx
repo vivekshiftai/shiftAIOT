@@ -17,6 +17,8 @@ import { knowledgeAPI } from '../services/api';
 import { ImageViewer } from '../components/UI/ImageViewer';
 import { processImagePlaceholders } from '../utils/imageResponseProcessor';
 import { useSectionState } from '../hooks/useSectionState';
+import { ChatFeedbackButtons } from '../components/Chat/ChatFeedbackButtons';
+import { chatFeedbackService } from '../services/chatFeedbackService';
 
 // Updated interface to match UnifiedPDF API response
 interface UnifiedPDF {
@@ -428,8 +430,57 @@ export const KnowledgeSection: React.FC = () => {
     setImageViewerInitialIndex(0);
   };
 
+  // Feedback handling functions
+  const handleFeedback = async (messageId: string, feedback: 'like' | 'dislike' | 'regenerate') => {
+    try {
+      logInfo('KnowledgeSection', 'Handling user feedback', { 
+        messageId, 
+        feedback 
+      });
 
+      // Send feedback to backend
+      await chatFeedbackService.addFeedback({
+        messageId,
+        feedback
+      });
 
+      logInfo('KnowledgeSection', 'Feedback submitted successfully', { 
+        messageId, 
+        feedback 
+      });
+
+    } catch (error) {
+      logError('KnowledgeSection', 'Failed to submit feedback', error instanceof Error ? error : new Error('Unknown error'));
+    }
+  };
+
+  const handleRegenerate = async (messageId: string) => {
+    try {
+      logInfo('KnowledgeSection', 'Handling message regeneration', { 
+        messageId 
+      });
+
+      // Find the original message to regenerate
+      const originalMessage = sectionState.chatMessages.find(msg => msg.id === messageId);
+      if (!originalMessage) {
+        logError('KnowledgeSection', 'Original message not found for regeneration', new Error('Message not found'));
+        return;
+      }
+
+      // For now, we'll just show a message that regeneration is not yet implemented
+      // In a full implementation, this would call the backend to regenerate the response
+      logInfo('KnowledgeSection', 'Regeneration requested (not yet implemented)', { 
+        messageId 
+      });
+
+      // TODO: Implement actual regeneration logic
+      // This would involve calling the backend to regenerate the response
+      // and updating the UI with the new response
+
+    } catch (error) {
+      logError('KnowledgeSection', 'Failed to regenerate message', error instanceof Error ? error : new Error('Unknown error'));
+    }
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -751,6 +802,18 @@ export const KnowledgeSection: React.FC = () => {
                       <p className="text-xs text-gray-500 mt-2">
                         ⏱️ Processed in {message.processing_time}
                       </p>
+                    )}
+                    
+                    {/* Feedback Buttons for Assistant Messages */}
+                    {message.type === 'assistant' && (
+                      <div className="mt-3 pt-2 border-t border-gray-100">
+                        <ChatFeedbackButtons
+                          messageId={message.id}
+                          onFeedback={handleFeedback}
+                          onRegenerate={handleRegenerate}
+                          disabled={isTyping}
+                        />
+                      </div>
                     )}
                     
                     <p className={`text-xs mt-2 ${

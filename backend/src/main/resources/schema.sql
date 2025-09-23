@@ -826,4 +826,55 @@ CREATE INDEX IF NOT EXISTS idx_rule_conditions_rule ON rule_conditions(rule_id);
 CREATE INDEX IF NOT EXISTS idx_rule_conditions_device ON rule_conditions(device_id);
 CREATE INDEX IF NOT EXISTS idx_rule_actions_rule ON rule_actions(rule_id);
 
+-- Chat History Table - Stores all chat messages and user feedback
+CREATE TABLE IF NOT EXISTS chat_history (
+    id VARCHAR(255) PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    device_id VARCHAR(255), -- Device context for the chat (nullable for general chats)
+    organization_id VARCHAR(255) NOT NULL,
+    
+    -- Message details
+    message_type VARCHAR(20) NOT NULL CHECK (message_type IN ('user', 'assistant')),
+    content TEXT NOT NULL,
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    -- Query context (for assistant messages)
+    query_type VARCHAR(50), -- 'DATABASE', 'PDF', 'MIXED', 'LLM_ANSWER', 'UNKNOWN'
+    pdf_name VARCHAR(255), -- PDF that was queried
+    chunks_used TEXT, -- JSON array of chunks used
+    processing_time VARCHAR(100), -- Processing time as string
+    sql_query TEXT, -- SQL query if applicable
+    database_results TEXT, -- JSON array of database results
+    row_count INTEGER, -- Number of rows returned
+    
+    -- User feedback
+    user_feedback VARCHAR(20) CHECK (user_feedback IN ('like', 'dislike', 'regenerate')),
+    feedback_timestamp TIMESTAMP,
+    
+    -- Metadata
+    session_id VARCHAR(255), -- To group related messages
+    parent_message_id VARCHAR(255), -- For regenerate functionality
+    is_regenerated BOOLEAN DEFAULT false, -- True if this is a regenerated response
+    
+    -- Soft delete
+    deleted BOOLEAN DEFAULT false,
+    deleted_at TIMESTAMP,
+    
+    -- Foreign Keys
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE SET NULL,
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_message_id) REFERENCES chat_history(id) ON DELETE SET NULL,
+    
+    -- Indexes for performance
+    INDEX idx_chat_history_user_id (user_id),
+    INDEX idx_chat_history_device_id (device_id),
+    INDEX idx_chat_history_org_id (organization_id),
+    INDEX idx_chat_history_timestamp (timestamp),
+    INDEX idx_chat_history_session_id (session_id),
+    INDEX idx_chat_history_message_type (message_type),
+    INDEX idx_chat_history_feedback (user_feedback),
+    INDEX idx_chat_history_deleted (deleted)
+);
+
 -- Note: Sample data has been removed. Users should be created through the application's user management system.

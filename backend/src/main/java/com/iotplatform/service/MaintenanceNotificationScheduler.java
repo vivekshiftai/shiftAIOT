@@ -65,6 +65,13 @@ public class MaintenanceNotificationScheduler {
             int overdueCount = 0;
             for (Object[] taskData : overdueTasks) {
                 try {
+                    // Validate array bounds
+                    if (taskData == null || taskData.length < 28) {
+                        log.error("Invalid taskData array in overdue check - length: {}, expected: 28", 
+                                 taskData != null ? taskData.length : "null");
+                        continue;
+                    }
+
                     String taskId = (String) taskData[0];
                     String nextMaintenance = taskData[8] != null ? taskData[8].toString() : null;
                     String status = (String) taskData[10];
@@ -112,6 +119,13 @@ public class MaintenanceNotificationScheduler {
             int updatedCount = 0;
             for (Object[] taskData : overdueTasks) {
                 try {
+                    // Validate array bounds
+                    if (taskData == null || taskData.length < 28) {
+                        log.error("Invalid taskData array in auto-update - length: {}, expected: 28", 
+                                 taskData != null ? taskData.length : "null");
+                        continue;
+                    }
+
                     String taskId = (String) taskData[0];
                     String taskName = (String) taskData[2];
                     String nextMaintenance = taskData[8] != null ? taskData[8].toString() : null;
@@ -178,14 +192,25 @@ public class MaintenanceNotificationScheduler {
             // Process each maintenance task
             for (Object[] taskData : reminderTasks) {
                 try {
+                    // Log task details for debugging
+                    if (taskData != null && taskData.length > 0) {
+                        log.debug("Processing maintenance reminder for task ID: {}", taskData[0]);
+                    }
+                    
                     boolean sent = processMaintenanceReminder(taskData);
                     if (sent) {
                         totalRemindersSent++;
+                        log.debug("Successfully processed maintenance reminder for task ID: {}", 
+                                taskData != null && taskData.length > 0 ? taskData[0] : "unknown");
                     } else {
                         totalRemindersFailed++;
+                        log.debug("Failed to process maintenance reminder for task ID: {}", 
+                                taskData != null && taskData.length > 0 ? taskData[0] : "unknown");
                     }
                 } catch (Exception e) {
-                    log.error("Error processing maintenance reminder: {}", e.getMessage(), e);
+                    log.error("Error processing maintenance reminder for task ID: {} - {}", 
+                             taskData != null && taskData.length > 0 ? taskData[0] : "unknown", 
+                             e.getMessage(), e);
                     totalRemindersFailed++;
                 }
             }
@@ -267,24 +292,31 @@ public class MaintenanceNotificationScheduler {
      */
     private boolean processMaintenanceReminder(Object[] taskData) {
         try {
+            // Validate array bounds first
+            if (taskData == null || taskData.length < 28) {
+                log.error("Invalid taskData array - length: {}, expected: 28", 
+                         taskData != null ? taskData.length : "null");
+                return false;
+            }
+
             // Extract data from the Object array
             String taskId = (String) taskData[0]; // id
             String taskName = (String) taskData[2]; // task_name
             String deviceId = (String) taskData[1]; // device_id
             String organizationId = (String) taskData[21]; // organization_id
-            String assignedUserId = (String) taskData[25]; // assigned_user_id from devices table
+            String assignedUserId = (String) taskData[16]; // assigned_to from maintenance table (corrected from 25)
             String deviceName = (String) taskData[24]; // device_name from devices table
-            String firstName = (String) taskData[26]; // first_name from users table
-            String lastName = (String) taskData[27]; // last_name from users table
-            String email = (String) taskData[28]; // email from users table
+            String firstName = (String) taskData[25]; // first_name from users table
+            String lastName = (String) taskData[26]; // last_name from users table
+            String email = (String) taskData[27]; // email from users table (corrected from 28)
 
             // Debug logging to see what's in the array
             log.debug("DEBUG: taskData array length: {}", taskData.length);
-            log.debug("DEBUG: assignedUserId at position 25: '{}'", assignedUserId);
+            log.debug("DEBUG: assignedUserId at position 16: '{}'", assignedUserId);
             log.debug("DEBUG: deviceName at position 24: '{}'", deviceName);
-            log.debug("DEBUG: firstName at position 26: '{}'", firstName);
-            log.debug("DEBUG: lastName at position 27: '{}'", lastName);
-            log.debug("DEBUG: email at position 28: '{}'", email);
+            log.debug("DEBUG: firstName at position 25: '{}'", firstName);
+            log.debug("DEBUG: lastName at position 26: '{}'", lastName);
+            log.debug("DEBUG: email at position 27: '{}'", email);
             
             // Skip if no assigned user
             if (assignedUserId == null || assignedUserId.trim().isEmpty()) {
@@ -335,6 +367,13 @@ public class MaintenanceNotificationScheduler {
      */
     private boolean processMaintenanceTask(Object[] taskData) {
         try {
+            // Validate array bounds first
+            if (taskData == null || taskData.length < 28) {
+                log.error("Invalid taskData array - length: {}, expected: 28", 
+                         taskData != null ? taskData.length : "null");
+                return false;
+            }
+
             // Extract data from the Object array
             String taskId = (String) taskData[0]; // id
             String taskName = (String) taskData[2]; // task_name
@@ -409,6 +448,13 @@ public class MaintenanceNotificationScheduler {
                                                     String deviceName, String organizationId, String taskName, 
                                                     String deviceId, long reminderNumber) {
         try {
+            // Validate array bounds
+            if (taskData == null || taskData.length < 28) {
+                log.error("Invalid taskData array in reminder notification - length: {}, expected: 28", 
+                         taskData != null ? taskData.length : "null");
+                return false;
+            }
+
             // Extract additional data from taskData
             String priority = (String) taskData[9]; // priority
             String description = (String) taskData[3]; // description

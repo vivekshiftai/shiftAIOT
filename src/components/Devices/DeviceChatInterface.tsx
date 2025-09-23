@@ -15,6 +15,8 @@ import { formatKnowledgeBaseResponse, getUserDisplayName } from '../../utils/res
 import { useAuth } from '../../contexts/AuthContext';
 import { processImagePlaceholders } from '../../utils/imageResponseProcessor';
 import { ImageViewer } from '../UI/ImageViewer';
+import { ChatFeedbackButtons } from '../Chat/ChatFeedbackButtons';
+import { chatFeedbackService } from '../../services/chatFeedbackService';
 
 interface DeviceChatInterfaceProps {
   deviceName: string;
@@ -80,6 +82,60 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     setImageViewerOpen(false);
     setImageViewerImages([]);
     setImageViewerInitialIndex(0);
+  };
+
+  // Feedback handling functions
+  const handleFeedback = async (messageId: string, feedback: 'like' | 'dislike' | 'regenerate') => {
+    try {
+      logInfo('DeviceChatInterface', 'Handling user feedback', { 
+        messageId, 
+        feedback,
+        deviceId 
+      });
+
+      // Send feedback to backend
+      await chatFeedbackService.addFeedback({
+        messageId,
+        feedback
+      });
+
+      logInfo('DeviceChatInterface', 'Feedback submitted successfully', { 
+        messageId, 
+        feedback 
+      });
+
+    } catch (error) {
+      logError('DeviceChatInterface', 'Failed to submit feedback', error instanceof Error ? error : new Error('Unknown error'));
+    }
+  };
+
+  const handleRegenerate = async (messageId: string) => {
+    try {
+      logInfo('DeviceChatInterface', 'Handling message regeneration', { 
+        messageId,
+        deviceId 
+      });
+
+      // Find the original message to regenerate
+      const originalMessage = messages.find(msg => msg.id === messageId);
+      if (!originalMessage) {
+        logError('DeviceChatInterface', 'Original message not found for regeneration', new Error('Message not found'));
+        return;
+      }
+
+      // For now, we'll just show a message that regeneration is not yet implemented
+      // In a full implementation, this would call the backend to regenerate the response
+      logInfo('DeviceChatInterface', 'Regeneration requested (not yet implemented)', { 
+        messageId 
+      });
+
+      // TODO: Implement actual regeneration logic
+      // This would involve calling the backend to regenerate the response
+      // and updating the UI with the new response
+
+    } catch (error) {
+      logError('DeviceChatInterface', 'Failed to regenerate message', error instanceof Error ? error : new Error('Unknown error'));
+    }
   };
 
   // Load chat history on component mount
@@ -277,6 +333,18 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
                       tables={message.tables} 
                       className="mt-3"
                     />
+                  )}
+                  
+                  {/* Feedback Buttons for Assistant Messages */}
+                  {message.type === 'assistant' && (
+                    <div className="mt-3 pt-2 border-t border-gray-100">
+                      <ChatFeedbackButtons
+                        messageId={message.id}
+                        onFeedback={handleFeedback}
+                        onRegenerate={handleRegenerate}
+                        disabled={isLoading}
+                      />
+                    </div>
                   )}
                   
                   {message.error && (

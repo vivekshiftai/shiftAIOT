@@ -51,6 +51,8 @@ import { PDFImage } from '../services/chatService';
 import { ImageViewer } from '../components/UI/ImageViewer';
 import { processImagePlaceholders } from '../utils/imageResponseProcessor';
 import { useSectionState, useSectionData } from '../hooks/useSectionState';
+import { ChatFeedbackButtons } from '../components/Chat/ChatFeedbackButtons';
+import { chatFeedbackService } from '../services/chatFeedbackService';
 
 interface DocumentationInfo {
   deviceId: string;
@@ -1128,6 +1130,60 @@ export const DeviceDetailsSection: React.FC = () => {
     }
   };
 
+  // Feedback handling functions
+  const handleFeedback = async (messageId: string, feedback: 'like' | 'dislike' | 'regenerate') => {
+    try {
+      logInfo('DeviceDetailsSection', 'Handling user feedback', { 
+        messageId, 
+        feedback,
+        deviceId 
+      });
+
+      // Send feedback to backend
+      await chatFeedbackService.addFeedback({
+        messageId,
+        feedback
+      });
+
+      logInfo('DeviceDetailsSection', 'Feedback submitted successfully', { 
+        messageId, 
+        feedback 
+      });
+
+    } catch (error) {
+      logError('DeviceDetailsSection', 'Failed to submit feedback', error instanceof Error ? error : new Error('Unknown error'));
+    }
+  };
+
+  const handleRegenerate = async (messageId: string) => {
+    try {
+      logInfo('DeviceDetailsSection', 'Handling message regeneration', { 
+        messageId,
+        deviceId 
+      });
+
+      // Find the original message to regenerate
+      const originalMessage = sectionState.chatMessages.find(msg => msg.id === messageId);
+      if (!originalMessage) {
+        logError('DeviceDetailsSection', 'Original message not found for regeneration', new Error('Message not found'));
+        return;
+      }
+
+      // For now, we'll just show a message that regeneration is not yet implemented
+      // In a full implementation, this would call the backend to regenerate the response
+      logInfo('DeviceDetailsSection', 'Regeneration requested (not yet implemented)', { 
+        messageId 
+      });
+
+      // TODO: Implement actual regeneration logic
+      // This would involve calling the backend to regenerate the response
+      // and updating the UI with the new response
+
+    } catch (error) {
+      logError('DeviceDetailsSection', 'Failed to regenerate message', error instanceof Error ? error : new Error('Unknown error'));
+    }
+  };
+
   const renderTabContent = () => {
     switch (sectionState.activeTab) {
       case 'device-info':
@@ -1520,6 +1576,18 @@ export const DeviceDetailsSection: React.FC = () => {
                         <p className="text-xs text-gray-500 mt-2">
                           ⏱️ Processed in {message.processing_time}
                         </p>
+                      )}
+                      
+                      {/* Feedback Buttons for Assistant Messages */}
+                      {message.type === 'assistant' && (
+                        <div className="mt-3 pt-2 border-t border-gray-100">
+                          <ChatFeedbackButtons
+                            messageId={message.id}
+                            onFeedback={handleFeedback}
+                            onRegenerate={handleRegenerate}
+                            disabled={isTyping}
+                          />
+                        </div>
                       )}
                       
                       <p className={`text-xs mt-1 ${
