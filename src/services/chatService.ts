@@ -199,7 +199,7 @@ export class ChatService {
     try {
       logInfo('ChatService', 'Fetching device chat history', { deviceId, limit });
 
-      const response = await fetch(`${this.baseUrl}/api/chat/history/device/${encodeURIComponent(deviceId)}?limit=${limit}`, {
+      const response = await fetch(`${this.baseUrl}/api/chat-history/device/${encodeURIComponent(deviceId)}/recent?limit=${limit}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${tokenService.getToken()}`,
@@ -212,24 +212,32 @@ export class ChatService {
         throw new Error(`Failed to fetch device chat history: ${response.status} ${response.statusText}`);
       }
 
-      const result = await response.json();
+      const messages = await response.json();
       
-      // Convert timestamps to Date objects
-      const messages = result.messages.map((msg: any) => ({
-        ...msg,
-        timestamp: new Date(msg.timestamp)
+      // Convert timestamps to Date objects and ensure proper message format
+      const formattedMessages = messages.map((msg: any) => ({
+        id: msg.id,
+        type: msg.messageType.toLowerCase(), // Convert USER/ASSISTANT to user/assistant for UI
+        content: msg.content,
+        timestamp: new Date(msg.timestamp),
+        pdfName: msg.pdfName,
+        deviceId: msg.deviceId,
+        queryType: msg.queryType,
+        chunks_used: msg.chunksUsed ? JSON.parse(msg.chunksUsed) : undefined,
+        processing_time: msg.processingTime,
+        userFeedback: msg.userFeedback,
+        feedbackTimestamp: msg.feedbackTimestamp ? new Date(msg.feedbackTimestamp) : undefined
       }));
 
       logInfo('ChatService', 'Device chat history fetched successfully', {
         deviceId,
-        messageCount: messages.length,
-        total: result.total
+        messageCount: formattedMessages.length
       });
 
       return {
-        messages,
-        total: result.total,
-        deviceId: result.deviceId
+        messages: formattedMessages,
+        total: formattedMessages.length,
+        deviceId: deviceId
       };
 
     } catch (error) {
