@@ -53,6 +53,7 @@ import { processImagePlaceholders } from '../utils/imageResponseProcessor';
 import { useSectionState, useSectionData } from '../hooks/useSectionState';
 import { ChatFeedbackButtons } from '../components/Chat/ChatFeedbackButtons';
 import { chatFeedbackService } from '../services/chatFeedbackService';
+import { chatService } from '../services/chatService';
 
 interface DocumentationInfo {
   deviceId: string;
@@ -954,12 +955,26 @@ export const DeviceDetailsSection: React.FC = () => {
       timestamp: new Date()
     };
 
+    // Generate session ID for this conversation
+    const sessionId = `device_details_${deviceId}_${Date.now()}`;
+
     setSectionState(prev => ({
       ...prev,
       chatMessages: [...prev.chatMessages, userMessage]
     }));
     setNewMessage('');
     setIsTyping(true);
+
+    // Save user message to database
+    if (user?.id && user?.organizationId) {
+      await chatService.saveUserMessage(
+        user.id,
+        deviceId,
+        user.organizationId,
+        newMessage,
+        sessionId
+      );
+    }
 
     try {
       // Automatically use the first available PDF if we have any
@@ -1061,6 +1076,25 @@ export const DeviceDetailsSection: React.FC = () => {
             chunks_used: queryResponse.chunks_used || [],
             processing_time: queryResponse.processing_time
           };
+
+          // Save assistant message to database
+          if (user?.id && user?.organizationId) {
+            await chatService.saveAssistantMessage(
+              user.id,
+              deviceId,
+              user.organizationId,
+              enhancedContent,
+              sessionId,
+              'PDF',
+              pdfToUse.name,
+              queryResponse.chunks_used ? JSON.stringify(queryResponse.chunks_used) : undefined,
+              queryResponse.processing_time,
+              undefined, // sqlQuery
+              undefined, // databaseResults
+              undefined  // rowCount
+            );
+          }
+
           setSectionState(prev => ({
             ...prev,
             chatMessages: [...prev.chatMessages, assistantMessage]
@@ -1155,34 +1189,6 @@ export const DeviceDetailsSection: React.FC = () => {
     }
   };
 
-  const handleRegenerate = async (messageId: string) => {
-    try {
-      logInfo('DeviceDetailsSection', 'Handling message regeneration', { 
-        messageId,
-        deviceId 
-      });
-
-      // Find the original message to regenerate
-      const originalMessage = sectionState.chatMessages.find(msg => msg.id === messageId);
-      if (!originalMessage) {
-        logError('DeviceDetailsSection', 'Original message not found for regeneration', new Error('Message not found'));
-        return;
-      }
-
-      // For now, we'll just show a message that regeneration is not yet implemented
-      // In a full implementation, this would call the backend to regenerate the response
-      logInfo('DeviceDetailsSection', 'Regeneration requested (not yet implemented)', { 
-        messageId 
-      });
-
-      // TODO: Implement actual regeneration logic
-      // This would involve calling the backend to regenerate the response
-      // and updating the UI with the new response
-
-    } catch (error) {
-      logError('DeviceDetailsSection', 'Failed to regenerate message', error instanceof Error ? error : new Error('Unknown error'));
-    }
-  };
 
   const renderTabContent = () => {
     switch (sectionState.activeTab) {
@@ -1579,20 +1585,15 @@ export const DeviceDetailsSection: React.FC = () => {
                       )}
                       
                       {/* Feedback Buttons for Assistant Messages */}
-                      <div className="mt-3 pt-2 border-t border-gray-100" style={{ border: '2px solid green', padding: '8px', backgroundColor: 'lightgreen' }}>
-                        <div style={{ color: 'red', fontSize: '12px', marginBottom: '4px' }}>
-                          DEBUG: Message type: {message.type}, ID: {message.id}
+                      {message.type === 'assistant' && (
+                        <div className="mt-3 pt-2 border-t border-gray-100">
+                          <ChatFeedbackButtons
+                            messageId={message.id}
+                            onFeedback={handleFeedback}
+                            disabled={isTyping}
+                          />
                         </div>
-                        <div style={{ color: 'red', fontSize: '12px', marginBottom: '4px' }}>
-                          DEBUG: Should show buttons: {message.type === 'assistant' ? 'YES' : 'NO'}
-                        </div>
-                        <ChatFeedbackButtons
-                          messageId={message.id}
-                          onFeedback={handleFeedback}
-                          onRegenerate={handleRegenerate}
-                          disabled={isTyping}
-                        />
-                      </div>
+                      )}
                       
                       <p className={`text-xs mt-1 ${
                         message.type === 'user' ? 'text-primary-100' : 'text-slate-500'

@@ -109,34 +109,6 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     }
   };
 
-  const handleRegenerate = async (messageId: string) => {
-    try {
-      logInfo('DeviceChatInterface', 'Handling message regeneration', { 
-        messageId,
-        deviceId 
-      });
-
-      // Find the original message to regenerate
-      const originalMessage = messages.find(msg => msg.id === messageId);
-      if (!originalMessage) {
-        logError('DeviceChatInterface', 'Original message not found for regeneration', new Error('Message not found'));
-        return;
-      }
-
-      // For now, we'll just show a message that regeneration is not yet implemented
-      // In a full implementation, this would call the backend to regenerate the response
-      logInfo('DeviceChatInterface', 'Regeneration requested (not yet implemented)', { 
-        messageId 
-      });
-
-      // TODO: Implement actual regeneration logic
-      // This would involve calling the backend to regenerate the response
-      // and updating the UI with the new response
-
-    } catch (error) {
-      logError('DeviceChatInterface', 'Failed to regenerate message', error instanceof Error ? error : new Error('Unknown error'));
-    }
-  };
 
   // Load chat history on component mount
   useEffect(() => {
@@ -207,13 +179,27 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
     setInputValue('');
     setIsLoading(true);
 
+    // Generate session ID for this conversation
+    const sessionId = `device_${deviceId}_${Date.now()}`;
+
     try {
       logInfo('DeviceChatInterface', 'Sending message to AI', { 
         deviceId, 
         pdfName: pdfFileName,
-        queryLength: query.length 
+        queryLength: query.length,
+        sessionId
       });
 
+      // Save user message to database
+      if (user?.id && user?.organizationId) {
+        await chatService.saveUserMessage(
+          user.id,
+          deviceId,
+          user.organizationId,
+          query,
+          sessionId
+        );
+      }
 
       // Use the clean chat service - stores conversation automatically in backend
       const queryResponse = await chatService.queryPDF({
@@ -222,6 +208,24 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
         top_k: 5
       }, deviceId);
       
+      // Save assistant message to database
+      if (user?.id && user?.organizationId && queryResponse.response) {
+        await chatService.saveAssistantMessage(
+          user.id,
+          deviceId,
+          user.organizationId,
+          queryResponse.response,
+          sessionId,
+          'PDF',
+          pdfFileName,
+          queryResponse.chunks_used ? JSON.stringify(queryResponse.chunks_used) : undefined,
+          queryResponse.processing_time,
+          undefined, // sqlQuery
+          undefined, // databaseResults
+          undefined  // rowCount
+        );
+      }
+
       // Reload chat history to get the updated conversation from backend
       const history = await chatService.getDeviceChatHistory(deviceId, 50);
       
@@ -341,7 +345,6 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
                       <ChatFeedbackButtons
                         messageId={message.id}
                         onFeedback={handleFeedback}
-                        onRegenerate={handleRegenerate}
                         disabled={isLoading}
                       />
                     </div>

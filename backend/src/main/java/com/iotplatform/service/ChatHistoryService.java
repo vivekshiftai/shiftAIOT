@@ -109,6 +109,7 @@ public class ChatHistoryService {
     
     /**
      * Add user feedback to a message
+     * Only allows feedback on assistant messages
      */
     @Transactional
     public void addUserFeedback(String messageId, ChatHistory.UserFeedback feedback) {
@@ -118,6 +119,14 @@ public class ChatHistoryService {
             Optional<ChatHistory> messageOpt = chatHistoryRepository.findById(messageId);
             if (messageOpt.isPresent()) {
                 ChatHistory message = messageOpt.get();
+                
+                // Validate that feedback can only be added to assistant messages
+                if (!message.isAssistantMessage()) {
+                    log.warn("⚠️ Attempted to add feedback to non-assistant message: messageId={}, type={}", 
+                            messageId, message.getMessageType());
+                    throw new IllegalArgumentException("Feedback can only be added to assistant messages");
+                }
+                
                 message.addFeedback(feedback);
                 chatHistoryRepository.save(message);
                 

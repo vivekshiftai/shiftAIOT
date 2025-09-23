@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { CheckCircle, X, ArrowRight } from 'lucide-react';
+import { CheckCircle, X } from 'lucide-react';
 import { logInfo, logError } from '../../utils/logger';
+import { chatFeedbackService } from '../../services/chatFeedbackService';
 
 interface ChatFeedbackButtonsProps {
   messageId: string;
-  onFeedback?: (messageId: string, feedback: 'like' | 'dislike' | 'regenerate') => void;
-  onRegenerate?: (messageId: string) => void;
+  onFeedback?: (messageId: string, feedback: 'like' | 'dislike') => void;
   className?: string;
   disabled?: boolean;
 }
@@ -13,7 +13,6 @@ interface ChatFeedbackButtonsProps {
 export const ChatFeedbackButtons: React.FC<ChatFeedbackButtonsProps> = ({
   messageId,
   onFeedback,
-  onRegenerate,
   className = '',
   disabled = false
 }) => {
@@ -32,52 +31,38 @@ export const ChatFeedbackButtons: React.FC<ChatFeedbackButtonsProps> = ({
         feedback 
       });
 
+      // Send feedback to backend API
+      await chatFeedbackService.addFeedback({
+        messageId,
+        feedback
+      });
+
       // Call the parent callback if provided
       if (onFeedback) {
         await onFeedback(messageId, feedback);
       }
 
-      // TODO: Send feedback to backend API
-      // This will be implemented when we update the frontend services
+      logInfo('ChatFeedbackButtons', 'Feedback submitted successfully', { 
+        messageId, 
+        feedback 
+      });
 
     } catch (error) {
       logError('ChatFeedbackButtons', 'Failed to submit feedback', error instanceof Error ? error : new Error('Unknown error'));
       setActiveFeedback(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRegenerate = async () => {
-    if (disabled || isLoading) return;
-
-    try {
-      setIsLoading(true);
       
-      logInfo('ChatFeedbackButtons', 'User requested regeneration', { 
-        messageId 
-      });
-
-      // Call the parent callback if provided
-      if (onRegenerate) {
-        await onRegenerate(messageId);
+      // Show user-friendly error message
+      if (error instanceof Error && error.message.includes('Feedback can only be added to assistant messages')) {
+        logError('ChatFeedbackButtons', 'Invalid feedback attempt on user message', error);
       }
-
-      // TODO: Send regenerate request to backend API
-      // This will be implemented when we update the frontend services
-
-    } catch (error) {
-      logError('ChatFeedbackButtons', 'Failed to regenerate message', error instanceof Error ? error : new Error('Unknown error'));
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
-    <div className={`flex items-center gap-2 ${className}`} style={{ border: '3px solid red', padding: '8px', backgroundColor: 'orange' }}>
-      <div style={{ color: 'black', fontSize: '10px', marginBottom: '4px' }}>
-        DEBUG: ChatFeedbackButtons rendered for message {messageId}
-      </div>
+    <div className={`flex items-center gap-2 ${className}`}>
       {/* Like Button */}
       <button
         onClick={() => handleFeedback('like')}
@@ -114,20 +99,6 @@ export const ChatFeedbackButtons: React.FC<ChatFeedbackButtonsProps> = ({
         <span>Dislike</span>
       </button>
 
-      {/* Regenerate Button */}
-      <button
-        onClick={handleRegenerate}
-        disabled={disabled || isLoading}
-        className={`
-          flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all duration-200
-          bg-gray-50 text-gray-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 border border-gray-200
-          ${disabled || isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-        `}
-        title="Regenerate this response"
-      >
-        <ArrowRight className="w-3 h-3" />
-        <span>Regenerate</span>
-      </button>
 
       {/* Loading indicator */}
       {isLoading && (

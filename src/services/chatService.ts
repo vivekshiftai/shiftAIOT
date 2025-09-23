@@ -1,6 +1,7 @@
 import { getApiConfig } from '../config/api';
 import { tokenService } from './tokenService';
 import { logInfo, logError } from '../utils/logger';
+import { chatFeedbackService, ChatMessage as FeedbackChatMessage } from './chatFeedbackService';
 
 /**
  * PDF Image interface
@@ -299,6 +300,103 @@ export class ChatService {
     } catch (error) {
       logError('ChatService', 'Backend health check failed', error instanceof Error ? error : new Error('Unknown error'));
       return false;
+    }
+  }
+
+  /**
+   * Save user message to chat history database
+   */
+  async saveUserMessage(userId: string, deviceId: string | undefined, organizationId: string, content: string, sessionId: string): Promise<void> {
+    try {
+      logInfo('ChatService', 'Saving user message to database', { 
+        userId, 
+        deviceId, 
+        organizationId,
+        contentLength: content.length,
+        sessionId 
+      });
+
+      const message: FeedbackChatMessage = {
+        id: Date.now().toString(),
+        userId,
+        deviceId,
+        organizationId,
+        content,
+        sessionId,
+        messageType: 'user'
+      };
+
+      await chatFeedbackService.saveMessage(message);
+      
+      logInfo('ChatService', 'User message saved to database successfully', { 
+        userId, 
+        deviceId,
+        sessionId 
+      });
+
+    } catch (error) {
+      logError('ChatService', 'Failed to save user message to database', error instanceof Error ? error : new Error('Unknown error'));
+      // Don't throw error - we don't want to break the chat flow if database saving fails
+    }
+  }
+
+  /**
+   * Save assistant message to chat history database
+   */
+  async saveAssistantMessage(
+    userId: string, 
+    deviceId: string | undefined, 
+    organizationId: string, 
+    content: string, 
+    sessionId: string,
+    queryType?: 'DATABASE' | 'PDF' | 'MIXED' | 'LLM_ANSWER' | 'UNKNOWN',
+    pdfName?: string,
+    chunksUsed?: string,
+    processingTime?: string,
+    sqlQuery?: string,
+    databaseResults?: string,
+    rowCount?: number
+  ): Promise<void> {
+    try {
+      logInfo('ChatService', 'Saving assistant message to database', { 
+        userId, 
+        deviceId, 
+        organizationId,
+        contentLength: content.length,
+        sessionId,
+        queryType,
+        pdfName
+      });
+
+      const message: FeedbackChatMessage = {
+        id: (Date.now() + 1).toString(),
+        userId,
+        deviceId,
+        organizationId,
+        content,
+        sessionId,
+        messageType: 'assistant',
+        queryType,
+        pdfName,
+        chunksUsed,
+        processingTime,
+        sqlQuery,
+        databaseResults,
+        rowCount
+      };
+
+      await chatFeedbackService.saveMessage(message);
+      
+      logInfo('ChatService', 'Assistant message saved to database successfully', { 
+        userId, 
+        deviceId,
+        sessionId,
+        queryType
+      });
+
+    } catch (error) {
+      logError('ChatService', 'Failed to save assistant message to database', error instanceof Error ? error : new Error('Unknown error'));
+      // Don't throw error - we don't want to break the chat flow if database saving fails
     }
   }
 }

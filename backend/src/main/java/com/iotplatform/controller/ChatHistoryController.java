@@ -137,12 +137,18 @@ public class ChatHistoryController {
                 return ResponseEntity.ok("Message regenerated successfully");
             } else {
                 // Handle like/dislike feedback
-                chatHistoryService.addUserFeedback(request.getMessageId(), request.getFeedback());
-                
-                log.info("✅ User feedback added successfully: messageId={}, feedback={}", 
-                        request.getMessageId(), request.getFeedback());
-                
-                return ResponseEntity.ok("Feedback added successfully");
+                try {
+                    chatHistoryService.addUserFeedback(request.getMessageId(), request.getFeedback());
+                    
+                    log.info("✅ User feedback added successfully: messageId={}, feedback={}", 
+                            request.getMessageId(), request.getFeedback());
+                    
+                    return ResponseEntity.ok("Feedback added successfully");
+                } catch (IllegalArgumentException e) {
+                    log.warn("⚠️ Invalid feedback request: messageId={}, feedback={}, error={}", 
+                            request.getMessageId(), request.getFeedback(), e.getMessage());
+                    return ResponseEntity.badRequest().body(e.getMessage());
+                }
             }
             
         } catch (Exception e) {
