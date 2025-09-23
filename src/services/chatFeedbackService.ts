@@ -9,7 +9,7 @@ export interface ChatMessage {
   organizationId: string;
   content: string;
   sessionId: string;
-  messageType?: 'user' | 'assistant';
+  messageType?: 'USER' | 'ASSISTANT';
   queryType?: 'DATABASE' | 'PDF' | 'MIXED' | 'LLM_ANSWER' | 'UNKNOWN';
   pdfName?: string;
   chunksUsed?: string;
@@ -21,7 +21,7 @@ export interface ChatMessage {
 
 export interface ChatFeedbackRequest {
   messageId: string;
-  feedback: 'like' | 'dislike' | 'regenerate';
+  feedback: 'LIKE' | 'DISLIKE' | 'REGENERATE';
   newContent?: string;
   newChunksUsed?: string;
   newProcessingTime?: string;
@@ -82,13 +82,16 @@ export class ChatFeedbackService {
         deviceId: message.deviceId
       });
 
+      // Remove the id field as the backend generates its own UUID
+      const { id, ...messageWithoutId } = message;
+      
       const response = await fetch(`${this.baseUrl}/api/chat-history/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${tokenService.getToken()}`,
         },
-        body: JSON.stringify(message),
+        body: JSON.stringify(messageWithoutId),
       });
 
       if (!response.ok) {

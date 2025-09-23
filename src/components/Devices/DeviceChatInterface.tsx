@@ -190,15 +190,17 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
         sessionId
       });
 
-      // Save user message to database
+      // Save user message to database and get the real database ID
+      let userMessageId: string | undefined;
       if (user?.id && user?.organizationId) {
-        await chatService.saveUserMessage(
+        const savedUserMessage = await chatService.saveUserMessage(
           user.id,
           deviceId,
           user.organizationId,
           query,
           sessionId
         );
+        userMessageId = savedUserMessage.id;
       }
 
       // Use the clean chat service - stores conversation automatically in backend
@@ -208,9 +210,10 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
         top_k: 5
       }, deviceId);
       
-      // Save assistant message to database
+      // Save assistant message to database and get the real database ID
+      let assistantMessageId: string | undefined;
       if (user?.id && user?.organizationId && queryResponse.response) {
-        await chatService.saveAssistantMessage(
+        const savedAssistantMessage = await chatService.saveAssistantMessage(
           user.id,
           deviceId,
           user.organizationId,
@@ -224,9 +227,10 @@ export const DeviceChatInterface: React.FC<DeviceChatInterfaceProps> = ({
           undefined, // databaseResults
           undefined  // rowCount
         );
+        assistantMessageId = savedAssistantMessage.id;
       }
 
-      // Reload chat history to get the updated conversation from backend
+      // Reload chat history to get the updated conversation from backend with real database IDs
       const history = await chatService.getDeviceChatHistory(deviceId, 50);
       
       // Format assistant messages with personalized templates

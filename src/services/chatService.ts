@@ -306,7 +306,7 @@ export class ChatService {
   /**
    * Save user message to chat history database
    */
-  async saveUserMessage(userId: string, deviceId: string | undefined, organizationId: string, content: string, sessionId: string): Promise<void> {
+  async saveUserMessage(userId: string, deviceId: string | undefined, organizationId: string, content: string, sessionId: string): Promise<{ id: string }> {
     try {
       logInfo('ChatService', 'Saving user message to database', { 
         userId, 
@@ -323,20 +323,24 @@ export class ChatService {
         organizationId,
         content,
         sessionId,
-        messageType: 'user'
+        messageType: 'USER'
       };
 
-      await chatFeedbackService.saveMessage(message);
+      const savedMessage = await chatFeedbackService.saveMessage(message);
       
       logInfo('ChatService', 'User message saved to database successfully', { 
         userId, 
         deviceId,
-        sessionId 
+        sessionId,
+        savedMessageId: savedMessage.id
       });
+
+      return { id: savedMessage.id };
 
     } catch (error) {
       logError('ChatService', 'Failed to save user message to database', error instanceof Error ? error : new Error('Unknown error'));
-      // Don't throw error - we don't want to break the chat flow if database saving fails
+      // Return a fallback ID to prevent breaking the chat flow
+      return { id: `fallback_user_${Date.now()}` };
     }
   }
 
@@ -356,7 +360,7 @@ export class ChatService {
     sqlQuery?: string,
     databaseResults?: string,
     rowCount?: number
-  ): Promise<void> {
+  ): Promise<{ id: string }> {
     try {
       logInfo('ChatService', 'Saving assistant message to database', { 
         userId, 
@@ -375,7 +379,7 @@ export class ChatService {
         organizationId,
         content,
         sessionId,
-        messageType: 'assistant',
+        messageType: 'ASSISTANT',
         queryType,
         pdfName,
         chunksUsed,
@@ -385,18 +389,22 @@ export class ChatService {
         rowCount
       };
 
-      await chatFeedbackService.saveMessage(message);
+      const savedMessage = await chatFeedbackService.saveMessage(message);
       
       logInfo('ChatService', 'Assistant message saved to database successfully', { 
         userId, 
         deviceId,
         sessionId,
-        queryType
+        queryType,
+        savedMessageId: savedMessage.id
       });
+
+      return { id: savedMessage.id };
 
     } catch (error) {
       logError('ChatService', 'Failed to save assistant message to database', error instanceof Error ? error : new Error('Unknown error'));
-      // Don't throw error - we don't want to break the chat flow if database saving fails
+      // Return a fallback ID to prevent breaking the chat flow
+      return { id: `fallback_assistant_${Date.now()}` };
     }
   }
 }

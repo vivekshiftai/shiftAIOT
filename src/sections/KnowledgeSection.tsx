@@ -256,15 +256,17 @@ export const KnowledgeSection: React.FC = () => {
     setNewMessage('');
     setIsTyping(true);
 
-    // Save user message to database
+    // Save user message to database and get the real database ID
+    let userMessageId: string | undefined;
     if (user?.id && user?.organizationId) {
-      await chatService.saveUserMessage(
+      const savedUserMessage = await chatService.saveUserMessage(
         user.id,
         selectedDevice?.id,
         user.organizationId,
         newMessage,
         sessionId
       );
+      userMessageId = savedUserMessage.id;
     }
 
     try {
@@ -324,9 +326,10 @@ export const KnowledgeSection: React.FC = () => {
               queryType: 'PDF'
             };
 
-            // Save assistant message to database
+            // Save assistant message to database and get the real database ID
+            let assistantMessageId: string | undefined;
             if (user?.id && user?.organizationId) {
-              await chatService.saveAssistantMessage(
+              const savedAssistantMessage = await chatService.saveAssistantMessage(
                 user.id,
                 selectedDevice?.id,
                 user.organizationId,
@@ -340,6 +343,7 @@ export const KnowledgeSection: React.FC = () => {
                 undefined, // databaseResults
                 undefined  // rowCount
               );
+              assistantMessageId = savedAssistantMessage.id;
             }
 
             setSectionState(prev => ({

@@ -34,7 +34,7 @@ export const ChatFeedbackButtons: React.FC<ChatFeedbackButtonsProps> = ({
       // Send feedback to backend API
       await chatFeedbackService.addFeedback({
         messageId,
-        feedback
+        feedback: feedback.toUpperCase() as 'LIKE' | 'DISLIKE'
       });
 
       // Call the parent callback if provided
@@ -63,7 +63,7 @@ export const ChatFeedbackButtons: React.FC<ChatFeedbackButtonsProps> = ({
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      {/* Like Button */}
+      {/* Good Button */}
       <button
         onClick={() => handleFeedback('like')}
         disabled={disabled || isLoading}
@@ -75,13 +75,13 @@ export const ChatFeedbackButtons: React.FC<ChatFeedbackButtonsProps> = ({
           }
           ${disabled || isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
-        title="Like this response"
+        title="Good response"
       >
         <CheckCircle className="w-3 h-3" />
-        <span>Like</span>
+        <span>Good</span>
       </button>
 
-      {/* Dislike Button */}
+      {/* Not up to the mark Button */}
       <button
         onClick={() => handleFeedback('dislike')}
         disabled={disabled || isLoading}
@@ -93,10 +93,10 @@ export const ChatFeedbackButtons: React.FC<ChatFeedbackButtonsProps> = ({
           }
           ${disabled || isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
-        title="Dislike this response"
+        title="Not up to the mark"
       >
         <X className="w-3 h-3" />
-        <span>Dislike</span>
+        <span>Not up to the mark</span>
       </button>
 
 

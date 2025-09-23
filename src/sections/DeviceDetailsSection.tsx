@@ -965,15 +965,17 @@ export const DeviceDetailsSection: React.FC = () => {
     setNewMessage('');
     setIsTyping(true);
 
-    // Save user message to database
+    // Save user message to database and get the real database ID
+    let userMessageId: string | undefined;
     if (user?.id && user?.organizationId) {
-      await chatService.saveUserMessage(
+      const savedUserMessage = await chatService.saveUserMessage(
         user.id,
         deviceId,
         user.organizationId,
         newMessage,
         sessionId
       );
+      userMessageId = savedUserMessage.id;
     }
 
     try {
@@ -1077,9 +1079,10 @@ export const DeviceDetailsSection: React.FC = () => {
             processing_time: queryResponse.processing_time
           };
 
-          // Save assistant message to database
+          // Save assistant message to database and get the real database ID
+          let assistantMessageId: string | undefined;
           if (user?.id && user?.organizationId) {
-            await chatService.saveAssistantMessage(
+            const savedAssistantMessage = await chatService.saveAssistantMessage(
               user.id,
               deviceId,
               user.organizationId,
@@ -1093,6 +1096,7 @@ export const DeviceDetailsSection: React.FC = () => {
               undefined, // databaseResults
               undefined  // rowCount
             );
+            assistantMessageId = savedAssistantMessage.id;
           }
 
           setSectionState(prev => ({
