@@ -1579,8 +1579,11 @@ export const DeviceDetailsSection: React.FC = () => {
                       )}
                       
                       {/* Feedback Buttons for Assistant Messages */}
-                      {message.type === 'assistant' && (
-                        <div className="mt-3 pt-2 border-t border-gray-100">
+                      {true && (
+                        <div className="mt-3 pt-2 border-t border-gray-100" style={{ border: '2px solid green', padding: '8px' }}>
+                          <div style={{ color: 'red', fontSize: '12px', marginBottom: '4px' }}>
+                            DEBUG: Feedback buttons for message {message.id}
+                          </div>
                           <ChatFeedbackButtons
                             messageId={message.id}
                             onFeedback={handleFeedback}
